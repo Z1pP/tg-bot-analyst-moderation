@@ -1,11 +1,24 @@
+import asyncio
 import logging
+import sys
 
-from aiogram import Bot, Dispatcher
+from bot import init_bot
 
-from config import settings
+logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+
+async def main():
+    try:
+        bot, dp = await init_bot()
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+        sys.exit(1)
+    finally:
+        await bot.session.close()
+
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    bot = Bot(token=settings.BOT_TOKEN)
-    dp = Dispatcher()
-    dp.run_polling(bot)
+    asyncio.run(main())
