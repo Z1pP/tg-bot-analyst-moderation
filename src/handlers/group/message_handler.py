@@ -2,11 +2,10 @@ import enum
 
 from aiogram import Router
 from aiogram.types import Message
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from dto.message import CreateMessageDTO, CreateMessageReplyDTO
 from filters.group_filter import GroupTypeFilter
-from models import ChatSession, ModeratorActivity, User
+from models import ChatSession, User
 
 router = Router(name=__name__)
 
@@ -80,31 +79,3 @@ async def process_moderator_reply(reply_dto: CreateMessageReplyDTO):
 async def precess_moderator_message(msg_dto: CreateMessageDTO):
     """Обрабатывает сообщения которые не являются reply"""
     pass
-
-
-async def _create_activity_record(
-    session: AsyncSession,
-    user_id: int,
-    chat_id: int,
-    last_message_id: int,
-    next_message_id: int,
-    inacvive_period: int,
-):
-    """Создание записи активности конкретного модератора"""
-    activity = ModeratorActivity(
-        moderator_id=user_id,
-        chat_id=chat_id,
-        last_message_id=last_message_id,
-        next_message_id=next_message_id,
-        inactive_period_seconds=inacvive_period,
-    )
-
-    try:
-        session.add(activity)
-        await session.commit()
-        await session.refresh(activity)
-        return activity
-    except Exception as e:
-        print(str(e))
-        session.rollback()
-        raise e
