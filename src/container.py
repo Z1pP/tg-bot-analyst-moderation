@@ -6,10 +6,12 @@ from repositories import (
     MessageRepository,
     UserRepository,
 )
+from usecases.chat import GetOrCreateChatUseCase
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
     GetOrCreateUserIfNotExistUserCase,
+    GetUserFromDatabaseUseCase,
 )
 
 
@@ -24,6 +26,8 @@ def setup_container() -> Container:
     container.register(GetOrCreateUserIfNotExistUserCase)
     container.register(CreateNewUserUserCase)
     container.register(DeleteUserUseCase)
+    container.register(GetUserFromDatabaseUseCase)
+    container.register(GetOrCreateChatUseCase)
 
     return container
 
