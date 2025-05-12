@@ -16,4 +16,5 @@ async def init_bot() -> tuple[Bot, Dispatcher]:
 
     dp = Dispatcher()
     registry_routers(disptcher=dp)
+
     return bot, dp

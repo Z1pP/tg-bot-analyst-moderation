@@ -1,26 +1,78 @@
 from aiogram import Router
 from aiogram.types import Message
+from punq import Container
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.session import async_session
+from dto.chat import ChatDTO
+from dto.message import MessageDTO
+from dto.user import UserDTO
 from filters.group_filter import GroupTypeFilter
 from models import ChatMessage, ChatSession, ModeratorActivity, User
 from models.user import UserRole
 
+# from usecases.user.get_or_create_user import GetOrCreateUserIfNotExistUserCase
+
 router = Router(name=__name__)
+
+"""
+1. Приходит сообщение с обработчик
+2. Бот понимает от кого это сообщение 
+3. Бот понимает что за тип сообщения
+4. Если это просто сообщение (не reply):
+    - Сообщение сохраняется в БД
+    - Трекается активность в БД также
+5. Если сообщение reply то:
+    - Сообщение сохраняется в БД reply 
+    - Трекается активность в БД также
+"""
 
 
 @router.message(GroupTypeFilter())
-async def message_handler(message: Message):
-    try:
-        db_message = await save_message(message=message)
-        text = f"Сообщение сохранено в базу данных: {db_message.text}"
-        await message.answer(text)
-    except Exception as e:
-        await message.answer(str(e))
+async def message_handler(message: Message, container: Container):
+    message_dto = MessageDTO(
+        user=UserDTO(
+            tg_id=message.from_user.id,
+            username=message.from_user.username,
+        ),
+        chat=ChatDTO(
+            chat_id=message.chat.id,
+            title=message.chat.title,
+        ),
+        message_id=message.message_id,
+        text=message.text,
+        message_type=message.content_type,
+        reply_to_message_id=message.reply_to_message.message_id
+        if message.reply_to_message
+        else None,
+    )
+
+    # usercase: GetOrCreateUserIfNotExistUserCase = container.resolve(
+    #     GetOrCreateUserIfNotExistUserCase
+    # )
+    # user = await usercase.execute(
+    #     tg_id=message.from_user.id, username=message.from_user.username
+    # )
+
+    # # Получение chat_id
+    # chat_id = message.chat.id
+
+    # # Если модератор сделал ответ на сообщение то
+    # # фиксируем это MessageReply + ModeratorActivity
+    # if message.reply_to_message:
+    #     await message.answer("Это сообщение было ответом на другое сообщение")
+
+    # # Если это обычное сообщение то
+    # # фиксируем это Message + ModeratorActivity
+    # else:
+    #     await
+    #     await message.answer("Это обычное сообщение")
+
+    # return
 
 
+# ------------------------------------------------------
 async def save_message(message: Message):
     # Ищем пользователя
     async with async_session() as session:

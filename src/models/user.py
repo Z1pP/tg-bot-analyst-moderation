@@ -22,17 +22,17 @@ class User(BaseModel):
 
     tg_id: Mapped[str] = mapped_column(
         String(length=32),
-        nullable=False,
+        nullable=True,
         unique=True,
     )
     username: Mapped[str] = mapped_column(
         String(length=64),
-        nullable=False,
+        nullable=True,
     )
     role: Mapped[Enum] = mapped_column(
         SQLAlchemyEnum(UserRole),
         nullable=False,
-        default=UserRole.USER,
+        default=UserRole.MODERATOR,
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
