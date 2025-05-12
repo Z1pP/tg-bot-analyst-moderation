@@ -8,6 +8,7 @@ dependencies = [
     "aiogram>=3.20.0.post0",
     "alembic>=1.15.2",
     "asyncpg>=0.30.0",
+    "cachetools>=5.5.2",
     "psycopg2-binary>=2.9.10",
     "punq>=0.7.0",
     "pydantic-settings>=2.9.1",
