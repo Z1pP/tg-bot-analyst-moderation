@@ -1,5 +1,7 @@
 from typing import Optional
 
+from sqlalchemy import select
+
 from database.session import async_session
 from models.chat_session import ChatSession
 
@@ -9,7 +11,7 @@ class ChatRepository:
         async with async_session() as session:
             try:
                 return await session.scalar(
-                    ChatSession.select().where(ChatSession.chat_id == chat_id)
+                    select(ChatSession).where(ChatSession.chat_id == chat_id)
                 )
             except Exception as e:
                 print(str(e))

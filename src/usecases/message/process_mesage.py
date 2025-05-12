@@ -14,8 +14,10 @@ class ProcessMessageUseCase:
         self.track_activity = track_activity_use_case
 
     async def execute(self, message_dto: MessageDTO):
+        # Сохраняем сообщение
         save_result = await self.save_message.execute(message_dto=message_dto)
 
+        # Трекаем в активность
         await self.track_activity.execute(
             user=save_result.user,
             message=save_result,

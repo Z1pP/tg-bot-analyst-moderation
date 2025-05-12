@@ -1,23 +1,17 @@
+import enum
+
 from aiogram import Router
 from aiogram.types import Message
-from punq import Container
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.session import async_session
-from dto.chat import ChatDTO
-from dto.message import MessageDTO
-from dto.user import UserDTO
+from dto.message import CreateMessageDTO, CreateMessageReplyDTO
 from filters.group_filter import GroupTypeFilter
-from models import ChatMessage, ChatSession, ModeratorActivity, User
-from models.user import UserRole
-
-# from usecases.user.get_or_create_user import GetOrCreateUserIfNotExistUserCase
+from models import ChatSession, ModeratorActivity, User
 
 router = Router(name=__name__)
 
 """
-1. Приходит сообщение с обработчик
+1. Приходит сообщение в обработчик
 2. Бот понимает от кого это сообщение 
 3. Бот понимает что за тип сообщения
 4. Если это просто сообщение (не reply):
@@ -29,148 +23,63 @@ router = Router(name=__name__)
 """
 
 
+class MessageType(enum.Enum):
+    REPLY = "reply"
+    MESSAGE = "message"
+
+
+def _get_message_type(message: Message) -> MessageType:
+    if message.reply_to_message:
+        return MessageType.REPLY
+    else:
+        return MessageType.MESSAGE
+
+
 @router.message(GroupTypeFilter())
-async def message_handler(message: Message, container: Container):
-    message_dto = MessageDTO(
-        user=UserDTO(
-            tg_id=message.from_user.id,
-            username=message.from_user.username,
-        ),
-        chat=ChatDTO(
-            chat_id=message.chat.id,
-            title=message.chat.title,
-        ),
-        message_id=message.message_id,
-        text=message.text,
-        message_type=message.content_type,
-        reply_to_message_id=message.reply_to_message.message_id
-        if message.reply_to_message
-        else None,
-    )
+async def group_message_handler(message: Message, **data):
+    """
+    Обрабатывет сообщения которые приходит только от модераторов чата
+    """
+    moderator: User = data.get("moderator")
+    chat: ChatSession = data.get("chat")
 
-    # usercase: GetOrCreateUserIfNotExistUserCase = container.resolve(
-    #     GetOrCreateUserIfNotExistUserCase
-    # )
-    # user = await usercase.execute(
-    #     tg_id=message.from_user.id, username=message.from_user.username
-    # )
+    if not moderator or not chat:
+        return
 
-    # # Получение chat_id
-    # chat_id = message.chat.id
+    msg_type = _get_message_type(message=message)
 
-    # # Если модератор сделал ответ на сообщение то
-    # # фиксируем это MessageReply + ModeratorActivity
-    # if message.reply_to_message:
-    #     await message.answer("Это сообщение было ответом на другое сообщение")
-
-    # # Если это обычное сообщение то
-    # # фиксируем это Message + ModeratorActivity
-    # else:
-    #     await
-    #     await message.answer("Это обычное сообщение")
-
-    # return
-
-
-# ------------------------------------------------------
-async def save_message(message: Message):
-    # Ищем пользователя
-    async with async_session() as session:
-        result = await session.execute(
-            select(User).where(User.tg_id == str(message.from_user.id))
+    # Если модератор сделал ответ на сообщение то
+    # фиксируем это MessageReply + ModeratorActivity
+    if msg_type == MessageType.REPLY:
+        reply_msg_dto = CreateMessageReplyDTO(
+            original_message_id=message.reply_to_message.message_id,
+            reply_message_id=message.message_id,
+            original_user_id=message.reply_to_message.from_user.id,
+            reply_user_id=message.from_user.id,
         )
-        user = result.scalars().first()
+        await process_moderator_reply(message, moderator)
 
-        if not user:
-            user = User(
-                tg_id=str(message.from_user.id),
-                username=message.from_user.username,
-                role=UserRole.ADMIN,
-            )
-
-            try:
-                session.add(user)
-                await session.commit()
-                await session.refresh(user)
-            except Exception as e:
-                session.rollback()
-                print(str(e))
-                raise e
-
-        # Ищем чат
-        try:
-            chat = await session.execute(
-                select(ChatSession).where(ChatSession.chat_id == str(message.chat.id))
-            )
-            chat = chat.scalars().first()
-        except Exception as e:
-            print(str(e))
-            raise e
-
-        if not chat:
-            chat = ChatSession(
-                chat_id=str(message.chat.id),
-                title=message.chat.title,
-            )
-            try:
-                session.add(chat)
-                await session.commit()
-                await session.refresh(chat)
-            except Exception as e:
-                await session.rollback()
-                print(str(e))
-
-        # Делаем запись по новому сообщению
-        new_message = ChatMessage(
+    # Если это обычное сообщение то
+    # фиксируем это Message + ModeratorActivity
+    else:
+        msg_dto = CreateMessageDTO(
             chat_id=chat.id,
-            user_id=user.id,
-            message_id=str(message.message_id),
+            user_id=moderator.id,
+            message_id=message.message_id,
             message_type=message.content_type,
             text=message.text,
         )
-
-        try:
-            session.add(new_message)
-            await session.commit()
-            await session.refresh(new_message)
-        except Exception as e:
-            await session.rollback()
-            print(str(e))
-
-        last_message = await _get_last_activity(session, user.id, chat.id)
-        if not last_message:
-            return new_message
-        inactive_perion = await _get_inactive_perion(last_message, new_message)
-        await _create_activity_record(
-            session, user.id, chat.id, last_message.id, new_message.id, inactive_perion
-        )
-
-        return new_message
+        await precess_moderator_message(message, moderator)
 
 
-async def _get_inactive_perion(
-    last_message: ChatMessage, next_message: ChatMessage
-) -> int:
-    perion = next_message.created_at - last_message.created_at
-    return perion.seconds
+async def process_moderator_reply(reply_dto: CreateMessageReplyDTO):
+    # Получаем данные о сообщении
+    pass
 
 
-async def _get_last_activity(session: AsyncSession, user_id: int, chat_id: int):
-    """Получение последнего сообщения"""
-    try:
-        return await session.scalar(
-            select(ChatMessage)
-            .where(
-                ChatMessage.user_id == user_id,
-                ChatMessage.chat_id == chat_id,
-            )
-            .order_by(ChatMessage.created_at.desc())
-            .limit(1)
-            .offset(1)
-        )
-    except Exception as e:
-        print(str(e))
-        raise e
+async def precess_moderator_message(msg_dto: CreateMessageDTO):
+    """Обрабатывает сообщения которые не являются reply"""
+    pass
 
 
 async def _create_activity_record(
