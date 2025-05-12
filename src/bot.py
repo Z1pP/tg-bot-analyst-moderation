@@ -5,6 +5,7 @@ from aiogram.enums import ParseMode
 from commands import start_commands
 from config import settings
 from handlers import registry_routers
+from middlewares import registry_middlewares
 
 
 async def init_bot() -> tuple[Bot, Dispatcher]:
@@ -16,5 +17,6 @@ async def init_bot() -> tuple[Bot, Dispatcher]:
 
     dp = Dispatcher()
     registry_routers(disptcher=dp)
+    registry_middlewares(dispatcher=dp)
 
     return bot, dp
