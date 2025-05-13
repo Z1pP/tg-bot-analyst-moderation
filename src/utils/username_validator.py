@@ -2,11 +2,13 @@ import re
 from typing import Optional
 
 
-async def validate_username(text: str) -> Optional[str]:
-    if not text:
+async def validate_username(username: str) -> Optional[str]:
+    if not username or not username.strip():
         return None
 
-    username = text.lstrip("@")
+    username = username.strip()
+    if username.startswith("@"):
+        username = username[1:]
 
     if not re.match(r"^[a-zA-Z0-9_]{5,32}$", username):
         return None
