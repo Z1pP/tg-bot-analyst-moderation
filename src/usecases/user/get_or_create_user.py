@@ -6,9 +6,9 @@ from repositories.user_repository import UserRepository
 
 
 @dataclass
-class GetOrCreateUserResult:
+class UserResult:
     user: User
-    is_created: bool
+    is_existed: bool
 
 
 class GetOrCreateUserIfNotExistUserCase:
@@ -19,7 +19,7 @@ class GetOrCreateUserIfNotExistUserCase:
         self,
         tg_id: Optional[str] = None,
         username: Optional[str] = None,
-    ) -> GetOrCreateUserResult:
+    ) -> UserResult:
         """
         Получает существующего пользователя или создает нового.
 
@@ -39,11 +39,11 @@ class GetOrCreateUserIfNotExistUserCase:
         user = await self._get_user(tg_id, username)
 
         if user:
-            return GetOrCreateUserResult(user=user, is_created=False)
+            return UserResult(user=user, is_existed=True)
 
-        return GetOrCreateUserResult(
+        return UserResult(
             user=await self._create_user(tg_id, username),
-            is_created=True,
+            is_existed=False,
         )
 
     async def _get_user(
