@@ -28,7 +28,7 @@ class ModeratorIdentityMiddleware(BaseMiddleware):
     ) -> Any:
         # Filter what middleware work only with group and supergroup chats
         if not self._is_group_chat(event=event):
-            await handler(event, data)
+            return await handler(event, data)
 
         try:
             username = self._get_username(event=event)
