@@ -7,8 +7,8 @@ from .base import BaseModeratorActivityTrackerUseCase
 
 
 class TrackSimpleModeratorActivityUseCase(BaseModeratorActivityTrackerUseCase):
-    def __init__(self, acivity_service: ActivityRepository):
-        self.acivity_service = acivity_service
+    def __init__(self, activivty_repository: ActivityRepository):
+        self.activity_repository = activivty_repository
         super().__init__()
 
     async def execute(
@@ -19,13 +19,13 @@ class TrackSimpleModeratorActivityUseCase(BaseModeratorActivityTrackerUseCase):
         """
         Трекает все сообщения которые не являются reply на другие сообщения
         """
-        last_activity = await self.acivity_service.get_last_activity(
+        last_activity = await self.activity_repository.get_last_activity(
             user_id=user.id, chat_id=message.chat_id
         )
 
         if not last_activity:
             # создаем новую активность
-            return await self.acivity_service.create_simple_activity(
+            return await self.activity_repository.create_simple_activity(
                 user_id=user.id,
                 chat_id=message.chat_id,
                 message_id=message.id,
