@@ -1,30 +1,18 @@
-import enum
+import logging
 
 from aiogram import Router
 from aiogram.types import Message
 
-from dto.message import CreateMessageDTO, CreateMessageReplyDTO
+from container import container
+from dto.message import CreateMessageDTO
+from dto.message_reply import CreateMessageReplyDTO
 from filters.group_filter import GroupTypeFilter
 from models import ChatSession, User
+from models.message import MessageType
+from usecases.message import ProcessMessageUseCase, ProcessReplyMessageUseCase
 
 router = Router(name=__name__)
-
-"""
-1. Приходит сообщение в обработчик
-2. Бот понимает от кого это сообщение 
-3. Бот понимает что за тип сообщения
-4. Если это просто сообщение (не reply):
-    - Сообщение сохраняется в БД
-    - Трекается активность в БД также
-5. Если сообщение reply то:
-    - Сообщение сохраняется в БД reply 
-    - Трекается активность в БД также
-"""
-
-
-class MessageType(enum.Enum):
-    REPLY = "reply"
-    MESSAGE = "message"
+logger = logging.getLogger(__name__)
 
 
 def _get_message_type(message: Message) -> MessageType:
@@ -39,43 +27,83 @@ async def group_message_handler(message: Message, **data):
     """
     Обрабатывет сообщения которые приходит только от модераторов чата
     """
-    moderator: User = data.get("moderator")
+    sender: User = data.get("sender")
     chat: ChatSession = data.get("chat")
 
-    if not moderator or not chat:
+    if not sender or not chat:
         return
 
     msg_type = _get_message_type(message=message)
 
-    # Если модератор сделал ответ на сообщение то
-    # фиксируем это MessageReply + ModeratorActivity
     if msg_type == MessageType.REPLY:
-        reply_msg_dto = CreateMessageReplyDTO(
-            original_message_id=message.reply_to_message.message_id,
-            reply_message_id=message.message_id,
-            original_user_id=message.reply_to_message.from_user.id,
-            reply_user_id=message.from_user.id,
-        )
-        await process_moderator_reply(message, moderator)
-
-    # Если это обычное сообщение то
-    # фиксируем это Message + ModeratorActivity
+        await process_moderator_reply(message=message, sender=sender, chat=chat)
     else:
-        msg_dto = CreateMessageDTO(
+        await precess_moderator_message(message=message, sender=sender, chat=chat)
+
+
+async def process_moderator_reply(message: Message, sender: User, chat: ChatSession):
+    """
+    Обрабатывает reply-сообщения модераторов.
+    Сохраняет reply как обычное сообщение, а затем создаёт связь в MessageReply.
+    """
+    # DTO для сохранения сообщения
+    msg_dto = CreateMessageDTO(
+        chat_id=chat.id,
+        user_id=sender.id,
+        message_id=str(message.message_id),
+        message_type=MessageType.REPLY.value,
+        content_type=message.content_type,
+        text=message.text,
+    )
+
+    # Получаем use case для обработки сообщений
+    message_usecase: ProcessMessageUseCase = container.resolve(ProcessMessageUseCase)
+    reply_usecase: ProcessReplyMessageUseCase = container.resolve(
+        ProcessReplyMessageUseCase
+    )
+
+    try:
+        # Сохраняем reply как обычное сообщение
+        saved_message = await message_usecase.execute(message_dto=msg_dto)
+
+        # DTO для связи reply с оригинальным сообщением
+        reply_dto = CreateMessageReplyDTO(
             chat_id=chat.id,
-            user_id=moderator.id,
-            message_id=message.message_id,
-            message_type=message.content_type,
-            text=message.text,
+            original_message_url=message.reply_to_message.text,  # ID оригинального сообщения
+            reply_message_id=saved_message.id,  # ID сохранённого reply-сообщения
+            reply_user_id=sender.id,
+            original_message_date=message.reply_to_message.date,
+            reply_message_date=message.date,
+            response_time_seconds=(
+                (message.date - message.reply_to_message.date).total_seconds()
+            ),
         )
-        await precess_moderator_message(message, moderator)
+
+        # Сохраняем связь в MessageReply
+        await reply_usecase.execute(reply_message_dto=reply_dto)
+
+        await message.answer("Сообщение сохранено")
+    except Exception as e:
+        logger.error("Error saving reply message: %s", str(e))
+        await message.answer("Ошибка при сохранении сообщения")
 
 
-async def process_moderator_reply(reply_dto: CreateMessageReplyDTO):
-    # Получаем данные о сообщении
-    pass
-
-
-async def precess_moderator_message(msg_dto: CreateMessageDTO):
+async def precess_moderator_message(message: Message, sender: User, chat: ChatSession):
     """Обрабатывает сообщения которые не являются reply"""
-    pass
+    msg_dto = CreateMessageDTO(
+        chat_id=chat.id,
+        user_id=sender.id,
+        message_id=str(message.message_id),
+        message_type=MessageType.MESSAGE.value,
+        content_type=message.content_type,
+        text=message.text,
+    )
+
+    usecase: ProcessMessageUseCase = container.resolve(ProcessMessageUseCase)
+
+    try:
+        await usecase.execute(message_dto=msg_dto)
+        await message.answer("Сообщение сохранено")
+    except Exception as e:
+        logger.error("Error saving message: %s", str(e))
+        await message.answer("Ошибка при сохранении сообщения")
