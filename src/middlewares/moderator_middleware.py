@@ -8,6 +8,7 @@ from cachetools import TTLCache
 from constants import ChatType
 from container import container
 from models import User
+from models.user import UserRole
 from usecases.user import GetUserFromDatabaseUseCase
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 TTL_SECONDS = 60 * 5  # 5 minutes
 
 
-class ModeratorIdentityMiddleware(BaseMiddleware):
+class UserIdentityMiddleware(BaseMiddleware):
     def __init__(self):
         self._cache = TTLCache(maxsize=100, ttl=TTL_SECONDS)
         super().__init__()
@@ -33,31 +34,40 @@ class ModeratorIdentityMiddleware(BaseMiddleware):
         try:
             username = self._get_username(event=event)
 
-            moderator = await self._get_moderator(username=username)
-            if moderator:
-                data["moderator"] = moderator
+            user = await self._get_user(username=username)
 
+            # Игнорирует сообщение если пользователь не найден в БД
+            if not user:
+                logger.warning("User not found in database: %s", username)
+                return
+
+            # Игнорирует сообщение если пользователь не является модератором или администратором
+            if not self._is_moderator_or_admin(user=user):
+                logger.warning("User is not a moderator or admin: %s", username)
+                return
+
+            data["sender"] = user
             return await handler(event, data)
 
         except Exception as e:
-            logger.error("Error getting moderator: %s", str(e))
+            logger.error("Error getting user: %s", str(e))
             return await handler(event, data)
 
     def _get_username(self, event: Message) -> str:
         return str(event.from_user.username)
 
-    async def _get_moderator(self, username: str) -> Optional[User]:
-        moderator = self._get_from_cache(username=username)
-        if moderator:
-            return moderator
+    async def _get_user(self, username: str) -> Optional[User]:
+        user = self._get_from_cache(username=username)
+        if user:
+            return user
 
-        moderator = await self._get_moderator_from_database(username=username)
-        if moderator:
-            self._add_to_cache(username=username, moderator=moderator)
+        user = await self._get_user_from_database(username=username)
+        if user:
+            self._add_to_cache(username=username, user=user)
 
-        return moderator
+        return user
 
-    async def _get_moderator_from_database(self, username: str) -> Optional[User]:
+    async def _get_user_from_database(self, username: str) -> Optional[User]:
         usercase: GetUserFromDatabaseUseCase = container.resolve(
             GetUserFromDatabaseUseCase
         )
@@ -67,11 +77,14 @@ class ModeratorIdentityMiddleware(BaseMiddleware):
         try:
             return self._cache.get(username)
         except Exception as e:
-            logger.error("Error getting moderator from cache: %s", str(e))
+            logger.error("Error getting user from cache: %s", str(e))
             return None
 
-    def _add_to_cache(self, username: str, moderator: User) -> None:
-        self._cache[username] = moderator
+    def _add_to_cache(self, username: str, user: User) -> None:
+        self._cache[username] = user
+
+    def _is_moderator_or_admin(self, user: User) -> bool:
+        return user.role == UserRole.MODERATOR or user.role == UserRole.ADMIN
 
     def _is_group_chat(self, event: Message) -> bool:
         chat_type = event.chat.type
