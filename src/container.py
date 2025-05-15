@@ -7,6 +7,12 @@ from repositories import (
     UserRepository,
 )
 from usecases.chat import GetOrCreateChatUseCase
+from usecases.message import (
+    ProcessMessageUseCase,
+    ProcessReplyMessageUseCase,
+    SaveMessageUseCase,
+)
+from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
@@ -23,11 +29,19 @@ def setup_container() -> Container:
     container.register(MessageRepository)
     container.register(ActivityRepository)
 
+    # user usecases
     container.register(GetOrCreateUserIfNotExistUserCase)
     container.register(CreateNewUserUserCase)
     container.register(DeleteUserUseCase)
     container.register(GetUserFromDatabaseUseCase)
+    # chat usecases
     container.register(GetOrCreateChatUseCase)
+    # message usecases
+    container.register(SaveMessageUseCase)
+    container.register(ProcessMessageUseCase)
+    container.register(ProcessReplyMessageUseCase)
+    # activity usecases
+    container.register(TrackModeratorActivityUseCase)
 
     return container
 
