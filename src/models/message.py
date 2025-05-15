@@ -1,3 +1,4 @@
+import enum
 from typing import TYPE_CHECKING
 
 from aiogram.enums import ContentType
@@ -10,6 +11,13 @@ if TYPE_CHECKING:
     from .chat_session import ChatSession
     from .user import User
 from sqlalchemy.orm import relationship
+
+
+class MessageType(str, enum.Enum):
+    """Типы сообщений"""
+
+    MESSAGE = "message"
+    REPLY = "reply"
 
 
 class ChatMessage(BaseModel):
@@ -32,15 +40,21 @@ class ChatMessage(BaseModel):
         String,
         nullable=False,
     )
+    # Какой тип сообщения reply или обычное
     message_type: Mapped[str] = mapped_column(
         String(length=32),
         nullable=False,
-        default=ContentType.TEXT.value,
+        default=MessageType.MESSAGE.value,
     )
     # Текст сообщения
     text: Mapped[str] = mapped_column(
         Text,
         nullable=True,
+    )
+    content_type: Mapped[str] = mapped_column(
+        String(length=32),
+        nullable=False,
+        default=ContentType.TEXT.value,
     )
 
     # Relationships
@@ -57,49 +71,4 @@ class ChatMessage(BaseModel):
         Index("idx_message_user", "user_id"),
         Index("idx_message_chat", "chat_id"),
         Index("idx_message_created", "created_at"),
-    )
-
-
-class MessageReply(BaseModel):
-    __tablename__ = "message_replies"
-
-    original_message_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey("chat_messages.id"),
-        nullable=False,
-    )
-    reply_message_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey("chat_messages.id"),
-        nullable=False,
-    )
-    original_user_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey("users.id"),
-        nullable=False,
-    )
-    reply_user_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey("users.id"),
-        nullable=False,
-    )
-    response_time_seconds: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-    )
-
-    # Relationships
-    original_message: Mapped["ChatMessage"] = relationship(
-        "ChatMessage",
-        foreign_keys=[original_message_id],
-    )
-    reply_message: Mapped["ChatMessage"] = relationship(
-        "ChatMessage",
-        foreign_keys=[reply_message_id],
-    )
-
-    __table_args__ = (
-        Index("idx_reply_original_message", "original_message_id"),
-        Index("idx_reply_users", "original_user_id", "reply_user_id"),
-        Index("idx_reply_time", "created_at"),
     )
