@@ -1,6 +1,7 @@
 from .base import Base
 from .chat_session import ChatSession
-from .message import ChatMessage, MessageReply
+from .message import ChatMessage
+from .message_reply import MessageReply
 from .moderator_activity import ModeratorActivity
 from .user import User
 
