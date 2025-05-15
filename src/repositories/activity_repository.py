@@ -1,25 +1,25 @@
 from sqlalchemy import select
 
 from database.session import async_session
-from models import ChatMessage, MessageReply, ModeratorActivity
+from dto.activity import CreateActivityDTO
+from models import MessageReply, ModeratorActivity
 
 
 class ActivityRepository:
-    async def create_simple_activity(
-        self, message: ChatMessage, activity: ModeratorActivity
-    ) -> ModeratorActivity:
+    async def create_activity(self, dto: CreateActivityDTO) -> ModeratorActivity:
         new_activity = ModeratorActivity(
-            moderator_id=message.user_id,
-            chat_id=message.chat_id,
-            message_id=message.id,
-            reply_to_message_id=None,
+            user_id=dto.user_id,
+            chat_id=dto.chat_id,
+            last_message_id=dto.last_message_id,
+            next_message_id=dto.next_message_id,
+            inactive_period_seconds=dto.inactive_period_seconds,
         )
         async with async_session() as session:
             try:
                 session.add(new_activity)
                 await session.commit()
                 await session.refresh(new_activity)
-                return activity
+                return new_activity
 
             except Exception as e:
                 print(str(e))
@@ -30,10 +30,9 @@ class ActivityRepository:
         self, message: MessageReply, activity: ModeratorActivity
     ) -> ModeratorActivity:
         new_activity = ModeratorActivity(
-            moderator_id=message.user_id,
+            user_id=message.reply_user_id,
             chat_id=message.chat_id,
             message_id=message.id,
-            reply_to_message_id=message.reply_to_message_id,
         )
         async with async_session() as session:
             try:
@@ -50,12 +49,16 @@ class ActivityRepository:
     async def get_last_activity(self, user_id: int, chat_id: int) -> ModeratorActivity:
         async with async_session() as session:
             try:
-                return await session.scalar(
-                    select(ModeratorActivity).where(
-                        ModeratorActivity.moderator_id == user_id,
+                query = (
+                    select(ModeratorActivity)
+                    .where(
+                        ModeratorActivity.user_id == user_id,
                         ModeratorActivity.chat_id == chat_id,
                     )
+                    .order_by(ModeratorActivity.created_at.desc())
                 )
+                result = await session.execute(query)
+                return result.scalars().first()
 
             except Exception as e:
                 print(str(e))
