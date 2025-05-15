@@ -9,7 +9,7 @@ class ModeratorActivity(BaseModel):
 
     __tablename__ = "moderator_activity"
 
-    moderator_id: Mapped[int] = mapped_column(
+    user_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("users.id"),
         nullable=False,
@@ -35,6 +35,6 @@ class ModeratorActivity(BaseModel):
     )
 
     __table_args__ = (
-        Index("idx_activity_moderator", "moderator_id"),
+        Index("idx_activity_moderator", "user_id"),
         Index("idx_activity_period", "inactive_period_seconds"),
     )
