@@ -13,7 +13,6 @@ class BotBaseException(Exception):
         self.details = details
         super().__init__(self.message)
 
-    @classmethod
     def get_user_message(self) -> str:
         """
         Возращает сообщение для пользователя
