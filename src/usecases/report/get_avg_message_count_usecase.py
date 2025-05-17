@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Tuple
 
@@ -35,7 +36,11 @@ class GetAvgMessageCountUseCase:
             )
 
             return self._generate_report(
-                messages=messages, user=user, time_period=report_dto.time
+                messages=messages,
+                user=user,
+                time_period=report_dto.time,
+                start_date=start_date,
+                end_date=end_date,
             )
         except Exception as e:
             logger.error(f"Ошибка при формировании отчета: {e}")
@@ -46,6 +51,8 @@ class GetAvgMessageCountUseCase:
         messages: list[ChatMessage],
         user: User,
         time_period: timedelta,
+        start_date: datetime,
+        end_date: datetime,
     ) -> str:
         """
         Формирует текстовый отчет.
@@ -55,7 +62,12 @@ class GetAvgMessageCountUseCase:
 
         total_messages = len(messages)
         period_str = self._format_timedelta(time_period)
-        start_date, end_date = self._get_period(time_period)
+
+        # Группируем сообщения по чатам
+        chat_stats = defaultdict(int)
+        for message in messages:
+            chat_title = message.chat_session.title
+            chat_stats[chat_title] += 1
 
         # Определяем единицу измерения для среднего значения
         if time_period.total_seconds() <= 3600:  # До 1 часа
@@ -73,15 +85,38 @@ class GetAvgMessageCountUseCase:
             f"{end_date.strftime('%d.%m.%Y %H:%M')}"
         )
 
-        return (
+        # Формируем основную часть отчета
+        report = (
             f"📊 <b>Отчет за {period_str}</b>\n"
             f"⏱ Период: <b>{date_range}</b>\n"
             f"👤 Пользователь: <b>{user.username}</b>\n\n"
-            f"📈 Статистика:\n"
+            f"📈 Общая статистика:\n"
             f"• Всего сообщений: <b>{total_messages}</b>\n"
-            f"• Среднее за {period_str}: <b>{avg}</b> сообщ./{unit}\n\n"
+            f"• Среднее за {period_str}: <b>{avg}</b> сообщ./{unit}\n"
+            f"────────────────────────────\n"
+        )
+
+        # Добавляем статистику по чатам
+        report += "\n📊 <b>Статистика по чатам:</b>\n"
+        for chat_title, count in sorted(
+            chat_stats.items(), key=lambda x: x[1], reverse=True
+        ):
+            # Вычисляем среднее для каждого чата
+            if time_period.total_seconds() <= 86400:  # До 1 дня
+                chat_avg = round(count / (time_period.total_seconds() / 3600), 2)
+                chat_unit = "час"
+            else:  # Более 1 дня
+                chat_avg = round(count / (time_period.total_seconds() / 86400), 2)
+                chat_unit = "день"
+
+            report += f"  • «{chat_title}» — <b>{count}</b> сообщ. (<b>{chat_avg}</b> сообщ./{chat_unit})\n"
+
+        report += "────────────────────────────\n"
+        report += (
             f"<i>Отчет сгенерирован {datetime.now().strftime('%d.%m.%Y %H:%M')}</i>"
         )
+
+        return report
 
     def _get_period(self, time: timedelta) -> Tuple[datetime, datetime]:
         """
