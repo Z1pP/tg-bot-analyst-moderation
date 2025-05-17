@@ -13,7 +13,7 @@ from usecases.message import (
     SaveMessageUseCase,
 )
 from usecases.moderator_activity import TrackModeratorActivityUseCase
-from usecases.report import GetDailyReportUseCase
+from usecases.report import GetAvgMessageCountUseCase, GetDailyReportUseCase
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
@@ -45,6 +45,7 @@ def setup_container() -> Container:
     container.register(TrackModeratorActivityUseCase)
     # report usecases
     container.register(GetDailyReportUseCase)
+    container.register(GetAvgMessageCountUseCase)
 
     return container
 
