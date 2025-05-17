@@ -8,47 +8,10 @@ from aiogram.types import Message
 from constants import CommandList
 from container import container
 from usecases.user import DeleteUserUseCase, GetOrCreateUserIfNotExistUserCase
-from utils.username_validator import validate_username
+from utils.username_validator import get_valid_username
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
-
-
-def extract_username(text: str) -> str | None:
-    """
-    Извлекает username из текста команды.
-    """
-    segments = text.split(" ")
-    if len(segments) > 1:
-        username = segments[-1].strip()
-        return username if username.startswith("@") else f"@{username}"
-    return None
-
-
-async def get_valid_username(message: Message) -> str | None:
-    """
-    Извлекает и валидирует username из сообщения.
-    """
-    username = extract_username(message.text)
-    if username is None:
-        await message.answer(
-            text=(
-                "Некорректно введена команда! \n"
-                "Формат: <code>/add_moderator @username</code>"
-            ),
-            parse_mode=ParseMode.HTML,
-        )
-        return None
-
-    username = await validate_username(username=username)
-    if username is None:
-        await message.answer(
-            text="Указан некорректный username. Проверьте формат и попробуйте снова.",
-            parse_mode=ParseMode.HTML,
-        )
-        return None
-
-    return username
 
 
 async def handle_error(message: Message, error: Exception, action: str):
@@ -60,7 +23,7 @@ async def handle_error(message: Message, error: Exception, action: str):
 
 
 @router.message(Command(CommandList.ADD_MODERATOR.name.lower()))
-async def add_moderator_handler(message: Message):
+async def add_moderator_handler(message: Message) -> None:
     """
     Хендлер для команды добавления модератора.
     """
@@ -71,7 +34,7 @@ async def add_moderator_handler(message: Message):
     await process_adding_moderator(username=username, message=message)
 
 
-async def process_adding_moderator(username: str, message: Message):
+async def process_adding_moderator(username: str, message: Message) -> None:
     """
     Обработчик для добавления нового модератора.
     """
@@ -98,7 +61,7 @@ async def process_adding_moderator(username: str, message: Message):
 
 
 @router.message(Command(CommandList.REMOVE_MODERATOR.name.lower()))
-async def remove_moderator_handler(message: Message):
+async def remove_moderator_handler(message: Message) -> None:
     """
     Хендлер для команды удаления модератора.
     """
@@ -109,7 +72,7 @@ async def remove_moderator_handler(message: Message):
     await process_removing_moderator(username=username, message=message)
 
 
-async def process_removing_moderator(username: str, message: Message):
+async def process_removing_moderator(username: str, message: Message) -> None:
     """
     Обработчик для удаления модератора.
     """
