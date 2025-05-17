@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta, timezone
+from typing import Optional
 
 from dto.activity import CreateActivityDTO, ResultActivityDTO
 from dto.message import ResultMessageDTO
@@ -7,84 +8,98 @@ from repositories import ActivityRepository
 
 
 class TrackModeratorActivityUseCase:
-    def __init__(self, activivty_repository: ActivityRepository):
-        self.activity_repository = activivty_repository
-        super().__init__()
+    WORK_START = time(10, 0)  # 10:00
+    WORK_END = time(22, 0)  # 22:00
+    TOLERANCE = timedelta(minutes=10)  # Допустимое отклонение
+
+    def __init__(self, activity_repository: ActivityRepository):
+        self.activity_repository = activity_repository
 
     async def execute(self, message_dto: ResultMessageDTO) -> ResultActivityDTO:
         """
-        Трекает все сообщения которые не являются reply на другие сообщения
+        Трекает активность модератора на основе отправленных сообщений.
+
+        Args:
+            message_dto: DTO с информацией о сообщении
+
+        Returns:
+            DTO с результатом трекинга активности
         """
-        last_activity = await self.activity_repository.get_last_activity(
+        last_activity = await self._get_last_activity(message_dto)
+
+        if last_activity:
+            inactive_seconds = self._calculate_inactive_period(last_activity)
+            activity_dto = self._build_activity_dto(
+                message_dto, last_activity.next_message_id, inactive_seconds
+            )
+        else:
+            activity_dto = self._build_activity_dto(message_dto, message_dto.id, 0)
+
+        new_activity = await self.activity_repository.create_activity(activity_dto)
+        return ResultActivityDTO.from_model(new_activity)
+
+    async def _get_last_activity(
+        self, message_dto: ResultMessageDTO
+    ) -> Optional[ModeratorActivity]:
+        """Получает последнюю активность модератора в чате."""
+        return await self.activity_repository.get_last_activity(
             user_id=message_dto.db_user_id, chat_id=message_dto.db_chat_id
         )
 
-        if last_activity:
-            activity_dto = CreateActivityDTO(
-                user_id=message_dto.db_user_id,
-                chat_id=message_dto.db_chat_id,
-                last_message_id=last_activity.next_message_id,
-                next_message_id=message_dto.id,
-                inactive_period_seconds=self._calcutale_inactive_period(
-                    last_activity=last_activity
-                ),
-            )
-            new_activity = await self.activity_repository.create_activity(
-                dto=activity_dto
-            )
-            return ResultActivityDTO.from_model(new_activity)
-        else:
-            # Если активности нет, то создаем новую
-            activity_dto = CreateActivityDTO(
-                user_id=message_dto.db_user_id,
-                chat_id=message_dto.db_chat_id,
-                last_message_id=message_dto.id,
-                next_message_id=message_dto.id,
-                inactive_period_seconds=0,
-            )
-            new_activity = await self.activity_repository.create_activity(
-                dto=activity_dto
-            )
-            return ResultActivityDTO.from_model(model=new_activity)
+    def _build_activity_dto(
+        self, message_dto: ResultMessageDTO, last_message_id: int, inactive_seconds: int
+    ) -> CreateActivityDTO:
+        """Создает DTO для новой активности."""
+        return CreateActivityDTO(
+            user_id=message_dto.db_user_id,
+            chat_id=message_dto.db_chat_id,
+            last_message_id=last_message_id,
+            next_message_id=message_dto.id,
+            inactive_period_seconds=inactive_seconds,
+        )
 
-    def _calcutale_inactive_period(self, last_activity: ModeratorActivity) -> int:
+    def _calculate_inactive_period(self, last_activity: ModeratorActivity) -> int:
         """
-        Вычисляет период неактивности с учётом рабочего времени.
-        """
-        created_date = last_activity.created_at
-        if created_date.tzinfo is None:
-            created_date = created_date.replace(tzinfo=timezone.utc)
+        Вычисляет период неактивности с учетом рабочего времени.
 
+        Args:
+            last_activity: Последняя зарегистрированная активность
+
+        Returns:
+            Количество секунд неактивности (0 если вне рабочего времени)
+        """
+        created_date = self._ensure_timezone(last_activity.created_at)
         current_date = datetime.now(timezone.utc)
 
-        # Рабочее время модераторов
-        work_start = time(10, 0)  # 10:00
-        work_end = time(22, 0)  # 22:00
-        tolerance = timedelta(minutes=10)  # Допустимое отклонение
-
-        # Проверяем, попадает ли текущее время в рабочий интервал
-        if not self._is_within_working_hours(
-            current_date.time(), work_start, work_end, tolerance
+        # Не считаем период если разные даты или вне рабочего времени
+        if created_date.date() != current_date.date() or not self._is_working_time(
+            current_date
         ):
-            return 0  # Если сообщение вне рабочего времени, период неактивности не увеличивается
+            return 0
 
-        # Рассчитываем период неактивности
-        inactive_period = current_date - created_date
-        return inactive_period.total_seconds()
+        return int((current_date - created_date).total_seconds())
 
-    def _is_within_working_hours(
-        self, current_time: time, start: time, end: time, tolerance: timedelta
-    ) -> bool:
+    def _ensure_timezone(self, dt: datetime) -> datetime:
+        """Добавляет временную зону если отсутствует."""
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+    def _is_working_time(self, current_dt: datetime) -> bool:
         """
-        Проверяет, попадает ли текущее время в рабочий интервал с учётом допустимого отклонения.
-        """
-        start_with_tolerance = (
-            datetime.combine(datetime.today(), start) - tolerance
-        ).time()
-        end_with_tolerance = (
-            datetime.combine(datetime.today(), end) + tolerance
-        ).time()
+        Проверяет, попадает ли текущее время в рабочий интервал.
 
-        if start_with_tolerance <= current_time <= end_with_tolerance:
-            return True
-        return False
+        Args:
+            current_dt: Текущее время с временной зоной
+
+        Returns:
+            True если рабочее время, иначе False
+        """
+        current_time = current_dt.time()
+        start = self._adjust_time_with_tolerance(self.WORK_START, -self.TOLERANCE)
+        end = self._adjust_time_with_tolerance(self.WORK_END, self.TOLERANCE)
+
+        return start <= current_time <= end
+
+    def _adjust_time_with_tolerance(self, base_time: time, delta: timedelta) -> time:
+        """Корректирует время с учетом допуска."""
+        adjusted = datetime.combine(datetime.today(), base_time) + delta
+        return adjusted.time()
