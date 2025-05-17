@@ -4,8 +4,10 @@ from datetime import datetime, timedelta
 from typing import Tuple
 
 from dto.report import AVGReportDTO
+from exceptions.user import UserNotFoundException
 from models import ChatMessage, User
 from repositories import MessageRepository, UserRepository
+from utils.exception_handler import handle_exception
 
 logger = logging.getLogger(__name__)
 
@@ -23,28 +25,24 @@ class GetAvgMessageCountUseCase:
         """
         Формирует отчет о среднем количестве сообщений пользователя за указанный период.
         """
-        try:
-            user = await self._user_repository.get_user_by_username(report_dto.username)
-            if not user:
-                return "❌ Пользователь не найден в базе данных."
+        user = await self._user_repository.get_user_by_username(report_dto.username)
+        if not user:
+            raise UserNotFoundException()
 
-            start_date, end_date = self._get_period(report_dto.time)
-            messages = await self._message_repository.get_messages_by_period_date(
-                user_id=user.id,
-                start_date=start_date,
-                end_date=end_date,
-            )
+        start_date, end_date = self._get_period(report_dto.time)
+        messages = await self._message_repository.get_messages_by_period_date(
+            user_id=user.id,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
-            return self._generate_report(
-                messages=messages,
-                user=user,
-                time_period=report_dto.time,
-                start_date=start_date,
-                end_date=end_date,
-            )
-        except Exception as e:
-            logger.error(f"Ошибка при формировании отчета: {e}")
-            return f"Произошла ошибка при формировании отчета: {e}"
+        return self._generate_report(
+            messages=messages,
+            user=user,
+            time_period=report_dto.time,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     def _generate_report(
         self,
