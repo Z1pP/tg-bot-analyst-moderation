@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from dto.report import DailyReportDTO
+from exceptions.user import UserNotFoundException
 from models import ChatMessage, User
 from repositories import MessageRepository, UserRepository
 
@@ -29,9 +30,7 @@ class GetDailyReportUseCase:
                 username=daily_report_dto.username
             )
             if user is None:
-                return (
-                    f"Модератор в таким именем - {daily_report_dto.username} не найден."
-                )
+                raise UserNotFoundException()
 
             # Получаем все сооббщения пользователя за день
             messages = await self._message_repository.get_messages_by_period_date(
@@ -40,7 +39,11 @@ class GetDailyReportUseCase:
                 end_date=daily_report_dto.end_date,
             )
 
-            return self._generate_report(messages=messages, user=user)
+            return self._generate_report(
+                messages=messages,
+                user=user,
+                dto=daily_report_dto,
+            )
         except Exception as e:
             logger.error(f"Ошибка при получении отчета: {e}")
             return f"Произошла ошибка при получении отчета: {str(e)}"
@@ -70,7 +73,7 @@ class GetDailyReportUseCase:
 
         # Формируем заголовок отчета
         report = (
-            f"📊 <b>Общее количество сообщений за период</b>"
+            f"📊 <b>Общее количество сообщений за период</b>\n"
             f"👤 Модератор: <b>{user.username}</b>\n"
             f"📅 Период: <b>{self._format_to_date(dto.start_date)} — {self._format_to_date(dto.end_date)}</b>\n"
             f"📊 Всего сообщений: <b>{len(messages)}</b>\n"
@@ -87,7 +90,7 @@ class GetDailyReportUseCase:
         report += "────────────────────────────\n"
         return report
 
-    def _format_to_date(date: datetime) -> str:
+    def _format_to_date(self, date: datetime) -> str:
         """
         Форматирует дату в строку.
         """
