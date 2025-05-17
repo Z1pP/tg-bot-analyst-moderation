@@ -30,16 +30,17 @@ def parse_time(text: str) -> timedelta | None:
 
     try:
         value, unit = match.group(1), match.group(2).lower()
+        value_int = int(value)
 
         match unit:
             case "h":
-                return timedelta(hours=int(value))
+                return timedelta(hours=value_int)
             case "d":
-                return timedelta(days=int(value))
+                return timedelta(days=value_int)
             case "w":
-                return timedelta(weeks=int(value))
+                return timedelta(weeks=value_int)
             case "m":
-                return timedelta(months=int(value))
+                return timedelta(days=value_int * 30)
             case _:
                 return None
     except (ValueError, TypeError):
