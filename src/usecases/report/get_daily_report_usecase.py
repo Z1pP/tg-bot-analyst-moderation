@@ -1,8 +1,12 @@
+import logging
 from collections import defaultdict
+from datetime import datetime
 
 from dto.report import DailyReportDTO
 from models import ChatMessage, User
 from repositories import MessageRepository, UserRepository
+
+logger = logging.getLogger(__name__)
 
 
 class GetDailyReportUseCase:
@@ -30,17 +34,23 @@ class GetDailyReportUseCase:
                 )
 
             # Получаем все сооббщения пользователя за день
-            messages = await self._message_repository.get_messages_by_period(
+            messages = await self._message_repository.get_messages_by_period_date(
                 user_id=user.id,
                 start_date=daily_report_dto.start_date,
                 end_date=daily_report_dto.end_date,
             )
 
-            return self._format_report(messages=messages, user=user)
+            return self._generate_report(messages=messages, user=user)
         except Exception as e:
+            logger.error(f"Ошибка при получении отчета: {e}")
             return f"Произошла ошибка при получении отчета: {str(e)}"
 
-    def _format_report(self, messages: list[ChatMessage], user: User) -> str:
+    def _generate_report(
+        self,
+        messages: list[ChatMessage],
+        user: User,
+        dto: DailyReportDTO,
+    ) -> str:
         """
         Форматирует отчет о количестве сообщений за день.
         """
@@ -60,18 +70,25 @@ class GetDailyReportUseCase:
 
         # Формируем заголовок отчета
         report = (
-            f"📅 <b>Отчет о сообщениях</b>\n"
+            f"📊 <b>Общее количество сообщений за период</b>"
             f"👤 Модератор: <b>{user.username}</b>\n"
+            f"📅 Период: <b>{self._format_to_date(dto.start_date)} — {self._format_to_date(dto.end_date)}</b>\n"
             f"📊 Всего сообщений: <b>{len(messages)}</b>\n"
             "────────────────────────────\n"
         )
 
         # Добавляем данные по каждой дате
         for date in sorted_dates:
-            report += f"\n📅 <b>{date.strftime('%d.%m.%Y')}</b>\n"
+            report += f"\n📅 <b>{self._format_to_date(date)}</b>\n"
             for chat_title, count in date_chat_stats[date].items():
                 report += f"  • «{chat_title}» — <b>{count}</b>\n"
 
         # Итоговый разделитель
         report += "────────────────────────────\n"
         return report
+
+    def _format_to_date(date: datetime) -> str:
+        """
+        Форматирует дату в строку.
+        """
+        return date.strftime("%d.%m.%Y")
