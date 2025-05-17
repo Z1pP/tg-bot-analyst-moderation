@@ -1,5 +1,3 @@
-import logging
-
 from aiogram import Router
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
@@ -10,8 +8,7 @@ from container import container
 from dto.report import AVGReportDTO
 from usecases.report import GetAvgMessageCountUseCase
 from utils.command_parser import parse_time, parse_username
-
-logger = logging.getLogger(__name__)
+from utils.exception_handler import handle_exception
 
 router = Router(name=__name__)
 
@@ -32,9 +29,7 @@ async def report_avg_message_count_handler(message: Message) -> None:
 
         await message.answer(text=report, parse_mode=ParseMode.HTML)
     except Exception as e:
-        logger.error(f"Ошибка при обработке команды: {e}")
-        await message.answer("Произошла ошибка при обработке команды.")
-        return
+        await handle_exception(message, e, context="report_avg_message_count_handler")
 
 
 def break_down_text(text: str) -> AVGReportDTO:
