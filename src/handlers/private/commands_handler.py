@@ -1,5 +1,3 @@
-import logging
-
 from aiogram import Router
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
@@ -8,18 +6,10 @@ from aiogram.types import Message
 from constants import CommandList
 from container import container
 from usecases.user import DeleteUserUseCase, GetOrCreateUserIfNotExistUserCase
+from utils.exception_handler import handle_exception
 from utils.username_validator import get_valid_username
 
 router = Router(name=__name__)
-logger = logging.getLogger(__name__)
-
-
-async def handle_error(message: Message, error: Exception, action: str):
-    """
-    Обрабатывает ошибки и отправляет сообщение пользователю.
-    """
-    logger.error("An error occurred during %s: %s", action, str(error))
-    await message.answer(f"Ошибка при {action}. Попробуйте позже.")
 
 
 @router.message(Command(CommandList.ADD_MODERATOR.name.lower()))
@@ -57,7 +47,7 @@ async def process_adding_moderator(username: str, message: Message) -> None:
             parse_mode=ParseMode.HTML,
         )
     except Exception as e:
-        await handle_error(message, e, "добавлении модератора")
+        await handle_exception(message, e, "добавлении модератора")
 
 
 @router.message(Command(CommandList.REMOVE_MODERATOR.name.lower()))
@@ -87,4 +77,4 @@ async def process_removing_moderator(username: str, message: Message) -> None:
     except ValueError as e:
         await message.answer(str(e))
     except Exception as e:
-        await handle_error(message, e, "удалении модератора")
+        await handle_exception(message, e, "удалении модератора")
