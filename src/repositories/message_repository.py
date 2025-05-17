@@ -1,6 +1,8 @@
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from database.session import async_session
 from dto.message import CreateMessageDTO
@@ -46,6 +48,28 @@ class MessageRepository:
                 print(str(e))
                 await session.rollback()
                 raise e
+
+    async def get_messages_by_period(
+        self,
+        user_id: int,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list[ChatMessage]:
+        async with async_session() as session:
+            query = (
+                select(ChatMessage)
+                .options(joinedload(ChatMessage.chat_session))
+                .where(
+                    ChatMessage.user_id == user_id,
+                    ChatMessage.created_at.between(start_date, end_date),
+                )
+            )
+            try:
+                result = await session.execute(query)
+                return result.scalars().all()
+            except Exception as e:
+                print(str(e))
+                return []
 
     async def create_reply_message(self, dto: CreateMessageReplyDTO) -> MessageReply:
         async with async_session() as session:
