@@ -49,7 +49,7 @@ class MessageRepository:
                 await session.rollback()
                 raise e
 
-    async def get_messages_by_period(
+    async def get_messages_by_period_date(
         self,
         user_id: int,
         start_date: datetime,
