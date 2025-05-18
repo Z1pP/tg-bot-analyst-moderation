@@ -13,9 +13,7 @@ from alembic import context
 from config import settings  # noqa E402
 
 config = context.config
-config.set_main_option(
-    "sqlalchemy.url", "postgresql://postgres:12345@localhost:5432/dev_analytics_bot"
-)
+config.set_main_option("sqlalchemy.url", f"{settings.ALEMBIC_DB_URL}")
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
