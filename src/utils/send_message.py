@@ -7,4 +7,4 @@ async def send_html_message(
     message: Message,
     parse_mode: ParseMode = ParseMode.HTML,
 ) -> None:
-    await message.answer(text=text, parse_mode=parse_mode)
+    await message.reply(text=text, parse_mode=parse_mode)
