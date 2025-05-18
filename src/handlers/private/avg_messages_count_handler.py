@@ -20,7 +20,7 @@ async def report_avg_message_count_handler(message: Message) -> None:
 
     """
     try:
-        report_dto = break_down_text(text=message.text)
+        report_dto = parse_command(text=message.text)
 
         usecase: GetAvgMessageCountUseCase = container.resolve(
             GetAvgMessageCountUseCase
@@ -32,7 +32,7 @@ async def report_avg_message_count_handler(message: Message) -> None:
         await handle_exception(message, e, context="report_avg_message_count_handler")
 
 
-def break_down_text(text: str) -> AVGReportDTO:
+def parse_command(text: str) -> AVGReportDTO:
     segments = text.split(" ")
 
     if len(segments) > 3:

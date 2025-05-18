@@ -19,7 +19,7 @@ router = Router(name=__name__)
 @router.message(Command(CommandList.REPORT_DAILY.name.lower()))
 async def report_daily_handler(message: Message) -> None:
     try:
-        report_dto = break_down_text(text=message.text)
+        report_dto = parse_command(text=message.text)
 
         usecase: GetDailyReportUseCase = container.resolve(GetDailyReportUseCase)
         report = await usecase.execute(daily_report_dto=report_dto)
@@ -34,7 +34,7 @@ async def report_daily_handler(message: Message) -> None:
         return
 
 
-def break_down_text(text: str) -> DailyReportDTO:
+def parse_command(text: str) -> DailyReportDTO:
     segments = text.split(" ")
 
     if len(segments) > 3:
