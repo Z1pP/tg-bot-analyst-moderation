@@ -13,3 +13,9 @@ class DailyReportDTO:
 class AVGReportDTO:
     username: str
     time: timedelta
+
+
+@dataclass
+class ResponseTimeReportDTO:
+    username: str
+    days: int = 7  # По умолчанию отчет за неделю
