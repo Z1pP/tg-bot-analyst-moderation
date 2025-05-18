@@ -10,6 +10,9 @@ router = Router(name=__name__)
 
 @router.message(Command(CommandList.START.name.lower()))
 async def start_handler(message: Message) -> None:
+    """
+    Выводит приветственное сообщение
+    """
     username = message.from_user.full_name
     welcome_text = Dialog.START_TEXT.format(username=username)
 
