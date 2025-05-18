@@ -9,6 +9,7 @@ from middlewares import registry_middlewares
 
 
 async def init_bot() -> tuple[Bot, Dispatcher]:
+    print(settings.model_dump())
     bot = Bot(
         token=settings.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
