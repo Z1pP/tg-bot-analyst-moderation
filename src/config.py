@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     IS_DEVELOPMENT: bool = Field(False, alias="IS_DEVELOPMENT")
 
     # Используем строку вместо списка для начального чтения
-    ADMINS_LIST_STR: str = Field("", alias="ADMINS_LIST")
+    ADMINS_LIST_STR: str = Field("", alias="ADMINS_LIST_STR")
 
     @property
     def ADMINS_LIST(self) -> List[str]:
