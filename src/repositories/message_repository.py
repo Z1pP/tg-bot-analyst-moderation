@@ -6,8 +6,7 @@ from sqlalchemy.orm import joinedload
 
 from database.session import async_session
 from dto.message import CreateMessageDTO
-from dto.message_reply import CreateMessageReplyDTO
-from models import ChatMessage, MessageReply
+from models import ChatMessage
 
 
 class MessageRepository:
@@ -70,22 +69,3 @@ class MessageRepository:
             except Exception as e:
                 print(str(e))
                 return []
-
-    async def create_reply_message(self, dto: CreateMessageReplyDTO) -> MessageReply:
-        async with async_session() as session:
-            try:
-                new_reply = MessageReply(
-                    chat_id=dto.chat_id,
-                    original_message_url=dto.original_message_url,
-                    reply_message_id=dto.reply_message_id,
-                    reply_user_id=dto.reply_user_id,
-                    response_time_seconds=dto.response_time_seconds,
-                )
-                session.add(new_reply)
-                await session.commit()
-                await session.refresh(new_reply)
-                return new_reply
-            except Exception as e:
-                print(str(e))
-                await session.rollback()
-                raise e
