@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Optional
 
 
 @dataclass
@@ -18,4 +19,4 @@ class AVGReportDTO:
 @dataclass
 class ResponseTimeReportDTO:
     username: str
-    days: int = 7  # По умолчанию отчет за неделю
+    report_date: Optional[datetime.date] = None
