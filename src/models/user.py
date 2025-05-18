@@ -5,16 +5,12 @@ from sqlalchemy import Boolean, Index, String
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from constants.enums import UserRole
+
 from .base import BaseModel
 
 if TYPE_CHECKING:
     from .message import ChatMessage
-
-
-class UserRole(Enum):
-    ADMIN = "admin"
-    MODERATOR = "moderator"
-    USER = "user"
 
 
 class User(BaseModel):
