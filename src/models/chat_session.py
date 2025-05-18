@@ -7,6 +7,7 @@ from .base import BaseModel
 
 if TYPE_CHECKING:
     from .message import ChatMessage
+    from .message_reply import MessageReply
 
 
 class ChatSession(BaseModel):
@@ -25,5 +26,10 @@ class ChatSession(BaseModel):
     # Relationships
     messages: Mapped[list["ChatMessage"]] = relationship(
         "ChatMessage",
+        back_populates="chat_session",
+    )
+
+    replies: Mapped[list["MessageReply"]] = relationship(
+        "MessageReply",
         back_populates="chat_session",
     )
