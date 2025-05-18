@@ -3,7 +3,7 @@ from typing import Optional
 from aiogram.filters import Filter
 from aiogram.types import Message
 
-from constants import ChatType
+from constants.enums import ChatType
 
 
 class GroupTypeFilter(Filter):
