@@ -91,10 +91,10 @@ async def process_moderator_reply(message: Message, sender: User, chat: ChatSess
         # Сохраняем связь в MessageReply
         await reply_usecase.execute(reply_message_dto=reply_dto)
 
-        await message.answer("Сообщение сохранено")
+        return
     except Exception as e:
         logger.error("Error saving reply message: %s", str(e))
-        await message.answer("Ошибка при сохранении сообщения")
+        return
 
 
 async def precess_moderator_message(message: Message, sender: User, chat: ChatSession):
@@ -112,7 +112,7 @@ async def precess_moderator_message(message: Message, sender: User, chat: ChatSe
 
     try:
         await usecase.execute(message_dto=msg_dto)
-        await message.answer("Сообщение сохранено")
+        return
     except Exception as e:
         logger.error("Error saving message: %s", str(e))
-        await message.answer("Ошибка при сохранении сообщения")
+        return
