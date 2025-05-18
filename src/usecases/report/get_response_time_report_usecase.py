@@ -1,0 +1,115 @@
+from collections import defaultdict
+from datetime import datetime, timedelta
+from statistics import mean, median
+
+from dto.report import ResponseTimeReportDTO
+from exceptions.user import UserNotFoundException
+from models import MessageReply, User
+from repositories.message_reply_repository import MessageReplyRepository
+from repositories.user_repository import UserRepository
+
+
+class GetResponseTimeReportUseCase:
+    def __init__(
+        self,
+        msg_reply_repository: MessageReplyRepository,
+        user_repository: UserRepository,
+    ):
+        self._msg_reply_repository = msg_reply_repository
+        self._user_repository = user_repository
+
+    async def execute(self, report_dto: ResponseTimeReportDTO) -> str:
+        user = await self._user_repository.get_user_by_username(
+            username=report_dto.username
+        )
+
+        if not user:
+            raise UserNotFoundException()
+
+        start_date, end_date = self._get_period(days=report_dto.days)
+
+        msg_replies = await self._msg_reply_repository.get_replies_by_user_and_period(
+            user_id=user.id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        return self._generate_report(
+            replies=msg_replies,
+            user=user,
+            days=report_dto.days,
+        )
+
+    def _get_period(self, days: int) -> tuple[datetime, datetime]:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        return start_date, end_date
+
+    def _generate_report(
+        self,
+        replies: list[MessageReply],
+        user: User,
+        days: int,
+    ) -> str:
+        """
+        Формирует текстовый отчет о времени ответа.
+        """
+        # Собираем статистику по времени ответа
+        response_times = [reply.response_time_seconds for reply in replies]
+
+        # Группируем по чатам
+        chat_stats = defaultdict(list)
+        for reply in replies:
+            chat_title = (
+                reply.chat_session.title
+                if hasattr(reply, "chat_session")
+                else "Неизвестный чат"
+            )
+            chat_stats[chat_title].append(reply.response_time_seconds)
+
+        # Рассчитываем статистику
+        avg_time = mean(response_times)
+        median_time = median(response_times)
+        min_time = min(response_times)
+        max_time = max(response_times)
+        total_replies = len(replies)
+
+        # Форматируем отчет
+        report = (
+            f"⏱ <b>Отчет о времени ответа</b>\n"
+            f"👤 Пользователь: <b>{user.username}</b>\n"
+            f"📅 Период: <b>последние {days} дней</b>\n\n"
+            f"📊 <b>Общая статистика:</b>\n"
+            f"• Всего ответов: <b>{total_replies}</b>\n"
+            f"• Среднее время ответа: <b>{self._format_seconds(avg_time)}</b>\n"
+            f"• Медианное время: <b>{self._format_seconds(median_time)}</b>\n"
+            f"• Минимальное время: <b>{self._format_seconds(min_time)}</b>\n"
+            f"• Максимальное время: <b>{self._format_seconds(max_time)}</b>\n"
+            f"────────────────────────────\n\n"
+        )
+
+        # Добавляем статистику по чатам
+        report += "<b>📊 Статистика по чатам:</b>\n"
+        for chat_title, times in sorted(chat_stats.items(), key=lambda x: mean(x[1])):
+            chat_avg = mean(times)
+            chat_count = len(times)
+            report += f"• «{chat_title}» — <b>{chat_count}</b> ответов, среднее время: <b>{self._format_seconds(chat_avg)}</b>\n"
+
+        report += (
+            f"\n<i>Отчет сгенерирован {datetime.now().strftime('%d.%m.%Y %H:%M')}</i>"
+        )
+
+        return report
+
+    def _format_seconds(self, seconds: float) -> str:
+        """
+        Форматирует секунды в читаемый формат.
+        """
+        if seconds < 60:
+            return f"{round(seconds, 1)} сек."
+        elif seconds < 3600:
+            minutes = seconds / 60
+            return f"{round(minutes, 1)} мин."
+        else:
+            hours = seconds / 3600
+            return f"{round(hours, 1)} ч."
