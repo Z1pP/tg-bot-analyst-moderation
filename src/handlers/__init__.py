@@ -5,6 +5,7 @@ from .private.avg_messages_count_handler import router as avg_messages_count_rou
 from .private.commands_handler import router as commands_router
 from .private.help_handler import router as help_router
 from .private.report_daily_handler import router as report_daily_router
+from .private.response_time import router as response_time_router
 from .private.start_handler import router as start_router
 
 
@@ -15,3 +16,4 @@ def registry_routers(disptcher: Dispatcher):
     disptcher.include_router(avg_messages_count_router)
     disptcher.include_router(start_router)
     disptcher.include_router(help_router)
+    disptcher.include_router(response_time_router)
