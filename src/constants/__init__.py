@@ -15,12 +15,3 @@ class CommandList(str, Enum):
     EXPORT_START = (
         "Экспортировать данные в выбранном формате. Пример: /export_start csv"
     )
-
-
-class ChatType(str, Enum):
-    """Типы чатов."""
-
-    PRIVATE = "private"
-    GROUP = "group"
-    SUPERGROUP = "supergroup"
-    CHANNEL = "channel"
