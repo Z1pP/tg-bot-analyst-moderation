@@ -5,7 +5,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import Message
 from cachetools import TTLCache
 
-from constants import ChatType
+from constants.enums import ChatType
 from container import container
 from models import User
 from models.user import UserRole
