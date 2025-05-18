@@ -22,11 +22,20 @@ def _get_message_type(message: Message) -> MessageType:
         return MessageType.MESSAGE
 
 
+def _is_bot(message: Message) -> bool:
+    return message.from_user.is_bot
+
+
 @router.message(GroupTypeFilter())
 async def group_message_handler(message: Message, **data):
     """
     Обрабатывет сообщения которые приходит только от модераторов чата
     """
+
+    # Сообщения от ботов не сохраняются
+    if _is_bot(message=message):
+        return
+
     sender: User = data.get("sender")
     chat: ChatSession = data.get("chat")
 
