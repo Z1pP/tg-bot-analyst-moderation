@@ -1,6 +1,7 @@
 from datetime import datetime, time, timedelta, timezone
 from typing import Optional
 
+from constants.work_time import TOLERANCE, WORK_END, WORK_START
 from dto.activity import CreateActivityDTO, ResultActivityDTO
 from dto.message import ResultMessageDTO
 from models import ModeratorActivity
@@ -8,10 +9,6 @@ from repositories import ActivityRepository
 
 
 class TrackModeratorActivityUseCase:
-    WORK_START = time(10, 0)  # 10:00
-    WORK_END = time(22, 0)  # 22:00
-    TOLERANCE = timedelta(minutes=10)  # Допустимое отклонение
-
     def __init__(self, activity_repository: ActivityRepository):
         self.activity_repository = activity_repository
 
@@ -94,8 +91,8 @@ class TrackModeratorActivityUseCase:
             True если рабочее время, иначе False
         """
         current_time = current_dt.time()
-        start = self._adjust_time_with_tolerance(self.WORK_START, -self.TOLERANCE)
-        end = self._adjust_time_with_tolerance(self.WORK_END, self.TOLERANCE)
+        start = self._adjust_time_with_tolerance(WORK_START, -TOLERANCE)
+        end = self._adjust_time_with_tolerance(WORK_END, TOLERANCE)
 
         return start <= current_time <= end
 
