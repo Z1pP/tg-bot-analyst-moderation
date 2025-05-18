@@ -68,8 +68,8 @@ class Dialog:
     • <code>/report_daily 15.06-15.07 @moderator1</code> - отчет за месяц
 
     <b>3. Отчет о времени ответа:</b>
-    • <code>/report_response_time @moderator1</code> - время ответа за последние 7 дней
-    • <code>/report_response_time @moderator1 14</code> - время ответа за последние 14 дней
+    • <code>/report_response_time @moderator1</code> - время ответа за текущий день
+    • <code>/report_response_time @moderator1 17.05</code> - время ответа за 17.05.2025 
 
     <i>Примечание: Рабочее время установлено с {WORK_START} до {WORK_END} с допуском {TOLERANCE} минут. Сообщения вне рабочего времени не учитываются в статистике времени ответа.</i>
     """
