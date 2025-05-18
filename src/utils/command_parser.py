@@ -49,3 +49,13 @@ def parse_time(text: str) -> timedelta | None:
 
 def parse_username(text: str) -> str:
     return validate_username(username=text)
+
+
+def parse_days(text: str) -> int:
+    try:
+        days = int(text.strip())
+        if 0 > days > 365:
+            return None
+        return days
+    except (ValueError, TypeError):
+        return None
