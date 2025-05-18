@@ -3,6 +3,7 @@ from punq import Container
 from repositories import (
     ActivityRepository,
     ChatRepository,
+    MessageReplyRepository,
     MessageRepository,
     UserRepository,
 )
@@ -13,7 +14,11 @@ from usecases.message import (
     SaveMessageUseCase,
 )
 from usecases.moderator_activity import TrackModeratorActivityUseCase
-from usecases.report import GetAvgMessageCountUseCase, GetDailyReportUseCase
+from usecases.report import (
+    GetAvgMessageCountUseCase,
+    GetDailyReportUseCase,
+    GetResponseTimeReportUseCase,
+)
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
@@ -29,6 +34,7 @@ def setup_container() -> Container:
     container.register(ChatRepository)
     container.register(MessageRepository)
     container.register(ActivityRepository)
+    container.register(MessageReplyRepository)
 
     # user usecases
     container.register(GetOrCreateUserIfNotExistUserCase)
@@ -46,6 +52,7 @@ def setup_container() -> Container:
     # report usecases
     container.register(GetDailyReportUseCase)
     container.register(GetAvgMessageCountUseCase)
+    container.register(GetResponseTimeReportUseCase)
 
     return container
 
