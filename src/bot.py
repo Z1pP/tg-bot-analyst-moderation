@@ -16,7 +16,7 @@ async def init_bot() -> tuple[Bot, Dispatcher]:
     await start_commands.set_bot_commands(bot=bot)
 
     dp = Dispatcher()
-    registry_routers(disptcher=dp)
+    registry_routers(dispatcher=dp)
     registry_middlewares(dispatcher=dp)
 
     return bot, dp
