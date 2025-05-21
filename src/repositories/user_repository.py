@@ -3,6 +3,7 @@ from typing import Optional
 
 from sqlalchemy import select
 
+from constants.enums import UserRole
 from database.session import async_session
 from models import User
 
@@ -16,6 +17,26 @@ class UserRepository:
                 result = await session.execute(select(User).where(User.tg_id == tg_id))
                 user = result.scalars().first()
                 return user
+            except Exception as e:
+                logger.error("An error occurred when receiving a user: %s", str(e))
+                return None
+
+    async def get_all_users(self, exclude: list[str]) -> list[User]:
+        if exclude is None:
+            exclude = []
+
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(User)
+                    .where(
+                        User.username.not_in(exclude),
+                        User.role == UserRole.MODERATOR,
+                    )
+                    .order_by(User.username),
+                )
+
+                return result.scalars().all()
             except Exception as e:
                 logger.error("An error occurred when receiving a user: %s", str(e))
                 return None
