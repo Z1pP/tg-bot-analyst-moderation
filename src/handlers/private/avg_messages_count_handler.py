@@ -1,49 +1,81 @@
-from aiogram import Router
-from aiogram.enums import ParseMode
-from aiogram.filters import Command
+import logging
+
+from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from constants import CommandList
 from container import container
 from dto.report import AVGReportDTO
+from keyboards.reply.menu import get_moderators_list_kb
+from keyboards.reply.user_actions import KbCommands
+from states.user_states import UserManagement
 from usecases.report import GetAvgMessageCountUseCase
-from utils.command_parser import parse_time, parse_username
+from utils.command_parser import parse_time
 from utils.exception_handler import handle_exception
+from utils.send_message import send_html_message_with_kb
 
 router = Router(name=__name__)
 
+logger = logging.getLogger(name=__name__)
 
-@router.message(Command(CommandList.REPORT_AVG.name.lower()))
-async def report_avg_message_count_handler(message: Message) -> None:
+
+@router.message(F.text == KbCommands.REPORT_AVG)
+async def report_avg_handler(message: Message, state: FSMContext) -> None:
     """
-    Обработчик команды /report_avg для получения отчета о среднем количестве сообщений за период.
+    Обработчик запроса на создание отчета о средних сообщениях.
+    Запрашивает период для отчета.
+    """
 
+    user_data = await state.get_data()
+    username = user_data.get("username")
+
+    await state.set_state(UserManagement.report_avg_selecting_period)
+
+    if username:
+        await state.update_data(report_username=username)
+        await send_html_message_with_kb(
+            message=message,
+            text="Введите период для отчета в формате:\n"
+            "• <b>Xh</b> - часы (например, 6h)\n"
+            "• <b>Xd</b> - дни (например, 1d)\n"
+            "• <b>Xw</b> - недели (например, 2w)\n"
+            "• <b>Xm</b> - месяцы (например, 1m)",
+        )
+
+    else:
+        await state.clear()
+        await send_html_message_with_kb(
+            message=message,
+            text="Выберите пользователя заново",
+            reply_markup=get_moderators_list_kb(),
+        )
+
+
+@router.message(UserManagement.report_avg_selecting_period)
+async def process_avg_report_input(message: Message, state: FSMContext) -> None:
+    """
+    Обрабатывает ввод периода и пользователя для отчета о средних сообщениях.
     """
     try:
-        report_dto = parse_command(text=message.text)
+        user_data = await state.get_data()
+        saved_username = user_data.get("username")
 
-        usecase: GetAvgMessageCountUseCase = container.resolve(
-            GetAvgMessageCountUseCase
-        )
+        time = parse_time(text=message.text)
+
+        # Формируем отчет
+        report_dto = AVGReportDTO(username=saved_username, time=time)
+
+        usecase = container.resolve(GetAvgMessageCountUseCase)
         report = await usecase.execute(report_dto=report_dto)
 
-        await message.answer(text=report, parse_mode=ParseMode.HTML)
+        if saved_username:
+            await state.set_state(UserManagement.viewing_user)
+        else:
+            await state.clear()
+
+        await send_html_message_with_kb(
+            message=message,
+            text=report,
+        )
     except Exception as e:
-        await handle_exception(message, e, context="report_avg_message_count_handler")
-
-
-def parse_command(text: str) -> AVGReportDTO:
-    segments = text.split(" ")
-
-    if len(segments) > 3:
-        raise ValueError("Некорректно введена команда")
-
-    time = parse_time(text=segments[1])
-    if time is None:
-        raise ValueError("Некорректно введено время")
-
-    username = parse_username(text=segments[2])
-    if username is None:
-        raise ValueError("Некорректно введен username")
-
-    return AVGReportDTO(username=username, time=time)
+        await handle_exception(message, e, context="process_avg_report_input")
