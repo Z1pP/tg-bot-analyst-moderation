@@ -10,7 +10,7 @@ from container import container
 from dto.report import ResponseTimeReportDTO
 from usecases.report import GetResponseTimeReportUseCase
 from utils.exception_handler import handle_exception
-from utils.send_message import send_html_message
+from utils.send_message import send_html_message_with_kb
 from utils.username_validator import validate_username
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ async def response_time_report_handler(message: Message) -> None:
         report_dto = parse_command(message.text)
         usecase = container.resolve(GetResponseTimeReportUseCase)
         report = await usecase.execute(report_dto=report_dto)
-        await send_html_message(message=message, text=report)
+        await send_html_message_with_kb(message=message, text=report)
     except Exception as e:
         logger.error(f"Ошибка при обработке команды: {e}")
         await handle_exception(message, e)

@@ -9,7 +9,7 @@ from container import container
 from dto.report import DailyReportDTO
 from usecases.report import GetDailyReportUseCase
 from utils.command_parser import parse_data, parse_username
-from utils.send_message import send_html_message
+from utils.send_message import send_html_message_with_kb
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ async def report_daily_handler(message: Message) -> None:
         usecase: GetDailyReportUseCase = container.resolve(GetDailyReportUseCase)
         report = await usecase.execute(daily_report_dto=report_dto)
 
-        await send_html_message(message=message, text=report)
+        await send_html_message_with_kb(message=message, text=report)
     except ValueError as e:
         await message.answer(str(e))
         return

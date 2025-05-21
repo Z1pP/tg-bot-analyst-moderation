@@ -4,7 +4,7 @@ from typing import Optional
 from aiogram.types import Message
 
 from exceptions.base import BotBaseException
-from utils.send_message import send_html_message
+from utils.send_message import send_html_message_with_kb
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +24,13 @@ async def handle_exception(
         logger.warning(
             f"Обработано исключение{' в ' + context if context else ''}: {exc}"
         )
-        await send_html_message(message=message, text=exc.get_user_message())
+        await send_html_message_with_kb(message=message, text=exc.get_user_message())
     else:
         logger.error(
             f"Необработанное исключение{' в ' + context if context else ''}: {exc}",
             exc_info=True,
         )
-        await send_html_message(
+        await send_html_message_with_kb(
             message=message,
             text="❌ Произошла непредвиденная ошибка. Попробуйте позже.",
         )
