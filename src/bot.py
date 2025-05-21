@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
+from callbacks import register_callback_routers
 from commands import start_commands
 from config import settings
 from handlers import registry_routers
@@ -19,5 +20,6 @@ async def init_bot() -> tuple[Bot, Dispatcher]:
     dp = Dispatcher()
     registry_routers(dispatcher=dp)
     registry_middlewares(dispatcher=dp)
+    register_callback_routers(dispatcher=dp)
 
     return bot, dp
