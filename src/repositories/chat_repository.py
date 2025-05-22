@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import select
@@ -23,6 +24,7 @@ class ChatRepository:
                 chat = ChatSession(
                     chat_id=chat_id,
                     title=title,
+                    created_at=datetime.now(),
                 )
                 session.add(chat)
                 await session.commit()
