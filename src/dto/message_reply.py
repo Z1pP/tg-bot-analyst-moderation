@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 from models import MessageReply
 
@@ -16,7 +15,7 @@ class CreateMessageReplyDTO:
     reply_user_id: int
     original_message_date: datetime
     reply_message_date: datetime
-    response_time_seconds: Optional[int] = None
+    response_time_seconds: int
 
 
 @dataclass
