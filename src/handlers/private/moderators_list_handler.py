@@ -17,12 +17,11 @@ async def moderators_list_handler(message: Message) -> None:
     """
     Обработчик команды для получения списка модераторов.
     """
-    username = message.from_user.username
 
     try:
         usecase: GetAllUsersUseCase = container.resolve(GetAllUsersUseCase)
 
-        users = await usecase.execute(admin_username=username)
+        users = await usecase.execute()
 
         if not users:
             await send_html_message_with_kb(
@@ -30,6 +29,7 @@ async def moderators_list_handler(message: Message) -> None:
                 text="Список модераторов пуст. Добавьте модераторов",
                 reply_markup=get_moderators_list_kb(),
             )
+            return
 
         await send_html_message_with_kb(
             message=message,
