@@ -14,8 +14,8 @@ class CreateMessageDTO:
     message_id: str
     message_type: str
     content_type: str
+    created_at: datetime
     text: Optional[str] = None
-    created_at: Optional[datetime] = None
 
 
 @dataclass
