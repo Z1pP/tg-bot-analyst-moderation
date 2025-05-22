@@ -43,6 +43,7 @@ class MessageReplyRepository:
                     reply_message_id=dto.reply_message_id,
                     reply_user_id=dto.reply_user_id,
                     response_time_seconds=dto.response_time_seconds,
+                    created_at=datetime.now(),
                 )
                 session.add(new_reply)
                 await session.commit()
