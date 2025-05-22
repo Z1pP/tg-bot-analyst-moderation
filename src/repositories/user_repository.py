@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import select
@@ -21,16 +22,12 @@ class UserRepository:
                 logger.error("An error occurred when receiving a user: %s", str(e))
                 return None
 
-    async def get_all_users(self, exclude: list[str]) -> list[User]:
-        if exclude is None:
-            exclude = []
-
+    async def get_all_users(self) -> list[User]:
         async with async_session() as session:
             try:
                 result = await session.execute(
                     select(User)
                     .where(
-                        User.username.not_in(exclude),
                         User.role == UserRole.MODERATOR,
                     )
                     .order_by(User.username),
@@ -62,6 +59,7 @@ class UserRepository:
                 user = User(
                     tg_id=tg_id,
                     username=username,
+                    created_at=datetime.now(),
                 )
                 session.add(user)
                 await session.commit()
