@@ -37,7 +37,9 @@ class MessageRepository:
                     chat_id=dto.chat_id,
                     message_id=dto.message_id,
                     message_type=dto.message_type,
+                    content_type=dto.content_type,
                     text=dto.text,
+                    created_at=dto.created_at,
                 )
                 session.add(new_message)
                 await session.commit()
