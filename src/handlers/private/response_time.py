@@ -76,6 +76,8 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
         usecase: GetResponseTimeReportUseCase = container.resolve(
             GetResponseTimeReportUseCase
         )
+
+        # Получаем отчет
         report = await usecase.execute(report_dto=report_dto)
 
         # Возвращаемся в состояние просмотра пользователя
