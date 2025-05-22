@@ -1,4 +1,6 @@
 from aiogram import F, Router
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import KbCommands
@@ -9,11 +11,16 @@ router = Router(name=__name__)
 
 
 @router.message(F.text == KbCommands.MENU)
-async def menu_handler(message: Message) -> None:
+@router.message(Command("menu"))
+@router.message(Command("start"))
+async def menu_handler(message: Message, state: FSMContext) -> None:
     """
-    Обработчик команды /menu и кнопки "Главное меню".
+    Обработчик команды /menu, /start и кнопки "Главное меню".
     Отображает главное меню бота.
     """
+    # Очищаем состояние FSM
+    await state.clear()
+
     user_name = message.from_user.first_name
 
     menu_text = (
