@@ -1,80 +1,123 @@
-from aiogram import Router
-from aiogram.enums import ParseMode
-from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 
-from constants import CommandList
+from constants import KbCommands
 from container import container
+from keyboards.inline.moderators import remove_inline_kb
+from keyboards.reply.menu import get_moderators_list_kb
+from states.user_states import UsernameManagement
 from usecases.user import DeleteUserUseCase, GetOrCreateUserIfNotExistUserCase
+from usecases.user.get_all_users import GetAllUsersUseCase
 from utils.exception_handler import handle_exception
-from utils.username_validator import get_valid_username
+from utils.send_message import send_html_message_with_kb
+from utils.username_validator import validate_username
 
 router = Router(name=__name__)
 
 
-@router.message(Command(CommandList.ADD_MODERATOR.name.lower()))
-async def add_moderator_handler(message: Message) -> None:
+@router.message(F.text == KbCommands.ADD_MODERATOR)
+async def add_moderator_handler(message: Message, state: FSMContext) -> None:
     """
     Хендлер для команды добавления модератора.
     """
-    username = await get_valid_username(message)
-    if username is None:
-        return
+    await state.set_state(UsernameManagement.imput_username)
 
-    await process_adding_moderator(username=username, message=message)
+    await send_html_message_with_kb(
+        message=message,
+        text="Введите username или @username нового модератора",
+    )
 
 
-async def process_adding_moderator(username: str, message: Message) -> None:
+@router.message(UsernameManagement.imput_username)
+async def process_adding_moderator(message: Message, state: FSMContext) -> None:
     """
     Обработчик для добавления нового модератора.
     """
-    use_case: GetOrCreateUserIfNotExistUserCase = container.resolve(
-        GetOrCreateUserIfNotExistUserCase
-    )
+
+    username = validate_username(message.text)
+
+    if not username:
+        await send_html_message_with_kb(
+            message=message,
+            text="Неверный формат username или @username",
+        )
+        return
 
     try:
+        use_case: GetOrCreateUserIfNotExistUserCase = container.resolve(
+            GetOrCreateUserIfNotExistUserCase
+        )
         user = await use_case.execute(username=username)
 
         if user.is_existed:
-            await message.answer(
+            await send_html_message_with_kb(
+                message=message,
                 text=f"Пользователь <b>{username}</b> уже является модератором",
-                parse_mode=ParseMode.HTML,
+            )
+
+        await send_html_message_with_kb(
+            message=message,
+            text=f"Пользователь <b>{username}</b> добавлен в список модераторов",
+        )
+    except Exception as e:
+        await handle_exception(message, e, "process_adding_moderator")
+    finally:
+        await state.clear()
+
+
+@router.message(F.text == KbCommands.REMOVE_MODERATOR)
+async def remove_moderator_handler(message: Message) -> None:
+    """
+    Обработчик команды для получения списка модераторов.
+    """
+
+    try:
+        usecase: GetAllUsersUseCase = container.resolve(GetAllUsersUseCase)
+
+        users = await usecase.execute()
+
+        if not users:
+            await send_html_message_with_kb(
+                message=message,
+                text="Список модераторов пуст. Добавьте модераторов",
+                reply_markup=get_moderators_list_kb(),
             )
             return
 
-        await message.answer(
-            text=f"Пользователь <b>{username}</b> добавлен в список модераторов",
-            parse_mode=ParseMode.HTML,
+        await send_html_message_with_kb(
+            message=message,
+            text=f"Всего {len(users)} модераторов",
+            reply_markup=remove_inline_kb(users),
         )
     except Exception as e:
-        await handle_exception(message, e, "добавлении модератора")
+        await handle_exception(
+            message=message,
+            exc=e,
+            context="moderators_list_handler",
+        )
 
 
-@router.message(Command(CommandList.REMOVE_MODERATOR.name.lower()))
-async def remove_moderator_handler(message: Message) -> None:
-    """
-    Хендлер для команды удаления модератора.
-    """
-    username = await get_valid_username(message)
-    if username is None:
-        return
-
-    await process_removing_moderator(username=username, message=message)
-
-
-async def process_removing_moderator(username: str, message: Message) -> None:
+@router.callback_query(F.data.startswith("remove_user__"))
+async def process_removing_moderator(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     """
     Обработчик для удаления модератора.
     """
+    username = callback.data.split("__")[1]
+
     use_case: DeleteUserUseCase = container.resolve(DeleteUserUseCase)
 
     try:
+        await callback.answer()
+
         await use_case.execute(username=username)
-        await message.answer(
+        await send_html_message_with_kb(
+            message=callback.message,
             text=f"Пользователь <b>{username}</b> удален из списка модераторов",
-            parse_mode=ParseMode.HTML,
         )
-    except ValueError as e:
-        await message.answer(str(e))
     except Exception as e:
-        await handle_exception(message, e, "удалении модератора")
+        await handle_exception(callback.message, e, "удалении модератора")
+    finally:
+        await state.clear()
