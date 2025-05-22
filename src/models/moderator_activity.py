@@ -1,5 +1,12 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, Index, Integer
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from .message import ChatMessage
+    from .user import User
+
 
 from .base import BaseModel
 
@@ -32,6 +39,24 @@ class ModeratorActivity(BaseModel):
     inactive_period_seconds: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
+    )
+
+    user: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[user_id],
+        back_populates="activities",
+    )
+
+    last_message: Mapped["ChatMessage"] = relationship(
+        "ChatMessage",
+        foreign_keys=[last_message_id],
+        back_populates="last_activities",
+    )
+
+    next_message: Mapped["ChatMessage"] = relationship(
+        "ChatMessage",
+        foreign_keys=[next_message_id],
+        back_populates="next_activities",
     )
 
     __table_args__ = (
