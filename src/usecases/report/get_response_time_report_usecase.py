@@ -70,12 +70,12 @@ class GetResponseTimeReportUseCase:
         report_date: datetime.date,
     ) -> str:
         """
-        Формирует текстовый отчет о времени ответа.
+        Формирует текстовый отчет о времени ответа в заданном формате.
         """
         if not replies:
             return (
-                f"⚠️ <b>Отчет о времени ответа</b>\n\n"
-                f"Нет данных за {report_date.strftime('%d.%m.%Y')}."
+                f"Отчёт: @{user.username} за {report_date.strftime('%d.%m.%Y')}\n\n"
+                f"⚠️ Нет данных за указанный период."
             )
 
         # Собираем статистику по времени ответа
@@ -86,8 +86,8 @@ class GetResponseTimeReportUseCase:
         for reply in replies:
             chat_title = (
                 reply.chat_session.title
-                if hasattr(reply, "chat_session")
-                else "Неизвестный чат"
+                if hasattr(reply, "chat_session") and reply.chat_session.title
+                else "Без названия"
             )
             chat_stats[chat_title].append(reply.response_time_seconds)
 
@@ -97,30 +97,32 @@ class GetResponseTimeReportUseCase:
         min_time = min(response_times)
         max_time = max(response_times)
         total_replies = len(replies)
+        total_chats = len(chat_stats)
 
         # Форматируем отчет
         report = (
-            f"⏱ <b>Отчет о времени ответа</b>\n"
-            f"👤 Пользователь: <b>{user.username}</b>\n"
-            f"📅 Дата: <b>{report_date.strftime('%d.%m.%Y')}</b>\n\n"
-            f"📊 <b>Общая статистика:</b>\n"
-            f"• Всего ответов: <b>{total_replies}</b>\n"
-            f"• Среднее время ответа: <b>{self._format_seconds(avg_time)}</b>\n"
-            f"• Медианное время: <b>{self._format_seconds(median_time)}</b>\n"
-            f"• Минимальное время: <b>{self._format_seconds(min_time)}</b>\n"
-            f"• Максимальное время: <b>{self._format_seconds(max_time)}</b>\n"
-            f"────────────────────────────\n\n"
+            f"Отчёт: @{user.username} за {report_date.strftime('%d.%m.%Y')}\n\n"
+            f"📊 Всего сообщений в чатах: <b>{total_replies}</b>\n"
         )
 
         # Добавляем статистику по чатам
-        report += "<b>📊 Статистика по чатам:</b>\n"
-        for chat_title, times in sorted(chat_stats.items(), key=lambda x: mean(x[1])):
-            chat_avg = mean(times)
+        for chat_title, times in sorted(chat_stats.items(), key=lambda x: -len(x[1])):
             chat_count = len(times)
-            report += f"• «{chat_title}» — <b>{chat_count}</b> ответов, среднее время: <b>{self._format_seconds(chat_avg)}</b>\n"
+            chat_avg = mean(times)
+            report += (
+                f"В чате <b>{chat_title}</b> — <b>{chat_count}</b> "
+                f"- ср. время отв. — <b>{self._format_seconds(chat_avg)}</b>\n"
+            )
 
+        # Добавляем общую статистику по времени ответа
         report += (
-            f"\n<i>Отчет сгенерирован {datetime.now().strftime('%d.%m.%Y %H:%M')}</i>"
+            f"\n⏱️ Время ответа:\n"
+            f"Всего ответов — <b>{total_replies}</b>\n"
+            f"Min|max ответ: <b>{self._format_seconds(min_time)}</b> и "
+            f"<b>{self._format_seconds(max_time)}</b>\n"
+            f"AVG и медиан. ответ: <b>{self._format_seconds(avg_time)}</b> и "
+            f"<b>{self._format_seconds(median_time)}</b>\n\n"
+            f"<i>Отчет сгенерирован: {datetime.now().strftime('%d.%m.%Y %H:%M')}</i>"
         )
 
         return report
