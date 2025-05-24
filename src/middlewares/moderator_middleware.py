@@ -42,7 +42,7 @@ class UserIdentityMiddleware(BaseMiddleware):
                 return
 
             # Игнорирует сообщение если пользователь не является модератором или администратором
-            if not self._is_moderator_or_admin(user=user):
+            if not self._is_moderator(user=user):
                 logger.warning("User is not a moderator or admin: %s", username)
                 return
 
@@ -83,8 +83,8 @@ class UserIdentityMiddleware(BaseMiddleware):
     def _add_to_cache(self, username: str, user: User) -> None:
         self._cache[username] = user
 
-    def _is_moderator_or_admin(self, user: User) -> bool:
-        return user.role == UserRole.MODERATOR or user.role == UserRole.ADMIN
+    def _is_moderator(self, user: User) -> bool:
+        return user.role == UserRole.MODERATOR
 
     def _is_group_chat(self, event: Message) -> bool:
         chat_type = event.chat.type
