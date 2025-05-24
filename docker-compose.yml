@@ -3,6 +3,8 @@ version: '3.8'
 services:
   bot:
     build: .
+    volumes:
+      - ./logs:/app/logs
     restart: always
     depends_on:
       - db
