@@ -1,8 +1,8 @@
 from aiogram import Dispatcher, Router
 from aiogram.enums import ChatType
 
+from filters.admin_filter import AdminOnlyFilter
 from filters.group_filter import ChatTypeFilter
-from filters.role_filter import IsAdminFilter
 
 from .group.message_handler import router as message_router
 
@@ -24,7 +24,7 @@ def registry_admin_routers(dispatcher: Dispatcher):
     # Регистрируем фильтры: только для приватных чатов и только для админов
     admin_router.message.filter(
         ChatTypeFilter(chat_type=[ChatType.PRIVATE]),
-        IsAdminFilter(),
+        AdminOnlyFilter(),
     )
 
     # Регистрируем роутеры
@@ -41,8 +41,17 @@ def registry_admin_routers(dispatcher: Dispatcher):
     dispatcher.include_router(admin_router)
 
 
+def registry_group_routers(dispatcher: Dispatcher):
+    # Регистриуем групповой роутер
+    group_router = Router(name="group_router")
+
+    group_router.include_router(message_router)
+
+    dispatcher.include_router(group_router)
+
+
 def registry_routers(dispatcher: Dispatcher):
     registry_admin_routers(dispatcher)
 
     # Регистриуем групповой роутер
-    dispatcher.include_router(message_router)
+    registry_group_routers
