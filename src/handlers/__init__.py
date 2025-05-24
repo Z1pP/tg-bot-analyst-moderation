@@ -56,4 +56,4 @@ def registry_routers(dispatcher: Dispatcher):
     registry_admin_routers(dispatcher)
 
     # Регистриуем групповой роутер
-    registry_group_routers
+    registry_group_routers(dispatcher)
