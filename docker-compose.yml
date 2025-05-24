@@ -7,12 +7,15 @@ services:
     depends_on:
       db:
         condition: service_healthy 
+    env_file:
+    - .env
     environment:
-      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot?connect_timeout=10
-      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot?connect_timeout=10
+      - DEV_DATABASE_URL=${DEV_DATABASE_URL}
+      - DEV_DB_URL_FOR_ALEMBIC=${DEV_DB_URL_FOR_ALEMBIC}
+      - PROD_DATABASE_URL=${PROD_DATABASE_URL}
+      - PROD_DB_URL_FOR_ALEMBIC=${PROD_DB_URL_FOR_ALEMBIC}
       - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
       - BOT_TOKEN=${BOT_TOKEN}
-      - ADMINS_LIST_STR=${ADMINS_LIST_STR}
     volumes:
       - ./logs:/app/logs 
 
