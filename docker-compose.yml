@@ -3,29 +3,48 @@ version: '3.8'
 services:
   bot:
     build: .
-    restart: always
+    restart: unless-stopped 
     depends_on:
-      - db
+      db:
+        condition: service_healthy 
     environment:
-      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
-      - DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/dev_analytics_bot
-      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
-      - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
-      - IS_DEVELOPMENT=True
+      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot?connect_timeout=10
+      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot?connect_timeout=10
+      - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
       - BOT_TOKEN=${BOT_TOKEN}
       - ADMINS_LIST_STR=${ADMINS_LIST_STR}
+    volumes:
+      - ./logs:/app/logs 
 
   db:
     image: postgres:14
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 12345
       POSTGRES_DB: dev_analytics_bot
+      TZ: Europe/Moscow
+      PGTZ: Europe/Moscow
+      POSTGRES_INITDB_ARGS: >-
+        --encoding=UTF8
+        --lc-collate=C.UTF-8  # Лучше использовать C.UTF-8 вместо ru_RU.UTF-8
+        --lc-ctype=C.UTF-8
+        --data-checksums
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql  
     ports:
       - "5434:5432"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:
