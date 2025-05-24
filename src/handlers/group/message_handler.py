@@ -63,10 +63,10 @@ async def process_moderator_reply(message: Message, sender: User, chat: ChatSess
 
     # Преобразуем время сообщения в московское время
     message_date = TimeZoneService.convert_to_local_time(
-        utc_time=message.date,
+        dt=message.date,
     )
     reply_to_message_date = TimeZoneService.convert_to_local_time(
-        utc_time=message.reply_to_message.date,
+        dt=message.reply_to_message.date,
     )
 
     # Создаем DTO для сохранения сообщения
@@ -121,7 +121,7 @@ async def precess_moderator_message(message: Message, sender: User, chat: ChatSe
 
     # Преобразуем время сообщения в московское время
     message_date = TimeZoneService.convert_to_local_time(
-        utc_time=message.date,
+        dt=message.date,
     )
 
     msg_dto = CreateMessageDTO(
