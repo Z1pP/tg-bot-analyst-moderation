@@ -9,7 +9,20 @@ from repositories.message_reply_repository import MessageReplyRepository
 from repositories.user_repository import UserRepository
 
 
+class Report:
+    text: str
+    chart: str
+    excel: str
+
+
 class GetResponseTimeReportUseCase:
+    """UseCase для генерации отчетов о времени ответа пользователей.
+
+    Attributes:
+        _msg_reply_repository: Репозиторий для работы с ответами
+        _user_repository: Репозиторий для работы с пользователями
+    """
+
     def __init__(
         self,
         msg_reply_repository: MessageReplyRepository,
@@ -97,7 +110,6 @@ class GetResponseTimeReportUseCase:
         min_time = min(response_times)
         max_time = max(response_times)
         total_replies = len(replies)
-        total_chats = len(chat_stats)
 
         # Форматируем отчет
         report = (
