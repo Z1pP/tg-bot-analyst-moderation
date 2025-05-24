@@ -29,13 +29,13 @@ def registry_admin_routers(dispatcher: Dispatcher):
 
     # Регистрируем роутеры
     admin_router.include_router(commands_router)
+    admin_router.include_router(menu_router)
     admin_router.include_router(report_daily_router)
     admin_router.include_router(avg_messages_count_router)
     admin_router.include_router(start_router)
     admin_router.include_router(help_router)
     admin_router.include_router(response_time_router)
     admin_router.include_router(moderators_list_router)
-    admin_router.include_router(menu_router)
 
     # Регистрируем роутер для админов
     dispatcher.include_router(admin_router)
