@@ -6,6 +6,7 @@ from dto.activity import CreateActivityDTO, ResultActivityDTO
 from dto.message import ResultMessageDTO
 from models import ModeratorActivity
 from repositories import ActivityRepository
+from services.time_service import TimeZoneService
 
 
 class TrackModeratorActivityUseCase:
@@ -66,7 +67,7 @@ class TrackModeratorActivityUseCase:
             Количество секунд неактивности (0 если вне рабочего времени)
         """
         created_date = self._ensure_timezone(last_activity.created_at)
-        current_date = datetime.now(timezone.utc)
+        current_date = TimeZoneService.now()
 
         # Не считаем период если разные даты или вне рабочего времени
         if created_date.date() != current_date.date() or not self._is_working_time(
@@ -79,7 +80,7 @@ class TrackModeratorActivityUseCase:
     def _ensure_timezone(self, dt: datetime) -> datetime:
         """Добавляет временную зону если отсутствует."""
         if dt is None:
-            return datetime.now(timezone.utc)
+            return TimeZoneService.now()
         return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
     def _is_working_time(self, current_dt: datetime) -> bool:

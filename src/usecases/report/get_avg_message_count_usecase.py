@@ -7,6 +7,7 @@ from dto.report import AVGReportDTO
 from exceptions.user import UserNotFoundException
 from models import ChatMessage, User
 from repositories import MessageRepository, UserRepository
+from services.time_service import TimeZoneService
 from utils.exception_handler import handle_exception
 
 logger = logging.getLogger(__name__)
@@ -110,9 +111,7 @@ class GetAvgMessageCountUseCase:
             report += f"  • «{chat_title}» — <b>{count}</b> сообщ. (<b>{chat_avg}</b> сообщ./{chat_unit})\n"
 
         report += "────────────────────────────\n"
-        report += (
-            f"<i>Отчет сгенерирован {datetime.now().strftime('%d.%m.%Y %H:%M')}</i>"
-        )
+        report += f"<i>Отчет сгенерирован {TimeZoneService.now().strftime('%d.%m.%Y %H:%M')}</i>"
 
         return report
 
@@ -120,7 +119,7 @@ class GetAvgMessageCountUseCase:
         """
         Возвращает начальную и конечную дату для отчета.
         """
-        end_date = datetime.now()
+        end_date = TimeZoneService.now()
         start_date = end_date - time
         return start_date, end_date
 

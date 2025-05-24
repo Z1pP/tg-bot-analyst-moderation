@@ -7,6 +7,7 @@ from exceptions.user import UserNotFoundException
 from models import MessageReply, User
 from repositories.message_reply_repository import MessageReplyRepository
 from repositories.user_repository import UserRepository
+from services.time_service import TimeZoneService
 
 
 class Report:
@@ -66,7 +67,7 @@ class GetResponseTimeReportUseCase:
         """
         # Если дата не указана, используем текущую
         if report_date is None:
-            report_date = datetime.now().date()
+            report_date = TimeZoneService.now().date()
 
         # Начало дня (00:00:00)
         start_date = datetime.combine(report_date, time.min)
@@ -134,7 +135,7 @@ class GetResponseTimeReportUseCase:
             f"<b>{self._format_seconds(max_time)}</b>\n"
             f"AVG и медиан. ответ: <b>{self._format_seconds(avg_time)}</b> и "
             f"<b>{self._format_seconds(median_time)}</b>\n\n"
-            f"<i>Отчет сгенерирован: {datetime.now().strftime('%d.%m.%Y %H:%M')}</i>"
+            f"<i>Отчет сгенерирован: {TimeZoneService.now().strftime('%d.%m.%Y %H:%M')}</i>"
         )
 
         return report
