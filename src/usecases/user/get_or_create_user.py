@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from constants.enums import UserRole
 from models import User
 from repositories.user_repository import UserRepository
 
@@ -19,6 +20,7 @@ class GetOrCreateUserIfNotExistUserCase:
         self,
         tg_id: Optional[str] = None,
         username: Optional[str] = None,
+        role: Optional[UserRole] = None,
     ) -> UserResult:
         """
         Получает существующего пользователя или создает нового.
@@ -26,6 +28,7 @@ class GetOrCreateUserIfNotExistUserCase:
         Args:
             tg_id: Telegram ID пользователя
             username: Username пользователя
+            role: Role пользователя
 
         Returns:
             GetOrCreateUserResult с пользователем и флагом создания
@@ -42,7 +45,7 @@ class GetOrCreateUserIfNotExistUserCase:
             return UserResult(user=user, is_existed=True)
 
         return UserResult(
-            user=await self._create_user(tg_id, username),
+            user=await self._create_user(tg_id, username, role),
             is_existed=False,
         )
 
@@ -62,8 +65,13 @@ class GetOrCreateUserIfNotExistUserCase:
         self,
         tg_id: Optional[str],
         username: Optional[str],
+        role: Optional[UserRole] = None,
     ) -> User:
         """
         Создает нового пользователя
         """
-        return await self.user_repository.create_user(tg_id=tg_id, username=username)
+        return await self.user_repository.create_user(
+            tg_id=tg_id,
+            username=username,
+            role=role,
+        )
