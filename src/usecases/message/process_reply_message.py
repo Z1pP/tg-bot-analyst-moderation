@@ -32,10 +32,6 @@ class ProcessReplyMessageUseCase:
         if dto.original_message_date.date() != dto.reply_message_date.date():
             return False
 
-        # Проверяем, что оригинальное сообщение создано в рабочее время
-        if not self._is_working_time(dto.original_message_date.time()):
-            return False
-
         # Проверяем, что ответ создан в рабочее время
         if not self._is_working_time(dto.reply_message_date.time()):
             return False

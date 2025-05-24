@@ -78,6 +78,8 @@ class TrackModeratorActivityUseCase:
 
     def _ensure_timezone(self, dt: datetime) -> datetime:
         """Добавляет временную зону если отсутствует."""
+        if dt is None:
+            return datetime.now(timezone.utc)
         return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
     def _is_working_time(self, current_dt: datetime) -> bool:

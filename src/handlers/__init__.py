@@ -10,6 +10,8 @@ from .group.message_handler import router as message_router
 from .private.avg_messages_count_handler import router as avg_messages_count_router
 from .private.commands_handler import router as commands_router
 from .private.help_handler import router as help_router
+from .private.menu_handler import router as menu_router
+from .private.moderators_list_handler import router as moderators_list_router
 from .private.report_daily_handler import router as report_daily_router
 from .private.response_time import router as response_time_router
 from .private.start_handler import router as start_router
@@ -32,6 +34,8 @@ def registry_admin_routers(dispatcher: Dispatcher):
     admin_router.include_router(start_router)
     admin_router.include_router(help_router)
     admin_router.include_router(response_time_router)
+    admin_router.include_router(moderators_list_router)
+    admin_router.include_router(menu_router)
 
     # Регистрируем роутер для админов
     dispatcher.include_router(admin_router)

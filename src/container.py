@@ -22,6 +22,7 @@ from usecases.report import (
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
+    GetAllUsersUseCase,
     GetOrCreateUserIfNotExistUserCase,
     GetUserFromDatabaseUseCase,
 )
@@ -41,6 +42,7 @@ def setup_container() -> Container:
     container.register(CreateNewUserUserCase)
     container.register(DeleteUserUseCase)
     container.register(GetUserFromDatabaseUseCase)
+    container.register(GetAllUsersUseCase)
     # chat usecases
     container.register(GetOrCreateChatUseCase)
     # message usecases

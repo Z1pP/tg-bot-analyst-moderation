@@ -11,6 +11,7 @@ from .base import BaseModel
 
 if TYPE_CHECKING:
     from .message import ChatMessage
+    from .moderator_activity import ModeratorActivity
 
 
 class User(BaseModel):
@@ -41,6 +42,13 @@ class User(BaseModel):
         "ChatMessage",
         back_populates="user",
         cascade="all, delete-orphan",
+    )
+
+    activities: Mapped[list["ModeratorActivity"]] = relationship(
+        "ModeratorActivity",
+        foreign_keys="ModeratorActivity.user_id",
+        cascade="all, delete-orphan",
+        back_populates="user",
     )
 
     __table_args__ = (

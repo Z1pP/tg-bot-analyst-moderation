@@ -7,7 +7,8 @@ from sqlalchemy.sql.schema import Index
 from .base import BaseModel
 
 if TYPE_CHECKING:
-    from models import ChatSession
+    from .chat_session import ChatSession
+    from .message import ChatMessage
 
 
 class MessageReply(BaseModel):
@@ -43,6 +44,12 @@ class MessageReply(BaseModel):
 
     chat_session: Mapped["ChatSession"] = relationship(
         "ChatSession",
+        back_populates="replies",
+    )
+
+    reply_message: Mapped["ChatMessage"] = relationship(
+        "ChatMessage",
+        foreign_keys=[reply_message_id],
         back_populates="replies",
     )
 
