@@ -6,7 +6,7 @@ from aiogram.types import Message
 
 from container import container
 from dto.report import AVGReportDTO
-from keyboards.reply.menu import get_moderators_list_kb
+from keyboards.reply.menu import get_back_kb, get_moderators_list_kb
 from keyboards.reply.user_actions import KbCommands
 from states.user_states import UserManagement
 from usecases.report import GetAvgMessageCountUseCase
@@ -62,20 +62,25 @@ async def process_avg_report_input(message: Message, state: FSMContext) -> None:
 
         time = parse_time(text=message.text)
 
-        # Формируем отчет
-        report_dto = AVGReportDTO(username=saved_username, time=time)
+        report_dto = AVGReportDTO(
+            username=saved_username,
+            time=time,
+        )
+        usecase: GetAvgMessageCountUseCase = container.resolve(
+            GetAvgMessageCountUseCase
+        )
 
-        usecase = container.resolve(GetAvgMessageCountUseCase)
+        # Формируем отчет
         report = await usecase.execute(report_dto=report_dto)
 
-        if saved_username:
-            await state.set_state(UserManagement.viewing_user)
-        else:
-            await state.clear()
+        text = report + (
+            "\n\nДля продолжения укажите дату, либо выберите другой раздел ниже"
+        )
 
         await send_html_message_with_kb(
             message=message,
-            text=report,
+            text=text,
+            reply_markup=get_back_kb(),
         )
     except Exception as e:
         await handle_exception(message, e, context="process_avg_report_input")

@@ -8,7 +8,7 @@ from aiogram.types import Message
 from constants import KbCommands
 from container import container
 from dto.report import ResponseTimeReportDTO
-from keyboards.reply.menu import get_moderators_list_kb
+from keyboards.reply.menu import get_back_kb, get_moderators_list_kb
 from services.time_service import TimeZoneService
 from states.user_states import UserManagement
 from usecases.report import GetResponseTimeReportUseCase
@@ -81,11 +81,20 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
         # Получаем отчет
         report = await usecase.execute(report_dto=report_dto)
 
-        # Возвращаемся в состояние просмотра пользователя
-        await state.set_state(UserManagement.viewing_user)
+        # Склеиваем отчет с доп. информацией
+        text = report + (
+            "\n\nДля продолжения укажите дату, либо выберите другой раздел ниже"
+        )
+
+        # Снова устанавливаем состояние для указания даты
+        await state.set_state(UserManagement.report_response_time_selecting_date)
 
         # Отправляем отчет
-        await send_html_message_with_kb(message=message, text=report)
+        await send_html_message_with_kb(
+            message=message,
+            text=text,
+            reply_markup=get_back_kb(),
+        )
     except Exception as e:
         logger.error(f"Ошибка при обработке ввода для отчета: {e}")
         await handle_exception(message, e)
@@ -109,7 +118,7 @@ async def parse_report_date(message: Message):
     elif "." in text:
         try:
             day, month = map(int, text.split("."))
-            current_year = TimeZoneService.now().year()
+            current_year = TimeZoneService.now().year
             return datetime(current_year, month, day).date()
         except (ValueError, IndexError):
             await message.answer(

@@ -8,7 +8,8 @@ from aiogram.types import Message
 from constants import KbCommands
 from container import container
 from dto.report import DailyReportDTO
-from keyboards.reply.menu import get_moderators_list_kb
+from keyboards.reply.menu import get_back_kb, get_moderators_list_kb
+from services.time_service import TimeZoneService
 from states.user_states import UserManagement
 from usecases.report import GetDailyReportUseCase
 from utils.exception_handler import handle_exception
@@ -87,8 +88,11 @@ async def process_daily_report_input(message: Message, state: FSMContext) -> Non
                 return
 
             day, month = map(int, start_str.split("."))
-            current_year = datetime.now().year
-            start_date = datetime(current_year, month, day)
+            current_year = TimeZoneService.now().year
+            # Добавляем часовой пояс к начальной дате
+            start_date = datetime(
+                current_year, month, day, tzinfo=TimeZoneService.DEFAULT_TIMEZONE
+            )
         except (ValueError, IndexError):
             await message.answer(
                 "Некорректный формат начальной даты. Используйте DD.MM"
@@ -105,15 +109,24 @@ async def process_daily_report_input(message: Message, state: FSMContext) -> Non
                     return
 
                 day, month = map(int, end_str.split("."))
-                current_year = datetime.now().year
-                end_date = datetime(current_year, month, day, 23, 59, 59)
+                current_year = TimeZoneService.now().year
+                # Добавляем часовой пояс к конечной дате
+                end_date = datetime(
+                    current_year,
+                    month,
+                    day,
+                    23,
+                    59,
+                    59,
+                    tzinfo=TimeZoneService.DEFAULT_TIMEZONE,
+                )
             except (ValueError, IndexError):
                 await message.answer(
                     "Некорректный формат конечной даты. Используйте DD.MM"
                 )
                 return
         else:
-            end_date = datetime.now()
+            end_date = TimeZoneService.now()
 
         # Проверяем, что конечная дата не раньше начальной
         if end_date < start_date:
@@ -127,12 +140,17 @@ async def process_daily_report_input(message: Message, state: FSMContext) -> Non
         usecase = container.resolve(GetDailyReportUseCase)
         report = await usecase.execute(daily_report_dto=report_dto)
 
-        await state.set_state(UserManagement.viewing_user)
+        text = report + (
+            "\n\nДля продолжения укажите дату, либо выберите другой раздел ниже"
+        )
+
+        await state.set_state(UserManagement.report_daily_selecting_period)
 
         # Отправляем отчет
         await send_html_message_with_kb(
             message=message,
-            text=report,
+            text=text,
+            reply_markup=get_back_kb(),
         )
     except Exception as e:
         await handle_exception(
