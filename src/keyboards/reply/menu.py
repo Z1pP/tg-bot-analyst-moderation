@@ -16,3 +16,14 @@ def get_moderators_list_kb():
     return ReplyKeyboardMarkup(
         keyboard=buttons, resize_keyboard=True, one_time_keyboard=True
     )
+
+
+def get_back_kb():
+    buttons = [
+        [
+            KeyboardButton(text=KbCommands.BACK),
+        ]
+    ]
+    return ReplyKeyboardMarkup(
+        keyboard=buttons, resize_keyboard=True, one_time_keyboard=True
+    )
