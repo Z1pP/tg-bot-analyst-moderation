@@ -1,13 +1,11 @@
 import logging
 import sys
-from logging.handlers import RotatingFileHandler
 
 
-def setup_logger(log_file: str = "bot.log", log_level: int = logging.INFO):
+def setup_logger(log_level: int = logging.INFO):
     """
-    Настраивает глобальный логгер для всего приложения.
+    Настраивает глобальный логгер для всего приложения (только в консоль).
 
-    :param log_file: Путь к файлу логов
     :param log_level: Уровень логирования
     """
 
@@ -21,16 +19,9 @@ def setup_logger(log_file: str = "bot.log", log_level: int = logging.INFO):
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
 
-    # Обработчик для файла (с ротацией)
-    file_handler = RotatingFileHandler(
-        log_file, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
-    )
-    file_handler.setFormatter(formatter)
-
     # Настройка корневого логгера
     logger = logging.getLogger()
     logger.setLevel(log_level)
     logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
 
-    logging.info("Logger configured successfully.")
+    logging.info("Logger configured successfully (console only).")
