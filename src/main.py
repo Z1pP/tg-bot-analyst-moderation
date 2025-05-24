@@ -1,18 +1,14 @@
 import asyncio
 import logging
-import os
 import sys
-from pathlib import Path
 
 from bot import init_bot
 from utils.logger_config import setup_logger
 
 # Создание папки для хранения логов
-BASE_DIR = Path(__file__).resolve().parent.parent
-LOGS_FOLDER = BASE_DIR / "logs"
-os.makedirs(LOGS_FOLDER, exist_ok=True)
 
-setup_logger(log_file=LOGS_FOLDER / "bot.log", log_level=logging.DEBUG)
+
+setup_logger(log_level=logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 
