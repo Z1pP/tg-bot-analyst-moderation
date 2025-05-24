@@ -50,7 +50,12 @@ class UserRepository:
                 logger.error("An error occurred when receiving a user: %s", str(e))
                 return None
 
-    async def create_user(self, tg_id: str = None, username: str = None) -> User:
+    async def create_user(
+        self,
+        tg_id: str = None,
+        username: str = None,
+        role: Optional[UserRole] = None,
+    ) -> User:
         if tg_id is None and username is None:
             raise ValueError("tg_id or username must be provided")
 
@@ -59,6 +64,7 @@ class UserRepository:
                 user = User(
                     tg_id=tg_id,
                     username=username,
+                    role=role,
                     created_at=datetime.now(),
                 )
                 session.add(user)

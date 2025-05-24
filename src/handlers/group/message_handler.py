@@ -9,8 +9,8 @@ from dto.message_reply import CreateMessageReplyDTO
 from filters.group_filter import GroupTypeFilter
 from models import ChatSession, User
 from models.message import MessageType
+from services.time_service import TimeZoneService
 from usecases.message import ProcessMessageUseCase, ProcessReplyMessageUseCase
-from utils.time_converter import TimeZoneService
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)

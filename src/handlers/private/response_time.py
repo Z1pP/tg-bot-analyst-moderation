@@ -9,6 +9,7 @@ from constants import KbCommands
 from container import container
 from dto.report import ResponseTimeReportDTO
 from keyboards.reply.menu import get_moderators_list_kb
+from services.time_service import TimeZoneService
 from states.user_states import UserManagement
 from usecases.report import GetResponseTimeReportUseCase
 from utils.exception_handler import handle_exception
@@ -108,7 +109,7 @@ async def parse_report_date(message: Message):
     elif "." in text:
         try:
             day, month = map(int, text.split("."))
-            current_year = datetime.now().year
+            current_year = TimeZoneService.now().year()
             return datetime(current_year, month, day).date()
         except (ValueError, IndexError):
             await message.answer(

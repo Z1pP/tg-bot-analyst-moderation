@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -31,16 +30,9 @@ class DataBaseConfig(BaseSettings):
 class Settings(BaseSettings):
     BOT_TOKEN: str = Field(alias="BOT_TOKEN")
     IS_DEVELOPMENT: bool = Field(False, alias="IS_DEVELOPMENT")
-
-    # Используем строку вместо списка для начального чтения
-    ADMINS_LIST_STR: str = Field(alias="ADMINS_LIST_STR")
-
-    @property
-    def ADMINS_LIST(self) -> List[str]:
-        """Получает список администраторов."""
-        if not self.ADMINS_LIST_STR:
-            return []
-        return [username.strip() for username in self.ADMINS_LIST_STR.split(",")]
+    TIMEZONE: str = Field(
+        "Europe/Moscow", alias="TIMEZONE", description="Default timezone "
+    )
 
     @property
     def ALEMBIC_DB_URL(self) -> str:

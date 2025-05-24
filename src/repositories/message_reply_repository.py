@@ -6,6 +6,7 @@ from sqlalchemy.orm import joinedload
 from database.session import async_session
 from dto.message_reply import CreateMessageReplyDTO
 from models import MessageReply
+from services.time_service import TimeZoneService
 
 
 class MessageReplyRepository:
@@ -43,7 +44,7 @@ class MessageReplyRepository:
                     reply_message_id=dto.reply_message_id,
                     reply_user_id=dto.reply_user_id,
                     response_time_seconds=dto.response_time_seconds,
-                    created_at=datetime.now(),
+                    created_at=TimeZoneService.now(),
                 )
                 session.add(new_reply)
                 await session.commit()

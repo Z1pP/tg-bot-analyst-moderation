@@ -3,6 +3,7 @@ from datetime import datetime, time, timedelta
 from constants.work_time import TOLERANCE, WORK_END, WORK_START
 from dto.message_reply import CreateMessageReplyDTO
 from repositories.message_reply_repository import MessageReplyRepository
+from services.time_service import TimeZoneService
 
 
 class ProcessReplyMessageUseCase:
@@ -54,7 +55,7 @@ class ProcessReplyMessageUseCase:
         Корректирует время с учетом допуска.
         """
         # Преобразуем time в datetime для выполнения арифметических операций
-        dt = datetime.combine(datetime.today(), base_time)
+        dt = datetime.combine(TimeZoneService.now(), base_time)
         # Применяем смещение
         adjusted_dt = dt + delta
         # Возвращаем только компонент времени

@@ -11,5 +11,3 @@ DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:password@localhost:5432/db_name
 PROD_DATABASE_URL = postgresql+asyncpg://postgres:password@localhost:5432/db_name
 PROD_DB_URL_FOR_ALEMBIC = postgresql://postgres:password@localhost:5432/db_name
 
-# Список админов
-ADMINS_LIST_STR = username1,username2
