@@ -12,6 +12,8 @@ def get_time_period_kb() -> ReplyKeyboardMarkup:
         row = periods[i : i + 2]
         buttons.append([KeyboardButton(text=p) for p in row])
 
+    buttons.append([KeyboardButton(text="⬅️ Назад")])
+
     # Создаем клавиатуру
     return ReplyKeyboardMarkup(
         keyboard=buttons,
