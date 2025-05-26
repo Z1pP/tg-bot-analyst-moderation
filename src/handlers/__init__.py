@@ -9,6 +9,7 @@ from .group.message_handler import router as message_router
 # Роутеры для приватного чата
 from .private.avg_messages_count_handler import router as avg_messages_count_router
 from .private.commands_handler import router as commands_router
+from .private.full_report_handler import router as full_report_router
 from .private.help_handler import router as help_router
 from .private.menu_handler import router as menu_router
 from .private.moderators_list_handler import router as moderators_list_router
@@ -37,6 +38,7 @@ def registry_admin_routers(dispatcher: Dispatcher):
     admin_router.include_router(help_router)
     admin_router.include_router(response_time_router)
     admin_router.include_router(moderators_list_router)
+    admin_router.include_router(full_report_router)
     admin_router.include_router(time_router)
 
     # Регистрируем роутер для админов
