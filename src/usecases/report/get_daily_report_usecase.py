@@ -57,8 +57,13 @@ class GetDailyReportUseCase:
         """
         Форматирует отчет о количестве сообщений за день.
         """
+
+        period = dto.selected_period if dto.selected_period else ""
+
+        total_messages_text = f"📊 <b>Общее количество сообщений за {period}</b>\n"
+
         if not messages:
-            return "❌ Нет данных для формирования отчета."
+            return f"{total_messages_text}\n❌ Нет данных для формирования отчета."
 
         # Группируем сообщения по датам и чатам
         date_chat_stats = defaultdict(lambda: defaultdict(int))
@@ -73,7 +78,7 @@ class GetDailyReportUseCase:
 
         # Формируем заголовок отчета
         report = (
-            f"📊 <b>Общее количество сообщений за период</b>\n"
+            f"{total_messages_text}"
             f"👤 Модератор: <b>{user.username}</b>\n"
             f"📅 Период: <b>{self._format_to_date(dto.start_date)} — {self._format_to_date(dto.end_date)}</b>\n"
             f"📊 Всего сообщений: <b>{len(messages)}</b>\n"
