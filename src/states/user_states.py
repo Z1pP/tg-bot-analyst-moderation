@@ -14,7 +14,9 @@ class UserManagement(StatesGroup):
     report_avg_selecting_period = State()
     report_response_time_selecting_date = State()
 
-    report_waiting_input_period = State()
+    report_daily_waiting_input_period = State()
+    report_avg_waiting_input_period = State()
+    report_reponse_time_input_period = State()
 
 
 class UsernameManagement(StatesGroup):
