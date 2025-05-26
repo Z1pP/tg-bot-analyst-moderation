@@ -14,6 +14,8 @@ class UserManagement(StatesGroup):
     report_avg_selecting_period = State()
     report_response_time_selecting_date = State()
 
+    report_waiting_input_period = State()
+
 
 class UsernameManagement(StatesGroup):
     """Состояние для задавания имени пользователя"""
