@@ -7,21 +7,20 @@ from services.time_service import TimeZoneService
 
 class TimePeriod(Enum):
     """
-    Перечисления для указания выбора периода создания отчета
+    Перечисления для указания выбора периода создания отчета 📅 🔧
     """
 
-    THREE_HOURS = "📅 3 часа"
-    SIX_HOURS = "📅 6 часов"
+    THREE_HOURS = "📅 За 3 часа"
+    SIX_HOURS = "📅 За 6 часов"
     ONE_DAY = "📅 За день"
     ONE_WEEK = "📅 За неделю"
     ONE_MONTH = "📅 За месяц"
-    ALL = "📅 Все"
-    CUSTOM = "🔧 Свой"
-    BACK = "⬅️ Назад"
+    ALL = "📅 За все время"
+    CUSTOM = "🔧 За период"
 
     @classmethod
     def get_all_periods(cls) -> list[str]:
-        return [p.value for p in cls if p.value != cls.BACK or p.value != cls.CUSTOM]
+        return [p.value for p in cls if p.value != cls.CUSTOM]
 
     @classmethod
     def get_all(cls) -> list[str]:
