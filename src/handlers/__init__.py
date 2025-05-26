@@ -13,7 +13,7 @@ from .private.help_handler import router as help_router
 from .private.menu_handler import router as menu_router
 from .private.moderators_list_handler import router as moderators_list_router
 from .private.report_daily_handler import router as report_daily_router
-from .private.response_time import router as response_time_router
+from .private.report_response_time_handler import router as response_time_router
 from .private.start_handler import router as start_router
 from .private.time_router import router as time_router
 
