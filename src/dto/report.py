@@ -8,6 +8,7 @@ class DailyReportDTO:
     username: str
     start_date: datetime
     end_date: datetime
+    selected_period: Optional[str] = None
 
 
 @dataclass
