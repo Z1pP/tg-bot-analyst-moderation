@@ -25,14 +25,14 @@ class GetDailyReportUseCase:
         """
 
         try:
-            # Получаем пользователя из репозитория
+            # Получаем пользователя из БД
             user = await self._user_repository.get_user_by_username(
                 username=daily_report_dto.username
             )
             if user is None:
                 raise UserNotFoundException()
 
-            # Получаем все сооббщения пользователя за день
+            # Получаем все сооббщения пользователя период
             messages = await self._message_repository.get_messages_by_period_date(
                 user_id=user.id,
                 start_date=daily_report_dto.start_date,
