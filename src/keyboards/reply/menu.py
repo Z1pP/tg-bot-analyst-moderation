@@ -6,7 +6,8 @@ from constants import KbCommands
 def get_moderators_list_kb():
     buttons = [
         [
-            KeyboardButton(text=KbCommands.GET_MODERATORS_LIST),
+            KeyboardButton(text=KbCommands.SELECT_MODERATOR),
+            KeyboardButton(text=KbCommands.FULL_REPORT),
         ],
         [
             KeyboardButton(text=KbCommands.ADD_MODERATOR),
