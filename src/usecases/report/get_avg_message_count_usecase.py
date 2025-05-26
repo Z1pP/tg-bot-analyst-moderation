@@ -8,7 +8,6 @@ from exceptions.user import UserNotFoundException
 from models import ChatMessage, User
 from repositories import MessageRepository, UserRepository
 from services.time_service import TimeZoneService
-from utils.exception_handler import handle_exception
 
 logger = logging.getLogger(__name__)
 
@@ -26,41 +25,43 @@ class GetAvgMessageCountUseCase:
         """
         Формирует отчет о среднем количестве сообщений пользователя за указанный период.
         """
-        user = await self._user_repository.get_user_by_username(report_dto.username)
+        user = await self._user_repository.get_user_by_username(
+            username=report_dto.username
+        )
         if not user:
             raise UserNotFoundException()
 
-        start_date, end_date = self._get_period(report_dto.time)
         messages = await self._message_repository.get_messages_by_period_date(
             user_id=user.id,
-            start_date=start_date,
-            end_date=end_date,
+            start_date=report_dto.start_date,
+            end_date=report_dto.end_date,
         )
 
         return self._generate_report(
             messages=messages,
             user=user,
-            time_period=report_dto.time,
-            start_date=start_date,
-            end_date=end_date,
+            start_date=report_dto.start_date,
+            end_date=report_dto.end_date,
+            selected_period=report_dto.selected_period,
         )
 
     def _generate_report(
         self,
         messages: list[ChatMessage],
         user: User,
-        time_period: timedelta,
         start_date: datetime,
         end_date: datetime,
+        selected_period: str = None,
     ) -> str:
         """
-        Формирует текстовый отчет.
+        Формирует текстовой отчет.
         """
         if not messages:
             return "❌ Нет данных для формирования отчета."
 
         total_messages = len(messages)
-        period_str = self._format_timedelta(time_period)
+        period_str = selected_period if selected_period else "выбранное"
+        time_period = end_date - start_date
 
         # Группируем сообщения по чатам
         chat_stats = defaultdict(int)
