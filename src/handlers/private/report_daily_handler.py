@@ -1,17 +1,19 @@
 import logging
-from datetime import datetime
+from typing import Optional
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import KbCommands
+from constants.period import TimePeriod
 from container import container
 from dto.report import DailyReportDTO
-from keyboards.reply.menu import get_back_kb, get_moderators_list_kb
-from services.time_service import TimeZoneService
+from keyboards.reply import get_time_period_kb
+from keyboards.reply.menu import get_moderators_list_kb
 from states.user_states import UserManagement
 from usecases.report import GetDailyReportUseCase
+from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 
@@ -26,28 +28,41 @@ async def report_daily_handler(message: Message, state: FSMContext) -> None:
     Обработчик запроса на создание ежедневного отчета.
     Запрашивает период для отчета.
     """
-    user_data = await state.get_data()
-    username = user_data.get("username")
+    try:
+        user_data = await state.get_data()
+        username = user_data.get("username")
 
-    await state.set_state(UserManagement.report_daily_selecting_period)
+        if not username:
+            # Очищаем состояние
+            await state.clear()
 
-    if username:
+            # Просим пользователя заново выбрать модератора
+            await send_html_message_with_kb(
+                message=message,
+                text="Выберите пользователя заново",
+                reply_markup=get_moderators_list_kb(),
+            )
+
+        # Устанавливаем состояние ожидания выбора периода
+        await state.set_state(UserManagement.report_daily_selecting_period)
+
         await send_html_message_with_kb(
             message=message,
-            text="Введите период для отчета в формате DD.MM-DD.MM\n"
-            "Например: 16.04-20.04 или 16.04- (с 16.04 до сегодня)",
+            text="Выберите период для отчета",
+            reply_markup=get_time_period_kb(),
         )
-
-    else:
-        await state.clear()
-        await send_html_message_with_kb(
+    except Exception as e:
+        await handle_exception(
             message=message,
-            text="Выберите пользователя заново",
-            reply_markup=get_moderators_list_kb(),
+            exc=e,
+            context="report_daily_handler",
         )
 
 
-@router.message(UserManagement.report_daily_selecting_period)
+@router.message(
+    UserManagement.report_daily_selecting_period,
+    F.text.in_(TimePeriod.get_all_periods()),
+)
 async def process_daily_report_input(message: Message, state: FSMContext) -> None:
     """
     Обрабатывает ввод периода и пользователя для отчета.
@@ -65,96 +80,110 @@ async def process_daily_report_input(message: Message, state: FSMContext) -> Non
                 reply_markup=get_moderators_list_kb(),
             )
 
-        parts = message.text.split()
+        if message.text == TimePeriod.CUSTOM.value:
+            await state.set_state(UserManagement.report_waiting_input_period)
 
-        date_part = parts[0] if parts else ""
-
-        # Проверяем формат даты
-        if "-" not in date_part:
-            await message.answer(
-                "Некорректный формат периода. Используйте формат DD.MM-DD.MM или DD.MM-"
+            await send_html_message_with_kb(
+                message=message,
+                text="Введите период в формате DD.MM-DD.MM\n"
+                "Например: 16.04-20.04 или 16.04- (с 16.04 до сегодня)",
             )
             return
 
-        # Разбираем период
-        start_str, end_str = date_part.split("-")
+        start_date, end_date = TimePeriod.to_datetime(message.text)
 
-        # Парсим начальную дату
-        try:
-            if "." not in start_str or len(start_str.split(".")) != 2:
-                await message.answer(
-                    "Некорректный формат начальной даты. Используйте DD.MM"
-                )
-                return
-
-            day, month = map(int, start_str.split("."))
-            current_year = TimeZoneService.now().year
-            # Добавляем часовой пояс к начальной дате
-            start_date = datetime(
-                current_year, month, day, tzinfo=TimeZoneService.DEFAULT_TIMEZONE
-            )
-        except (ValueError, IndexError):
-            await message.answer(
-                "Некорректный формат начальной даты. Используйте DD.MM"
-            )
-            return
-
-        # Парсим конечную дату
-        if end_str:
-            try:
-                if "." not in end_str or len(end_str.split(".")) != 2:
-                    await message.answer(
-                        "Некорректный формат конечной даты. Используйте DD.MM"
-                    )
-                    return
-
-                day, month = map(int, end_str.split("."))
-                current_year = TimeZoneService.now().year
-                # Добавляем часовой пояс к конечной дате
-                end_date = datetime(
-                    current_year,
-                    month,
-                    day,
-                    23,
-                    59,
-                    59,
-                    tzinfo=TimeZoneService.DEFAULT_TIMEZONE,
-                )
-            except (ValueError, IndexError):
-                await message.answer(
-                    "Некорректный формат конечной даты. Используйте DD.MM"
-                )
-                return
-        else:
-            end_date = TimeZoneService.now()
-
-        # Проверяем, что конечная дата не раньше начальной
-        if end_date < start_date:
-            await message.answer("Конечная дата не может быть раньше начальной!")
-            return
-
-        report_dto = DailyReportDTO(
-            username=username, start_date=start_date, end_date=end_date
-        )
-
-        usecase = container.resolve(GetDailyReportUseCase)
-        report = await usecase.execute(daily_report_dto=report_dto)
-
-        text = report + (
-            "\n\nДля продолжения укажите дату, либо выберите другой раздел ниже"
-        )
-
-        await state.set_state(UserManagement.report_daily_selecting_period)
-
-        # Отправляем отчет
-        await send_html_message_with_kb(
+        await generate_and_send_report(
             message=message,
-            text=text,
-            reply_markup=get_back_kb(),
+            state=state,
+            username=username,
+            start_date=start_date,
+            end_date=end_date,
+            selected_period=message.text,
         )
+
     except Exception as e:
         await handle_exception(
             message=message,
             exc=e,
             context="process_daily_report_input",
         )
+
+
+@router.message(UserManagement.report_waiting_input_period)
+async def process_daily_report_period(message: Message, state: FSMContext) -> None:
+    """
+    Обрабатывает ввод пользовательского периода для отчета.
+    """
+    try:
+        user_data = await state.get_data()
+        username = user_data.get("username")
+
+        if not username:
+            await state.clear()
+            await send_html_message_with_kb(
+                message=message,
+                text="Выберите пользователя заново",
+                reply_markup=get_moderators_list_kb(),
+            )
+            return
+
+        start_date, end_date = parse_date(message.text)
+
+        await generate_and_send_report(
+            message=message,
+            state=state,
+            username=username,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    except ValueError as e:
+        await send_html_message_with_kb(
+            message=message,
+            text=f"❌ Некорректный формат даты: {str(e)}\n"
+            "Пожалуйста, введите период в формате DD.MM-DD.MM",
+            reply_markup=get_time_period_kb(),
+        )
+    except Exception as e:
+        await handle_exception(message, e, "process_daily_report_period")
+
+
+async def generate_and_send_report(
+    message: Message,
+    state: FSMContext,
+    username: str,
+    start_date,
+    end_date,
+    selected_period: Optional[str] = None,
+) -> None:
+    """
+    Генерирует и отправляет отчет.
+    """
+    report_dto = DailyReportDTO(
+        username=username,
+        start_date=start_date,
+        end_date=end_date,
+        selected_period=selected_period,
+    )
+
+    report = await generate_report(report_dto)
+    text = f"{report}\n\nДля продолжения выберите период, либо нажмите назад"
+
+    await state.set_state(UserManagement.report_daily_selecting_period)
+    await send_html_message_with_kb(
+        message=message,
+        text=text,
+        reply_markup=get_time_period_kb(),
+    )
+
+
+async def generate_report(report_dto: DailyReportDTO) -> str:
+    """
+    Генерирует отчет используя UseCase.
+    """
+    try:
+        usecase: GetDailyReportUseCase = container.resolve(GetDailyReportUseCase)
+        return await usecase.execute(daily_report_dto=report_dto)
+    except Exception as e:
+        logger.error("Ошибка генерации отчета: %s", str(e), exc_info=True)
+        raise e
