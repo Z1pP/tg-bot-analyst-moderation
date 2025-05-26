@@ -81,7 +81,7 @@ async def process_daily_report_input(message: Message, state: FSMContext) -> Non
             )
 
         if message.text == TimePeriod.CUSTOM.value:
-            await state.set_state(UserManagement.report_waiting_input_period)
+            await state.set_state(UserManagement.report_daily_waiting_input_period)
 
             await send_html_message_with_kb(
                 message=message,
@@ -109,7 +109,7 @@ async def process_daily_report_input(message: Message, state: FSMContext) -> Non
         )
 
 
-@router.message(UserManagement.report_waiting_input_period)
+@router.message(UserManagement.report_daily_waiting_input_period)
 async def process_daily_report_period(message: Message, state: FSMContext) -> None:
     """
     Обрабатывает ввод пользовательского периода для отчета.
