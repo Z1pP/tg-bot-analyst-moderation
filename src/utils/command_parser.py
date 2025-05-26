@@ -1,24 +1,69 @@
 import re
 from datetime import datetime, timedelta
+from typing import Tuple
 
+from exceptions.date import IncorrectDateFormatError
+from services.time_service import TimeZoneService
 from utils.username_validator import validate_username
 
 
-def parse_data(text: str) -> tuple[datetime, datetime] | None:
-    date = []
-    data_segments = text.split("-")
-    for data in data_segments:
-        day, mounth = data.split(".")
-        if not day.isdigit() or not mounth.isdigit():
-            return None
-        if int(day) > 31 or int(mounth) > 12:
-            return None
-        date.append(datetime(year=2025, month=int(mounth), day=int(day)))
-    if len(date) != 2:
-        return None
-    if date[0] > date[1]:
-        return None
-    return date[0], date[1]
+def parse_date(custom_period: str) -> Tuple[datetime, datetime]:
+    """
+    Парсит пользовательский ввод периода и возвращает кортеж с начальной и конечной датами.
+    """
+    parts = custom_period.split()
+
+    date_part = parts[0] if parts else ""
+
+    # Проверяем формат даты
+    if "-" not in date_part:
+        raise IncorrectDateFormatError()
+
+    # Разбираем период
+    start_str, end_str = date_part.split("-")
+
+    # Парсим начальную дату
+    try:
+        if "." not in start_str or len(start_str.split(".")) != 2:
+            raise IncorrectDateFormatError()
+
+        day, month = map(int, start_str.split("."))
+        current_year = TimeZoneService.now().year
+        # Добавляем часовой пояс к начальной дате
+        start_date = datetime(
+            current_year, month, day, tzinfo=TimeZoneService.DEFAULT_TIMEZONE
+        )
+    except (ValueError, IndexError):
+        raise IncorrectDateFormatError()
+
+    # Парсим конечную дату
+    if end_str:
+        try:
+            if "." not in end_str or len(end_str.split(".")) != 2:
+                raise IncorrectDateFormatError()
+
+            day, month = map(int, end_str.split("."))
+            current_year = TimeZoneService.now().year
+            # Добавляем часовой пояс к конечной дате
+            end_date = datetime(
+                current_year,
+                month,
+                day,
+                23,
+                59,
+                59,
+                tzinfo=TimeZoneService.DEFAULT_TIMEZONE,
+            )
+        except (ValueError, IndexError):
+            raise IncorrectDateFormatError()
+    else:
+        end_date = TimeZoneService.now()
+
+    # Проверяем, что конечная дата не раньше начальной
+    if end_date < start_date:
+        raise IncorrectDateFormatError()
+
+    return start_date, end_date
 
 
 def parse_time(text: str) -> timedelta | None:
