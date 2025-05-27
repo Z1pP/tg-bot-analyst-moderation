@@ -15,6 +15,7 @@ from usecases.message import (
 )
 from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.report import (
+    GetAllModeratorsReportUseCase,
     GetAvgMessageCountUseCase,
     GetDailyReportUseCase,
     GetResponseTimeReportUseCase,
@@ -55,6 +56,7 @@ def setup_container() -> Container:
     container.register(GetDailyReportUseCase)
     container.register(GetAvgMessageCountUseCase)
     container.register(GetResponseTimeReportUseCase)
+    container.register(GetAllModeratorsReportUseCase)
 
     return container
 
