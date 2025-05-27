@@ -94,7 +94,7 @@ class GetResponseTimeReportUseCase:
         report = (
             f"Отчёт: @{user.username} за {period}\n\n"
             f"Временной период: {start_date.strftime('%d.%m.%Y')}-{end_date.strftime('%d.%m.%Y')}\n"
-            f"📊 Всего сообщений в чатах: <b>{total_replies}</b>\n"
+            f"📊 Всего ответов — <b>{total_replies}</b>\n"
         )
 
         # Добавляем статистику по чатам
@@ -109,7 +109,6 @@ class GetResponseTimeReportUseCase:
         # Добавляем общую статистику по времени ответа
         report += (
             f"\n⏱️ Время ответа:\n"
-            f"Всего ответов — <b>{total_replies}</b>\n"
             f"Min|max ответ: <b>{self._format_seconds(min_time)}</b> и "
             f"<b>{self._format_seconds(max_time)}</b>\n"
             f"AVG и медиан. ответ: <b>{self._format_seconds(avg_time)}</b> и "
