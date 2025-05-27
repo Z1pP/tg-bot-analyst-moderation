@@ -5,16 +5,18 @@ from filters.admin_filter import AdminOnlyFilter
 from filters.group_filter import ChatTypeFilter
 
 from .group.message_handler import router as message_router
-
-# Роутеры для приватного чата
-from .private.avg_messages_count_handler import router as avg_messages_count_router
 from .private.commands_handler import router as commands_router
-from .private.full_report_handler import router as full_report_router
 from .private.help_handler import router as help_router
 from .private.menu_handler import router as menu_router
 from .private.moderators_list_handler import router as moderators_list_router
-from .private.report_daily_handler import router as report_daily_router
-from .private.report_response_time_handler import router as response_time_router
+
+# Роутеры для приватного чата
+from .private.reports.avg_messages_count_handler import (
+    router as avg_messages_count_router,
+)
+from .private.reports.full_report_handler import router as full_report_router
+from .private.reports.report_daily_handler import router as report_daily_router
+from .private.reports.report_response_time_handler import router as response_time_router
 from .private.start_handler import router as start_router
 from .private.time_router import router as time_router
 
