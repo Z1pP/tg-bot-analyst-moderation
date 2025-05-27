@@ -18,13 +18,14 @@ class CommandList(str, Enum):
 
 
 class KbCommands:
-    GET_MODERATORS_LIST = "👥 Список модераторов"
+    SELECT_MODERATOR = "👤 Список модераторов"
     ADD_MODERATOR = "➕ Добавить модератора"
     REMOVE_MODERATOR = "➖ Удалить модератора"
     SELECTED_USER = "Выбран: {username}"
     REPORT_DAILY = "📊 Отчет за период"
     REPORT_AVG = "📈 Средняя активность"
     REPORT_RESPONSE_TIME = "⏱ Время ответов"
+    FULL_REPORT = "📋 Общий отчет"
     MENU = "📋 Меню"
     BACK = "⬅️ Назад"
 
