@@ -43,7 +43,7 @@ async def response_time_menu_handler(message: Message, state: FSMContext) -> Non
             )
 
         # Устанавливаем состояние ожидания выбора периода
-        await state.set_state(UserManagement.report_response_time_selecting_date)
+        await state.set_state(UserManagement.report_response_time_selecting_period)
 
         await send_html_message_with_kb(
             message=message,
@@ -59,7 +59,7 @@ async def response_time_menu_handler(message: Message, state: FSMContext) -> Non
 
 
 @router.message(
-    UserManagement.report_response_time_selecting_date,
+    UserManagement.report_response_time_selecting_period,
     F.text.in_(TimePeriod.get_all_periods()),
 )
 async def process_response_time_input(message: Message, state: FSMContext) -> None:
@@ -168,7 +168,7 @@ async def generate_and_send_report(
     report = await generate_report(report_dto)
     text = f"{report}\n\nДля продолжения выберите период, либо нажмите назад"
 
-    await state.set_state(UserManagement.report_response_time_selecting_date)
+    await state.set_state(UserManagement.report_response_time_selecting_period)
     await send_html_message_with_kb(
         message=message,
         text=text,
