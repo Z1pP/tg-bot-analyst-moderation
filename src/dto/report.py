@@ -25,3 +25,10 @@ class ResponseTimeReportDTO:
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
+
+
+@dataclass
+class AllModeratorReportDTO:
+    start_date: datetime
+    end_date: datetime
+    selected_period: Optional[str] = None
