@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from sqlalchemy import select
 
 from database.session import async_session
@@ -15,7 +13,6 @@ class ActivityRepository:
             last_message_id=dto.last_message_id,
             next_message_id=dto.next_message_id,
             inactive_period_seconds=dto.inactive_period_seconds,
-            created_at=datetime.now(),
         )
         async with async_session() as session:
             try:
@@ -36,7 +33,6 @@ class ActivityRepository:
             user_id=message.reply_user_id,
             chat_id=message.chat_id,
             message_id=message.id,
-            created_at=datetime.now(),
         )
         async with async_session() as session:
             try:
@@ -63,6 +59,24 @@ class ActivityRepository:
                 )
                 result = await session.execute(query)
                 return result.scalars().first()
+
+            except Exception as e:
+                print(str(e))
+                return None
+
+    async def get_activities_by_period_date(self, start_date, end_date):
+        async with async_session() as session:
+            try:
+                query = (
+                    select(ModeratorActivity)
+                    .where(
+                        ModeratorActivity.created_at >= start_date,
+                        ModeratorActivity.created_at <= end_date,
+                    )
+                    .order_by(ModeratorActivity.created_at.desc())
+                )
+                result = await session.execute(query)
+                return result.scalars().all()
 
             except Exception as e:
                 print(str(e))
