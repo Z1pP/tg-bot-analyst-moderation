@@ -12,6 +12,7 @@ from dto.report import ResponseTimeReportDTO
 from keyboards.reply import get_moderators_list_kb, get_time_period_kb
 from states.user_states import UserManagement
 from usecases.report import GetResponseTimeReportUseCase
+from usecases.report.get_response_time_report_usecase import Report
 from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -166,7 +167,7 @@ async def generate_and_send_report(
     )
 
     report = await generate_report(report_dto)
-    text = f"{report}\n\nДля продолжения выберите период, либо нажмите назад"
+    text = f"{report.text}\n\nДля продолжения выберите период, либо нажмите назад"
 
     await state.set_state(UserManagement.report_response_time_selecting_period)
     await send_html_message_with_kb(
@@ -176,7 +177,7 @@ async def generate_and_send_report(
     )
 
 
-async def generate_report(report_dto: ResponseTimeReportDTO) -> str:
+async def generate_report(report_dto: ResponseTimeReportDTO) -> Report:
     """
     Генерирует отчет используя UseCase.
     """
