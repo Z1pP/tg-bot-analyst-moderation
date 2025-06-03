@@ -6,6 +6,15 @@ from dto.user import UserDTO
 def moderators_inline_kb(users: list[UserDTO]):
     keyboards = []
 
+    keyboards.append(
+        [
+            InlineKeyboardButton(
+                text="Все модераторы",
+                callback_data="all_users",
+            )
+        ]
+    )
+
     for index, user in enumerate(users):
         keyboards.append(
             [
