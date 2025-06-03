@@ -1,6 +1,7 @@
 from typing import Optional
 
 from dto.message import CreateMessageDTO, ResultMessageDTO
+from services.work_time_service import WorkTimeService
 from usecases.moderator_activity import (
     TrackModeratorActivityUseCase,
 )
@@ -22,6 +23,9 @@ class ProcessMessageUseCase:
         message_dto: CreateMessageDTO,
     ) -> Optional[ResultMessageDTO]:
         # Сохраняем сообщение
+        if not WorkTimeService.is_work_time(message_dto.created_at.time()):
+            return None
+
         result_msg = await self.save_message.execute(message_dto=message_dto)
 
         # Трекаем в активность
