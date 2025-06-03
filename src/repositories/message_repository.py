@@ -7,7 +7,6 @@ from sqlalchemy.orm import joinedload
 from database.session import async_session
 from dto.message import CreateMessageDTO
 from models import ChatMessage
-from services.time_service import TimeZoneService
 
 
 class MessageRepository:
@@ -40,7 +39,6 @@ class MessageRepository:
                     message_type=dto.message_type,
                     content_type=dto.content_type,
                     text=dto.text,
-                    created_at=TimeZoneService.now(),
                 )
                 session.add(new_message)
                 await session.commit()
