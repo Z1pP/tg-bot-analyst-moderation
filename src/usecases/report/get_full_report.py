@@ -1,5 +1,6 @@
 from datetime import datetime
 from statistics import mean, median
+from typing import Awaitable, Callable
 
 from dto.report import AllModeratorReportDTO
 from models import ChatMessage, MessageReply, User
@@ -29,37 +30,30 @@ class GetAllModeratorsReportUseCase:
         if not users:
             return "⚠️ Не выбран не один модератор!"
 
-        selected_period = self._format_selected_period(dto.selected_period)
-
         # Конвертируем дату согласно UTC +3
         dto.start_date = TimeZoneService.convert_to_local_time(dto.start_date)
         dto.end_date = TimeZoneService.convert_to_local_time(dto.end_date)
 
+        selected_period = self._format_selected_period(dto.selected_period)
         report_title = f"Отчет по модераторам за {selected_period}"
         report_period = f"Период: {dto.start_date.strftime('%d.%m.%Y')} - {dto.end_date.strftime('%d.%m.%Y')}"
 
         reports = []
-
         for user in users:
-            # Получаем все replies сообщения за указанный период
-            replies = await self._msg_reply_repository.get_replies_by_period_date(
-                user_id=user.id,
-                start_date=dto.start_date,
-                end_date=dto.end_date,
+            # Получаем и обрабатываем данные для отчета
+            replies = await self._get_processed_items(
+                self._msg_reply_repository.get_replies_by_period_date,
+                user.id,
+                dto.start_date,
+                dto.end_date,
             )
 
-            replies = self._convert_to_local_time(items=replies)
-            replies = WorkTimeService.filter_by_work_time(items=replies)
-
-            # Получаем все сообщения за указанный период
-            messages = await self._message_repository.get_messages_by_period_date(
-                user_id=user.id,
-                start_date=dto.start_date,
-                end_date=dto.end_date,
+            messages = await self._get_processed_items(
+                self._message_repository.get_messages_by_period_date,
+                user.id,
+                dto.start_date,
+                dto.end_date,
             )
-
-            messages = self._convert_to_local_time(items=messages)
-            messages = WorkTimeService.filter_by_work_time(items=messages)
 
             if not messages:
                 continue
@@ -71,10 +65,28 @@ class GetAllModeratorsReportUseCase:
                 start_date=dto.start_date,
                 end_date=dto.end_date,
             )
-
             reports.append(report)
 
         return "\n\n".join([report_title] + [report_period] + reports)
+
+    async def _get_processed_items(
+        self,
+        repository_method: Callable[[int, datetime, datetime], Awaitable[list]],
+        user_id: int,
+        start_date: datetime,
+        end_date: datetime,
+    ):
+        """Получает и обрабатывает элементы из репозитория"""
+        items = await repository_method(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        for item in items:
+            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
+
+        return WorkTimeService.filter_by_work_time(items=items)
 
     def _generate_report(
         self,
@@ -84,30 +96,26 @@ class GetAllModeratorsReportUseCase:
         start_date: datetime,
         end_date: datetime,
     ) -> str:
-        """
-        Создает отчет для одного модератора
-        """
-
-        # Сортируем сообщения по времени
+        """Создает отчет для одного модератора"""
         sorted_messages = sorted(messages, key=lambda r: r.created_at)
 
         response_times = (
             [reply.response_time_seconds for reply in replies] if replies else [0]
         )
         total_message = len(messages)
+        total_replies = len(replies)
+
         period_hours = (end_date - start_date).total_seconds() / 3600
         avg_message_per_hour = (
             round(total_message / period_hours, 2) if period_hours else 0
         )
 
         # Рассчитываем статистику
-        avg_time = round(mean(response_times), 2)  # в секундах
+        avg_time = round(mean(response_times), 2)
         median_time = round(median(response_times), 2)
         min_time = round(min(response_times), 2)
         max_time = round(max(response_times), 2)
-        total_replies = len(replies)
 
-        # Поиск перерывов > 30 мин
         breaks = self._calculate_breaks(sorted_messages)
 
         report = [
@@ -121,49 +129,30 @@ class GetAllModeratorsReportUseCase:
 
         if breaks:
             report.append("Перерывы:")
-            for break_info in breaks:
-                report.append(f"- {break_info}")
+            report.extend(f"- {break_info}" for break_info in breaks)
         else:
             report.append("Перерывы: отсутствуют")
 
         return "\n".join(report)
 
     def _format_selected_period(self, selected_period: str) -> str:
-        """
-        Форматирует выбранный период в читаемый формат.
-        """
+        """Форматирует выбранный период в читаемый формат"""
         if not selected_period:
             return "<b>указанный период</b>"
-        period = selected_period.split("За")[-1]
-        return period.strip()
-
-    def _convert_to_local_time(
-        self, items: list[ChatMessage | MessageReply]
-    ) -> list[ChatMessage | MessageReply]:
-        """
-        Конвертирует дату в локальное время
-        """
-        for item in items:
-            TimeZoneService.convert_to_local_time(item.created_at)
-
-        return items
+        return selected_period.split("За")[-1].strip()
 
     def _calculate_breaks(self, messages: list[ChatMessage]) -> list[str]:
-        """
-        Считает перерывы между сообщениями
-        """
-
+        """Считает перерывы между сообщениями"""
         if len(messages) < 2:
             return []
 
         breaks = []
-
         for i in range(1, len(messages)):
-            prev_msg = messages[i - 1]
-            curr_msg = messages[i]
+            prev_msg, curr_msg = messages[i - 1], messages[i]
 
-            time_diff = curr_msg.created_at - prev_msg.created_at
-            minutes_diff = time_diff.total_seconds() / 60
+            minutes_diff = (
+                curr_msg.created_at - prev_msg.created_at
+            ).total_seconds() / 60
 
             if minutes_diff >= 30:
                 start_break = prev_msg.created_at.strftime("%H:%M")
