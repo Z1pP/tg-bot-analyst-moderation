@@ -1,6 +1,8 @@
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from statistics import mean, median
+from typing import Optional
 
 from dto.report import ResponseTimeReportDTO
 from exceptions.user import UserNotFoundException
@@ -10,10 +12,11 @@ from repositories.user_repository import UserRepository
 from services.time_service import TimeZoneService
 
 
+@dataclass
 class Report:
     text: str
-    chart: str
-    excel: str
+    chart: Optional[str] = None
+    excel: Optional[str] = None
 
 
 class GetResponseTimeReportUseCase:
@@ -32,7 +35,7 @@ class GetResponseTimeReportUseCase:
         self._msg_reply_repository = msg_reply_repository
         self._user_repository = user_repository
 
-    async def execute(self, report_dto: ResponseTimeReportDTO) -> str:
+    async def execute(self, report_dto: ResponseTimeReportDTO) -> Report:
         user = await self._user_repository.get_user_by_username(
             username=report_dto.username
         )
@@ -40,7 +43,8 @@ class GetResponseTimeReportUseCase:
         if not user:
             raise UserNotFoundException()
 
-        msg_replies = await self._msg_reply_repository.get_replies_by_user_and_period(
+        # Получаем все reply сообщения за нужный период из БД
+        msg_replies = await self._msg_reply_repository.get_replies_by_period_date(
             user_id=user.id,
             start_date=report_dto.start_date,
             end_date=report_dto.end_date,
@@ -61,14 +65,19 @@ class GetResponseTimeReportUseCase:
         start_date: datetime,
         end_date: datetime,
         selected_period: str = None,
-    ) -> str:
+    ) -> Report:
         """
         Формирует текстовый отчет о времени ответа в заданном формате.
         """
         period = self._format_selected_period(selected_period)
 
         if not replies:
-            return f"Отчёт: @{user.username} за {period}\n\n⚠️ Нет данных за указанный период."
+            return Report(
+                text=(
+                    f"Отчёт: @{user.username} за {period}\n\n"
+                    "⚠️ Нет данных за указанный период."
+                )
+            )
 
         # Собираем статистику по времени ответа
         response_times = [reply.response_time_seconds for reply in replies]
@@ -116,7 +125,7 @@ class GetResponseTimeReportUseCase:
             f"<i>Отчет сгенерирован: {TimeZoneService.now().strftime('%d.%m.%Y %H:%M')}</i>"
         )
 
-        return report
+        return Report(text=report)
 
     def _format_selected_period(self, selected_period: str) -> str:
         """
