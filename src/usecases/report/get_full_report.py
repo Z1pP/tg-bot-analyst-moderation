@@ -47,11 +47,7 @@ class GetAllModeratorsReportUseCase:
                 end_date=dto.end_date,
             )
 
-            for reply in replies:
-                reply.created_at = TimeZoneService.convert_to_local_time(
-                    reply.created_at
-                )
-
+            replies = self._convert_to_local_time(replies=replies)
             replies = WorkTimeService.filter_by_work_time(items=replies)
 
             # Получаем все сообщения за указанный период
@@ -61,9 +57,7 @@ class GetAllModeratorsReportUseCase:
                 end_date=dto.end_date,
             )
 
-            for msg in messages:
-                msg.created_at = TimeZoneService.convert_to_local_time(msg.created_at)
-
+            messages = self._convert_to_local_time(messages=messages)
             messages = WorkTimeService.filter_by_work_time(items=messages)
 
             if not messages:
@@ -141,6 +135,17 @@ class GetAllModeratorsReportUseCase:
             return "<b>указанный период</b>"
         period = selected_period.split("За")[-1]
         return period.strip()
+
+    def _convert_to_local_time(
+        self, items: list[ChatMessage | MessageReply]
+    ) -> list[ChatMessage | MessageReply]:
+        """
+        Конвертирует дату в локальное время
+        """
+        for item in items:
+            TimeZoneService.convert_to_local_time(item.created_at)
+
+        return items
 
     def _calculate_breaks(self, messages: list[ChatMessage]) -> list[str]:
         """
