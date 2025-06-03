@@ -7,7 +7,7 @@ def get_moderators_list_kb():
     buttons = [
         [
             KeyboardButton(text=KbCommands.SELECT_MODERATOR),
-            KeyboardButton(text=KbCommands.FULL_REPORT),
+            KeyboardButton(text=KbCommands.SELECT_CHAT),
         ],
         [
             KeyboardButton(text=KbCommands.ADD_MODERATOR),
