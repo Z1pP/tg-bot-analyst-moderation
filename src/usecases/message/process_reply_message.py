@@ -1,9 +1,6 @@
-from datetime import datetime, time, timedelta
-
-from constants.work_time import TOLERANCE, WORK_END, WORK_START
 from dto.message_reply import CreateMessageReplyDTO
 from repositories.message_reply_repository import MessageReplyRepository
-from services.time_service import TimeZoneService
+from services.work_time_service import WorkTimeService
 
 
 class ProcessReplyMessageUseCase:
@@ -34,29 +31,9 @@ class ProcessReplyMessageUseCase:
             return False
 
         # Проверяем, что ответ создан в рабочее время
-        if not self._is_working_time(dto.reply_message_date.time()):
+        if not WorkTimeService.is_work_time(
+            current_time=dto.reply_message_date.time(),
+        ):
             return False
 
         return True
-
-    def _is_working_time(self, current_time: time) -> bool:
-        """
-        Проверяет, входит ли время в рабочие часы с учетом допустимого отклонения.
-        """
-        # Вычисляем границы рабочего времени с учетом допуска
-        start_with_tolerance = self._adjust_time_with_tolerance(WORK_START, -TOLERANCE)
-        end_with_tolerance = self._adjust_time_with_tolerance(WORK_END, TOLERANCE)
-
-        # Проверяем, входит ли время в диапазон
-        return start_with_tolerance <= current_time <= end_with_tolerance
-
-    def _adjust_time_with_tolerance(self, base_time: time, delta: timedelta) -> time:
-        """
-        Корректирует время с учетом допуска.
-        """
-        # Преобразуем time в datetime для выполнения арифметических операций
-        dt = datetime.combine(TimeZoneService.now(), base_time)
-        # Применяем смещение
-        adjusted_dt = dt + delta
-        # Возвращаем только компонент времени
-        return adjusted_dt.time()
