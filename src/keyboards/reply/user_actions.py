@@ -17,3 +17,16 @@ def get_user_actions_kb(username: str):
     ]
 
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=False)
+
+
+def get_all_users_actions_kb():
+    buttons = [
+        [
+            KeyboardButton(text=KbCommands.FULL_REPORT),
+        ],
+        [
+            KeyboardButton(text=KbCommands.MENU),
+        ],
+    ]
+
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=False)
