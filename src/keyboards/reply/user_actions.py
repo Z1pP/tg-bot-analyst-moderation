@@ -9,12 +9,6 @@ def get_user_actions_kb(username: str):
             KeyboardButton(text=KbCommands.SELECTED_USER.format(username=username)),
         ],
         [
-            KeyboardButton(text=KbCommands.REPORT_DAILY),
-        ],
-        [
-            KeyboardButton(text=KbCommands.REPORT_AVG),
-        ],
-        [
             KeyboardButton(text=KbCommands.REPORT_RESPONSE_TIME),
         ],
         [
