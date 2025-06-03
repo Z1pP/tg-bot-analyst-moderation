@@ -11,8 +11,10 @@ from .private.menu_handler import router as menu_router
 from .private.moderators_list_handler import router as moderators_list_router
 
 # Роутеры для приватного чата
-from .private.reports.full_report_handler import router as full_report_router
-from .private.reports.report_response_time_handler import router as response_time_router
+from .private.moderators_reports.full_report_handler import router as full_report_router
+from .private.moderators_reports.report_response_time_handler import (
+    router as response_time_router,
+)
 from .private.start_handler import router as start_router
 from .private.time_router import router as time_router
 
