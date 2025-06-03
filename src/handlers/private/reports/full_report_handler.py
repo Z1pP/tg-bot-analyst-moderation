@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Optional
 
 from aiogram import F, Router
@@ -69,6 +70,7 @@ async def process_full_report_input(message: Message, state: FSMContext) -> None
             state=state,
             start_date=start_date,
             end_date=end_date,
+            selected_period=message.text,
         )
 
     except Exception as e:
@@ -108,8 +110,8 @@ async def process_full_report_period(message: Message, state: FSMContext) -> Non
 async def generate_and_send_report(
     message: Message,
     state: FSMContext,
-    start_date,
-    end_date,
+    start_date: datetime,
+    end_date: datetime,
     selected_period: Optional[str] = None,
 ) -> None:
     """
@@ -122,6 +124,7 @@ async def generate_and_send_report(
     )
 
     report = await generate_report(report_dto)
+
     text = f"{report}\n\nДля продолжения выберите период, либо нажмите назад"
 
     await state.set_state(UserManagement.report_full_selecting_period)
