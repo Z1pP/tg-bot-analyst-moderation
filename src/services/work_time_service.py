@@ -52,7 +52,7 @@ class WorkTimeService:
     @classmethod
     def filter_by_work_time(
         cls, items: list[MessageReply | ChatMessage]
-    ) -> list[MessageReply]:
+    ) -> list[MessageReply | ChatMessage]:
         """
         Фильтрует ответы в пределах рабочего времени
         """
