@@ -15,7 +15,7 @@ class TimePeriod(Enum):
     ONE_DAY = "📅 За день"
     ONE_WEEK = "📅 За неделю"
     ONE_MONTH = "📅 За месяц"
-    ALL = "📅 За все время"
+    THREE_MONTH = "📅 За 3 месяца"
     CUSTOM = "🔧 За период"
 
     @classmethod
@@ -39,7 +39,7 @@ class TimePeriod(Enum):
             return now - timedelta(weeks=1), now
         elif self == TimePeriod.ONE_MONTH.value:
             return now - timedelta(days=30), now
-        elif self == TimePeriod.ALL.value:
-            return now - timedelta(1970, 1, 1), now
+        elif self == TimePeriod.THREE_MONTH.value:
+            return now - timedelta(days=90), now
         else:
             raise ValueError(f"Неизвестный период: {self}")
