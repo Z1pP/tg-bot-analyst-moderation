@@ -31,13 +31,14 @@ class GetAllModeratorsReportUseCase:
 
         selected_period = self._format_selected_period(dto.selected_period)
 
-        report_title = f"Отчет по модераторам за {selected_period}"
-
-        reports = []
-
         # Конвертируем дату согласно UTC +3
         dto.start_date = TimeZoneService.convert_to_local_time(dto.start_date)
         dto.end_date = TimeZoneService.convert_to_local_time(dto.end_date)
+
+        report_title = f"Отчет по модераторам за {selected_period}"
+        report_period = f"Период: {dto.start_date.strftime('%d.%m.%Y')} - {dto.end_date.strftime('%d.%m.%Y')}"
+
+        reports = []
 
         for user in users:
             # Получаем все replies сообщения за указанный период
@@ -47,7 +48,7 @@ class GetAllModeratorsReportUseCase:
                 end_date=dto.end_date,
             )
 
-            replies = self._convert_to_local_time(replies=replies)
+            replies = self._convert_to_local_time(items=replies)
             replies = WorkTimeService.filter_by_work_time(items=replies)
 
             # Получаем все сообщения за указанный период
@@ -57,7 +58,7 @@ class GetAllModeratorsReportUseCase:
                 end_date=dto.end_date,
             )
 
-            messages = self._convert_to_local_time(messages=messages)
+            messages = self._convert_to_local_time(items=messages)
             messages = WorkTimeService.filter_by_work_time(items=messages)
 
             if not messages:
@@ -73,7 +74,7 @@ class GetAllModeratorsReportUseCase:
 
             reports.append(report)
 
-        return "\n\n".join([report_title] + reports)
+        return "\n\n".join([report_title] + [report_period] + reports)
 
     def _generate_report(
         self,
