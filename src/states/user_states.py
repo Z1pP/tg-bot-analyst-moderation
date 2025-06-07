@@ -1,7 +1,7 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
-class UserManagement(StatesGroup):
+class UserStateManager(StatesGroup):
     """Состояния для управления пользователями."""
 
     selecting_user = State()
