@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Optional
 
 from aiogram import F, Router
@@ -10,6 +11,7 @@ from constants.period import TimePeriod
 from container import container
 from dto.report import ResponseTimeReportDTO
 from keyboards.reply import get_admin_menu_kb, get_time_period_kb
+from services.work_time_service import WorkTimeService
 from states.user_states import UserStateManager
 from usecases.report import GetResponseTimeReportUseCase
 from usecases.report.get_response_time_report_usecase import Report
@@ -152,17 +154,20 @@ async def generate_and_send_report(
     message: Message,
     state: FSMContext,
     username: str,
-    start_date,
-    end_date,
+    start_date: datetime,
+    end_date: datetime,
     selected_period: Optional[str] = None,
 ) -> None:
     """
     Генерирует и отправляет отчет.
     """
+    adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
+        start_date, end_date
+    )
     report_dto = ResponseTimeReportDTO(
         username=username,
-        start_date=start_date,
-        end_date=end_date,
+        start_date=adjusted_start,
+        end_date=adjusted_end,
         selected_period=selected_period,
     )
 
