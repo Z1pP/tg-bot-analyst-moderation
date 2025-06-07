@@ -9,8 +9,8 @@ from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import ResponseTimeReportDTO
-from keyboards.reply import get_moderators_list_kb, get_time_period_kb
-from states.user_states import UserManagement
+from keyboards.reply import get_admin_menu_kb, get_time_period_kb
+from states.user_states import UserStateManager
 from usecases.report import GetResponseTimeReportUseCase
 from usecases.report.get_response_time_report_usecase import Report
 from utils.command_parser import parse_date
@@ -40,11 +40,11 @@ async def response_time_menu_handler(message: Message, state: FSMContext) -> Non
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
-                reply_markup=get_moderators_list_kb(),
+                reply_markup=get_admin_menu_kb(),
             )
 
         # Устанавливаем состояние ожидания выбора периода
-        await state.set_state(UserManagement.report_response_time_selecting_period)
+        await state.set_state(UserStateManager.report_response_time_selecting_period)
 
         await send_html_message_with_kb(
             message=message,
@@ -60,7 +60,7 @@ async def response_time_menu_handler(message: Message, state: FSMContext) -> Non
 
 
 @router.message(
-    UserManagement.report_response_time_selecting_period,
+    UserStateManager.report_response_time_selecting_period,
     F.text.in_(TimePeriod.get_all_periods()),
 )
 async def process_response_time_input(message: Message, state: FSMContext) -> None:
@@ -77,11 +77,11 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
-                reply_markup=get_moderators_list_kb(),
+                reply_markup=get_admin_menu_kb(),
             )
 
         if message.text == TimePeriod.CUSTOM.value:
-            await state.set_state(UserManagement.report_reponse_time_input_period)
+            await state.set_state(UserStateManager.report_reponse_time_input_period)
 
             await send_html_message_with_kb(
                 message=message,
@@ -109,7 +109,7 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
         )
 
 
-@router.message(UserManagement.report_reponse_time_input_period)
+@router.message(UserStateManager.report_reponse_time_input_period)
 async def process_daily_report_period(message: Message, state: FSMContext) -> None:
     """
     Обрабатывает ввод пользовательского периода для отчета.
@@ -123,7 +123,7 @@ async def process_daily_report_period(message: Message, state: FSMContext) -> No
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
-                reply_markup=get_moderators_list_kb(),
+                reply_markup=get_admin_menu_kb(),
             )
             return
 
@@ -169,7 +169,7 @@ async def generate_and_send_report(
     report = await generate_report(report_dto)
     text = f"{report.text}\n\nДля продолжения выберите период, либо нажмите назад"
 
-    await state.set_state(UserManagement.report_response_time_selecting_period)
+    await state.set_state(UserStateManager.report_response_time_selecting_period)
     await send_html_message_with_kb(
         message=message,
         text=text,
