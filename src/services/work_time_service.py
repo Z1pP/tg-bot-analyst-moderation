@@ -53,7 +53,11 @@ class WorkTimeService:
         return start_with_tolerance <= current_time <= end_with_tolerance
 
     @classmethod
-    def _adjust_time_with_tolerance(cls, base_time: time, delta: int) -> time:
+    def _adjust_time_with_tolerance(
+        cls,
+        base_time: time,
+        delta: timedelta | int,
+    ) -> time:
         """
         Корректирует время с учетом допуска.
 
@@ -68,9 +72,14 @@ class WorkTimeService:
             Скорректированное время
         """
         # Преобразуем time в datetime для выполнения арифметических операций
-        dt = datetime.combine(TimeZoneService.now(), base_time)
-        # Применяем смещение
-        adjusted_dt = dt + timedelta(minutes=delta)
+        dt = datetime.combine(TimeZoneService.now().date(), base_time)
+
+        # Проверяем тип delta и применяем смещение
+        if isinstance(delta, timedelta):
+            adjusted_dt = dt + delta
+        else:
+            adjusted_dt = dt + timedelta(minutes=delta)
+
         # Возвращаем только компонент времени
         return adjusted_dt.time()
 
