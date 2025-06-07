@@ -36,7 +36,11 @@ class GetAllModeratorsReportUseCase:
 
         selected_period = self._format_selected_period(dto.selected_period)
         report_title = f"Отчет по модераторам за {selected_period}"
-        report_period = f"Период: {dto.start_date.strftime('%d.%m.%Y')} - {dto.end_date.strftime('%d.%m.%Y')}"
+        report_period = (
+            f"Период: {dto.start_date.strftime('%d.%m.%Y')} - "
+            f"{dto.end_date.strftime('%d.%m.%Y')} "
+            f"({dto.start_date.strftime('%H:%M')}-{dto.end_date.strftime('%H:%M')})"
+        )
 
         reports = []
         for user in users:
@@ -120,11 +124,11 @@ class GetAllModeratorsReportUseCase:
 
         report = [
             f"@{user.username}",
-            f"Всего сообщений: <b>{total_message}</b>",
-            f"Сред. кол-во сообщ. в час: <b>{avg_message_per_hour:.2f}</b>",
-            f"Всего ответов: <b>{total_replies}</b>",
-            f"Мин. и макс. время ответа: <b>{min_time} сек.</b> и <b>{max_time / 60:.2f} мин.</b>",
-            f"Сред. и медиан. время ответа: <b>{avg_time} сек.</b> и <b>{median_time} сек.</b>",
+            f"<b>{total_message}</b> - всего сообщений",
+            f"<b>{avg_message_per_hour:.2f}</b> - сред. кол-во сообщ. в час",
+            f"<b>{total_replies}</b> - всего ответов",
+            f"<b>{min_time} сек.</b> и <b>{max_time / 60:.2f} мин.</b> - мин. и макс. время ответа",
+            f"<b>{avg_time} сек.</b> и <b>{median_time} сек. - сред. и медиан. время ответа</b>",
         ]
 
         if breaks:
