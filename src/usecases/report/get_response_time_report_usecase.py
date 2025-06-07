@@ -190,4 +190,4 @@ class GetResponseTimeReportUseCase:
         hours = (end_date - start_date).total_seconds() / 3600
         if hours <= 0:
             return 1
-        return round(messages_count / hours, 1)
+        return round(messages_count / hours, 2)
