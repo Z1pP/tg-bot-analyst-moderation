@@ -123,19 +123,24 @@ class GetAllModeratorsReportUseCase:
         breaks = self._calculate_breaks(sorted_messages)
 
         report = [
-            f"@{user.username}",
-            f"<b>{total_message}</b> - всего сообщений",
-            f"<b>{avg_message_per_hour:.2f}</b> - сред. кол-во сообщ. в час",
-            f"<b>{total_replies}</b> - всего ответов",
-            f"<b>{min_time} сек.</b> и <b>{max_time / 60:.2f} мин.</b> - мин. и макс. время ответа",
-            f"<b>{avg_time} сек.</b> и <b>{median_time} сек. - сред. и медиан. время ответа</b>",
+            f"<b>👤 @{user.username}</b>",
+            "<b>📊 Статистика сообщений:</b>",
+            f"• <b>{total_message}</b> - всего сообщений",
+            f"• <b>{avg_message_per_hour:.2f}</b> - сред. кол-во сообщ. в час",
+            "",
+            "<b>⏱️ Статистика ответов:</b>",
+            f"• <b>{total_replies}</b> - всего ответов",
+            f"• <b>{min_time} сек.</b> и <b>{max_time / 60:.2f} мин.</b> - мин. и макс. время ответа",
+            f"• <b>{avg_time} сек.</b> и <b>{median_time} сек.</b> - сред. и медиан. время ответа",
+            "",
         ]
 
         if breaks:
-            report.append("Перерывы:")
-            report.extend(f"- {break_info}" for break_info in breaks)
+            report.append("<b>⏸️ Перерывы:</b>")
+            for break_info in breaks:
+                report.append(f"• {break_info}")
         else:
-            report.append("Перерывы: отсутствуют")
+            report.append("<b>⏸️ Перерывы:</b> отсутствуют")
 
         return "\n".join(report)
 
