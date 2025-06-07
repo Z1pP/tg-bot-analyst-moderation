@@ -107,19 +107,26 @@ class GetResponseTimeReportUseCase:
         min_time = min(response_times)
         max_time = max(response_times)
         total_replies = len(replies)
+        time_first_replie = TimeZoneService.convert_to_local_time(
+            replies[0].created_at
+        ).strftime("%H:%M")
 
         total_messages = len(messages)
         messages_per_hour = self._messages_per_hour(len(messages), start_date, end_date)
+        time_first_message = TimeZoneService.convert_to_local_time(
+            messages[0].created_at
+        ).strftime("%H:%M")
 
         # Форматируем отчет
         report = (
-            f"Отчёт: @{user.username} за {period}\n\n"
-            f"Временной период: {start_date.strftime('%d.%m.%Y')}-"
+            f"<b>📊 Отчёт: @{user.username} за {period}</b>\n\n"
+            f"<b>🕒 Временной период:</b> {start_date.strftime('%d.%m.%Y')}-"
             f"{end_date.strftime('%d.%m.%Y')} "
             f"({start_date.strftime('%H:%M')}-{end_date.strftime('%H:%M')})\n\n"
-            f"📊 Статистика по сообщениям:\n"
-            f"<b>{total_messages}</b> - всего сообщений\n"
-            f"<b>{messages_per_hour}</b> - сообщений в час\n"
+            f"<b>📈 Статистика по сообщениям:</b>\n"
+            f"• <b>{total_messages}</b> - всего сообщений\n"
+            f"• <b>{messages_per_hour}</b> - сообщений в час\n"
+            f"• <b>{time_first_message}</b> - время первого сообщения\n"
         )
 
         # report += "По чатам:\n"
@@ -144,12 +151,13 @@ class GetResponseTimeReportUseCase:
 
         # Добавляем общую статистику по времени ответа
         report += (
-            f"\n⏱️ Статистика по ответам:\n"
-            f"<b>{total_replies}</b> - всего ответов\n"
-            f"<b>{self._format_seconds(min_time)}</b> и "
+            f"\n<b>⏱️ Статистика по ответам:</b>\n"
+            f"• <b>{total_replies}</b> - всего ответов\n"
+            f"• <b>{time_first_replie}</b> - время первого ответа\n"
+            f"• <b>{self._format_seconds(min_time)}</b> и "
             f"<b>{self._format_seconds(max_time)}</b> - мин. и макс. время ответов\n"
-            f"<b>{self._format_seconds(avg_time)}</b> и "
-            f"<b>{self._format_seconds(median_time)}</b> сред. и медиан. время ответа\n"
+            f"• <b>{self._format_seconds(avg_time)}</b> и "
+            f"<b>{self._format_seconds(median_time)}</b> - сред. и медиан. время ответа\n"
         )
 
         return Report(text=report)
