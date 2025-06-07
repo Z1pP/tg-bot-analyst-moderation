@@ -3,10 +3,11 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from constants import KbCommands
 
 
-def get_user_actions_kb(username: str):
+def chat_actions_kb(chat_title: str):
+    chat_title = shorten(chat_title)
     buttons = [
         [
-            KeyboardButton(text=KbCommands.SELECTED_USER.format(username=username)),
+            KeyboardButton(text=KbCommands.SELECTED_CHAT.format(chat_title=chat_title)),
         ],
         [
             KeyboardButton(text=KbCommands.REPORT_RESPONSE_TIME),
@@ -19,7 +20,7 @@ def get_user_actions_kb(username: str):
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 
-def get_all_users_actions_kb():
+def all_chats_actions_kb():
     buttons = [
         [
             KeyboardButton(text=KbCommands.FULL_REPORT),
@@ -30,3 +31,9 @@ def get_all_users_actions_kb():
     ]
 
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
+
+def shorten(text: str, max_len: int = 25, suffix: str = "...") -> str:
+    if len(text) <= max_len:
+        return text
+    return text[:max_len].rstrip() + suffix

@@ -3,10 +3,11 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from constants import KbCommands
 
 
-def get_moderators_list_kb():
+def get_admin_menu_kb():
     buttons = [
         [
-            KeyboardButton(text=KbCommands.GET_MODERATORS_LIST),
+            KeyboardButton(text=KbCommands.SELECT_MODERATOR),
+            KeyboardButton(text=KbCommands.SELECT_CHAT),
         ],
         [
             KeyboardButton(text=KbCommands.ADD_MODERATOR),

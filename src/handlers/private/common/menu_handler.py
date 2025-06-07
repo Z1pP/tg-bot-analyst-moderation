@@ -4,9 +4,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import KbCommands
-from keyboards.reply.menu import get_moderators_list_kb
+from keyboards.reply.menu import get_admin_menu_kb
 from keyboards.reply.user_actions import get_user_actions_kb
-from states.user_states import UserManagement
+from states.user_states import UserStateManager
 from utils.send_message import send_html_message_with_kb
 
 router = Router(name=__name__)
@@ -34,7 +34,7 @@ async def menu_handler(message: Message, state: FSMContext) -> None:
     await send_html_message_with_kb(
         message=message,
         text=menu_text,
-        reply_markup=get_moderators_list_kb(),
+        reply_markup=get_admin_menu_kb(),
     )
 
 
@@ -47,7 +47,7 @@ async def back_handler(message: Message, state: FSMContext) -> None:
     user_data = await state.get_data()
     username = user_data.get("username")
 
-    await state.set_state(UserManagement.viewing_user)
+    await state.set_state(UserStateManager.viewing_user)
 
     await send_html_message_with_kb(
         message=message,

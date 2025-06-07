@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from keyboards.reply.user_actions import get_user_actions_kb
-from states.user_states import UserManagement
+from states.user_states import UserStateManager
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 
@@ -18,7 +18,7 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
     try:
         _, username = callback.data.split("__")
 
-        await state.set_state(UserManagement.viewing_user)
+        await state.set_state(UserStateManager.viewing_user)
         await state.update_data(username=username)
 
         await send_html_message_with_kb(

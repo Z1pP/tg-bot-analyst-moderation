@@ -12,7 +12,6 @@ class CreateMessageReplyDTO:
     original_message_url: str
     reply_message_id: int
     reply_user_id: int
-    reply_user_id: int
     original_message_date: datetime
     reply_message_date: datetime
     response_time_seconds: int

@@ -7,7 +7,7 @@ from repositories import (
     MessageRepository,
     UserRepository,
 )
-from usecases.chat import GetOrCreateChatUseCase
+from usecases.chat import GetAllChatsUseCase, GetOrCreateChatUseCase
 from usecases.message import (
     ProcessMessageUseCase,
     ProcessReplyMessageUseCase,
@@ -15,8 +15,7 @@ from usecases.message import (
 )
 from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.report import (
-    GetAvgMessageCountUseCase,
-    GetDailyReportUseCase,
+    GetAllModeratorsReportUseCase,
     GetResponseTimeReportUseCase,
 )
 from usecases.user import (
@@ -45,6 +44,7 @@ def setup_container() -> Container:
     container.register(GetAllUsersUseCase)
     # chat usecases
     container.register(GetOrCreateChatUseCase)
+    container.register(GetAllChatsUseCase)
     # message usecases
     container.register(SaveMessageUseCase)
     container.register(ProcessMessageUseCase)
@@ -52,9 +52,8 @@ def setup_container() -> Container:
     # activity usecases
     container.register(TrackModeratorActivityUseCase)
     # report usecases
-    container.register(GetDailyReportUseCase)
-    container.register(GetAvgMessageCountUseCase)
     container.register(GetResponseTimeReportUseCase)
+    container.register(GetAllModeratorsReportUseCase)
 
     return container
 

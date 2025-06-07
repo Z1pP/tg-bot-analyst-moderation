@@ -3,6 +3,8 @@ from datetime import datetime
 from sqlalchemy import DateTime, Integer
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 
+from services.time_service import TimeZoneService
+
 Base = declarative_base()
 
 
@@ -17,5 +19,5 @@ class BaseModel(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        nullable=True,
+        default=lambda: TimeZoneService.now(),
     )

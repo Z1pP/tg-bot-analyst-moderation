@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 
@@ -8,15 +8,27 @@ class DailyReportDTO:
     username: str
     start_date: datetime
     end_date: datetime
+    selected_period: Optional[str] = None
 
 
 @dataclass
 class AVGReportDTO:
     username: str
-    time: timedelta
+    start_date: datetime
+    end_date: datetime
+    selected_period: Optional[str] = None
 
 
 @dataclass
 class ResponseTimeReportDTO:
     username: str
-    report_date: Optional[datetime.date] = None
+    start_date: datetime
+    end_date: datetime
+    selected_period: Optional[str] = None
+
+
+@dataclass
+class AllModeratorReportDTO:
+    start_date: datetime
+    end_date: datetime
+    selected_period: Optional[str] = None

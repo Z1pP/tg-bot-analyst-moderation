@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import select
@@ -17,6 +16,9 @@ class UserRepository:
             try:
                 result = await session.execute(select(User).where(User.tg_id == tg_id))
                 user = result.scalars().first()
+
+                logger.info("Received user: %s", user)
+
                 return user
             except Exception as e:
                 logger.error("An error occurred when receiving a user: %s", str(e))
@@ -33,7 +35,11 @@ class UserRepository:
                     .order_by(User.username),
                 )
 
-                return result.scalars().all()
+                users = result.scalars().all()
+
+                logger.info("Received users: %s", len(users))
+
+                return users
             except Exception as e:
                 logger.error("An error occurred when receiving a user: %s", str(e))
                 return None
@@ -45,6 +51,9 @@ class UserRepository:
                     select(User).where(User.username == username)
                 )
                 user = result.scalars().first()
+
+                logger.info("Received user: %s", user)
+
                 return user
             except Exception as e:
                 logger.error("An error occurred when receiving a user: %s", str(e))
@@ -65,11 +74,13 @@ class UserRepository:
                     tg_id=tg_id,
                     username=username,
                     role=role,
-                    created_at=datetime.now(),
                 )
                 session.add(user)
                 await session.commit()
                 await session.refresh(user)
+
+                logger.info("Created user: %s", user)
+
                 return user
             except Exception as e:
                 logger.error("An error occurred when creating a user: %s", str(e))
@@ -82,6 +93,8 @@ class UserRepository:
                 await session.delete(user)
                 await session.flush()
                 await session.commit()
+
+                logger.info("Deleted user with id = %s", user.id)
             except Exception as e:
                 logger.error("An error occurred when deleting a user: %s", str(e))
                 await session.rollback()

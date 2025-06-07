@@ -1,7 +1,7 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
-class UserManagement(StatesGroup):
+class UserStateManager(StatesGroup):
     """Состояния для управления пользователями."""
 
     selecting_user = State()
@@ -10,9 +10,11 @@ class UserManagement(StatesGroup):
 
     # Состояния для работы с отчетами для выбранного пользователя
     report_menu = State()
-    report_daily_selecting_period = State()
-    report_avg_selecting_period = State()
-    report_response_time_selecting_date = State()
+    report_response_time_selecting_period = State()
+    report_full_selecting_period = State()
+
+    report_reponse_time_input_period = State()
+    report_full_waiting_input_period = State()
 
 
 class UsernameManagement(StatesGroup):
