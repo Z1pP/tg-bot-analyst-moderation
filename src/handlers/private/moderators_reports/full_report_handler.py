@@ -11,7 +11,7 @@ from constants.period import TimePeriod
 from container import container
 from dto.report import AllModeratorReportDTO
 from keyboards.reply import get_time_period_for_full_report
-from states.user_states import UserManagement
+from states.user_states import UserStateManager
 from usecases.report import GetAllModeratorsReportUseCase
 from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
@@ -29,7 +29,7 @@ async def full_report_handler(message: Message, state: FSMContext) -> None:
     """
     try:
         # Устанавливаем состояние ожидания выбора периода
-        await state.set_state(UserManagement.report_full_selecting_period)
+        await state.set_state(UserStateManager.report_full_selecting_period)
 
         await send_html_message_with_kb(
             message=message,
@@ -45,7 +45,7 @@ async def full_report_handler(message: Message, state: FSMContext) -> None:
 
 
 @router.message(
-    UserManagement.report_full_selecting_period,
+    UserStateManager.report_full_selecting_period,
     F.text.in_(TimePeriod.get_all_periods()),
 )
 async def process_full_report_input(message: Message, state: FSMContext) -> None:
@@ -54,7 +54,7 @@ async def process_full_report_input(message: Message, state: FSMContext) -> None
     """
     try:
         if message.text == TimePeriod.CUSTOM.value:
-            await state.set_state(UserManagement.report_full_waiting_input_period)
+            await state.set_state(UserStateManager.report_full_waiting_input_period)
 
             await send_html_message_with_kb(
                 message=message,
@@ -81,7 +81,7 @@ async def process_full_report_input(message: Message, state: FSMContext) -> None
         )
 
 
-@router.message(UserManagement.report_full_waiting_input_period)
+@router.message(UserStateManager.report_full_waiting_input_period)
 async def process_full_report_period(message: Message, state: FSMContext) -> None:
     """
     Обрабатывает ввод пользовательского периода для отчета.
@@ -127,7 +127,7 @@ async def generate_and_send_report(
 
     text = f"{report}\n\nДля продолжения выберите период, либо нажмите назад"
 
-    await state.set_state(UserManagement.report_full_selecting_period)
+    await state.set_state(UserStateManager.report_full_selecting_period)
 
     await send_html_message_with_kb(
         message=message,
