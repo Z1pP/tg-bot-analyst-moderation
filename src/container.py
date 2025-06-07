@@ -7,7 +7,7 @@ from repositories import (
     MessageRepository,
     UserRepository,
 )
-from usecases.chat import GetOrCreateChatUseCase
+from usecases.chat import GetAllChatsUseCase, GetOrCreateChatUseCase
 from usecases.message import (
     ProcessMessageUseCase,
     ProcessReplyMessageUseCase,
@@ -44,6 +44,7 @@ def setup_container() -> Container:
     container.register(GetAllUsersUseCase)
     # chat usecases
     container.register(GetOrCreateChatUseCase)
+    container.register(GetAllChatsUseCase)
     # message usecases
     container.register(SaveMessageUseCase)
     container.register(ProcessMessageUseCase)
