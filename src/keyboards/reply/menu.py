@@ -3,7 +3,7 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from constants import KbCommands
 
 
-def get_moderators_list_kb():
+def get_admin_menu_kb():
     buttons = [
         [
             KeyboardButton(text=KbCommands.SELECT_MODERATOR),
