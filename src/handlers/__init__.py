@@ -5,6 +5,7 @@ from filters.admin_filter import AdminOnlyFilter
 from filters.group_filter import ChatTypeFilter
 
 from .group.message_handler import router as message_router
+from .private.chats_list_handler import router as chats_list_router
 from .private.commands_handler import router as commands_router
 from .private.help_handler import router as help_router
 from .private.menu_handler import router as menu_router
@@ -34,10 +35,14 @@ def registry_admin_routers(dispatcher: Dispatcher):
     admin_router.include_router(menu_router)
     admin_router.include_router(start_router)
     admin_router.include_router(help_router)
-    admin_router.include_router(response_time_router)
+    # Списки
     admin_router.include_router(moderators_list_router)
-    admin_router.include_router(full_report_router)
+    admin_router.include_router(chats_list_router)
+    # Локальное время
     admin_router.include_router(time_router)
+    # Отчеты
+    admin_router.include_router(response_time_router)
+    admin_router.include_router(full_report_router)
 
     # Регистрируем роутер для админов
     dispatcher.include_router(admin_router)
