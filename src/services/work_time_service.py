@@ -1,5 +1,5 @@
 from datetime import datetime, time, timedelta
-from typing import Optional
+from typing import Optional, Tuple
 
 from constants.work_time import TOLERANCE, WORK_END, WORK_START
 from models import ChatMessage, MessageReply
@@ -9,7 +9,13 @@ from .time_service import TimeZoneService
 
 class WorkTimeService:
     """
-    Сервис который устанавливает рабочее время для последующей логики
+    Сервис для работы с рабочим временем.
+
+    Предоставляет методы для проверки, фильтрации и корректировки времени
+    в соответствии с установленными рабочими часами и допустимыми отклонениями.
+
+    Рабочее время определяется константами WORK_START и WORK_END,
+    а допустимое отклонение - константой TOLERANCE.
     """
 
     @classmethod
@@ -20,9 +26,18 @@ class WorkTimeService:
         work_start: Optional[time] = None,
         work_end: Optional[time] = None,
         tolerance: Optional[int] = None,
-    ):
+    ) -> bool:
         """
         Проверяет, входит ли время в рабочие часы с учетом допустимого отклонения.
+
+        Args:
+            current_time: Время для проверки
+            work_start: Начало рабочего времени (по умолчанию WORK_START)
+            work_end: Конец рабочего времени (по умолчанию WORK_END)
+            tolerance: Допустимое отклонение в минутах (по умолчанию TOLERANCE)
+
+        Returns:
+            True, если время входит в рабочие часы с учетом допуска, иначе False
         """
         # Вычисляем границы рабочего времени с учетом допуска
         start_with_tolerance = WorkTimeService._adjust_time_with_tolerance(
@@ -38,14 +53,24 @@ class WorkTimeService:
         return start_with_tolerance <= current_time <= end_with_tolerance
 
     @classmethod
-    def _adjust_time_with_tolerance(cls, base_time: time, delta: timedelta) -> time:
+    def _adjust_time_with_tolerance(cls, base_time: time, delta: int) -> time:
         """
         Корректирует время с учетом допуска.
+
+        Преобразует объект time в datetime, добавляет или вычитает
+        указанное количество минут, и возвращает результат как time.
+
+        Args:
+            base_time: Исходное время
+            delta: Смещение в минутах (положительное или отрицательное)
+
+        Returns:
+            Скорректированное время
         """
         # Преобразуем time в datetime для выполнения арифметических операций
         dt = datetime.combine(TimeZoneService.now(), base_time)
         # Применяем смещение
-        adjusted_dt = dt + delta
+        adjusted_dt = dt + timedelta(minutes=delta)
         # Возвращаем только компонент времени
         return adjusted_dt.time()
 
@@ -54,7 +79,16 @@ class WorkTimeService:
         cls, items: list[MessageReply | ChatMessage]
     ) -> list[MessageReply | ChatMessage]:
         """
-        Фильтрует ответы в пределах рабочего времени
+        Фильтрует элементы, оставляя только те, которые созданы в рабочее время.
+
+        Использует время создания (created_at) каждого элемента для проверки,
+        входит ли оно в рабочие часы с учетом допустимого отклонения.
+
+        Args:
+            items: Список сообщений или ответов для фильтрации
+
+        Returns:
+            Отфильтрованный список элементов, созданных в рабочее время
         """
         start_work_time = cls._adjust_time_with_tolerance(WORK_START, -TOLERANCE)
         end_work_time = cls._adjust_time_with_tolerance(WORK_END, TOLERANCE)
@@ -64,3 +98,42 @@ class WorkTimeService:
             for item in items
             if start_work_time <= item.created_at.time() <= end_work_time
         ]
+
+    @classmethod
+    def adjust_dates_to_work_hours(
+        cls,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> Tuple[datetime, datetime]:
+        """
+        Корректирует даты начала и конца в соответствии с рабочими часами.
+
+        Если время начала раньше рабочего времени (с учетом допуска),
+        устанавливает его на начало рабочего времени.
+        Если время окончания позже рабочего времени (с учетом допуска),
+        устанавливает его на конец рабочего времени.
+
+        Args:
+            start_date: Дата и время начала
+            end_date: Дата и время окончания
+
+        Returns:
+            Кортеж из скорректированных дат начала и окончания
+        """
+        start_work_time = cls._adjust_time_with_tolerance(WORK_START, -TOLERANCE)
+        end_work_time = cls._adjust_time_with_tolerance(WORK_END, TOLERANCE)
+
+        if start_date.time() < start_work_time:
+            start_date = start_date.replace(
+                hour=start_work_time.hour,
+                minute=start_work_time.minute,
+                second=start_work_time.second,
+            )
+        if end_date.time() > end_work_time:
+            end_date = end_date.replace(
+                hour=end_work_time.hour,
+                minute=end_work_time.minute,
+                second=end_work_time.second,
+            )
+
+        return start_date, end_date
