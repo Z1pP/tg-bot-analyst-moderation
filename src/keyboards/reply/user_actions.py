@@ -16,7 +16,7 @@ def get_user_actions_kb(username: str):
         ],
     ]
 
-    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=False)
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 
 def get_all_users_actions_kb():
@@ -29,4 +29,4 @@ def get_all_users_actions_kb():
         ],
     ]
 
-    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=False)
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
