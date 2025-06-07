@@ -7,8 +7,7 @@ from typing import Optional
 from dto.report import ResponseTimeReportDTO
 from exceptions.user import UserNotFoundException
 from models import MessageReply, User
-from repositories.message_reply_repository import MessageReplyRepository
-from repositories.user_repository import UserRepository
+from repositories import MessageReplyRepository, MessageRepository, UserRepository
 from services.time_service import TimeZoneService
 
 
@@ -30,10 +29,12 @@ class GetResponseTimeReportUseCase:
     def __init__(
         self,
         msg_reply_repository: MessageReplyRepository,
+        msg_repository: MessageRepository,
         user_repository: UserRepository,
     ):
         self._msg_reply_repository = msg_reply_repository
         self._user_repository = user_repository
+        self._msg_repository = msg_repository
 
     async def execute(self, report_dto: ResponseTimeReportDTO) -> Report:
         user = await self._user_repository.get_user_by_username(
@@ -50,8 +51,15 @@ class GetResponseTimeReportUseCase:
             end_date=report_dto.end_date,
         )
 
+        msgs = await self._msg_repository.get_messages_by_period_date(
+            user_id=user.id,
+            start_date=report_dto.start_date,
+            end_date=report_dto.end_date,
+        )
+
         return self._generate_report(
             replies=msg_replies,
+            messages=msgs,
             user=user,
             start_date=report_dto.start_date,
             end_date=report_dto.end_date,
@@ -61,6 +69,7 @@ class GetResponseTimeReportUseCase:
     def _generate_report(
         self,
         replies: list[MessageReply],
+        messages: list[MessageReply],
         user: User,
         start_date: datetime,
         end_date: datetime,
@@ -82,15 +91,15 @@ class GetResponseTimeReportUseCase:
         # Собираем статистику по времени ответа
         response_times = [reply.response_time_seconds for reply in replies]
 
-        # Группируем по чатам
-        chat_stats = defaultdict(list)
-        for reply in replies:
-            chat_title = (
-                reply.chat_session.title
-                if hasattr(reply, "chat_session") and reply.chat_session.title
-                else "Без названия"
-            )
-            chat_stats[chat_title].append(reply.response_time_seconds)
+        # # Группируем по чатам
+        # chat_stats = defaultdict(list)
+        # for reply in replies:
+        #     chat_title = (
+        #         reply.chat_session.title
+        #         if hasattr(reply, "chat_session") and reply.chat_session.title
+        #         else "Без названия"
+        #     )
+        #     chat_stats[chat_title].append(reply.response_time_seconds)
 
         # Рассчитываем статистику
         avg_time = mean(response_times)
@@ -99,30 +108,48 @@ class GetResponseTimeReportUseCase:
         max_time = max(response_times)
         total_replies = len(replies)
 
+        total_messages = len(messages)
+        messages_per_hour = self._messages_per_hour(len(messages), start_date, end_date)
+
         # Форматируем отчет
         report = (
             f"Отчёт: @{user.username} за {period}\n\n"
-            f"Временной период: {start_date.strftime('%d.%m.%Y')}-{end_date.strftime('%d.%m.%Y')}\n"
-            f"📊 Всего ответов — <b>{total_replies}</b>\n"
+            f"Временной период: {start_date.strftime('%d.%m.%Y')}-"
+            f"{end_date.strftime('%d.%m.%Y')} "
+            f"({start_date.strftime('%H:%M')}-{end_date.strftime('%H:%M')})\n\n"
+            f"📊 Статистика по сообщениям:\n"
+            f"<b>{total_messages}</b> - всего сообщений\n"
+            f"<b>{messages_per_hour}</b> - сообщений в час\n"
         )
 
-        # Добавляем статистику по чатам
-        for chat_title, times in sorted(chat_stats.items(), key=lambda x: -len(x[1])):
-            chat_count = len(times)
-            chat_avg = mean(times)
-            report += (
-                f"В чате <b>{chat_title}</b> — <b>{chat_count}</b> "
-                f"- ср. время отв. — <b>{self._format_seconds(chat_avg)}</b>\n"
-            )
+        # report += "По чатам:\n"
+
+        # # Добавляем статистику по чатам
+        # for chat_title, times in sorted(chat_stats.items(), key=lambda x: -len(x[1])):
+        #     # Получаем количество сообщений для данного чата
+        #     chat_messages = sum(
+        #         1
+        #         for msg in messages
+        #         if (
+        #             hasattr(msg, "chat_session")
+        #             and msg.chat_session.title == chat_title
+        #         )
+        #         or (not hasattr(msg, "chat_session") and chat_title == "Без названия")
+        #     )
+        #     chat_avg = mean(times)
+        #     report += (
+        #         f"<b>{chat_title}</b> — <b>{chat_messages}</b> сообщ. "
+        #         f"(<b>{self._format_seconds(chat_avg)}</b> - частота отпр)\n"
+        #     )
 
         # Добавляем общую статистику по времени ответа
         report += (
-            f"\n⏱️ Время ответа:\n"
-            f"Min|max ответ: <b>{self._format_seconds(min_time)}</b> и "
-            f"<b>{self._format_seconds(max_time)}</b>\n"
-            f"AVG и медиан. ответ: <b>{self._format_seconds(avg_time)}</b> и "
-            f"<b>{self._format_seconds(median_time)}</b>\n\n"
-            f"<i>Отчет сгенерирован: {TimeZoneService.now().strftime('%d.%m.%Y %H:%M')}</i>"
+            f"\n⏱️ Статистика по ответам:\n"
+            f"<b>{total_replies}</b> - всего ответов\n"
+            f"<b>{self._format_seconds(min_time)}</b> и "
+            f"<b>{self._format_seconds(max_time)}</b> - мин. и макс. время ответов\n"
+            f"<b>{self._format_seconds(avg_time)}</b> и "
+            f"<b>{self._format_seconds(median_time)}</b> сред. и медиан. время ответа\n"
         )
 
         return Report(text=report)
@@ -148,3 +175,19 @@ class GetResponseTimeReportUseCase:
         else:
             hours = seconds / 3600
             return f"{round(hours, 1)} ч."
+
+    def _messages_per_hour(
+        self,
+        messages_count: int,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> float:
+        """
+        Рассчитывает количество сообщений в час.
+        """
+        if messages_count < 2:
+            return 1
+        hours = (end_date - start_date).total_seconds() / 3600
+        if hours <= 0:
+            return 1
+        return round(messages_count / hours, 1)
