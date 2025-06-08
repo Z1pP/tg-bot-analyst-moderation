@@ -11,6 +11,7 @@ from constants.period import TimePeriod
 from container import container
 from dto.report import ResponseTimeReportDTO
 from keyboards.reply import get_admin_menu_kb, get_time_period_kb
+from keyboards.reply.user_actions import get_user_actions_kb
 from services.work_time_service import WorkTimeService
 from states.user_states import UserStateManager
 from usecases.report import GetResponseTimeReportUseCase
@@ -107,12 +108,12 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
         await handle_exception(
             message=message,
             exc=e,
-            context="process_daily_report_input",
+            context="process_response_time_input",
         )
 
 
 @router.message(UserStateManager.report_reponse_time_input_period)
-async def process_daily_report_period(message: Message, state: FSMContext) -> None:
+async def process_custom_period_input(message: Message, state: FSMContext) -> None:
     """
     Обрабатывает ввод пользовательского периода для отчета.
     """
@@ -147,7 +148,36 @@ async def process_daily_report_period(message: Message, state: FSMContext) -> No
             reply_markup=get_time_period_kb(),
         )
     except Exception as e:
-        await handle_exception(message, e, "process_daily_report_period")
+        await handle_exception(message, e, "process_custom_period_input")
+
+
+@router.message(
+    UserStateManager.report_response_time_selecting_period,
+    F.text == KbCommands.BACK,
+)
+async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
+    """Обработчик для возврата в главное меню."""
+    try:
+        user_data = await state.get_data()
+        username = user_data.get("username")
+
+        if not username:
+            await state.clear()
+            await send_html_message_with_kb(
+                message=message,
+                text="Выберите пользователя заново",
+                reply_markup=get_admin_menu_kb(),
+            )
+            return
+
+        await state.set_state(UserStateManager.report_menu)
+        await send_html_message_with_kb(
+            message=message,
+            text="Нет так нет.",
+            reply_markup=get_user_actions_kb(username=username),
+        )
+    except Exception as e:
+        await handle_exception(message, e, "back_to_menu_handler")
 
 
 async def generate_and_send_report(
@@ -158,28 +188,29 @@ async def generate_and_send_report(
     end_date: datetime,
     selected_period: Optional[str] = None,
 ) -> None:
-    """
-    Генерирует и отправляет отчет.
-    """
-    adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
-        start_date, end_date
-    )
-    report_dto = ResponseTimeReportDTO(
-        username=username,
-        start_date=adjusted_start,
-        end_date=adjusted_end,
-        selected_period=selected_period,
-    )
+    """Генерирует и отправляет отчет."""
+    try:
+        adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
+            start_date, end_date
+        )
+        report_dto = ResponseTimeReportDTO(
+            username=username,
+            start_date=adjusted_start,
+            end_date=adjusted_end,
+            selected_period=selected_period,
+        )
 
-    report = await generate_report(report_dto)
-    text = f"{report.text}\n\nДля продолжения выберите период, либо нажмите назад"
+        report = await generate_report(report_dto)
+        text = f"{report.text}\n\nДля продолжения выберите период, либо нажмите назад"
 
-    await state.set_state(UserStateManager.report_response_time_selecting_period)
-    await send_html_message_with_kb(
-        message=message,
-        text=text,
-        reply_markup=get_time_period_kb(),
-    )
+        await state.set_state(UserStateManager.report_response_time_selecting_period)
+        await send_html_message_with_kb(
+            message=message,
+            text=text,
+            reply_markup=get_time_period_kb(),
+        )
+    except Exception as e:
+        await handle_exception(message, e, "generate_and_send_report")
 
 
 async def generate_report(report_dto: ResponseTimeReportDTO) -> Report:
