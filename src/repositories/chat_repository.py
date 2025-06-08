@@ -28,6 +28,24 @@ class ChatRepository:
                 logger.error("Произошла ошибка при получении чата: %s, %s", chat_id, e)
                 raise e
 
+    async def get_chat_by_title(self, title: str) -> Optional[ChatSession]:
+        """Получает чат по названию."""
+        async with async_session() as session:
+            try:
+                chat = await session.scalar(
+                    select(ChatSession).where(ChatSession.title == title)
+                )
+                if chat:
+                    logger.info(
+                        "Получен чат: chat_id=%s, title=%s", chat.chat_id, chat.title
+                    )
+                else:
+                    logger.info("Чат не найден: title=%s", title)
+                return chat
+            except Exception as e:
+                logger.error("Произошла ошибка при получении чата: %s, %s", title, e)
+                raise e
+
     async def get_all(self) -> List[ChatSession]:
         """Получает список всех чатов."""
         async with async_session() as session:
