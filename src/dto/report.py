@@ -32,3 +32,11 @@ class AllModeratorReportDTO:
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
+
+
+@dataclass
+class ChatReportDTO:
+    chat_title: str
+    start_date: datetime
+    end_date: datetime
+    selected_period: Optional[str] = None
