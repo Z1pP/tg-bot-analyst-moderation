@@ -146,3 +146,34 @@ class WorkTimeService:
             )
 
         return start_date, end_date
+
+    @classmethod
+    def calculate_work_hours(cls, start_date: datetime, end_date: datetime) -> float:
+        """
+        Рассчитывает количество рабочих часов между двумя датами.
+
+        Args:
+            start_date: Начальная дата
+            end_date: Конечная дата
+
+        Returns:
+            Количество рабочих часов
+        """
+
+        # Рассчитываем количество рабочих часов в день
+        work_hours_per_day = (WORK_END.hour + WORK_END.minute / 60) - (
+            WORK_START.hour + WORK_START.minute / 60
+        )
+
+        # Рассчитываем количество дней между датами (исключая выходные, если нужно)
+        current_date = start_date.date()
+        end_date_day = end_date.date()
+        days = 0
+
+        while current_date <= end_date_day:
+            # Проверяем, является ли день рабочим (не выходным)
+            # Можно добавить проверку на выходные, если нужно
+            days += 1
+            current_date += timedelta(days=1)
+
+        return days * work_hours_per_day
