@@ -4,6 +4,7 @@ from statistics import mean, median
 from dto.report import ChatReportDTO
 from models import ChatMessage, ChatSession, MessageReply
 from repositories import ChatRepository, MessageReplyRepository, MessageRepository
+from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
 
@@ -100,17 +101,16 @@ class GetReportOnSpecificChat:
         return report
 
     def _messages_per_hour(
-        self,
-        messages_count: int,
-        start_date: datetime,
-        end_date: datetime,
+        self, messages_count: int, start_date: datetime, end_date: datetime
     ) -> float:
-        """
-        Рассчитывает количество сообщений в час.
-        """
+        """Рассчитывает количество сообщений в час рабочего времени."""
         if messages_count < 2:
             return 1
-        hours = (end_date - start_date).total_seconds() / 3600
-        if hours <= 0:
+
+        # Получаем количество рабочих часов между датами
+        work_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
+
+        if work_hours <= 0:
             return 1
-        return round(messages_count / hours, 2)
+
+        return round(messages_count / work_hours, 2)
