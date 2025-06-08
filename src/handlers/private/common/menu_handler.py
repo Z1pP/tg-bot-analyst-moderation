@@ -36,21 +36,3 @@ async def menu_handler(message: Message, state: FSMContext) -> None:
         text=menu_text,
         reply_markup=get_admin_menu_kb(),
     )
-
-
-@router.message(F.text == KbCommands.BACK)
-async def back_handler(message: Message, state: FSMContext) -> None:
-    """
-    Обработчик кнопки "Назад".
-    Возвращает пользователя к главному меню.
-    """
-    user_data = await state.get_data()
-    username = user_data.get("username")
-
-    await state.set_state(UserStateManager.viewing_user)
-
-    await send_html_message_with_kb(
-        message=message,
-        text="Выберите действие:",
-        reply_markup=get_user_actions_kb(username=username),
-    )
