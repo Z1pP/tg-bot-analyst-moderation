@@ -1,6 +1,6 @@
 from datetime import datetime
 from statistics import mean, median
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, List, TypeVar
 
 from dto.report import AllModeratorReportDTO
 from models import ChatMessage, MessageReply, User
@@ -11,6 +11,8 @@ from repositories import (
 )
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
+
+T = TypeVar("T", ChatMessage, MessageReply)
 
 
 class GetAllModeratorsReportUseCase:
@@ -35,12 +37,7 @@ class GetAllModeratorsReportUseCase:
         dto.end_date = TimeZoneService.convert_to_local_time(dto.end_date)
 
         selected_period = self._format_selected_period(dto.selected_period)
-        report_title = f"Отчет по модераторам за {selected_period}"
-        # report_period = (
-        #     f"Период: {dto.start_date.strftime('%d.%m.%Y')} - "
-        #     f"{dto.end_date.strftime('%d.%m.%Y')} "
-        #     f"({dto.start_date.strftime('%H:%M')}-{dto.end_date.strftime('%H:%M')})"
-        # )
+        report_title = f"<b>📈 Отчет по модераторам за {selected_period}</b>"
 
         reports = []
         for user in users:
@@ -75,11 +72,11 @@ class GetAllModeratorsReportUseCase:
 
     async def _get_processed_items(
         self,
-        repository_method: Callable[[int, datetime, datetime], Awaitable[list]],
+        repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],
         user_id: int,
         start_date: datetime,
         end_date: datetime,
-    ):
+    ) -> List[T]:
         """Получает и обрабатывает элементы из репозитория"""
         items = await repository_method(
             user_id=user_id,
@@ -94,47 +91,63 @@ class GetAllModeratorsReportUseCase:
 
     def _generate_report(
         self,
-        replies: list[MessageReply],
-        messages: list[ChatMessage],
+        replies: List[MessageReply],
+        messages: List[ChatMessage],
         user: User,
         start_date: datetime,
         end_date: datetime,
     ) -> str:
         """Создает отчет для одного модератора"""
+        if not messages:
+            return f"<b>👤 @{user.username}</b>\nНет сообщений за указанный период"
+
         sorted_messages = sorted(messages, key=lambda r: r.created_at)
 
+        # Базовая статистика
+        total_message = len(messages)
+        total_replies = len(replies)
+        time_first_message = TimeZoneService.format_time(sorted_messages[0].created_at)
+
+        # Сообщений в час
+        period_hours = (end_date - start_date).total_seconds() / 3600
+        avg_message_per_hour = (
+            round(total_message / period_hours, 2) if period_hours > 0 else 0
+        )
+
+        # Статистика времени ответа
         response_times = (
             [reply.response_time_seconds for reply in replies] if replies else [0]
         )
-        total_message = len(messages)
-        total_replies = len(replies)
+        if response_times and response_times != [0]:
+            avg_time = round(mean(response_times), 2)
+            median_time = round(median(response_times), 2)
+            min_time = round(min(response_times), 2)
+            max_time = round(max(response_times), 2)
+            response_stats = [
+                f"• <b>{min_time} сек.</b> и <b>{max_time / 60:.2f} мин.</b> - мин. и макс. время ответа",
+                f"• <b>{avg_time} сек.</b> и <b>{median_time} сек.</b> - сред. и медиан. время ответа",
+            ]
+        else:
+            response_stats = []
 
-        time_first_message = TimeZoneService.format_time(sorted_messages[0].created_at)
-
-        period_hours = (end_date - start_date).total_seconds() / 3600
-        avg_message_per_hour = (
-            round(total_message / period_hours, 2) if period_hours else 0
-        )
-
-        # Рассчитываем статистику
-        avg_time = round(mean(response_times), 2)
-        median_time = round(median(response_times), 2)
-        min_time = round(min(response_times), 2)
-        max_time = round(max(response_times), 2)
-
-        breaks = self._calculate_breaks(sorted_messages)
-
+        # Формируем отчет
         report = [
-            f"\n<b>👤 @{user.username}</b>",
+            f"<b>👤 @{user.username}</b>\n",
             f"Первое сообщение {time_first_message}\n",
             f"• <b>{total_message}</b> - всего сообщений",
             f"• <b>{avg_message_per_hour:.2f}</b> - сред. кол-во сообщ. в час",
-            f"• Из них <b>{total_replies}</b> ответов",
-            f"• <b>{min_time} сек.</b> и <b>{max_time / 60:.2f} мин.</b> - мин. и макс. время ответа",
-            f"• <b>{avg_time} сек.</b> и <b>{median_time} сек.</b> - сред. и медиан. время ответа",
-            "",
         ]
 
+        if total_replies > 0:
+            report.append(f"• Из них <b>{total_replies}</b> ответов")
+            report.extend(response_stats)
+        else:
+            report.append("• <b>Нет ответов</b> за указанный период")
+
+        report.append("")
+
+        # Добавляем перерывы
+        breaks = self._calculate_breaks(sorted_messages)
         if breaks:
             report.append("<b>⏸️ Перерывы:</b>")
             for break_info in breaks:
@@ -150,7 +163,7 @@ class GetAllModeratorsReportUseCase:
             return "<b>указанный период</b>"
         return selected_period.split("За")[-1].strip()
 
-    def _calculate_breaks(self, messages: list[ChatMessage]) -> list[str]:
+    def _calculate_breaks(self, messages: List[ChatMessage]) -> List[str]:
         """Считает перерывы между сообщениями"""
         if len(messages) < 2:
             return []
@@ -158,7 +171,6 @@ class GetAllModeratorsReportUseCase:
         breaks = []
         for i in range(1, len(messages)):
             prev_msg, curr_msg = messages[i - 1], messages[i]
-
             minutes_diff = (
                 curr_msg.created_at - prev_msg.created_at
             ).total_seconds() / 60
