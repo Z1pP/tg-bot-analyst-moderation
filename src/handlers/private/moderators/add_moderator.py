@@ -40,13 +40,13 @@ async def process_adding_moderator(message: Message, state: FSMContext) -> None:
 
     if message.forward_from:
         username = message.forward_from.username
-
-    username = validate_username(message.text)
+    else:
+        username = validate_username(message.text)
 
     if not username:
         await send_html_message_with_kb(
             message=message,
-            text="Неверный формат username или @username",
+            text=Dialog.Error.INVALID_USERNAME_FORMAT,
         )
         return
 
@@ -59,12 +59,15 @@ async def process_adding_moderator(message: Message, state: FSMContext) -> None:
         if user.is_existed:
             await send_html_message_with_kb(
                 message=message,
-                text=f"Пользователь <b>{username}</b> уже является модератором",
+                text=Dialog.ALREADY_MODERATOR.format(username=username),
+                reply_markup=get_admin_menu_kb(),
             )
+            return
 
         await send_html_message_with_kb(
             message=message,
-            text=f"Пользователь <b>{username}</b> добавлен в список модераторов",
+            text=Dialog.SUCCESS_ADD_MODERATOR.format(username=username),
+            reply_markup=get_admin_menu_kb(),
         )
     except Exception as e:
         await handle_exception(message, e, "process_adding_moderator")
