@@ -9,6 +9,7 @@ from exceptions.user import UserNotFoundException
 from models import MessageReply, User
 from repositories import MessageReplyRepository, MessageRepository, UserRepository
 from services.time_service import TimeZoneService
+from utils.formatter import format_seconds, format_selected_period
 
 
 @dataclass
@@ -78,7 +79,7 @@ class GetResponseTimeReportUseCase:
         """
         Формирует текстовый отчет о времени ответа в заданном формате.
         """
-        period = self._format_selected_period(selected_period)
+        period = format_selected_period(selected_period)
 
         if not replies:
             return Report(
@@ -120,9 +121,9 @@ class GetResponseTimeReportUseCase:
         # Форматируем отчет
         report = (
             f"<b>📊 Отчёт: @{user.username} за {period}</b>\n\n"
-            f"<b>🕒 Временной период:</b> {start_date.strftime('%d.%m.%Y')}-"
-            f"{end_date.strftime('%d.%m.%Y')} "
-            f"({start_date.strftime('%H:%M')}-{end_date.strftime('%H:%M')})\n\n"
+            # f"<b>🕒 Временной период:</b> {start_date.strftime('%d.%m.%Y')}-"
+            # f"{end_date.strftime('%d.%m.%Y')} "
+            # f"({start_date.strftime('%H:%M')}-{end_date.strftime('%H:%M')})\n\n"
             f"<b>📈 Статистика по сообщениям:</b>\n"
             f"• <b>{total_messages}</b> - всего сообщений\n"
             f"• <b>{messages_per_hour}</b> - сообщений в час\n"
@@ -154,35 +155,13 @@ class GetResponseTimeReportUseCase:
             f"\n<b>⏱️ Статистика по ответам:</b>\n"
             f"• <b>{total_replies}</b> - всего ответов\n"
             f"• <b>{time_first_replie}</b> - время первого ответа\n"
-            f"• <b>{self._format_seconds(min_time)}</b> и "
-            f"<b>{self._format_seconds(max_time)}</b> - мин. и макс. время ответов\n"
-            f"• <b>{self._format_seconds(avg_time)}</b> и "
-            f"<b>{self._format_seconds(median_time)}</b> - сред. и медиан. время ответа\n"
+            f"• <b>{format_seconds(min_time)}</b> и "
+            f"<b>{format_seconds(max_time)}</b> - мин. и макс. время ответов\n"
+            f"• <b>{format_seconds(avg_time)}</b> и "
+            f"<b>{format_seconds(median_time)}</b> - сред. и медиан. время ответа\n"
         )
 
         return Report(text=report)
-
-    def _format_selected_period(self, selected_period: str) -> str:
-        """
-        Форматирует выбранный период в читаемый формат.
-        """
-        if not selected_period:
-            return "указанный период"
-        period = selected_period.split("За")[-1]
-        return period.strip()
-
-    def _format_seconds(self, seconds: float) -> str:
-        """
-        Форматирует секунды в читаемый формат.
-        """
-        if seconds < 60:
-            return f"{round(seconds, 1)} сек."
-        elif seconds < 3600:
-            minutes = seconds / 60
-            return f"{round(minutes, 1)} мин."
-        else:
-            hours = seconds / 3600
-            return f"{round(hours, 1)} ч."
 
     def _messages_per_hour(
         self,
