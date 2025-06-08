@@ -7,7 +7,9 @@ from dto.report import ResponseTimeReportDTO
 from exceptions.user import UserNotFoundException
 from models import ChatMessage, MessageReply, User
 from repositories import MessageReplyRepository, MessageRepository, UserRepository
+from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
+from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
 
@@ -135,7 +137,8 @@ class GetResponseTimeReportUseCase:
             report_lines.append("• Нет ответов на сообщения\n")
 
         # Добавляем информацию о перерывах
-        breaks = self._calculate_breaks(sorted_messages)
+        breaks = BreakAnalysisService.calculate_breaks(messages=sorted_messages)
+
         if breaks:
             report_lines.append("<b>⏸️ Перерывы:</b>")
             for break_info in breaks:
@@ -148,37 +151,14 @@ class GetResponseTimeReportUseCase:
     def _messages_per_hour(
         self, messages_count: int, start_date: datetime, end_date: datetime
     ) -> float:
-        """Рассчитывает количество сообщений в час."""
+        """Рассчитывает количество сообщений в час рабочего времени."""
         if messages_count < 2:
             return 1
-        hours = (end_date - start_date).total_seconds() / 3600
-        if hours <= 0:
+
+        # Получаем количество рабочих часов между датами
+        work_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
+
+        if work_hours <= 0:
             return 1
-        return round(messages_count / hours, 2)
 
-    def _calculate_breaks(self, messages: list[ChatMessage]) -> list[str]:
-        """Считает перерывы между сообщениями."""
-        if len(messages) < 2:
-            return []
-
-        breaks = []
-        for i in range(1, len(messages)):
-            # Приводим даты к локальному времени
-            prev_msg_time = TimeZoneService.convert_to_local_time(
-                messages[i - 1].created_at
-            )
-            curr_msg_time = TimeZoneService.convert_to_local_time(
-                messages[i].created_at
-            )
-
-            minutes_diff = (curr_msg_time - prev_msg_time).total_seconds() / 60
-
-            if minutes_diff >= 30:
-                start_break = prev_msg_time.strftime("%H:%M")
-                end_break = curr_msg_time.strftime("%H:%M")
-                date = prev_msg_time.strftime("%d.%m.%Y")
-                breaks.append(
-                    f"{start_break}-{end_break} — {round(minutes_diff)} мин. ({date})"
-                )
-
-        return breaks
+        return round(messages_count / work_hours, 2)
