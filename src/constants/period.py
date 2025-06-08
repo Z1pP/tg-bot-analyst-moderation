@@ -12,7 +12,7 @@ class TimePeriod(Enum):
 
     THREE_HOURS = "📅 За 3 часа"
     SIX_HOURS = "📅 За 6 часов"
-    ONE_DAY = "📅 За день"
+    ONE_DAY = "📅 24 часа"
     ONE_WEEK = "📅 За неделю"
     ONE_MONTH = "📅 За месяц"
     THREE_MONTH = "📅 За 3 месяца"
