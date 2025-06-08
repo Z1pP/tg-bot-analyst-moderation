@@ -9,6 +9,7 @@ from repositories import (
     MessageRepository,
     UserRepository,
 )
+from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 
@@ -147,7 +148,8 @@ class GetAllModeratorsReportUseCase:
         report.append("")
 
         # Добавляем перерывы
-        breaks = self._calculate_breaks(sorted_messages)
+        breaks = BreakAnalysisService.calculate_breaks(messages=sorted_messages)
+
         if breaks:
             report.append("<b>⏸️ Перерывы:</b>")
             for break_info in breaks:
@@ -162,25 +164,3 @@ class GetAllModeratorsReportUseCase:
         if not selected_period:
             return "<b>указанный период</b>"
         return selected_period.split("За")[-1].strip()
-
-    def _calculate_breaks(self, messages: List[ChatMessage]) -> List[str]:
-        """Считает перерывы между сообщениями"""
-        if len(messages) < 2:
-            return []
-
-        breaks = []
-        for i in range(1, len(messages)):
-            prev_msg, curr_msg = messages[i - 1], messages[i]
-            minutes_diff = (
-                curr_msg.created_at - prev_msg.created_at
-            ).total_seconds() / 60
-
-            if minutes_diff >= 30:
-                start_break = prev_msg.created_at.strftime("%H:%M")
-                end_break = curr_msg.created_at.strftime("%H:%M")
-                date = prev_msg.created_at.strftime("%d.%m.%Y")
-                breaks.append(
-                    f"{start_break}-{end_break} — {round(minutes_diff)} мин. ({date})"
-                )
-
-        return breaks
