@@ -62,13 +62,18 @@ class GetReportOnSpecificChat:
         selected_period: str = None,
     ) -> str:
 
+        if not messages:
+            return "\n⚠️ Нет данных за указанный период."
+
         period = format_selected_period(selected_period)
 
         total_messages = len(messages)
         messages_per_hour = self._messages_per_hour(len(messages), start_date, end_date)
 
         total_replies = len(replies)
-        response_times = [reply.response_time_seconds for reply in replies]
+        response_times = (
+            [reply.response_time_seconds for reply in replies] if replies else [0]
+        )
 
         avg_time = mean(response_times)
         median_time = median(response_times)
