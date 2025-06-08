@@ -109,6 +109,8 @@ class GetAllModeratorsReportUseCase:
         total_message = len(messages)
         total_replies = len(replies)
 
+        time_first_message = TimeZoneService.format_time(sorted_messages[0].created_at)
+
         period_hours = (end_date - start_date).total_seconds() / 3600
         avg_message_per_hour = (
             round(total_message / period_hours, 2) if period_hours else 0
@@ -123,13 +125,11 @@ class GetAllModeratorsReportUseCase:
         breaks = self._calculate_breaks(sorted_messages)
 
         report = [
-            f"<b>👤 @{user.username}</b>",
-            "<b>📊 Статистика сообщений:</b>",
+            f"\n<b>👤 @{user.username}</b>",
+            f"Первое сообщение {time_first_message}\n",
             f"• <b>{total_message}</b> - всего сообщений",
             f"• <b>{avg_message_per_hour:.2f}</b> - сред. кол-во сообщ. в час",
-            "",
-            "<b>⏱️ Статистика ответов:</b>",
-            f"• <b>{total_replies}</b> - всего ответов",
+            f"• Из них <b>{total_replies}</b> ответов",
             f"• <b>{min_time} сек.</b> и <b>{max_time / 60:.2f} мин.</b> - мин. и макс. время ответа",
             f"• <b>{avg_time} сек.</b> и <b>{median_time} сек.</b> - сред. и медиан. время ответа",
             "",
