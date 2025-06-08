@@ -36,11 +36,11 @@ class GetAllModeratorsReportUseCase:
 
         selected_period = self._format_selected_period(dto.selected_period)
         report_title = f"Отчет по модераторам за {selected_period}"
-        report_period = (
-            f"Период: {dto.start_date.strftime('%d.%m.%Y')} - "
-            f"{dto.end_date.strftime('%d.%m.%Y')} "
-            f"({dto.start_date.strftime('%H:%M')}-{dto.end_date.strftime('%H:%M')})"
-        )
+        # report_period = (
+        #     f"Период: {dto.start_date.strftime('%d.%m.%Y')} - "
+        #     f"{dto.end_date.strftime('%d.%m.%Y')} "
+        #     f"({dto.start_date.strftime('%H:%M')}-{dto.end_date.strftime('%H:%M')})"
+        # )
 
         reports = []
         for user in users:
@@ -71,7 +71,7 @@ class GetAllModeratorsReportUseCase:
             )
             reports.append(report)
 
-        return "\n\n".join([report_title] + [report_period] + reports)
+        return "\n\n".join([report_title] + reports)
 
     async def _get_processed_items(
         self,
