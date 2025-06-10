@@ -12,7 +12,8 @@ class TimePeriod(Enum):
 
     THREE_HOURS = "📅 За 3 часа"
     SIX_HOURS = "📅 За 6 часов"
-    ONE_DAY = "📅 24 часа"
+    TODAY = "📅 За сегодня"
+    YESTERDAY = "📅 За вчера"
     ONE_WEEK = "📅 За неделю"
     ONE_MONTH = "📅 За месяц"
     THREE_MONTH = "📅 За 3 месяца"
@@ -26,20 +27,31 @@ class TimePeriod(Enum):
     def get_all(cls) -> list[str]:
         return [p.value for p in cls]
 
-    def to_datetime(self) -> Tuple[datetime, datetime]:
+    def to_datetime(cls, period: str) -> Tuple[datetime, datetime]:
         now = TimeZoneService.now()
 
-        if self == TimePeriod.THREE_HOURS.value:
+        if period == cls.THREE_HOURS.value:
             return now - timedelta(hours=3), now
-        elif self == TimePeriod.SIX_HOURS.value:
+        elif period == cls.SIX_HOURS.value:
             return now - timedelta(hours=6), now
-        elif self == TimePeriod.ONE_DAY.value:
-            return now - timedelta(days=1), now
-        elif self == TimePeriod.ONE_WEEK.value:
+        elif period == cls.TODAY.value:
+            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            return start_of_day, now
+        elif period == cls.YESTERDAY.value:
+            # Начало вчерашнего дня (00:00) до конца вчерашнего дня (23:59:59)
+            yesterday = now - timedelta(days=1)
+            start_of_yesterday = yesterday.replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            end_of_yesterday = yesterday.replace(
+                hour=23, minute=59, second=59, microsecond=999999
+            )
+            return start_of_yesterday, end_of_yesterday
+        elif period == cls.ONE_WEEK.value:
             return now - timedelta(weeks=1), now
-        elif self == TimePeriod.ONE_MONTH.value:
+        elif period == cls.ONE_MONTH.value:
             return now - timedelta(days=30), now
-        elif self == TimePeriod.THREE_MONTH.value:
+        elif period == cls.THREE_MONTH.value:
             return now - timedelta(days=90), now
         else:
-            raise ValueError(f"Неизвестный период: {self}")
+            raise ValueError(f"Неизвестный период: {period}")
