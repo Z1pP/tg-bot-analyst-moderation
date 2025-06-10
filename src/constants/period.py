@@ -27,6 +27,7 @@ class TimePeriod(Enum):
     def get_all(cls) -> list[str]:
         return [p.value for p in cls]
 
+    @classmethod
     def to_datetime(cls, period: str) -> Tuple[datetime, datetime]:
         now = TimeZoneService.now()
 
