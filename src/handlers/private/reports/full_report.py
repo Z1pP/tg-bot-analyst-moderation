@@ -11,6 +11,7 @@ from constants.period import TimePeriod
 from container import container
 from dto.report import AllModeratorReportDTO
 from keyboards.reply import get_time_period_for_full_report
+from services.work_time_service import WorkTimeService
 from states.user_states import UserStateManager
 from usecases.report import GetAllModeratorsReportUseCase
 from utils.command_parser import parse_date
@@ -117,9 +118,14 @@ async def generate_and_send_report(
     """
     Генерирует и отправляет отчет.
     """
+
+    adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
+        start_date, end_date
+    )
+
     report_dto = AllModeratorReportDTO(
-        start_date=start_date,
-        end_date=end_date,
+        start_date=adjusted_start,
+        end_date=adjusted_end,
         selected_period=selected_period,
     )
 
