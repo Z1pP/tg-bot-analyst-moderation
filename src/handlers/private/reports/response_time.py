@@ -14,8 +14,8 @@ from keyboards.reply import get_admin_menu_kb, get_time_period_kb
 from keyboards.reply.user_actions import get_user_actions_kb
 from services.work_time_service import WorkTimeService
 from states.user_states import UserStateManager
-from usecases.report import GetResponseTimeReportUseCase
-from usecases.report.get_response_time_report_usecase import Report
+from usecases.report import GetReportOnSpecificModeratorUseCase
+from usecases.report.moderator.get_specific_moderator_report import Report
 from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -45,6 +45,7 @@ async def response_time_menu_handler(message: Message, state: FSMContext) -> Non
                 text="Выберите пользователя заново",
                 reply_markup=get_admin_menu_kb(),
             )
+            return
 
         # Устанавливаем состояние ожидания выбора периода
         await state.set_state(UserStateManager.report_response_time_selecting_period)
@@ -82,6 +83,7 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
                 text="Выберите пользователя заново",
                 reply_markup=get_admin_menu_kb(),
             )
+            return
 
         if message.text == TimePeriod.CUSTOM.value:
             await state.set_state(UserStateManager.report_reponse_time_input_period)
@@ -93,7 +95,7 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
             )
             return
 
-        start_date, end_date = TimePeriod.to_datetime(message.text)
+        start_date, end_date = TimePeriod.to_datetime(period=message.text)
 
         await generate_and_send_report(
             message=message,
@@ -200,10 +202,11 @@ async def generate_and_send_report(
             selected_period=selected_period,
         )
 
-        report = await generate_report(report_dto)
+        report = await generate_report(report_dto=report_dto)
         text = f"{report.text}\n\nДля продолжения выберите период, либо нажмите назад"
 
         await state.set_state(UserStateManager.report_response_time_selecting_period)
+
         await send_html_message_with_kb(
             message=message,
             text=text,
@@ -218,8 +221,8 @@ async def generate_report(report_dto: ResponseTimeReportDTO) -> Report:
     Генерирует отчет используя UseCase.
     """
     try:
-        usecase: GetResponseTimeReportUseCase = container.resolve(
-            GetResponseTimeReportUseCase
+        usecase: GetReportOnSpecificModeratorUseCase = container.resolve(
+            GetReportOnSpecificModeratorUseCase
         )
         return await usecase.execute(report_dto=report_dto)
     except Exception as e:
