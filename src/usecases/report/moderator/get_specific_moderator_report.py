@@ -2,20 +2,18 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from statistics import mean, median
-from typing import Awaitable, Callable, List, Optional, TypeVar
+from typing import Optional
 
 from dto.report import ResponseTimeReportDTO
 from exceptions.user import UserNotFoundException
 from models import ChatMessage, MessageReply, User
-from repositories import MessageReplyRepository, MessageRepository, UserRepository
 from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
-from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
-logger = logging.getLogger(__name__)
+from .base import BaseReportUseCase
 
-T = TypeVar("T", ChatMessage, MessageReply)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -25,18 +23,8 @@ class Report:
     excel: Optional[str] = None
 
 
-class GetReportOnSpecificModeratorUseCase:
+class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
     """UseCase для генерации отчетов о времени ответа пользователей."""
-
-    def __init__(
-        self,
-        msg_reply_repository: MessageReplyRepository,
-        msg_repository: MessageRepository,
-        user_repository: UserRepository,
-    ):
-        self._msg_reply_repository = msg_reply_repository
-        self._user_repository = user_repository
-        self._msg_repository = msg_repository
 
     async def execute(self, report_dto: ResponseTimeReportDTO) -> Report:
         user = await self._user_repository.get_user_by_username(
@@ -63,7 +51,7 @@ class GetReportOnSpecificModeratorUseCase:
         )
 
         messages = await self._get_processed_items(
-            repository_method=self._msg_repository.get_messages_by_period_date,
+            repository_method=self._message_repository.get_messages_by_period_date,
             user_id=user.id,
             start_date=report_dto.start_date,
             end_date=report_dto.end_date,
@@ -84,25 +72,6 @@ class GetReportOnSpecificModeratorUseCase:
             end_date=report_dto.end_date,
             selected_period=report_dto.selected_period,
         )
-
-    async def _get_processed_items(
-        self,
-        repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],
-        user_id: int,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> List[T]:
-        """Получает и обрабатывает элементы из репозитория"""
-        items = await repository_method(
-            user_id=user_id,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        for item in items:
-            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
-
-        return WorkTimeService.filter_by_work_time(items=items)
 
     def _generate_report(
         self,
@@ -188,18 +157,3 @@ class GetReportOnSpecificModeratorUseCase:
             report_lines.append("<b>⏸️ Перерывы:</b> отсутствуют")
 
         return Report(text="\n".join(report_lines))
-
-    def _messages_per_hour(
-        self, messages_count: int, start_date: datetime, end_date: datetime
-    ) -> float:
-        """Рассчитывает количество сообщений в час рабочего времени."""
-        if messages_count < 2:
-            return 1
-
-        # Получаем количество рабочих часов между датами
-        work_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
-
-        if work_hours <= 0:
-            return 1
-
-        return round(messages_count / work_hours, 2)
