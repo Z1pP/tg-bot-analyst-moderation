@@ -1,7 +1,8 @@
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from statistics import mean, median
-from typing import Optional
+from typing import Awaitable, Callable, List, Optional, TypeVar
 
 from dto.report import ResponseTimeReportDTO
 from exceptions.user import UserNotFoundException
@@ -11,6 +12,10 @@ from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
+
+logger = logging.getLogger(__name__)
+
+T = TypeVar("T", ChatMessage, MessageReply)
 
 
 @dataclass
@@ -39,29 +44,65 @@ class GetResponseTimeReportUseCase:
         )
 
         if not user:
+            logger.error("Пользователь не найден: %s", report_dto.username)
             raise UserNotFoundException()
 
         # Получаем сообщения и ответы за указанный период
-        msg_replies = await self._msg_reply_repository.get_replies_by_period_date(
+        replies = await self._get_processed_items(
+            repository_method=self._msg_reply_repository.get_replies_by_period_date,
             user_id=user.id,
             start_date=report_dto.start_date,
             end_date=report_dto.end_date,
         )
 
-        msgs = await self._msg_repository.get_messages_by_period_date(
+        logger.info(
+            "Получено %d ответов за период %s - %s",
+            len(replies),
+            report_dto.start_date,
+            report_dto.end_date,
+        )
+
+        messages = await self._get_processed_items(
+            repository_method=self._msg_repository.get_messages_by_period_date,
             user_id=user.id,
             start_date=report_dto.start_date,
             end_date=report_dto.end_date,
+        )
+
+        logger.info(
+            "Получено %d сообщений за период %s - %s",
+            len(messages),
+            report_dto.start_date,
+            report_dto.end_date,
         )
 
         return self._generate_report(
-            replies=msg_replies,
-            messages=msgs,
+            replies=replies,
+            messages=messages,
             user=user,
             start_date=report_dto.start_date,
             end_date=report_dto.end_date,
             selected_period=report_dto.selected_period,
         )
+
+    async def _get_processed_items(
+        self,
+        repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],
+        user_id: int,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> List[T]:
+        """Получает и обрабатывает элементы из репозитория"""
+        items = await repository_method(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        for item in items:
+            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
+
+        return WorkTimeService.filter_by_work_time(items=items)
 
     def _generate_report(
         self,
