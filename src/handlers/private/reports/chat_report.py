@@ -15,7 +15,7 @@ from keyboards.reply.menu import get_admin_menu_kb
 from keyboards.reply.time_period import get_time_period_kb
 from services.work_time_service import WorkTimeService
 from states import ChatStateManager
-from usecases.report import GetReportOnSpecificChat
+from usecases.report import GetReportOnSpecificChatUseCase
 from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -202,7 +202,9 @@ async def generate_and_send_report(
 async def generate_report(report_dto: ChatReportDTO) -> str:
     """Генерирует отчет используя UseCase."""
     try:
-        usecase: GetReportOnSpecificChat = container.resolve(GetReportOnSpecificChat)
+        usecase: GetReportOnSpecificChatUseCase = container.resolve(
+            GetReportOnSpecificChatUseCase
+        )
         return await usecase.execute(dto=report_dto)
     except Exception as e:
         logger.error("Ошибка генерации отчета: %s", str(e), exc_info=True)
