@@ -16,8 +16,8 @@ from usecases.message import (
 from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.report import (
     GetAllModeratorsReportUseCase,
-    GetReportOnSpecificChat,
-    GetResponseTimeReportUseCase,
+    GetReportOnSpecificChatUseCase,
+    GetReportOnSpecificModeratorUseCase,
 )
 from usecases.user import (
     CreateNewUserUserCase,
@@ -53,9 +53,9 @@ def setup_container() -> Container:
     # activity usecases
     container.register(TrackModeratorActivityUseCase)
     # report usecases
-    container.register(GetResponseTimeReportUseCase)
+    container.register(GetReportOnSpecificModeratorUseCase)
     container.register(GetAllModeratorsReportUseCase)
-    container.register(GetReportOnSpecificChat)
+    container.register(GetReportOnSpecificChatUseCase)
 
     return container
 
