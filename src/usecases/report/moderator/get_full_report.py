@@ -1,36 +1,19 @@
 import logging
 from datetime import datetime
 from statistics import mean, median
-from typing import Awaitable, Callable, List, TypeVar
+from typing import List
 
 from dto.report import AllModeratorReportDTO
 from models import ChatMessage, MessageReply, User
-from repositories import (
-    MessageReplyRepository,
-    MessageRepository,
-    UserRepository,
-)
 from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
-from services.work_time_service import WorkTimeService
 
-T = TypeVar("T", ChatMessage, MessageReply)
-
+from .base import BaseReportUseCase
 
 logger = logging.getLogger(__name__)
 
 
-class GetAllModeratorsReportUseCase:
-    def __init__(
-        self,
-        msg_reply_repository: MessageReplyRepository,
-        message_repository: MessageRepository,
-        user_repository: UserRepository,
-    ):
-        self._msg_reply_repository = msg_reply_repository
-        self._user_repository = user_repository
-        self._message_repository = message_repository
-
+class GetAllModeratorsReportUseCase(BaseReportUseCase):
     async def execute(self, dto: AllModeratorReportDTO) -> str:
         users = await self._user_repository.get_all_users()
 
@@ -87,25 +70,6 @@ class GetAllModeratorsReportUseCase:
 
         return "\n\n".join([report_title] + reports)
 
-    async def _get_processed_items(
-        self,
-        repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],
-        user_id: int,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> List[T]:
-        """Получает и обрабатывает элементы из репозитория"""
-        items = await repository_method(
-            user_id=user_id,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        for item in items:
-            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
-
-        return WorkTimeService.filter_by_work_time(items=items)
-
     def _generate_report(
         self,
         replies: List[MessageReply],
@@ -126,9 +90,8 @@ class GetAllModeratorsReportUseCase:
         time_first_message = TimeZoneService.format_time(sorted_messages[0].created_at)
 
         # Сообщений в час
-        period_hours = (end_date - start_date).total_seconds() / 3600
-        avg_message_per_hour = (
-            round(total_message / period_hours, 2) if period_hours > 0 else 0
+        avg_message_per_hour = self._messages_per_hour(
+            total_message, start_date, end_date
         )
 
         # Статистика времени ответа
@@ -174,9 +137,3 @@ class GetAllModeratorsReportUseCase:
             report.append("<b>⏸️ Перерывы:</b> отсутствуют")
 
         return "\n".join(report)
-
-    def _format_selected_period(self, selected_period: str) -> str:
-        """Форматирует выбранный период в читаемый формат"""
-        if not selected_period:
-            return "<b>указанный период</b>"
-        return selected_period.split("За")[-1].strip()
