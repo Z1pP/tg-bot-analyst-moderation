@@ -8,7 +8,7 @@ from constants import KbCommands
 from container import container
 from keyboards.inline.chats_kb import tracked_chats_inline_kb
 from states.chat_states import ChatStateManager
-from usecases.chat import GetAllChatsUseCase
+from usecases.chat import GetTrackedChatsUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 
@@ -28,7 +28,7 @@ async def list_of_tracking_chats_handler(message: Message, state: FSMContext) ->
 
         username = message.from_user.username
 
-        usecase: GetAllChatsUseCase = container.resolve(GetAllChatsUseCase)
+        usecase: GetTrackedChatsUseCase = container.resolve(GetTrackedChatsUseCase)
         chats = await usecase.execute(username)
 
         text = (
