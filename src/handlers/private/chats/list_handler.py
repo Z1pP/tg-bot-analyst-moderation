@@ -5,7 +5,7 @@ from aiogram.types import Message
 from constants import KbCommands
 from container import container
 from keyboards.inline.chats_kb import chats_inline_kb
-from keyboards.reply.menu import get_admin_menu_kb
+from keyboards.reply.menu import admin_menu_kb
 from states import ChatStateManager
 from usecases.chat import GetAllChatsUseCase
 from utils.exception_handler import handle_exception
@@ -24,15 +24,17 @@ async def chats_list_handler(message: Message, state: FSMContext) -> None:
         # Состояние вывода списка чатов
         await state.set_state(ChatStateManager.listing_chats)
 
+        username = message.from_user.username
+
         # Получение чатов из БД
         usecase: GetAllChatsUseCase = container.resolve(GetAllChatsUseCase)
-        chats = await usecase.execute()
+        chats = await usecase.execute(username)
 
         if not chats:
             await send_html_message_with_kb(
                 message=message,
                 text="Список чатов пуст. Добавьте бот в чат и выдайте ему админ права",
-                reply_markup=get_admin_menu_kb(),
+                reply_markup=admin_menu_kb(),
             )
             return
 
