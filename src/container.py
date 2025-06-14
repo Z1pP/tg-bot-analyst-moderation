@@ -2,8 +2,8 @@ from punq import Container
 
 from repositories import (
     ActivityRepository,
-    AdminChatAccessRepository,
     ChatRepository,
+    ChatTrackingRepository,
     MessageReplyRepository,
     MessageRepository,
     UserRepository,
@@ -38,7 +38,7 @@ def setup_container() -> Container:
     container.register(MessageRepository)
     container.register(ActivityRepository)
     container.register(MessageReplyRepository)
-    container.register(AdminChatAccessRepository)
+    container.register(ChatTrackingRepository)
 
     # user usecases
     container.register(GetOrCreateUserIfNotExistUserCase)
