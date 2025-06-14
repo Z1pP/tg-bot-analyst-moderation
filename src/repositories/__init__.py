@@ -1,4 +1,5 @@
 from .activity_repository import ActivityRepository
+from .admin_access_repository import AdminChatAccessRepository
 from .chat_repository import ChatRepository
 from .message_reply_repository import MessageReplyRepository
 from .message_repository import MessageRepository
@@ -10,4 +11,5 @@ __all__ = [
     "MessageRepository",
     "UserRepository",
     "MessageReplyRepository",
+    "AdminChatAccessRepository",
 ]
