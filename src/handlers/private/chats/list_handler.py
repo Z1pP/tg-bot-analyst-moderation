@@ -7,7 +7,7 @@ from container import container
 from keyboards.inline.chats_kb import chats_inline_kb
 from keyboards.reply.menu import admin_menu_kb
 from states import ChatStateManager
-from usecases.chat import GetAllChatsUseCase
+from usecases.chat import GetAllTargetChatsUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 
@@ -27,7 +27,7 @@ async def chats_list_handler(message: Message, state: FSMContext) -> None:
         username = message.from_user.username
 
         # Получение чатов из БД
-        usecase: GetAllChatsUseCase = container.resolve(GetAllChatsUseCase)
+        usecase: GetAllTargetChatsUseCase = container.resolve(GetAllTargetChatsUseCase)
         chats = await usecase.execute(username)
 
         if not chats:
