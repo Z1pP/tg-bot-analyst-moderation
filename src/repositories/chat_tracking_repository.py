@@ -167,6 +167,7 @@ class ChatTrackingRepository:
                     .join(AdminChatAccess, ChatSession.id == AdminChatAccess.chat_id)
                     .options(joinedload(ChatSession.admin_access))
                     .where(AdminChatAccess.admin_id == admin_id)
+                    .order_by(ChatSession.title)
                     .distinct()
                 )
                 result = await session.execute(query)
