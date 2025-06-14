@@ -1,4 +1,3 @@
-from dto.chat_dto import ChatReadDTO
 from repositories import ChatTrackingRepository
 from services.user import UserService
 
@@ -18,6 +17,6 @@ class GetAllChatsUseCase:
         if not user:
             return []
 
-        chats = await self._chat_tracking_repository.get_admin_target_chats(user.id)
+        chats = await self._chat_tracking_repository.get_all_admin_chats(user.id)
 
-        return [ChatReadDTO.from_entity(chat) for chat in chats]
+        return chats
