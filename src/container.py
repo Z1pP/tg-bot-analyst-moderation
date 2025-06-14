@@ -11,7 +11,11 @@ from repositories import (
 from services.caching import ICache, TTLEntityCache
 from services.chat import ChatService
 from services.user import UserService
-from usecases.chat import GetAllChatsUseCase, GetOrCreateChatUseCase
+from usecases.chat import (
+    GetAllTargetChatsUseCase,
+    GetOrCreateChatUseCase,
+    GetTrackedChatsUseCase,
+)
 from usecases.chat_tracking import AddChatToTrackUseCase
 from usecases.message import (
     ProcessMessageUseCase,
@@ -56,7 +60,8 @@ def setup_container() -> Container:
     container.register(GetAllUsersUseCase)
     # chat usecases
     container.register(GetOrCreateChatUseCase)
-    container.register(GetAllChatsUseCase)
+    container.register(GetAllTargetChatsUseCase)
+    container.register(GetTrackedChatsUseCase)
     # message usecases
     container.register(SaveMessageUseCase)
     container.register(ProcessMessageUseCase)
