@@ -2,12 +2,14 @@ from punq import Container
 
 from repositories import (
     ActivityRepository,
+    AdminChatAccessRepository,
     ChatRepository,
     MessageReplyRepository,
     MessageRepository,
     UserRepository,
 )
 from usecases.chat import GetAllChatsUseCase, GetOrCreateChatUseCase
+from usecases.chat_tracking import AddChatToTrackUseCase
 from usecases.message import (
     ProcessMessageUseCase,
     ProcessReplyMessageUseCase,
@@ -36,6 +38,7 @@ def setup_container() -> Container:
     container.register(MessageRepository)
     container.register(ActivityRepository)
     container.register(MessageReplyRepository)
+    container.register(AdminChatAccessRepository)
 
     # user usecases
     container.register(GetOrCreateUserIfNotExistUserCase)
@@ -56,6 +59,8 @@ def setup_container() -> Container:
     container.register(GetReportOnSpecificModeratorUseCase)
     container.register(GetAllModeratorsReportUseCase)
     container.register(GetReportOnSpecificChatUseCase)
+    # tracking usecases
+    container.register(AddChatToTrackUseCase)
 
     return container
 
