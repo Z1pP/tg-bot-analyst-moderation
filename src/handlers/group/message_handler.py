@@ -9,7 +9,9 @@ from dto.message_reply import CreateMessageReplyDTO
 from filters.group_filter import GroupTypeFilter
 from models import ChatSession, User
 from models.message import MessageType
+from services.chat import ChatService
 from services.time_service import TimeZoneService
+from services.user import UserService
 from usecases.message import ProcessMessageUseCase, ProcessReplyMessageUseCase
 
 router = Router(name=__name__)
@@ -24,23 +26,18 @@ def _get_message_type(message: Message) -> MessageType:
 
 
 @router.message(GroupTypeFilter())
-async def group_message_handler(message: Message, **data):
+async def group_message_handler(message: Message):
     """
     Обрабатывет сообщения которые приходит только от модераторов чата
     """
-
     # Сообщения от ботов не сохраняются
     if message.from_user.is_bot:
         return
 
-    sender: User = data.get("sender")
-    chat: ChatSession = data.get("chat")
+    sender, chat = await _get_sender_and_chat(message=message)
 
-    if not sender or not chat:
-        return
-
+    # Обрабатываем сообщение в зависимости от типа
     msg_type = _get_message_type(message=message)
-
     if msg_type == MessageType.REPLY:
         await process_moderator_reply(
             message=message,
@@ -48,20 +45,19 @@ async def group_message_handler(message: Message, **data):
             chat=chat,
         )
     else:
-        await precess_moderator_message(
+        await process_moderator_message(
             message=message,
             sender=sender,
             chat=chat,
         )
 
 
-async def process_moderator_reply(message: Message, sender: User, chat: ChatSession):
+async def process_moderator_reply(message: Message, sender, chat):
     """
     Обрабатывает reply-сообщения модераторов.
     Сохраняет reply как обычное сообщение, а затем создаёт связь в MessageReply.
     """
-
-    # Преобразуем время сообщения в московское время
+    # Преобразуем время сообщения в локальное время
     message_date = TimeZoneService.convert_to_local_time(
         dt=message.date,
     )
@@ -80,46 +76,37 @@ async def process_moderator_reply(message: Message, sender: User, chat: ChatSess
         created_at=message_date,
     )
 
-    # Получаем use case для обработки сообщений
-    message_usecase: ProcessMessageUseCase = container.resolve(ProcessMessageUseCase)
-
-    # use case для обработки reply сообщений
-    reply_usecase: ProcessReplyMessageUseCase = container.resolve(
-        ProcessReplyMessageUseCase
-    )
-
     try:
         # Сохраняем reply как обычное сообщение
+        message_usecase = container.resolve(ProcessMessageUseCase)
         saved_message = await message_usecase.execute(message_dto=msg_dto)
+
+        # Создаем ссылку на оригинальное сообщение
+        original_message_url = f"https://t.me/c/{chat.chat_id.lstrip('-')}/{message.reply_to_message.message_id}"
 
         # DTO для связи reply с оригинальным сообщением
         reply_dto = CreateMessageReplyDTO(
             chat_id=chat.id,
-            original_message_url=message.reply_to_message.text,  # ID оригинального сообщения
-            reply_message_id=saved_message.id,  # ID сохранённого reply-сообщения
+            original_message_url=original_message_url,
+            reply_message_id=saved_message.id,
             reply_user_id=sender.id,
-            original_message_date=reply_to_message_date,
-            reply_message_date=message_date,
             response_time_seconds=(
-                (message_date - reply_to_message_date).total_seconds()
-            ),
+                message_date - reply_to_message_date
+            ).total_seconds(),
         )
 
         # Сохраняем связь в MessageReply
+        reply_usecase = container.resolve(ProcessReplyMessageUseCase)
         await reply_usecase.execute(reply_message_dto=reply_dto)
-
-        return
     except Exception as e:
         logger.error("Error saving reply message: %s", str(e))
-        return
 
 
-async def precess_moderator_message(message: Message, sender: User, chat: ChatSession):
+async def process_moderator_message(message: Message, sender, chat):
     """
     Обрабатывает сообщения которые не являются reply
     """
-
-    # Преобразуем время сообщения в московское время
+    # Преобразуем время сообщения в локальное время
     message_date = TimeZoneService.convert_to_local_time(
         dt=message.date,
     )
@@ -134,11 +121,39 @@ async def precess_moderator_message(message: Message, sender: User, chat: ChatSe
         created_at=message_date,
     )
 
-    usecase: ProcessMessageUseCase = container.resolve(ProcessMessageUseCase)
-
     try:
+        usecase = container.resolve(ProcessMessageUseCase)
         await usecase.execute(message_dto=msg_dto)
-        return
     except Exception as e:
         logger.error("Error saving message: %s", str(e))
+
+
+async def _get_sender_and_chat(message: Message) -> tuple[User, ChatSession]:
+    """
+    Получает пользователя и чат из сообщения.
+    """
+    # Получаем сервисы
+    user_service = container.resolve(UserService)
+    chat_service = container.resolve(ChatService)
+
+    # Получаем пользователя и чат
+    username = message.from_user.username
+    chat_id = str(message.chat.id)
+
+    if not username:
+        logger.warning("Пользователь без username: %s", message.from_user.id)
         return
+
+    sender = await user_service.get_user(username)
+    if not sender:
+        logger.warning("Пользователь не найден в базе данных: %s", username)
+        return
+
+    chat = await chat_service.get_or_create_chat(
+        chat_id=chat_id, title=message.chat.title or "Без названия"
+    )
+    if not chat:
+        logger.error("Не удалось получить или создать чат: %s", chat_id)
+        return
+
+    return sender, chat
