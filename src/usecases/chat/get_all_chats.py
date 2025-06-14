@@ -1,12 +1,23 @@
 from dto.chat_dto import ChatReadDTO
-from repositories import ChatRepository
+from repositories import ChatTrackingRepository
+from services.user import UserService
 
 
 class GetAllChatsUseCase:
-    def __init__(self, chat_repository: ChatRepository):
-        self._chat_repository = chat_repository
+    def __init__(
+        self,
+        chat_tracking_repository: ChatTrackingRepository,
+        user_service: UserService,
+    ):
+        self._chat_tracking_repository = chat_tracking_repository
+        self._user_service = user_service
 
-    async def execute(self):
-        chats = await self._chat_repository.get_all()
+    async def execute(self, username: str):
+        user = await self._user_service.get_user(username)
+
+        if not user:
+            return []
+
+        chats = await self._chat_tracking_repository.get_admin_target_chats(user.id)
 
         return [ChatReadDTO.from_entity(chat) for chat in chats]
