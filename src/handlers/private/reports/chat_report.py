@@ -11,7 +11,7 @@ from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
 from keyboards.reply.chat_actions import chat_actions_kb
-from keyboards.reply.menu import get_admin_menu_kb
+from keyboards.reply.menu import admin_menu_kb
 from keyboards.reply.time_period import get_time_period_kb
 from services.work_time_service import WorkTimeService
 from states import ChatStateManager
@@ -161,7 +161,7 @@ async def select_chat_again(message: Message, state: FSMContext) -> None:
     await send_html_message_with_kb(
         message=message,
         text="Выберите чат заново",
-        reply_markup=get_admin_menu_kb(),
+        reply_markup=admin_menu_kb(),
     )
 
 

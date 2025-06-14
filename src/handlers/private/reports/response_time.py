@@ -10,7 +10,7 @@ from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import ResponseTimeReportDTO
-from keyboards.reply import get_admin_menu_kb, get_time_period_kb
+from keyboards.reply import admin_menu_kb, get_time_period_kb
 from keyboards.reply.user_actions import get_user_actions_kb
 from services.work_time_service import WorkTimeService
 from states.user_states import UserStateManager
@@ -43,7 +43,7 @@ async def response_time_menu_handler(message: Message, state: FSMContext) -> Non
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
-                reply_markup=get_admin_menu_kb(),
+                reply_markup=admin_menu_kb(),
             )
             return
 
@@ -81,7 +81,7 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
-                reply_markup=get_admin_menu_kb(),
+                reply_markup=admin_menu_kb(),
             )
             return
 
@@ -128,7 +128,7 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
-                reply_markup=get_admin_menu_kb(),
+                reply_markup=admin_menu_kb(),
             )
             return
 
@@ -168,7 +168,7 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
-                reply_markup=get_admin_menu_kb(),
+                reply_markup=admin_menu_kb(),
             )
             return
 

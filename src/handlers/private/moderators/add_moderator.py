@@ -4,7 +4,7 @@ from aiogram.types import Message
 
 from constants import Dialog, KbCommands
 from container import container
-from keyboards.reply import get_admin_menu_kb, get_back_kb
+from keyboards.reply import admin_menu_kb, get_back_kb
 from states.user_states import UsernameManagement
 from usecases.user import GetOrCreateUserIfNotExistUserCase
 from utils.exception_handler import handle_exception
@@ -60,14 +60,14 @@ async def process_adding_moderator(message: Message, state: FSMContext) -> None:
             await send_html_message_with_kb(
                 message=message,
                 text=Dialog.ALREADY_MODERATOR.format(username=username),
-                reply_markup=get_admin_menu_kb(),
+                reply_markup=admin_menu_kb(),
             )
             return
 
         await send_html_message_with_kb(
             message=message,
             text=Dialog.SUCCESS_ADD_MODERATOR.format(username=username),
-            reply_markup=get_admin_menu_kb(),
+            reply_markup=admin_menu_kb(),
         )
     except Exception as e:
         await handle_exception(message, e, "process_adding_moderator")
@@ -84,5 +84,5 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
     await send_html_message_with_kb(
         message=message,
         text="Нет так нет.",
-        reply_markup=get_admin_menu_kb(),
+        reply_markup=admin_menu_kb(),
     )

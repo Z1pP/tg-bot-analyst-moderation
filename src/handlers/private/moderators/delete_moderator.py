@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery, Message
 from constants import KbCommands
 from container import container
 from keyboards.inline.moderators import remove_inline_kb
-from keyboards.reply.menu import get_admin_menu_kb
+from keyboards.reply.menu import admin_menu_kb
 from usecases.user import DeleteUserUseCase, GetAllUsersUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -28,7 +28,7 @@ async def remove_moderator_handler(message: Message) -> None:
             await send_html_message_with_kb(
                 message=message,
                 text="Список модераторов пуст. Добавьте модераторов",
-                reply_markup=get_admin_menu_kb(),
+                reply_markup=admin_menu_kb(),
             )
             return
 

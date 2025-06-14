@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import KbCommands
-from keyboards.reply.menu import get_admin_menu_kb
+from keyboards.reply.menu import admin_menu_kb
 from keyboards.reply.user_actions import get_user_actions_kb
 from states.user_states import UserStateManager
 from utils.send_message import send_html_message_with_kb
@@ -34,5 +34,5 @@ async def menu_handler(message: Message, state: FSMContext) -> None:
     await send_html_message_with_kb(
         message=message,
         text=menu_text,
-        reply_markup=get_admin_menu_kb(),
+        reply_markup=admin_menu_kb(),
     )
