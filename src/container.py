@@ -37,45 +37,109 @@ from usecases.user import (
 )
 
 
-def setup_container() -> Container:
-    container = Container()
+class ContainerSetup:
+    @staticmethod
+    def setup() -> Container:
+        container = Container()
 
-    container.register(UserRepository)
-    container.register(ChatRepository)
-    container.register(MessageRepository)
-    container.register(ActivityRepository)
-    container.register(MessageReplyRepository)
-    container.register(ChatTrackingRepository)
+        ContainerSetup._register_repositories(container)
+        ContainerSetup._register_services(container)
+        ContainerSetup._register_usecases(container)
 
-    # services
-    container.register(ICache, TTLEntityCache)
-    container.register(UserService)
-    container.register(ChatService)
+        return container
 
-    # user usecases
-    container.register(GetOrCreateUserIfNotExistUserCase)
-    container.register(CreateNewUserUserCase)
-    container.register(DeleteUserUseCase)
-    container.register(GetUserFromDatabaseUseCase)
-    container.register(GetAllUsersUseCase)
-    # chat usecases
-    container.register(GetOrCreateChatUseCase)
-    container.register(GetAllTargetChatsUseCase)
-    container.register(GetTrackedChatsUseCase)
-    # message usecases
-    container.register(SaveMessageUseCase)
-    container.register(ProcessMessageUseCase)
-    container.register(ProcessReplyMessageUseCase)
-    # activity usecases
-    container.register(TrackModeratorActivityUseCase)
-    # report usecases
-    container.register(GetReportOnSpecificModeratorUseCase)
-    container.register(GetAllModeratorsReportUseCase)
-    container.register(GetReportOnSpecificChatUseCase)
-    # tracking usecases
-    container.register(AddChatToTrackUseCase)
+    @staticmethod
+    def _register_repositories(container: Container) -> None:
+        """Регистрация репозиториев."""
+        repositories = [
+            UserRepository,
+            ChatRepository,
+            MessageRepository,
+            ActivityRepository,
+            MessageReplyRepository,
+            ChatTrackingRepository,
+        ]
 
-    return container
+        for repo in repositories:
+            container.register(repo)
+
+    @staticmethod
+    def _register_services(container: Container) -> None:
+        """Регистрация сервисов."""
+        container.register(ICache, TTLEntityCache)
+        container.register(UserService)
+        container.register(ChatService)
+
+    @staticmethod
+    def _register_usecases(container: Container) -> None:
+        """Регистрация всех use cases."""
+        ContainerSetup._register_user_usecases(container)
+        ContainerSetup._register_chat_usecases(container)
+        ContainerSetup._register_message_usecases(container)
+        ContainerSetup._register_activity_usecases(container)
+        ContainerSetup._register_report_usecases(container)
+        ContainerSetup._register_tracking_usecases(container)
+
+    @staticmethod
+    def _register_user_usecases(container: Container) -> None:
+        """Регистрация use cases для пользователей."""
+        user_usecases = [
+            GetOrCreateUserIfNotExistUserCase,
+            CreateNewUserUserCase,
+            DeleteUserUseCase,
+            GetUserFromDatabaseUseCase,
+            GetAllUsersUseCase,
+        ]
+
+        for usecase in user_usecases:
+            container.register(usecase)
+
+    @staticmethod
+    def _register_chat_usecases(container: Container) -> None:
+        """Регистрация use cases для чатов."""
+        chat_usecases = [
+            GetOrCreateChatUseCase,
+            GetAllTargetChatsUseCase,
+            GetTrackedChatsUseCase,
+        ]
+
+        for usecase in chat_usecases:
+            container.register(usecase)
+
+    @staticmethod
+    def _register_message_usecases(container: Container) -> None:
+        """Регистрация use cases для сообщений."""
+        message_usecases = [
+            SaveMessageUseCase,
+            ProcessMessageUseCase,
+            ProcessReplyMessageUseCase,
+        ]
+
+        for usecase in message_usecases:
+            container.register(usecase)
+
+    @staticmethod
+    def _register_activity_usecases(container: Container) -> None:
+        """Регистрация use cases для активности."""
+        container.register(TrackModeratorActivityUseCase)
+
+    @staticmethod
+    def _register_report_usecases(container: Container) -> None:
+        """Регистрация use cases для отчетов."""
+        report_usecases = [
+            GetReportOnSpecificModeratorUseCase,
+            GetAllModeratorsReportUseCase,
+            GetReportOnSpecificChatUseCase,
+        ]
+
+        for usecase in report_usecases:
+            container.register(usecase)
+
+    @staticmethod
+    def _register_tracking_usecases(container: Container) -> None:
+        """Регистрация use cases для отслеживания."""
+        container.register(AddChatToTrackUseCase)
 
 
-container = setup_container()
+# Создаем и экспортируем контейнер
+container = ContainerSetup.setup()
