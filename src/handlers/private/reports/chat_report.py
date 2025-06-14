@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 @router.message(
     ChatStateManager.selecting_chat,
-    F.text == KbCommands.REPORT_RESPONSE_TIME,
+    F.text == KbCommands.GET_REPORT,
 )
 async def specific_chat_report(message: Message, state: FSMContext) -> None:
     """Обработчик запроса на создание отчета по конкретному чату."""

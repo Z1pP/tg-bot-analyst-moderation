@@ -3,10 +3,8 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from constants import KbCommands
-from keyboards.reply.menu import admin_menu_kb
-from keyboards.reply.user_actions import get_user_actions_kb
-from states.user_states import UserStateManager
+from constants import Dialog, KbCommands
+from keyboards.reply.menu import admin_menu_kb, chat_menu_kb, moderator_menu_kb
 from utils.send_message import send_html_message_with_kb
 
 router = Router(name=__name__)
@@ -23,16 +21,32 @@ async def menu_handler(message: Message, state: FSMContext) -> None:
     # Очищаем состояние FSM
     await state.clear()
 
-    user_name = message.from_user.first_name
+    username = message.from_user.first_name
 
-    menu_text = (
-        f"👋 Привет, <b>{user_name}</b>!\n\n"
-        f"Это панель управления ботом для аналитики и модерации.\n"
-        f"Выберите нужный раздел из меню ниже:"
-    )
+    menu_text = Dialog.START_TEXT.format(username=username)
 
     await send_html_message_with_kb(
         message=message,
         text=menu_text,
         reply_markup=admin_menu_kb(),
+    )
+
+
+@router.message(F.text == KbCommands.MODERATORS_MENU)
+async def moderators_menu_handler(message: Message) -> None:
+
+    await send_html_message_with_kb(
+        message=message,
+        text=Dialog.MODERATORS_MENU_TEXT,
+        reply_markup=moderator_menu_kb(),
+    )
+
+
+@router.message(F.text == KbCommands.CHATS_MENU)
+async def chats_menu_handler(message: Message) -> None:
+
+    await send_html_message_with_kb(
+        message=message,
+        text=Dialog.CHATS_MENU_TEXT,
+        reply_markup=chat_menu_kb(),
     )

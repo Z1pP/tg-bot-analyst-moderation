@@ -2,7 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
-from keyboards.reply.user_actions import get_user_actions_kb
+from keyboards.reply.user_actions import user_actions_kb
 from states.user_states import UserStateManager
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -24,7 +24,7 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
         await send_html_message_with_kb(
             message=callback.message,
             text=f"Выбран пользователь: {username}",
-            reply_markup=get_user_actions_kb(username=username),
+            reply_markup=user_actions_kb(username=username),
         )
 
         await callback.answer()

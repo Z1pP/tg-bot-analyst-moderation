@@ -11,7 +11,7 @@ from constants.period import TimePeriod
 from container import container
 from dto.report import ResponseTimeReportDTO
 from keyboards.reply import admin_menu_kb, get_time_period_kb
-from keyboards.reply.user_actions import get_user_actions_kb
+from keyboards.reply.user_actions import user_actions_kb
 from services.work_time_service import WorkTimeService
 from states.user_states import UserStateManager
 from usecases.report import GetReportOnSpecificModeratorUseCase
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 router = Router(name=__name__)
 
 
-@router.message(F.text == KbCommands.REPORT_RESPONSE_TIME)
+@router.message(F.text == KbCommands.GET_REPORT)
 async def response_time_menu_handler(message: Message, state: FSMContext) -> None:
     """
     Обработчик запроса на создание отчета о времени ответа.
@@ -176,7 +176,7 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
         await send_html_message_with_kb(
             message=message,
             text="Нет так нет.",
-            reply_markup=get_user_actions_kb(username=username),
+            reply_markup=user_actions_kb(username=username),
         )
     except Exception as e:
         await handle_exception(message, e, "back_to_menu_handler")
