@@ -8,6 +8,9 @@ from repositories import (
     MessageRepository,
     UserRepository,
 )
+from services.caching import ICache, TTLEntityCache
+from services.chat import ChatService
+from services.user import UserService
 from usecases.chat import GetAllChatsUseCase, GetOrCreateChatUseCase
 from usecases.chat_tracking import AddChatToTrackUseCase
 from usecases.message import (
@@ -39,6 +42,11 @@ def setup_container() -> Container:
     container.register(ActivityRepository)
     container.register(MessageReplyRepository)
     container.register(ChatTrackingRepository)
+
+    # services
+    container.register(ICache, TTLEntityCache)
+    container.register(UserService)
+    container.register(ChatService)
 
     # user usecases
     container.register(GetOrCreateUserIfNotExistUserCase)
