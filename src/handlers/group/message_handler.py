@@ -90,13 +90,17 @@ async def process_moderator_reply(message: Message, sender, chat):
             original_message_url=original_message_url,
             reply_message_id=saved_message.id,
             reply_user_id=sender.id,
+            original_message_date=message_date,
+            reply_message_date=reply_to_message_date,
             response_time_seconds=(
                 message_date - reply_to_message_date
             ).total_seconds(),
         )
 
         # Сохраняем связь в MessageReply
-        reply_usecase = container.resolve(ProcessReplyMessageUseCase)
+        reply_usecase: ProcessReplyMessageUseCase = container.resolve(
+            ProcessReplyMessageUseCase
+        )
         await reply_usecase.execute(reply_message_dto=reply_dto)
     except Exception as e:
         logger.error("Error saving reply message: %s", str(e))
