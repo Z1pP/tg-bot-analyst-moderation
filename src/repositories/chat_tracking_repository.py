@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from database.session import async_session
 from models import AdminChatAccess, ChatSession
@@ -157,18 +158,19 @@ class ChatTrackingRepository:
                 logger.error("Произошла ошибка при проверке доступа к чату: %s", e)
                 return None
 
-    async def get_all_admin_chats(self, admin_id: int) -> list[ChatSession]:
+    async def get_all_tracked_chats(self, admin_id: int) -> list[ChatSession]:
         """Получает все чаты администратора (и источники, и получатели)."""
         async with async_session() as session:
             try:
                 query = (
                     select(ChatSession)
-                    .join(AdminChatAccess)
+                    .join(AdminChatAccess, ChatSession.id == AdminChatAccess.chat_id)
+                    .options(joinedload(ChatSession.admin_access))
                     .where(AdminChatAccess.admin_id == admin_id)
                     .distinct()
                 )
                 result = await session.execute(query)
-                chats = result.scalars().all()
+                chats = result.unique().scalars().all()
 
                 logger.info(
                     "Получено %d чатов для администратора: %s", len(chats), admin_id
