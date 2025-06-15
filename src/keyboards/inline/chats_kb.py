@@ -7,13 +7,6 @@ from models.chat_session import ChatSession
 def chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
-    builder.row(
-        InlineKeyboardButton(
-            text="Все чаты",
-            callback_data="all_chats",
-        )
-    )
-
     for index, chat in enumerate(chats):
         builder.row(
             InlineKeyboardButton(
