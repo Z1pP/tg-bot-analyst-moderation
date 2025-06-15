@@ -152,28 +152,113 @@ class WorkTimeService:
         """
         Рассчитывает количество рабочих часов между двумя датами.
 
+        Учитывает только рабочие часы в каждом дне в заданном промежутке.
+
         Args:
             start_date: Начальная дата
             end_date: Конечная дата
 
         Returns:
-            Количество рабочих часов
+            Количество рабочих часов, округленное до 2 знаков после запятой
         """
+        # Проверяем корректность дат
+        if start_date > end_date:
+            return 0.0
 
-        # Рассчитываем количество рабочих часов в день
-        work_hours_per_day = (WORK_END.hour + WORK_END.minute / 60) - (
-            WORK_START.hour + WORK_START.minute / 60
+        # Убедимся, что обе даты имеют одинаковый тип (с часовым поясом или без)
+        if start_date.tzinfo is not None and end_date.tzinfo is None:
+            end_date = end_date.replace(tzinfo=start_date.tzinfo)
+        elif start_date.tzinfo is None and end_date.tzinfo is not None:
+            start_date = start_date.replace(tzinfo=end_date.tzinfo)
+
+        # Используем точные границы рабочего времени без отклонения
+        work_start_time = WORK_START
+        work_end_time = WORK_END
+
+        # Рассчитываем количество рабочих часов в полном рабочем дне
+        work_hours_per_day = (work_end_time.hour + work_end_time.minute / 60) - (
+            work_start_time.hour + work_start_time.minute / 60
+        )
+        work_hours_per_day = round(work_hours_per_day, 2)
+
+        # Если даты в одном дне
+        if start_date.date() == end_date.date():
+            return cls._calculate_work_hours_in_day(
+                start_date, end_date, work_start_time, work_end_time
+            )
+
+        # Рассчитываем часы для первого дня (от start_date до конца рабочего дня)
+        first_day_end = datetime.combine(start_date.date(), work_end_time)
+        if start_date.tzinfo is not None:
+            first_day_end = first_day_end.replace(tzinfo=start_date.tzinfo)
+        first_day_hours = cls._calculate_work_hours_in_day(
+            start_date, first_day_end, work_start_time, work_end_time
         )
 
-        # Рассчитываем количество дней между датами (исключая выходные, если нужно)
-        current_date = start_date.date()
-        end_date_day = end_date.date()
-        days = 0
+        # Рассчитываем часы для последнего дня (от начала рабочего дня до end_date)
+        last_day_start = datetime.combine(end_date.date(), work_start_time)
+        if end_date.tzinfo is not None:
+            last_day_start = last_day_start.replace(tzinfo=end_date.tzinfo)
+        last_day_hours = cls._calculate_work_hours_in_day(
+            last_day_start, end_date, work_start_time, work_end_time
+        )
 
-        while current_date <= end_date_day:
-            # Проверяем, является ли день рабочим (не выходным)
-            # Можно добавить проверку на выходные, если нужно
-            days += 1
-            current_date += timedelta(days=1)
+        # Рассчитываем количество полных рабочих дней между первым и последним днем
+        full_days = (end_date.date() - start_date.date()).days - 1
+        if full_days < 0:
+            full_days = 0
 
-        return days * work_hours_per_day
+        # Суммируем все часы и округляем до 2 знаков
+        total_hours = (
+            first_day_hours + (full_days * work_hours_per_day) + last_day_hours
+        )
+        total_hours = round(total_hours, 2)
+
+        return total_hours
+
+    @classmethod
+    def _calculate_work_hours_in_day(
+        cls,
+        start_datetime: datetime,
+        end_datetime: datetime,
+        work_start_time: time,
+        work_end_time: time,
+    ) -> float:
+        """
+        Рассчитывает количество рабочих часов в пределах одного дня.
+
+        Args:
+            start_datetime: Начальное время
+            end_datetime: Конечное время
+            work_start_time: Начало рабочего дня
+            work_end_time: Конец рабочего дня
+
+        Returns:
+            Количество рабочих часов, округленное до 2 знаков после запятой
+        """
+        # Проверяем, что даты в одном дне
+        if start_datetime.date() != end_datetime.date():
+            raise ValueError("Даты должны быть в одном дне")
+
+        # Ограничиваем время рабочими часами
+        day_start = datetime.combine(start_datetime.date(), work_start_time)
+        day_end = datetime.combine(end_datetime.date(), work_end_time)
+
+        # Сохраняем информацию о часовом поясе
+        if start_datetime.tzinfo is not None:
+            day_start = day_start.replace(tzinfo=start_datetime.tzinfo)
+            day_end = day_end.replace(tzinfo=start_datetime.tzinfo)
+
+        # Если начало после конца рабочего дня или конец до начала рабочего дня
+        if start_datetime > day_end or end_datetime < day_start:
+            return 0.0
+
+        # Корректируем границы
+        effective_start = max(start_datetime, day_start)
+        effective_end = min(end_datetime, day_end)
+
+        # Рассчитываем часы и округляем до 2 знаков
+        hours = (effective_end - effective_start).total_seconds() / 3600
+        hours = round(hours, 2)
+
+        return max(0.0, hours)
