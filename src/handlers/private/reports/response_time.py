@@ -48,7 +48,7 @@ async def response_time_menu_handler(message: Message, state: FSMContext) -> Non
             return
 
         # Устанавливаем состояние ожидания выбора периода
-        await state.set_state(UserStateManager.report_response_time_selecting_period)
+        await state.set_state(UserStateManager.process_select_time_period)
 
         await send_html_message_with_kb(
             message=message,
@@ -59,12 +59,12 @@ async def response_time_menu_handler(message: Message, state: FSMContext) -> Non
         await handle_exception(
             message=message,
             exc=e,
-            context="report_daily_handler",
+            context="response_time_menu_handler",
         )
 
 
 @router.message(
-    UserStateManager.report_response_time_selecting_period,
+    UserStateManager.process_select_time_period,
     F.text.in_(TimePeriod.get_all_periods()),
 )
 async def process_response_time_input(message: Message, state: FSMContext) -> None:
@@ -86,7 +86,7 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
             return
 
         if message.text == TimePeriod.CUSTOM.value:
-            await state.set_state(UserStateManager.report_reponse_time_input_period)
+            await state.set_state(UserStateManager.process_custom_period_input)
 
             await send_html_message_with_kb(
                 message=message,
@@ -114,7 +114,7 @@ async def process_response_time_input(message: Message, state: FSMContext) -> No
         )
 
 
-@router.message(UserStateManager.report_reponse_time_input_period)
+@router.message(UserStateManager.process_custom_period_input)
 async def process_custom_period_input(message: Message, state: FSMContext) -> None:
     """
     Обрабатывает ввод пользовательского периода для отчета.
@@ -154,7 +154,7 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
 
 
 @router.message(
-    UserStateManager.report_response_time_selecting_period,
+    UserStateManager.process_select_time_period,
     F.text == KbCommands.BACK,
 )
 async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
@@ -192,9 +192,11 @@ async def generate_and_send_report(
 ) -> None:
     """Генерирует и отправляет отчет."""
     try:
+        # Корректируем даты в соответствии с рабочим временем
         adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
             start_date, end_date
         )
+
         report_dto = ResponseTimeReportDTO(
             username=username,
             start_date=adjusted_start,
@@ -205,7 +207,7 @@ async def generate_and_send_report(
         report = await generate_report(report_dto=report_dto)
         text = f"{report.text}\n\nДля продолжения выберите период, либо нажмите назад"
 
-        await state.set_state(UserStateManager.report_response_time_selecting_period)
+        await state.set_state(UserStateManager.process_select_time_period)
 
         await send_html_message_with_kb(
             message=message,
