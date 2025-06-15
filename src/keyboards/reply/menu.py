@@ -43,9 +43,6 @@ def chat_menu_kb():
             KeyboardButton(text=KbCommands.SELECT_CHAT),
         ],
         [
-            KeyboardButton(text=KbCommands.TRACKED_CHATS),
-        ],
-        [
             KeyboardButton(text=KbCommands.MENU),
         ],
     ]
