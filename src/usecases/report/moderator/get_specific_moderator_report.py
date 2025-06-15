@@ -9,6 +9,7 @@ from exceptions.user import UserNotFoundException
 from models import ChatMessage, MessageReply, User
 from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
+from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
 from .base import BaseReportUseCase
@@ -124,10 +125,12 @@ class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
             else "N/A"
         )
 
+        working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
         # Формируем отчет
         report_lines = [
             f"<b>📊 Отчёт: @{user.username} за {period}</b>\n",
-            f"• <b>{time_first_message}</b> - время первого сообщения\n",
+            f"• <b>{time_first_message}</b> - время первого сообщения",
+            f"• <b>{working_hours}</b> - кол-во рабочих часов\n",
             f"• <b>{total_messages}</b> - всего сообщений",
             f"• <b>{messages_per_hour}</b> - сообщений в час",
             f"• Из них <b>{total_replies}</b> ответов",
