@@ -10,10 +10,10 @@ class UserStateManager(StatesGroup):
 
     # Состояния для работы с отчетами для выбранного пользователя
     report_menu = State()
-    report_response_time_selecting_period = State()
+    process_select_time_period = State()
     report_full_selecting_period = State()
 
-    report_reponse_time_input_period = State()
+    process_custom_period_input = State()
     report_full_waiting_input_period = State()
 
 
