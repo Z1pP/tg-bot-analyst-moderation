@@ -12,7 +12,7 @@ from services.caching import ICache, TTLEntityCache
 from services.chat import ChatService
 from services.user import UserService
 from usecases.chat import (
-    GetAllSourceChatsUseCase,
+    GetAllChatsUseCase,
     GetOrCreateChatUseCase,
     GetTrackedChatsUseCase,
 )
@@ -99,7 +99,7 @@ class ContainerSetup:
         """Регистрация use cases для чатов."""
         chat_usecases = [
             GetOrCreateChatUseCase,
-            GetAllSourceChatsUseCase,
+            GetAllChatsUseCase,
             GetTrackedChatsUseCase,
         ]
 
