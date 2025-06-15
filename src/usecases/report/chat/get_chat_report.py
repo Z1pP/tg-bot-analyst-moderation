@@ -81,15 +81,15 @@ class GetReportOnSpecificChatUseCase:
         min_time = min(response_times)
         max_time = max(response_times)
 
+        working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
+
         # Форматируем отчет
         report = (
             f"<b>📊 Отчёт по: {chat.title} за {period}</b>\n\n"
-            # f"<b>🕒 Временной период:</b> {start_date.strftime('%d.%m.%Y')}-"
-            # f"{end_date.strftime('%d.%m.%Y')} "
-            # f"({start_date.strftime('%H:%M')}-{end_date.strftime('%H:%M')})\n\n"
             f"<b>📈 Статистика по сообщениям:</b>\n"
-            f"{total_messages} - <b>всего сообщений модеров.</b>\n"
-            f"{messages_per_hour} - сред. кол-во сообщений в час\n\n"
+            f"• {total_messages} - <b>всего сообщений модеров.</b>\n"
+            f"• <b>{working_hours}</b> - кол-во рабочих часов\n"
+            f"• {messages_per_hour} - сред. кол-во сообщений в час\n\n"
             f"<b>⏱️ Статистика по ответам:</b>\n"
             f"• <b>{total_replies}</b> - всего ответов модеров\n"
             f"• <b>{format_seconds(min_time)}</b> и "
