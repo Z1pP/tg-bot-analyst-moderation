@@ -29,17 +29,31 @@ class TimePeriod(Enum):
 
     @classmethod
     def to_datetime(cls, period: str) -> Tuple[datetime, datetime]:
+        """
+        Преобразует строковое представление периода в пару дат (начало, конец).
+
+        Args:
+            period: Строковое представление периода (значение из TimePeriod)
+
+        Returns:
+            Кортеж из двух дат: (начало периода, конец периода)
+        """
         now = TimeZoneService.now()
+
+        # Текущий день
+        start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         if period == cls.THREE_HOURS.value:
             return now - timedelta(hours=3), now
+
         elif period == cls.SIX_HOURS.value:
             return now - timedelta(hours=6), now
+
         elif period == cls.TODAY.value:
-            start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            return start_of_day, now
+            return start_of_today, now
+
         elif period == cls.YESTERDAY.value:
-            # Начало вчерашнего дня (00:00) до конца вчерашнего дня (23:59:59)
+            # Вчерашний день от 00:00 до 23:59:59
             yesterday = now - timedelta(days=1)
             start_of_yesterday = yesterday.replace(
                 hour=0, minute=0, second=0, microsecond=0
@@ -48,11 +62,30 @@ class TimePeriod(Enum):
                 hour=23, minute=59, second=59, microsecond=999999
             )
             return start_of_yesterday, end_of_yesterday
+
         elif period == cls.ONE_WEEK.value:
-            return now - timedelta(weeks=1), now
+            # Последние 7 дней, включая сегодня
+            # Начало недели - 7 дней назад в 00:00
+            start_of_week = (now - timedelta(days=6)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            return start_of_week, now
+
         elif period == cls.ONE_MONTH.value:
-            return now - timedelta(days=30), now
+            # Последние 30 дней, включая сегодня
+            # Начало месяца - 30 дней назад в 00:00
+            start_of_month = (now - timedelta(days=29)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            return start_of_month, now
+
         elif period == cls.THREE_MONTH.value:
-            return now - timedelta(days=90), now
+            # Последние 90 дней, включая сегодня
+            # Начало 3-месячного периода - 90 дней назад в 00:00
+            start_of_three_months = (now - timedelta(days=89)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            return start_of_three_months, now
+
         else:
             raise ValueError(f"Неизвестный период: {period}")
