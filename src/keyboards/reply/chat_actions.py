@@ -10,7 +10,10 @@ def chat_actions_kb(chat_title: str):
             KeyboardButton(text=KbCommands.SELECTED_CHAT.format(chat_title=chat_title)),
         ],
         [
-            KeyboardButton(text=KbCommands.REPORT_RESPONSE_TIME),
+            KeyboardButton(text=KbCommands.GET_REPORT),
+        ],
+        [
+            KeyboardButton(text=KbCommands.SELECT_CHAT),
         ],
         [
             KeyboardButton(text=KbCommands.MENU),
@@ -24,6 +27,9 @@ def all_chats_actions_kb():
     buttons = [
         [
             KeyboardButton(text=KbCommands.FULL_REPORT),
+        ],
+        [
+            KeyboardButton(text=KbCommands.SELECT_CHAT),
         ],
         [
             KeyboardButton(text=KbCommands.MENU),

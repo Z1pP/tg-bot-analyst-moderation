@@ -1,3 +1,4 @@
+from .admin_chat_access import AdminChatAccess
 from .base import Base
 from .chat_session import ChatSession
 from .message import ChatMessage
@@ -12,4 +13,5 @@ __all__ = [
     "MessageReply",
     "ModeratorActivity",
     "User",
+    "AdminChatAccess",
 ]

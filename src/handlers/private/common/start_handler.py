@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from constants import CommandList, Dialog
-from keyboards.reply.menu import get_admin_menu_kb
+from keyboards.reply.menu import admin_menu_kb
 from utils.send_message import send_html_message_with_kb
 
 router = Router(name=__name__)
@@ -20,5 +20,5 @@ async def start_handler(message: Message) -> None:
     await send_html_message_with_kb(
         message=message,
         text=welcome_text,
-        reply_markup=get_admin_menu_kb(),
+        reply_markup=admin_menu_kb(),
     )

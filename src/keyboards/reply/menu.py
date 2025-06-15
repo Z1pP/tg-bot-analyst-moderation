@@ -3,15 +3,50 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from constants import KbCommands
 
 
-def get_admin_menu_kb():
+def admin_menu_kb():
+    buttons = [
+        [
+            KeyboardButton(text=KbCommands.MODERATORS_MENU),
+            KeyboardButton(text=KbCommands.CHATS_MENU),
+        ],
+        [
+            KeyboardButton(text=KbCommands.SETTINGS),
+            KeyboardButton(text=KbCommands.FAQ),
+        ],
+    ]
+    return ReplyKeyboardMarkup(
+        keyboard=buttons, resize_keyboard=True, one_time_keyboard=True
+    )
+
+
+def moderator_menu_kb():
     buttons = [
         [
             KeyboardButton(text=KbCommands.SELECT_MODERATOR),
-            KeyboardButton(text=KbCommands.SELECT_CHAT),
         ],
         [
             KeyboardButton(text=KbCommands.ADD_MODERATOR),
             KeyboardButton(text=KbCommands.REMOVE_MODERATOR),
+        ],
+        [
+            KeyboardButton(text=KbCommands.MENU),
+        ],
+    ]
+    return ReplyKeyboardMarkup(
+        keyboard=buttons, resize_keyboard=True, one_time_keyboard=True
+    )
+
+
+def chat_menu_kb():
+    buttons = [
+        [
+            KeyboardButton(text=KbCommands.SELECT_CHAT),
+        ],
+        [
+            KeyboardButton(text=KbCommands.TRACKED_CHATS),
+        ],
+        [
+            KeyboardButton(text=KbCommands.MENU),
         ],
     ]
     return ReplyKeyboardMarkup(

@@ -51,6 +51,8 @@ class User(BaseModel):
         back_populates="user",
     )
 
+    chat_access = relationship("AdminChatAccess", back_populates="admin")
+
     __table_args__ = (
         Index("idx_user_role", "role"),
         Index("idx_user_tg_id", "tg_id"),

@@ -33,3 +33,5 @@ class ChatSession(BaseModel):
         "MessageReply",
         back_populates="chat_session",
     )
+
+    admin_access = relationship("AdminChatAccess", back_populates="chat")
