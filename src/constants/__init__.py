@@ -1,5 +1,7 @@
 from enum import Enum
 
+MAX_MSG_LENGTH = 4000
+
 
 class CommandList(str, Enum):
     """Описания команд бота."""
