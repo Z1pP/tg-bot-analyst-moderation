@@ -148,7 +148,6 @@ class GetReportOnSpecificChatUseCase:
 
         Args:
             report: Полный текст отчета
-            max_length: Максимальная длина одного сообщения
 
         Returns:
             Список частей отчета
