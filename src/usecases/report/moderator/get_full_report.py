@@ -3,10 +3,10 @@ from datetime import datetime
 from statistics import mean, median
 from typing import List
 
+from constants import MAX_MSG_LENGTH
 from dto.report import AllModeratorReportDTO
 from models import ChatMessage, MessageReply, User
 from services.break_analysis_service import BreakAnalysisService
-from services.time_service import TimeZoneService
 
 from .base import BaseReportUseCase
 
@@ -14,12 +14,21 @@ logger = logging.getLogger(__name__)
 
 
 class GetAllModeratorsReportUseCase(BaseReportUseCase):
-    async def execute(self, dto: AllModeratorReportDTO) -> str:
+    async def execute(self, dto: AllModeratorReportDTO) -> List[str]:
+        """
+        Генерирует отчет по всем модераторам за указанный период.
+
+        Args:
+            dto: Объект с параметрами для генерации отчета
+
+        Returns:
+            Список строк с отформатированным отчетом, разделенным на части
+        """
         users = await self._user_repository.get_all_users()
 
         if not users:
             logger.error("Количество найденных модераторов = %s", len(users))
-            return "⚠️ Не выбран не один модератор!"
+            return ["⚠️ Не выбран не один модератор!"]
 
         selected_period = self._format_selected_period(dto.selected_period)
         report_title = f"<b>📈 Отчет по модераторам за {selected_period}</b>"
@@ -68,7 +77,11 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
 
             reports.append(report)
 
-        return "\n\n".join([report_title] + reports)
+        # Формируем полный отчет
+        full_report = "\n\n".join([report_title] + reports)
+
+        # Разделяем отчет на части, если он слишком длинный
+        return self._split_report(full_report)
 
     def _generate_report(
         self,
@@ -136,3 +149,43 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
             report.append("<b>⏸️ Перерывы:</b> отсутствуют")
 
         return "\n".join(report)
+
+    def _split_report(self, report: str) -> List[str]:
+        """
+        Разделяет отчет на части, если он превышает максимальную длину.
+
+        Args:
+            report: Полный текст отчета
+
+        Returns:
+            Список частей отчета
+        """
+        if len(report) <= MAX_MSG_LENGTH:
+            return [report]
+
+        # Разделяем отчет на заголовок и отчеты по модераторам
+        parts = report.split("\n\n")
+        title = parts[0]
+        moderator_reports = parts[1:] if len(parts) > 1 else []
+
+        result = [title]
+        current_part = ""
+
+        # Добавляем отчеты по модераторам
+        for mod_report in moderator_reports:
+            # Если добавление отчета превысит лимит, создаем новую часть
+            if len(current_part) + len(mod_report) + 2 > MAX_MSG_LENGTH:
+                if current_part:
+                    result.append(current_part)
+                current_part = mod_report
+            else:
+                if current_part:
+                    current_part += "\n\n" + mod_report
+                else:
+                    current_part = mod_report
+
+        # Добавляем последнюю часть
+        if current_part:
+            result.append(current_part)
+
+        return result
