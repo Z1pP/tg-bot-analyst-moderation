@@ -4,6 +4,7 @@ from statistics import mean, median
 from dto.report import ChatReportDTO
 from models import ChatMessage, ChatSession, MessageReply
 from repositories import ChatRepository, MessageReplyRepository, MessageRepository
+from services.break_analysis_service import BreakAnalysisService
 from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
@@ -83,9 +84,27 @@ class GetReportOnSpecificChatUseCase:
 
         working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
 
+        # Сортируем сообщения по времени
+        sorted_messages = sorted(messages, key=lambda r: r.created_at)
+
+        report_lines = []
+
+        # Добавляем информацию о перерывах
+        breaks = BreakAnalysisService.calculate_breaks(messages=sorted_messages)
+
+        if breaks:
+            report_lines.append("<b>⏸️ Перерывы:</b>")
+            for break_info in breaks:
+                report_lines.append(f"• {break_info}")
+        else:
+            report_lines.append("<b>⏸️ Перерывы:</b> отсутствуют")
+
+        breaks = "".join(report_lines)
+
         # Форматируем отчет
         report = (
             f"<b>📊 Отчёт по: {chat.title} за {period}</b>\n\n"
+            f"{self._get_time_first_msg_per_day(messages=messages)}\n"
             f"<b>📈 Статистика по сообщениям:</b>\n"
             f"• {total_messages} - <b>всего сообщений модеров.</b>\n"
             f"• <b>{working_hours}</b> - кол-во рабочих часов\n"
@@ -95,7 +114,9 @@ class GetReportOnSpecificChatUseCase:
             f"• <b>{format_seconds(min_time)}</b> и "
             f"<b>{format_seconds(max_time)}</b> - мин. и макс. время ответов\n"
             f"• <b>{format_seconds(avg_time)}</b> и "
-            f"<b>{format_seconds(median_time)}</b> - сред. и медиан. время ответа\n"
+            f"<b>{format_seconds(median_time)}</b> - сред. и медиан. время ответа\n\n"
+            "Перерывы:\n"
+            f"{breaks}"
         )
 
         return report
@@ -114,3 +135,18 @@ class GetReportOnSpecificChatUseCase:
             return 1
 
         return round(messages_count / work_hours, 2)
+
+    def _get_time_first_msg_per_day(self, messages: list[ChatMessage]) -> str:
+        """Возвращает список времени первого сообщения в день."""
+        time_first_msg_per_day = []
+        times = ""
+
+        for message in messages:
+            if message.created_at.date() not in time_first_msg_per_day:
+                times += (
+                    f"• {message.created_at.strftime('%H:%M')} - первое сообщение "
+                    f"{message.created_at.strftime('%d.%m.%Y')}\n"
+                )
+                time_first_msg_per_day.append(message.created_at.date())
+
+        return times
