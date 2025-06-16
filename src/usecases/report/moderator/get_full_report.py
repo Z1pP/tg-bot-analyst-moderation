@@ -87,7 +87,6 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
         # Базовая статистика
         total_message = len(messages)
         total_replies = len(replies)
-        time_first_message = TimeZoneService.format_time(sorted_messages[0].created_at)
 
         # Сообщений в час
         avg_message_per_hour = self._messages_per_hour(
@@ -113,13 +112,13 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
         # Формируем отчет
         report = [
             f"<b>👤 @{user.username}</b>\n",
-            f"Первое сообщение {time_first_message}\n",
+            f"{self.get_time_first_message(messages=messages)}\n",
             f"• <b>{total_message}</b> - всего сообщений",
             f"• <b>{avg_message_per_hour:.2f}</b> - сред. кол-во сообщ. в час",
         ]
 
         if total_replies > 0:
-            report.append(f"• Из них <b>{total_replies}</b> ответов")
+            report.append(f"• Из них <b>{total_replies}</b> ответ(ов)")
             report.extend(response_stats)
         else:
             report.append("• <b>Нет ответов</b> за указанный период")
