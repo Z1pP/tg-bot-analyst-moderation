@@ -118,7 +118,7 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
         ]
 
         if total_replies > 0:
-            report.append(f"• Из них <b>{total_replies}</b> ответ(ов)")
+            report.append(f"• Из них <b>{total_replies}</b> ответ(-ов)")
             report.extend(response_stats)
         else:
             report.append("• <b>Нет ответов</b> за указанный период")
