@@ -2,6 +2,7 @@ from datetime import datetime
 from statistics import mean, median
 from typing import Awaitable, Callable, List, Optional, TypeVar
 
+from constants import MAX_MSG_LENGTH
 from dto.report import ChatReportDTO
 from models import ChatMessage, ChatSession, MessageReply
 from repositories import ChatRepository, MessageReplyRepository, MessageRepository
@@ -26,7 +27,7 @@ class GetReportOnSpecificChatUseCase:
         self._msg_reply_repository = msg_reply_repository
         self._chat_repository = chat_repository
 
-    async def execute(self, dto: ChatReportDTO) -> str:
+    async def execute(self, dto: ChatReportDTO) -> List[str]:
         """
         Генерирует отчет по конкретному чату за указанный период.
 
@@ -65,7 +66,7 @@ class GetReportOnSpecificChatUseCase:
         )
 
         # Генерируем отчет
-        return self._generate_report(
+        report = self._generate_report(
             replies=replies,
             messages=messages,
             chat=chat,
@@ -73,6 +74,8 @@ class GetReportOnSpecificChatUseCase:
             end_date=dto.end_date,
             selected_period=dto.selected_period,
         )
+
+        return self._split_report(report=report)
 
     def _generate_report(
         self,
@@ -138,6 +141,50 @@ class GetReportOnSpecificChatUseCase:
             item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
 
         return items
+
+    def _split_report(self, report: str) -> List[str]:
+        """
+        Разделяет отчет на части, если он превышает максимальную длину.
+
+        Args:
+            report: Полный текст отчета
+            max_length: Максимальная длина одного сообщения
+
+        Returns:
+            Список частей отчета
+        """
+        if len(report) <= MAX_MSG_LENGTH:
+            return [report]
+
+        # Разделяем отчет на основную часть и информацию о перерывах
+
+        parts = report.split("Перерывы:\n")
+        main_part = parts[0]
+        breaks_part = parts[1] if len(parts) > 1 else ""
+
+        result = []
+
+        # Добавляем основную часть
+        result.append(main_part + "Перерывы: см. следующее сообщение")
+
+        # Если есть информация о перерывах, разделяем ее на части
+        if breaks_part:
+            breaks_lines = breaks_part.split("\n")
+            current_part = "<b>⏸️ Перерывы:</b>"
+
+            for line in breaks_lines:
+                # Если добавление строки превысит лимит, создаем новую часть
+                if len(current_part) + len(line) + 1 > MAX_MSG_LENGTH:
+                    result.append(current_part)
+                    current_part = "<b>⏸️ Перерывы (продолжение):</b>"
+
+                current_part += "\n" + line
+
+            # Добавляем последнюю часть
+            if current_part:
+                result.append(current_part)
+
+        return result
 
     def _calculate_messages_per_hour(
         self, messages_count: int, work_hours: float
