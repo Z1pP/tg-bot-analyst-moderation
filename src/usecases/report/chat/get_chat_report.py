@@ -116,7 +116,8 @@ class GetReportOnSpecificChatUseCase:
             f"• <b>{messages_per_hour}</b> - сообщений в час\n"
             f"• Из них <b>{total_replies}</b> ответ(-ов)\n"
             f"{response_stats}\n\n"
-            f"Перерывы:\n"
+            f"<code>Подробную информацию о перерывах смотри в отчете модераторов </code>"
+            f"<code>за день</code>\n"
             f"{breaks_info}"
         )
 
