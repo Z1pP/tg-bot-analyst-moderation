@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -186,20 +186,25 @@ async def generate_and_send_report(
             selected_period=selected_period,
         )
 
-        report = await generate_report(report_dto)
-        text = f"{report}\n\nДля продолжения выберите период, либо нажмите назад"
+        report_parts = await generate_report(report_dto)
 
         await state.set_state(ChatStateManager.selecting_period)
-        await send_html_message_with_kb(
-            message=message,
-            text=text,
-            reply_markup=get_time_period_kb(),
-        )
+
+        for idx, part in enumerate(report_parts):
+
+            if idx == len(report_parts) - 1:
+                part = f"{part}\n\nДля продолжения выберите период, либо нажмите назад"
+
+            await send_html_message_with_kb(
+                message=message,
+                text=part,
+                reply_markup=get_time_period_kb(),
+            )
     except Exception as e:
         await handle_exception(message, e, "generate_and_send_report")
 
 
-async def generate_report(report_dto: ChatReportDTO) -> str:
+async def generate_report(report_dto: ChatReportDTO) -> List[str]:
     """Генерирует отчет используя UseCase."""
     try:
         usecase: GetReportOnSpecificChatUseCase = container.resolve(
