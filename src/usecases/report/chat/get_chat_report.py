@@ -1,13 +1,16 @@
 from datetime import datetime
 from statistics import mean, median
-from typing import List, Optional
+from typing import Awaitable, Callable, List, Optional, TypeVar
 
 from dto.report import ChatReportDTO
 from models import ChatMessage, ChatSession, MessageReply
 from repositories import ChatRepository, MessageReplyRepository, MessageRepository
 from services.break_analysis_service import BreakAnalysisService
+from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
+
+T = TypeVar("T", ChatMessage, MessageReply)
 
 
 class GetReportOnSpecificChatUseCase:
@@ -47,7 +50,15 @@ class GetReportOnSpecificChatUseCase:
             end_date=dto.end_date,
         )
 
-        replies = await self._msg_reply_repository.get_replies_by_chat_id_and_period(
+        messages = await self._get_processed_items(
+            repository_method=self._message_repository.get_messages_by_chat_id_and_period,
+            chat_id=chat.id,
+            start_date=dto.start_date,
+            end_date=dto.end_date,
+        )
+
+        replies = await self._get_processed_items(
+            repository_method=self._msg_reply_repository.get_replies_by_chat_id_and_period,
             chat_id=chat.id,
             start_date=dto.start_date,
             end_date=dto.end_date,
@@ -110,6 +121,24 @@ class GetReportOnSpecificChatUseCase:
             f"Перерывы:\n"
             f"{breaks_info}"
         )
+
+    async def _get_processed_items(
+        self,
+        repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],
+        chat_id: int,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> List[T]:
+        items = await repository_method(
+            chat_id=chat_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        for item in items:
+            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
+
+        return items
 
     def _calculate_messages_per_hour(
         self, messages_count: int, work_hours: float
