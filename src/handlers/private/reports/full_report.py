@@ -129,17 +129,19 @@ async def generate_and_send_report(
         selected_period=selected_period,
     )
 
-    report = await generate_report(report_dto)
-
-    text = f"{report}\n\nДля продолжения выберите период, либо нажмите назад"
+    report_parts = await generate_report(report_dto)
 
     await state.set_state(UserStateManager.report_full_selecting_period)
 
-    await send_html_message_with_kb(
-        message=message,
-        text=text,
-        reply_markup=get_time_period_for_full_report(),
-    )
+    for idx, part in enumerate(report_parts):
+        if idx == len(report_parts) - 1:
+            part = f"{part}\n\nДля продолжения выберите период, либо нажмите назад"
+
+        await send_html_message_with_kb(
+            message=message,
+            text=part,
+            reply_markup=get_time_period_for_full_report(),
+        )
 
 
 async def generate_report(report_dto: AllModeratorReportDTO) -> str:
