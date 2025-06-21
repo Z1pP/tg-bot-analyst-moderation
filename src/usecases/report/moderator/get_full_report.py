@@ -24,7 +24,7 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
         Returns:
             Список строк с отформатированным отчетом, разделенным на части
         """
-        users = await self._user_repository.get_all_users()
+        users = await self._user_repository.get_all_moderators()
 
         if not users:
             logger.error("Количество найденных модераторов = %s", len(users))

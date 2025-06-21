@@ -7,6 +7,6 @@ class GetAllUsersUseCase:
         self._user_repository = user_repository
 
     async def execute(self) -> list[UserDTO]:
-        users = await self._user_repository.get_all_users()
+        users = await self._user_repository.get_all_moderators()
 
         return [UserDTO.from_entity(user) for user in users]

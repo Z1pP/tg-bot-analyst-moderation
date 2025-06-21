@@ -35,7 +35,7 @@ class UserRepository:
                 )
                 return None
 
-    async def get_all_users(self) -> List[User]:
+    async def get_all_moderators(self) -> List[User]:
         """Получает список всех модераторов."""
         async with async_session() as session:
             try:
