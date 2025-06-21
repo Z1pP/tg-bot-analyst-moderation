@@ -44,13 +44,7 @@ class GetReportOnSpecificChatUseCase:
         if not chat:
             raise ValueError("Чат не найден")
 
-        # Получаем сообщения и ответы за указанный период
-        messages = await self._message_repository.get_messages_by_chat_id_and_period(
-            chat_id=chat.id,
-            start_date=dto.start_date,
-            end_date=dto.end_date,
-        )
-
+        # Получаем сообщения за период
         messages = await self._get_processed_items(
             repository_method=self._message_repository.get_messages_by_chat_id_and_period,
             chat_id=chat.id,
@@ -58,6 +52,7 @@ class GetReportOnSpecificChatUseCase:
             end_date=dto.end_date,
         )
 
+        # Получаем ответы за период
         replies = await self._get_processed_items(
             repository_method=self._msg_reply_repository.get_replies_by_chat_id_and_period,
             chat_id=chat.id,
