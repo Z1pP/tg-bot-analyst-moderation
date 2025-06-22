@@ -94,8 +94,8 @@ async def _get_admin_and_chat(message: Message) -> tuple[User, ChatSession]:
     Получает пользователя и чат из сообщения.
     """
     # Получаем сервисы
-    user_service = container.resolve(UserService)
-    chat_service = container.resolve(ChatService)
+    user_service: UserService = container.resolve(UserService)
+    chat_service: ChatService = container.resolve(ChatService)
 
     # Получаем пользователя и чат
     username = message.from_user.username
