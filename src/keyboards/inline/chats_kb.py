@@ -31,29 +31,23 @@ def tracked_chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
 
     for chat in chats:
         is_target = False
-        is_source = False
 
         # Безопасное получение флагов
         if hasattr(chat, "admin_access") and chat.admin_access:
             admin_access = chat.admin_access[0]
             is_target = admin_access.is_target
-            is_source = admin_access.is_source
 
         # Добавляем название чата
         builder.row(
             InlineKeyboardButton(
-                text=f"{chat.title}", callback_data=f"chat_info__{chat.id}"
+                text=f"Группа: {chat.title}", callback_data=f"chat_info__{chat.id}"
             )
         )
 
         builder.row(
             InlineKeyboardButton(
-                text="✅ Получатель" if is_target else "❌ Получатель",
+                text="✅ Отчеты включены" if is_target else "❌ Отчеты выключены",
                 callback_data=f"toggle_target__{chat.id}",
-            ),
-            InlineKeyboardButton(
-                text="✅ Источник" if is_source else "❌ Источник",
-                callback_data=f"toggle_source__{chat.id}",
             ),
         )
 
