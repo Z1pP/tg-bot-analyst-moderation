@@ -8,6 +8,7 @@ class CommandList(str, Enum):
 
     START = "Запуск бота и получение списка команд"
     HELP = "Получить справку по командам"
+    TRACK = "Выбрать чат для отслеживания"
 
 
 class KbCommands:
