@@ -144,7 +144,7 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
         if breaks:
             report.append("<b>⏸️ Перерывы:</b>")
             for break_info in breaks:
-                report.append(f"• {break_info}")
+                report.append(f"{break_info}")
         else:
             report.append("<b>⏸️ Перерывы:</b> отсутствуют")
 

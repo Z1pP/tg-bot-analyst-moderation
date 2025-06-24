@@ -249,6 +249,6 @@ class GetReportOnSpecificChatUseCase:
         # Формируем строки с информацией
         result = ["<b>⏸️ Перерывы:</b>"]
         for break_info in breaks:
-            result.append(f"• {break_info}")
+            result.append(f"{break_info}")
 
         return "\n".join(result)
