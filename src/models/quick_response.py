@@ -1,7 +1,13 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
+
+if TYPE_CHECKING:
+    from .quick_response import QuickResponse
+    from .user import User
 
 
 class QuickResponse(BaseModel):
@@ -34,8 +40,14 @@ class QuickResponse(BaseModel):
     )
 
     # Relationships
-    author = relationship("User", back_populates="quick_responses")
-    category = relationship("QuickResponseCategory", back_populates="responses")
+    author: Mapped["User"] = relationship(
+        "User",
+        back_populates="quick_responses",
+    )
+    category: Mapped["QuickResponseCategory"] = relationship(
+        "QuickResponseCategory",
+        back_populates="responses",
+    )
 
 
 class QuickResponseCategory(BaseModel):
@@ -54,4 +66,7 @@ class QuickResponseCategory(BaseModel):
     )
 
     # Relationships
-    responses = relationship("QuickResponse", back_populates="category")
+    responses: Mapped[list["QuickResponse"]] = relationship(
+        "QuickResponse",
+        back_populates="category",
+    )
