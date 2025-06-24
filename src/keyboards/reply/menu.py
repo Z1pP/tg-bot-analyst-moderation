@@ -10,10 +10,32 @@ def admin_menu_kb():
             KeyboardButton(text=KbCommands.CHATS_MENU),
         ],
         [
+            KeyboardButton(text=KbCommands.TEMPLATES_MENU),
+        ],
+        [
             KeyboardButton(text=KbCommands.SETTINGS),
             KeyboardButton(text=KbCommands.FAQ),
         ],
     ]
+    return ReplyKeyboardMarkup(
+        keyboard=buttons, resize_keyboard=True, one_time_keyboard=True
+    )
+
+
+def tamplates_menu_kb():
+    buttons = [
+        [
+            KeyboardButton(text=KbCommands.SELECT_TEMPLATE),
+        ],
+        [
+            KeyboardButton(text=KbCommands.ADD_TEMPLATE),
+            KeyboardButton(text=KbCommands.ADD_CATEGORY),
+        ],
+        [
+            KeyboardButton(text=KbCommands.MENU),
+        ],
+    ]
+
     return ReplyKeyboardMarkup(
         keyboard=buttons, resize_keyboard=True, one_time_keyboard=True
     )
