@@ -29,8 +29,8 @@ def schedule_daily_report(bot: Bot) -> None:
         func=send_daily_report,
         args=[bot],
         trigger=CronTrigger(
-            hour=19,
-            minute=46,
+            hour=23,
+            minute=0,
             second=0,
             timezone=TimeZoneService.DEFAULT_TIMEZONE,
         ),
