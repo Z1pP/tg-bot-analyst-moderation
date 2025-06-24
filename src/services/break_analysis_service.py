@@ -24,7 +24,7 @@ class BreakAnalysisService:
         if len(messages) < 2:
             return []
 
-        breaks = []
+        result = []
         # Группируем сообщения по дате
         messages_by_date = {}
 
@@ -36,9 +36,10 @@ class BreakAnalysisService:
             messages_by_date[date_key].append((local_time, msg))
 
         # Обрабатываем каждый день отдельно
-        for date, day_messages in messages_by_date.items():
-            # Сортируем сообщения по времени
+        for date, day_messages in sorted(messages_by_date.items()):
             day_messages.sort(key=lambda x: x[0])
+            day_breaks = []
+            total_break_time = 0
 
             # Ищем перерывы в пределах одного дня
             for i in range(1, len(day_messages)):
@@ -50,9 +51,19 @@ class BreakAnalysisService:
                 if minutes_diff >= min_break_minutes:
                     start_break = prev_time.strftime("%H:%M")
                     end_break = curr_time.strftime("%H:%M")
-                    date_str = prev_time.strftime("%d.%m.%Y")
-                    breaks.append(
-                        f"{start_break}-{end_break} — {round(minutes_diff)} мин. ({date_str})"
-                    )
+                    day_breaks.append(f"{start_break}-{end_break}")
+                    total_break_time += minutes_diff
 
-        return breaks
+            # Добавляем информацию о дне, если есть перерывы
+            if day_breaks:
+                date_str = date.strftime("%d.%m.%Y")
+                avg_break = round(total_break_time / len(day_breaks), 1)
+
+                result.append(f"<code>{date_str}</code>")
+                result.append(
+                    f"<b>{avg_break} мин.</b> - средн. время перерыва за день"
+                )
+                result.extend([f"• {br}" for br in day_breaks])
+                result.append("")
+
+        return result
