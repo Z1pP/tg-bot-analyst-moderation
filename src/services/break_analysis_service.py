@@ -51,7 +51,9 @@ class BreakAnalysisService:
                 if minutes_diff >= min_break_minutes:
                     start_break = prev_time.strftime("%H:%M")
                     end_break = curr_time.strftime("%H:%M")
-                    day_breaks.append(f"{start_break}-{end_break}")
+                    day_breaks.append(
+                        f"{start_break}-{end_break} -- {int(minutes_diff)} мин."
+                    )
                     total_break_time += minutes_diff
 
             # Добавляем информацию о дне, если есть перерывы
