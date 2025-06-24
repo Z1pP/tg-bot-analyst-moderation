@@ -1,11 +1,14 @@
 from enum import Enum
 
+MAX_MSG_LENGTH = 4000
+
 
 class CommandList(str, Enum):
     """Описания команд бота."""
 
     START = "Запуск бота и получение списка команд"
     HELP = "Получить справку по командам"
+    TRACK = "Выбрать чат для отслеживания"
 
 
 class KbCommands:

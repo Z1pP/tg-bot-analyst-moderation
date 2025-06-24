@@ -67,3 +67,16 @@ class BaseReportUseCase:
             return 1
 
         return round(messages_count / work_hours, 2)
+
+    def get_time_first_message(self, messages: List[ChatMessage]) -> str:
+        """Возвращает время первого сообщения."""
+        if not messages:
+            return ""
+
+        sorted_messages = sorted(messages, key=lambda m: m.created_at)
+        first_message = sorted_messages[0]
+
+        return (
+            f"• {first_message.created_at.strftime('%H:%M')} - первое сообщение "
+            f"{first_message.created_at.strftime('%d.%m.%Y')}"
+        )

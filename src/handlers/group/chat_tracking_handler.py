@@ -7,6 +7,7 @@ from aiogram.types import Message
 
 from container import container
 from filters.admin_filter import AdminOnlyFilter
+from filters.group_filter import GroupTypeFilter
 from models import ChatSession, User
 from services.chat import ChatService
 from services.user import UserService
@@ -16,11 +17,9 @@ logger = logging.getLogger(__name__)
 router = Router(name=__name__)
 
 
-@router.message(Command("track"), AdminOnlyFilter())
+@router.message(Command("track"), GroupTypeFilter(), AdminOnlyFilter())
 async def chat_added_to_tracking_handler(message: Message, bot: Bot) -> None:
     """Обработчик команды /track для добавления чата в отслеживание."""
-    if message.chat.type not in ["group", "supergroup"]:
-        return
 
     admin, chat = await _get_admin_and_chat(message=message)
 
@@ -94,8 +93,8 @@ async def _get_admin_and_chat(message: Message) -> tuple[User, ChatSession]:
     Получает пользователя и чат из сообщения.
     """
     # Получаем сервисы
-    user_service = container.resolve(UserService)
-    chat_service = container.resolve(ChatService)
+    user_service: UserService = container.resolve(UserService)
+    chat_service: ChatService = container.resolve(ChatService)
 
     # Получаем пользователя и чат
     username = message.from_user.username

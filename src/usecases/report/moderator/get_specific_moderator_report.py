@@ -117,23 +117,16 @@ class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
         messages_per_hour = self._messages_per_hour(
             total_messages, start_date, end_date
         )
-        time_first_message = (
-            TimeZoneService.convert_to_local_time(
-                sorted_messages[0].created_at
-            ).strftime("%H:%M")
-            if sorted_messages
-            else "N/A"
-        )
 
         working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
         # Формируем отчет
         report_lines = [
-            f"<b>📊 Отчёт: @{user.username} за {period}</b>\n",
-            f"• <b>{time_first_message}</b> - время первого сообщения",
+            f"<b>📈 Отчёт: @{user.username} за {period}</b>\n",
+            f"{self.get_time_first_message(messages=messages)}",
             f"• <b>{working_hours}</b> - кол-во рабочих часов\n",
             f"• <b>{total_messages}</b> - всего сообщений",
             f"• <b>{messages_per_hour}</b> - сообщений в час",
-            f"• Из них <b>{total_replies}</b> ответов",
+            f"• Из них <b>{total_replies}</b> ответ(-ов)",
         ]
 
         # Добавляем статистику по времени ответа, если есть ответы
@@ -155,7 +148,7 @@ class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
         if breaks:
             report_lines.append("<b>⏸️ Перерывы:</b>")
             for break_info in breaks:
-                report_lines.append(f"• {break_info}")
+                report_lines.append(f"{break_info}")
         else:
             report_lines.append("<b>⏸️ Перерывы:</b> отсутствуют")
 

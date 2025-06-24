@@ -3,7 +3,7 @@ from repositories import ChatTrackingRepository
 from services.user import UserService
 
 
-class GetAllSourceChatsUseCase:
+class GetAllChatsUseCase:
     def __init__(
         self,
         chat_tracking_repository: ChatTrackingRepository,
@@ -18,7 +18,7 @@ class GetAllSourceChatsUseCase:
         if not user:
             raise UserNotFoundException()
 
-        chats = await self._chat_tracking_repository.get_admin_source_chats(
+        chats = await self._chat_tracking_repository.get_all_tracked_chats(
             admin_id=user.id
         )
 

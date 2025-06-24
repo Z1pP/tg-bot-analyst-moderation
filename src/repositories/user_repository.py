@@ -35,7 +35,7 @@ class UserRepository:
                 )
                 return None
 
-    async def get_all_users(self) -> List[User]:
+    async def get_all_moderators(self) -> List[User]:
         """Получает список всех модераторов."""
         async with async_session() as session:
             try:
@@ -52,6 +52,25 @@ class UserRepository:
                 return users
             except Exception as e:
                 logger.error("Ошибка при получении списка модераторов: %s", e)
+                return []
+
+    async def get_all_admins(self) -> List[User]:
+        """Получаем всех администраторов из БД"""
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(User)
+                    .where(
+                        User.role == UserRole.ADMIN,
+                    )
+                    .order_by(User.username),
+                )
+
+                users = result.scalars().all()
+                logger.info("Получено %d администраторов", len(users))
+                return users
+            except Exception as e:
+                logger.error("Ошибка при получении списка администраторов: %s", e)
                 return []
 
     async def get_user_by_username(self, username: str) -> Optional[User]:
