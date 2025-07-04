@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -14,7 +14,7 @@ class QuickResponse(BaseModel):
     __tablename__ = "quick_responses"
 
     title: Mapped[str] = mapped_column(
-        String,
+        String(200),
         nullable=False,
     )
     content: Mapped[str] = mapped_column(
@@ -48,6 +48,12 @@ class QuickResponse(BaseModel):
         "QuickResponseCategory",
         back_populates="responses",
     )
+    media_items: Mapped[List["QuickResponseMedia"]] = relationship(
+        "QuickResponseMedia",
+        back_populates="response",
+        order_by="QuickResponseMedia.position",
+        cascade="all, delete-orphan",
+    )
 
 
 class QuickResponseCategory(BaseModel):
@@ -69,4 +75,37 @@ class QuickResponseCategory(BaseModel):
     responses: Mapped[list["QuickResponse"]] = relationship(
         "QuickResponse",
         back_populates="category",
+    )
+
+
+class QuickResponseMedia(BaseModel):
+    __tablename__ = "quick_response_media"
+
+    response_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("quick_responses.id"),
+        nullable=False,
+    )
+    file_id: Mapped[str] = mapped_column(
+        String(256),
+        nullable=False,
+    )
+    file_unique_id: Mapped[str] = mapped_column(
+        String(256),
+        nullable=False,
+        unique=True,
+    )  # Telegram file_id of the media
+    media_type: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+    position: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+    )
+
+    # Relationships
+    response: Mapped["QuickResponse"] = relationship(
+        "QuickResponse",
+        back_populates="media_items",
     )
