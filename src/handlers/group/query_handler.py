@@ -12,7 +12,7 @@ from aiogram.types import (
 )
 
 from container import container
-from filters import AllRolesFilter, GroupTypeFilter
+from filters import StaffOnlyInlineFilter
 from models import QuickResponse
 from repositories import QuickResponseRepository
 
@@ -22,7 +22,10 @@ logger = logging.getLogger(__name__)
 local_memory: Dict[str, QuickResponse] = {}
 
 
-@router.inline_query(F.query)
+@router.inline_query(
+    F.query,
+    StaffOnlyInlineFilter(),
+)
 async def handle_inline_query(query: InlineQuery) -> None:
     """Обработчик inline запросов"""
     variants = await get_variants(query.query)
