@@ -6,6 +6,9 @@ from repositories import (
     ChatTrackingRepository,
     MessageReplyRepository,
     MessageRepository,
+    QuickResponseCategoryRepository,
+    QuickResponseMediaRepository,
+    QuickResponseRepository,
     UserRepository,
 )
 from services.caching import ICache, TTLEntityCache
@@ -58,6 +61,9 @@ class ContainerSetup:
             ActivityRepository,
             MessageReplyRepository,
             ChatTrackingRepository,
+            QuickResponseCategoryRepository,
+            QuickResponseMediaRepository,
+            QuickResponseRepository,
         ]
 
         for repo in repositories:
