@@ -25,11 +25,10 @@ async def select_template_callback(
 ) -> None:
     """Обработчик выбора шаблона"""
     template_id = query.data.split("__")[1]
-    template_title = query.data.split("__")[2]
 
     logger.info(
-        "Был выбран шаблон:%s пользователем - %s",
-        template_title,
+        "Был выбран шаблон c ID:%d пользователем - %s",
+        template_id,
         query.from_user.username,
     )
 
