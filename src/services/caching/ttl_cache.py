@@ -12,7 +12,7 @@ class TTLEntityCache(ICache):
     Реализация кеша с временем жизни (TTL) на основе cachetools.TTLCache.
     """
 
-    def __init__(self, maxsize: int = 100, ttl: int = 600):
+    def __init__(self, maxsize: int = 100, ttl: int = 60):
         """
         Инициализирует кеш с указанным размером и временем жизни.
 
