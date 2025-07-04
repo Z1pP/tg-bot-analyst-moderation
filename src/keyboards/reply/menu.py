@@ -26,6 +26,7 @@ def tamplates_menu_kb():
     buttons = [
         [
             KeyboardButton(text=KbCommands.SELECT_TEMPLATE),
+            KeyboardButton(text=KbCommands.SELECT_CATEGORY),
         ],
         [
             KeyboardButton(text=KbCommands.ADD_TEMPLATE),
