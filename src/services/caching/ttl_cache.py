@@ -12,7 +12,7 @@ class TTLEntityCache(ICache):
     Реализация кеша с временем жизни (TTL) на основе cachetools.TTLCache.
     """
 
-    def __init__(self, maxsize: int = 100, ttl: int = 600):
+    def __init__(self, maxsize: int = 100, ttl: int = 60):
         """
         Инициализирует кеш с указанным размером и временем жизни.
 
@@ -37,7 +37,7 @@ class TTLEntityCache(ICache):
         except Exception:
             return None
 
-    def set(self, key: str, entity: T, ttl: Optional[int] = None) -> None:
+    def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
         """
         Устанавливает значение в кеш по ключу.
 
@@ -47,7 +47,7 @@ class TTLEntityCache(ICache):
             ttl: Время жизни в секундах (игнорируется в этой реализации)
         """
         try:
-            self._cache[key] = entity
+            self._cache[key] = value
         except Exception:
             pass
 

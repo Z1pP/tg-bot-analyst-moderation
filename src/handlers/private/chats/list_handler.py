@@ -17,7 +17,7 @@ router = Router(name=__name__)
 @router.message(F.text == KbCommands.SELECT_CHAT)
 async def chats_list_handler(message: Message, state: FSMContext) -> None:
     """
-    Обработчик команды для получения списка модераторов.
+    Обработчик команды для получения списка чатов.
     """
 
     try:

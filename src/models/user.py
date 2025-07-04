@@ -10,8 +10,10 @@ from constants.enums import UserRole
 from .base import BaseModel
 
 if TYPE_CHECKING:
+    from .admin_chat_access import AdminChatAccess
     from .message import ChatMessage
     from .moderator_activity import ModeratorActivity
+    from .quick_response import QuickResponse
 
 
 class User(BaseModel):
@@ -51,7 +53,14 @@ class User(BaseModel):
         back_populates="user",
     )
 
-    chat_access = relationship("AdminChatAccess", back_populates="admin")
+    chat_access: Mapped[list["AdminChatAccess"]] = relationship(
+        "AdminChatAccess",
+        back_populates="admin",
+    )
+    quick_responses: Mapped[list["QuickResponse"]] = relationship(
+        "QuickResponse",
+        back_populates="author",
+    )
 
     __table_args__ = (
         Index("idx_user_role", "role"),

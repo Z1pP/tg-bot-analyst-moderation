@@ -1,6 +1,6 @@
 from enum import Enum
 
-MAX_MSG_LENGTH = 4000
+MAX_MSG_LENGTH = 4000  # Указывает максимальную длину сообщения для вывода
 
 
 class CommandList(str, Enum):
@@ -23,6 +23,11 @@ class KbCommands:
     SELECTED_CHAT = "Выбран: {chat_title}"
     GET_REPORT = "⏱ Получить отчет"
     FULL_REPORT = "📋 Общий отчет"
+    TEMPLATES_MENU = "🚀 Шаблоны ответов"
+    ADD_TEMPLATE = "➕ Добавить шаблон"
+    ADD_CATEGORY = "➕ Добавить категорию"
+    SELECT_TEMPLATE = "🔖 Шаблоны"
+    SELECT_CATEGORY = "🗃️ Категории"
     SETTINGS = "⚙️ Настройки"
     FAQ = "❓ FAQ"
     MENU = "📋 Меню"
