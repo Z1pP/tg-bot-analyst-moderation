@@ -1,11 +1,11 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from models import QuickResponseCategory
+from models import TemplateCategory
 
 
 def categories_inline_kb(
-    categories: list[QuickResponseCategory],
+    categories: list[TemplateCategory],
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -23,7 +23,12 @@ def categories_inline_kb(
             InlineKeyboardButton(
                 text=f"{index + 1}. {category.name}",
                 callback_data=f"category__{category.id}",
-            )
+            ),
+            InlineKeyboardButton(
+                text="🗑 Удалить",
+                callback_data=f"delete_category__{category.id}",
+            ),
+            width=2,
         )
 
     return builder.as_markup()
