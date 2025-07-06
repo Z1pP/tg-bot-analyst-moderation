@@ -234,7 +234,7 @@ async def save_template(
             raise ValueError("User or category not found")
 
         # Создаем шаблон
-        response = await response_repo.create_template(
+        new_template = await response_repo.create_template(
             title=content.get("title", "Без названия"),
             content=content.get("text", ""),
             category_id=category.id,
@@ -242,16 +242,16 @@ async def save_template(
         )
 
         # Сохраняем медиа если есть
-        await save_media_files(response.id, content, bot)
+        await save_media_files(new_template.id, content, bot)
 
-        return response
+        return new_template
     except Exception as e:
         logger.error(f"Error saving template: {str(e)}", exc_info=True)
         raise
 
 
 async def save_media_files(
-    response_id: int,
+    template_id: int,
     content: Dict[str, Any],
     bot: Bot,
 ) -> None:
@@ -262,7 +262,7 @@ async def save_media_files(
     if not media_files or not media_type:
         return
 
-    media_repo = container.resolve(TemplateMediaRepository)
+    media_repo: TemplateMediaRepository = container.resolve(TemplateMediaRepository)
 
     for position, file_id in enumerate(media_files):
         try:
@@ -271,7 +271,7 @@ async def save_media_files(
 
             # Сохраняем запись в БД с обоими ID
             await media_repo.create_media(
-                response_id=response_id,
+                template_id=template_id,
                 media_type=media_type,
                 file_id=file_id,
                 file_unique_id=file_info.file_unique_id,
