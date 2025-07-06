@@ -37,9 +37,7 @@ def tamplates_menu_kb():
         ],
     ]
 
-    return ReplyKeyboardMarkup(
-        keyboard=buttons, resize_keyboard=True, one_time_keyboard=True
-    )
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 
 def moderator_menu_kb():
