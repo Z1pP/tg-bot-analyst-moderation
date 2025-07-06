@@ -5,7 +5,7 @@ from aiogram.types import Message
 from constants import KbCommands
 from container import container
 from keyboards.reply.menu import tamplates_menu_kb
-from repositories import QuickResponseCategoryRepository
+from repositories import TemplateCategoryRepository
 from states import QuickResponseStateManager
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -32,9 +32,7 @@ async def process_category_name_handler(message: Message, state: FSMContext):
 
     category_name = _validate_category_name(name=message.text)
 
-    repo: QuickResponseCategoryRepository = container.resolve(
-        QuickResponseCategoryRepository
-    )
+    repo: TemplateCategoryRepository = container.resolve(TemplateCategoryRepository)
 
     try:
         category = await repo.create_category(name=category_name)

@@ -6,8 +6,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InputMediaPhoto, Message
 
 from container import container
-from models import QuickResponse, QuickResponseMedia
-from repositories import QuickResponseRepository
+from models import MessageTemplate, TemplateMedia
+from repositories import MessageTemplateRepository
 from states.response_state import QuickResponseStateManager
 
 router = Router(name=__name__)
@@ -47,8 +47,10 @@ async def send_quick_response(
     response_id: int,
 ) -> None:
     """Отправляет шаблон быстрого ответа пользователю"""
-    response_repo = container.resolve(QuickResponseRepository)
-    response = await response_repo.get_quick_response_by_id(response_id=response_id)
+    response_repo: MessageTemplateRepository = container.resolve(
+        MessageTemplateRepository
+    )
+    response = await response_repo.get_template_by_id(response_id=response_id)
 
     if not response:
         await message.reply("❌ Шаблон не найден")
@@ -73,7 +75,7 @@ async def send_quick_response(
 
 
 async def send_single_media(
-    bot: Bot, message: Message, response: QuickResponse, media: QuickResponseMedia
+    bot: Bot, message: Message, response: MessageTemplate, media: TemplateMedia
 ) -> None:
     """Отправляет одиночный медиа файл с текстом"""
     try:
@@ -99,8 +101,8 @@ async def send_single_media(
 async def send_media_group(
     bot: Bot,
     message: Message,
-    response: QuickResponse,
-    media_files: List[QuickResponseMedia],
+    response: MessageTemplate,
+    media_files: List[TemplateMedia],
 ) -> None:
     """Отправляет группу медиа файлов"""
     media_group = []

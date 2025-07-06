@@ -10,11 +10,11 @@ from aiogram.types import Message
 from constants import KbCommands
 from container import container
 from keyboards.inline.categories import categories_inline_kb
-from models import QuickResponse
+from models import MessageTemplate
 from repositories import (
-    QuickResponseCategoryRepository,
-    QuickResponseMediaRepository,
-    QuickResponseRepository,
+    MessageTemplateRepository,
+    TemplateCategoryRepository,
+    TemplateMediaRepository,
     UserRepository,
 )
 from states import QuickResponseStateManager
@@ -34,7 +34,7 @@ processing_media_groups: Set[str] = set()
 @router.message(F.text == KbCommands.ADD_TEMPLATE)
 async def add_template_handler(message: Message, state: FSMContext):
     """Обработчик добавления нового шаблона"""
-    category_repo = container.resolve(QuickResponseCategoryRepository)
+    category_repo = container.resolve(TemplateCategoryRepository)
     categories = await category_repo.get_all_categories()
 
     await send_html_message_with_kb(
@@ -212,25 +212,29 @@ async def save_template(
     author_username: str,
     content: Dict[str, Any],
     bot: Bot,
-) -> Optional[QuickResponse]:
+) -> Optional[MessageTemplate]:
     """Сохраняет шаблон в базу данных"""
     try:
         # Получаем репозитории
-        user_repo = container.resolve(UserRepository)
-        response_repo = container.resolve(QuickResponseRepository)
-        category_repo = container.resolve(QuickResponseCategoryRepository)
+        user_repo: UserRepository = container.resolve(UserRepository)
+        response_repo: MessageTemplateRepository = container.resolve(
+            MessageTemplateRepository
+        )
+        category_repo: TemplateCategoryRepository = container.resolve(
+            TemplateCategoryRepository
+        )
 
         # Получаем пользователя и категорию
         user: UserRepository = await user_repo.get_user_by_username(author_username)
-        category: QuickResponseCategoryRepository = (
-            await category_repo.get_category_by_id(content.get("category_id"))
+        category: TemplateCategoryRepository = await category_repo.get_category_by_id(
+            content.get("category_id")
         )
 
         if not user or not category:
             raise ValueError("User or category not found")
 
         # Создаем шаблон
-        response = await response_repo.create_quick_response(
+        response = await response_repo.create_template(
             title=content.get("title", "Без названия"),
             content=content.get("text", ""),
             category_id=category.id,
@@ -258,7 +262,7 @@ async def save_media_files(
     if not media_files or not media_type:
         return
 
-    media_repo = container.resolve(QuickResponseMediaRepository)
+    media_repo = container.resolve(TemplateMediaRepository)
 
     for position, file_id in enumerate(media_files):
         try:

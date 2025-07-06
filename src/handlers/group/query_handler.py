@@ -13,13 +13,13 @@ from aiogram.types import (
 
 from container import container
 from filters import StaffOnlyInlineFilter
-from models import QuickResponse
-from repositories import QuickResponseRepository
+from models import MessageTemplate
+from repositories import MessageTemplateRepository
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
-local_memory: Dict[str, QuickResponse] = {}
+local_memory: Dict[str, MessageTemplate] = {}
 
 
 @router.inline_query(
@@ -85,25 +85,39 @@ async def send_template_response(
     message: Message, template_id: int, reply_message_id: Optional[int]
 ) -> None:
     """Отправляет ответ по шаблону"""
-    response_repo = container.resolve(QuickResponseRepository)
-    response = await response_repo.get_quick_response_by_id(template_id)
+    response_repo: MessageTemplateRepository = container.resolve(
+        MessageTemplateRepository
+    )
+    template = await response_repo.get_template_by_id(template_id)
 
-    if not response:
+    # template = await update_template_usage_count(
+    #     template_id=template.id,
+    #     respository=response_repo,
+    # )
+
+    if not template:
         return
 
-    if response.media_items:
-        await send_media_group(message, response, reply_message_id)
+    if template.media_items:
+        await send_media_group(message, template, reply_message_id)
     else:
         await message.bot.send_message(
             chat_id=message.chat.id,
-            text=response.content,
+            text=template.content,
             reply_to_message_id=reply_message_id,
             parse_mode="HTML",
         )
 
 
+async def update_template_usage_count(
+    template_id: int,
+    respository: MessageTemplateRepository,
+) -> Optional[MessageTemplate]:
+    return await respository.increase_usage_count(template_id=template_id)
+
+
 async def send_media_group(
-    message: Message, response: QuickResponse, reply_message_id: Optional[int]
+    message: Message, response: MessageTemplate, reply_message_id: Optional[int]
 ) -> None:
     """Отправляет медиа-группу"""
     try:
@@ -132,14 +146,19 @@ async def send_media_group(
         )
 
 
-async def get_variants(query: str) -> List[QuickResponse]:
+async def get_variants(query: str) -> List[MessageTemplate]:
     """Получает варианты шаблонов по запросу"""
     if not local_memory:
-        resp_repo = container.resolve(QuickResponseRepository)
-        responses = await resp_repo.get_all_quick_responses()
+        resp_repo: MessageTemplateRepository = container.resolve(
+            MessageTemplateRepository
+        )
+        templates = await resp_repo.get_all_templates()
 
-        for resp in responses:
-            local_memory[resp.title] = resp
+        # Сортируем шаблоны по количеству исользований
+        sorted_templates = sorted(templates, key=lambda x: x.usage_count)
+
+        for templ in sorted_templates:
+            local_memory[templ.title] = templ
 
     return [
         instance

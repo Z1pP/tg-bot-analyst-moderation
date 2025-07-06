@@ -6,7 +6,7 @@ from constants import KbCommands
 from container import container
 from keyboards.inline.templates_answers import templates_inline_kb
 from keyboards.reply.menu import tamplates_menu_kb
-from repositories import QuickResponseRepository
+from repositories import MessageTemplateRepository
 from states import QuickResponseStateManager
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -26,10 +26,10 @@ async def templates_list_handler(message: Message, state: FSMContext) -> None:
 
         # Получение всех шаблонов из БД
         # TODO: Декомпозировать по сервисам и юзкейсам
-        response_repo: QuickResponseRepository = container.resolve(
-            QuickResponseRepository
+        response_repo: MessageTemplateRepository = container.resolve(
+            MessageTemplateRepository
         )
-        templates = await response_repo.get_all_quick_responses()
+        templates = await response_repo.get_all_templates()
 
         if not templates:
             await send_html_message_with_kb(
