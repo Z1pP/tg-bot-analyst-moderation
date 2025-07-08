@@ -18,11 +18,11 @@ async def main():
         logger.info("Инициализация бота...")
         bot, dp = await init_bot()
 
-        logger.info("Запускаем планировщик")
-        scheduler_instance = scheduler
-        schedule_daily_report(bot=bot)
-        scheduler_instance.start()
-        logger.info("Планировщик запущен успешно")
+        # logger.info("Запускаем планировщик")
+        # scheduler_instance = scheduler
+        # schedule_daily_report(bot=bot)
+        # scheduler_instance.start()
+        # logger.info("Планировщик запущен успешно")
 
         logger.info("Бот запущен успешно. Начинаем polling...")
         await dp.start_polling(bot)
