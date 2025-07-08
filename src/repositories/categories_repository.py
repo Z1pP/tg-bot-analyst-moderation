@@ -83,3 +83,20 @@ class TemplateCategoryRepository:
             except Exception as e:
                 logger.error("Ошибка при создании новой категории: %s", str(e))
                 raise Exception("Ошибка при создании репозитория")
+
+    async def delete_category(self, category_id: int) -> None:
+        """Удаляем категорию"""
+        async with async_session() as session:
+            try:
+                category = await self.get_category_by_id(category_id)
+                if category:
+                    await session.delete(category)
+                    await session.commit()
+                    logger.info('Категория "%s" удалена', category.name)
+                else:
+                    logger.warning("Категория с id %d не найдена", category_id)
+            except Exception as e:
+                logger.error("Ошибка при удалении категории: %s", str(e))
+                raise Exception("Ошибка при удалении категории")
+            finally:
+                await session.close()
