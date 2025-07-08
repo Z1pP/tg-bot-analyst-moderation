@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from aiogram import F, Router
 from aiogram.types import (
@@ -18,8 +18,6 @@ from repositories import MessageTemplateRepository
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
-
-local_memory: Dict[str, MessageTemplate] = {}
 
 
 @router.inline_query(
