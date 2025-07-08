@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from models.chat_session import ChatSession
+from models import AdminChatAccess, ChatSession
 
 
 def chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
@@ -30,13 +30,6 @@ def tracked_chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
         return builder.as_markup()
 
     for chat in chats:
-        is_target = False
-
-        # Безопасное получение флагов
-        if hasattr(chat, "admin_access") and chat.admin_access:
-            admin_access = chat.admin_access[0]
-            is_target = admin_access.is_target
-
         # Добавляем название чата
         builder.row(
             InlineKeyboardButton(
@@ -44,11 +37,32 @@ def tracked_chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
             )
         )
 
+    return builder.as_markup()
+
+
+def chat_info_inline_kb(access: AdminChatAccess):
+    builder = InlineKeyboardBuilder()
+
+    if access.is_target:
         builder.row(
             InlineKeyboardButton(
-                text="✅ Отчеты включены" if is_target else "❌ Отчеты выключены",
-                callback_data=f"toggle_target__{chat.id}",
-            ),
+                text="Не хочу получать отчеты сюда",
+                callback_data=f"toggle_target__{access.chat_id}",
+            )
         )
+    else:
+        builder.row(
+            InlineKeyboardButton(
+                text="Хочу получать отчеты сюда",
+                callback_data=f"toggle_target__{access.chat_id}",
+            )
+        ),
+
+    builder.row(
+        InlineKeyboardButton(
+            text="⬅️ Назад",
+            callback_data="chat_info_back",
+        ),
+    )
 
     return builder.as_markup()
