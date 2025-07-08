@@ -47,6 +47,7 @@ class ChatTrackingRepository:
                         AdminChatAccess.admin_id == admin_id,
                         AdminChatAccess.is_target,
                     )
+                    .distinct()
                 )
                 result = await session.execute(query)
                 chats = result.scalars().all()
