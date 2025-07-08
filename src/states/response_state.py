@@ -17,3 +17,4 @@ class QuickResponseStateManager(StatesGroup):
     listing_templates = State()
 
     removing_template = State()
+    removing_category = State()
