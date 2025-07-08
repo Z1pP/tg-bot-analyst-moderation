@@ -26,9 +26,26 @@ def categories_inline_kb(
             ),
             InlineKeyboardButton(
                 text="🗑 Удалить",
-                callback_data=f"delete_category__{category.id}",
+                callback_data=f"remove_category__{category.id}",
             ),
             width=2,
         )
 
+    return builder.as_markup()
+
+
+def conf_remove_category_kb() -> InlineKeyboardBuilder:
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text="Да",
+            callback_data="conf_remove_category__yes",
+        ),
+        InlineKeyboardButton(
+            text="Нет",
+            callback_data="conf_remove_category__no",
+        ),
+        width=2,
+    )
     return builder.as_markup()
