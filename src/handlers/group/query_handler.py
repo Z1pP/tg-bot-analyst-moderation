@@ -148,22 +148,16 @@ async def send_media_group(
 
 async def get_variants(query: str) -> List[MessageTemplate]:
     """Получает варианты шаблонов по запросу"""
-    if not local_memory:
-        resp_repo: MessageTemplateRepository = container.resolve(
-            MessageTemplateRepository
-        )
-        templates = await resp_repo.get_all_templates()
+    resp_repo: MessageTemplateRepository = container.resolve(MessageTemplateRepository)
+    templates = await resp_repo.get_all_templates()
 
-        # Сортируем шаблоны по количеству исользований
-        sorted_templates = sorted(templates, key=lambda x: x.usage_count)
-
-        for templ in sorted_templates:
-            local_memory[templ.title] = templ
+    # Сортируем шаблоны по количеству исользований
+    sorted_templates = sorted(templates, key=lambda x: x.usage_count)
 
     return [
-        instance
-        for title, instance in local_memory.items()
-        if query.lower() in instance.title.lower()
+        template
+        for template in sorted_templates
+        if query.lower() in template.title.lower()
     ]
 
 
