@@ -14,7 +14,7 @@ from aiogram.types import (
 from container import container
 from models import MessageTemplate, TemplateMedia
 from repositories import MessageTemplateRepository
-from states.response_state import TemplateStateManager
+from states import TemplateStateManager
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)

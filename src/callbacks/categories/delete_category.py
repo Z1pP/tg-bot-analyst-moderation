@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery
 from container import container
 from keyboards.inline.categories import conf_remove_category_kb
 from repositories import TemplateCategoryRepository
-from states.response_state import TemplateStateManager
+from states import TemplateStateManager
 
 router = Router(name=__name__)
 

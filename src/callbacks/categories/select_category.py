@@ -9,7 +9,7 @@ from container import container
 from keyboards.inline.templates_answers import templates_inline_kb
 from models import MessageTemplate
 from repositories import MessageTemplateRepository
-from states.response_state import TemplateStateManager
+from states import TemplateStateManager
 
 router = Router(name=__name__)
 

@@ -1,5 +1,5 @@
 from .chat_states import ChatStateManager
-from .response_state import TemplateStateManager
+from .template_state import TemplateStateManager
 from .user_states import UserStateManager
 
 __all__ = [
