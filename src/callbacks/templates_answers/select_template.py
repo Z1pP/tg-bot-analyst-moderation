@@ -38,80 +38,81 @@ async def select_template_callback(
         query.from_user.username,
     )
 
-    await send_quick_response(
+    await send_template(
         bot=bot,
         message=query.message,
-        response_id=int(template_id),
+        template_id=int(template_id),
     )
 
     await query.answer()
 
 
-async def send_quick_response(
+async def send_template(
     bot: Bot,
     message: Message,
-    response_id: int,
+    template_id: int,
 ) -> None:
     """Отправляет шаблон быстрого ответа пользователю"""
-    response_repo: MessageTemplateRepository = container.resolve(
+    template_repo: MessageTemplateRepository = container.resolve(
         MessageTemplateRepository
     )
-    response = await response_repo.get_template_by_id(response_id=response_id)
+    template = await template_repo.get_template_by_id(template_id=template_id)
 
-    if not response:
+    if not template:
         await message.reply("❌ Шаблон не найден")
         return
 
-    media_items = response.media_items
+    media_items = template.media_items
 
     # Отправляем в зависимости от типа контента
     if not media_items:
         # Только текст
         await bot.send_message(
             chat_id=message.chat.id,
-            text=response.content,
+            text=template.content,
             parse_mode="HTML",
         )
     elif len(media_items) == 1:
         # Одно фото с текстом
-        await send_single_media(bot, message, response, media_items[0])
+        await send_single_media(bot, message, template, media_items[0])
     else:
         # Группа медиа
-        await send_media_group(bot, message, response, media_items)
+        await send_media_group(bot, message, template, media_items)
 
 
 async def send_single_media(
-    bot: Bot, message: Message, response: MessageTemplate, media: TemplateMedia
+    bot: Bot, message: Message, template: MessageTemplate, media: TemplateMedia
 ) -> None:
     """Отправляет одиночный медиа файл с текстом"""
     try:
+
         if media.media_type == "photo":
             await message.reply_photo(
                 photo=media.file_id,
-                caption=response.content,
+                caption=template.content,
                 parse_mode="HTML",
             )
         elif media.media_type == "document":
             await message.reply_document(
                 document=media.file_id,
-                caption=response.content,
+                caption=template.content,
                 parse_mode="HTML",
             )
         elif media.media_type == "video":
             await message.reply_video(
                 video=media.file_id,
-                caption=response.content,
+                caption=template.content,
                 parse_mode="HTML",
             )
         elif media.media_type == "animation":
             await message.reply_animation(
                 animation=media.file_id,
-                caption=response.content,
+                caption=template.content,
                 parse_mode="HTML",
             )
     except Exception:
         await message.reply(
-            f"❌ Медиа недоступно. Текст шаблона:\n\n{response.content}",
+            f"❌ Медиа недоступно. Текст шаблона:\n\n{template.content}",
             parse_mode="HTML",
         )
 
@@ -119,7 +120,7 @@ async def send_single_media(
 async def send_media_group(
     bot: Bot,
     message: Message,
-    response: MessageTemplate,
+    template: MessageTemplate,
     media_files: List[TemplateMedia],
 ) -> None:
     """Отправляет группу медиа файлов"""
@@ -131,7 +132,7 @@ async def send_media_group(
             media_group.append(
                 InputMediaPhoto(
                     media=media.file_id,
-                    caption=response.content if i == 0 else None,
+                    caption=template.content if i == 0 else None,
                     parse_mode="HTML" if i == 0 else None,
                 )
             )
@@ -139,7 +140,7 @@ async def send_media_group(
             media_group.append(
                 InputMediaVideo(
                     media=media.file_id,
-                    caption=response.content if i == 0 else None,
+                    caption=template.content if i == 0 else None,
                     parse_mode="HTML" if i == 0 else None,
                 )
             )
@@ -147,7 +148,7 @@ async def send_media_group(
             media_group.append(
                 InputMediaAnimation(
                     media=media.file_id,
-                    caption=response.content if i == 0 else None,
+                    caption=template.content if i == 0 else None,
                     parse_mode="HTML" if i == 0 else None,
                 )
             )
@@ -158,6 +159,6 @@ async def send_media_group(
             await bot.send_media_group(chat_id=message.chat.id, media=media_group)
         except Exception:
             await message.reply(
-                f"❌ Медиа недоступно. Текст шаблона:\n\n{response.content}",
+                f"❌ Медиа недоступно. Текст шаблона:\n\n{template.content}",
                 parse_mode="HTML",
             )
