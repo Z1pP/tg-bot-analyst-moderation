@@ -55,7 +55,7 @@ class MessageTemplateRepository:
 
     async def get_template_by_id(
         self,
-        response_id: int,
+        template_id: int,
     ) -> Optional[MessageTemplate]:
         """Получаем быстрый ответ вместе с его медиа"""
         async with async_session() as session:
@@ -63,7 +63,7 @@ class MessageTemplateRepository:
                 query = (
                     select(MessageTemplate)
                     .options(selectinload(MessageTemplate.media_items))
-                    .where(MessageTemplate.id == response_id)
+                    .where(MessageTemplate.id == template_id)
                 )
                 result = await session.execute(query)
                 return result.scalar_one_or_none()
