@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Any, Dict, Optional, Set
 
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
@@ -63,7 +63,6 @@ async def process_template_title_handler(message: Message, state: FSMContext):
 @router.message(QuickResponseStateManager.process_template_content)
 async def process_template_content_handler(
     message: Message,
-    bot: Bot,
     state: FSMContext,
 ):
     """Обработчик получения контента шаблона"""
@@ -96,10 +95,10 @@ async def process_template_content_handler(
             processing_media_groups.add(group_id)
 
             # Обрабатываем медиагруппу
-            await handle_media_group(message, bot, state, content_data)
+            await handle_media_group(message, state, content_data)
         else:
             # Обычное сообщение без медиагруппы
-            await save_template(message.from_user.username, content_data, bot)
+            await save_template(message.from_user.username, content_data)
 
             await message.answer(f"✅ Шаблон '{title}' создан!")
 
@@ -123,16 +122,24 @@ def extract_message_content(message: Message) -> Dict[str, Any]:
     if message.photo:
         content["media_type"] = "photo"
         content["media_files"] = [message.photo[-1].file_id]
+        content["media_unique_ids"] = [message.photo[-1].file_unique_id]
     elif message.document:
         content["media_type"] = "document"
         content["media_files"] = [message.document.file_id]
-
+        content["media_unique_ids"] = [message.document.file_unique_id]
+    elif message.video:
+        content["media_type"] = "video"
+        content["media_files"] = [message.video.file_id]
+        content["media_unique_ids"] = [message.video.file_unique_id]
+    elif message.animation:
+        content["media_type"] = "animation"
+        content["media_files"] = [message.animation.file_id]
+        content["media_unique_ids"] = [message.animation.file_unique_id]
     return content
 
 
 async def handle_media_group(
     message: Message,
-    bot: Bot,
     state: FSMContext,
     content_data: Dict[str, Any],
     status_message: Message = None,
@@ -177,7 +184,7 @@ async def handle_media_group(
             processed_media_groups.add(group_id)
 
             # Сохраняем шаблон
-            await save_template(message.from_user.username, full_content, bot)
+            await save_template(message.from_user.username, full_content)
 
             # Удаляем статусное сообщение если оно есть
             if status_message:
@@ -211,7 +218,6 @@ async def clear_processed_group(group_id: str, delay: int = 60):
 async def save_template(
     author_username: str,
     content: Dict[str, Any],
-    bot: Bot,
 ) -> Optional[MessageTemplate]:
     """Сохраняет шаблон в базу данных"""
     try:
@@ -242,7 +248,7 @@ async def save_template(
         )
 
         # Сохраняем медиа если есть
-        await save_media_files(new_template.id, content, bot)
+        await save_media_files(new_template.id, content)
 
         return new_template
     except Exception as e:
@@ -253,10 +259,10 @@ async def save_template(
 async def save_media_files(
     template_id: int,
     content: Dict[str, Any],
-    bot: Bot,
 ) -> None:
     """Сохраняет медиа файлы в БД используя file_id и file_unique_id"""
     media_files = content.get("media_files", [])
+    media_unique_ids = content.get("media_unique_ids", [])
     media_type = content.get("media_type")
 
     if not media_files or not media_type:
@@ -264,17 +270,16 @@ async def save_media_files(
 
     media_repo: TemplateMediaRepository = container.resolve(TemplateMediaRepository)
 
-    for position, file_id in enumerate(media_files):
+    for position, (file_id, file_unique_id) in enumerate(
+        zip(media_files, media_unique_ids)
+    ):
         try:
-            # Получаем информацию о файле
-            file_info = await bot.get_file(file_id)
-
             # Сохраняем запись в БД с обоими ID
             await media_repo.create_media(
                 template_id=template_id,
                 media_type=media_type,
                 file_id=file_id,
-                file_unique_id=file_info.file_unique_id,
+                file_unique_id=file_unique_id,
                 position=position,
             )
         except Exception as e:
