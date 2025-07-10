@@ -86,20 +86,30 @@ class MessageTemplateRepository:
                 logger.error("Ошибка при получении всех быстрых ответов: %s", e)
                 raise
 
-    async def increase_usage_count(self, template_id: int) -> None:
+    async def get_template_and_increase_usage_count(
+        self, template_id: int
+    ) -> Optional[MessageTemplate]:
         async with async_session() as session:
             try:
-                template = await self.get_template_by_id(template_id)
+                # Получаем шаблон в рамках той же сессии
+                query = (
+                    select(MessageTemplate)
+                    .options(selectinload(MessageTemplate.media_items))
+                    .where(MessageTemplate.id == template_id)
+                )
+                result = await session.execute(query)
+                template = result.scalar_one_or_none()
 
                 if template:
+                    # Увеливаем количество использований на +1
                     template.usage_count += 1
                     await session.commit()
-                    await session.refresh(template, ["usage_count"])
+                    await session.refresh(template)
                     logger.info("Шаблон был использован %d раз", template.usage_count)
-                else:
-                    logger.info("Шаблон не найден")
+
+                return template
             except Exception as e:
-                logger.error("Ошибка при обнолени шаблона: %s", e)
+                logger.error("Ошибка при обновлении шаблона: %s", e)
                 raise
 
     async def delete_template(self, template_id: int) -> None:
