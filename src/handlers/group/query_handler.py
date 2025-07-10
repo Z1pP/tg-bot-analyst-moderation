@@ -76,27 +76,25 @@ async def handle_template_message(message: Message) -> None:
         await message.delete()
 
         # Отправляем шаблон
-        await send_template_response(message, template_id, reply_message_id)
+        await send_template(message, template_id, reply_message_id)
 
     except Exception as e:
         logger.error(f"Error handling template message: {e}")
 
 
-async def send_template_response(
+async def send_template(
     message: Message,
     template_id: int,
     reply_message_id: Optional[int],
 ) -> None:
     """Отправляет ответ по шаблону"""
-    response_repo: MessageTemplateRepository = container.resolve(
+    template_repo: MessageTemplateRepository = container.resolve(
         MessageTemplateRepository
     )
-    template = await response_repo.get_template_by_id(template_id)
 
-    # template = await update_template_usage_count(
-    #     template_id=template.id,
-    #     respository=response_repo,
-    # )
+    template = await template_repo.get_template_and_increase_usage_count(
+        template_id=template_id
+    )
 
     if not template:
         return
@@ -114,13 +112,6 @@ async def send_template_response(
             reply_to_message_id=reply_message_id,
             parse_mode="HTML",
         )
-
-
-async def update_template_usage_count(
-    template_id: int,
-    respository: MessageTemplateRepository,
-) -> Optional[MessageTemplate]:
-    return await respository.increase_usage_count(template_id=template_id)
 
 
 async def send_media_group(
@@ -188,8 +179,8 @@ async def get_variants(query: str) -> List[MessageTemplate]:
     resp_repo: MessageTemplateRepository = container.resolve(MessageTemplateRepository)
     templates = await resp_repo.get_all_templates()
 
-    # Сортируем шаблоны по количеству исользований
-    sorted_templates = sorted(templates, key=lambda x: x.usage_count)
+    # Сортируем шаблоны по количеству исользований от большего к меньшему
+    sorted_templates = sorted(templates, key=lambda x: -x.usage_count)
 
     return [
         template
