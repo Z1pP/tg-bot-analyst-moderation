@@ -6,7 +6,10 @@ from aiogram import F, Router
 from aiogram.types import (
     InlineQuery,
     InlineQueryResultArticle,
+    InputMediaAnimation,
+    InputMediaDocument,
     InputMediaPhoto,
+    InputMediaVideo,
     InputTextMessageContent,
     Message,
 )
@@ -80,7 +83,9 @@ async def handle_template_message(message: Message) -> None:
 
 
 async def send_template_response(
-    message: Message, template_id: int, reply_message_id: Optional[int]
+    message: Message,
+    template_id: int,
+    reply_message_id: Optional[int],
 ) -> None:
     """Отправляет ответ по шаблону"""
     response_repo: MessageTemplateRepository = container.resolve(
@@ -97,7 +102,11 @@ async def send_template_response(
         return
 
     if template.media_items:
-        await send_media_group(message, template, reply_message_id)
+        await send_media_group(
+            message=message,
+            template=template,
+            reply_message_id=reply_message_id,
+        )
     else:
         await message.bot.send_message(
             chat_id=message.chat.id,
@@ -115,19 +124,49 @@ async def update_template_usage_count(
 
 
 async def send_media_group(
-    message: Message, response: MessageTemplate, reply_message_id: Optional[int]
+    message: Message,
+    template: MessageTemplate,
+    reply_message_id: Optional[int],
 ) -> None:
     """Отправляет медиа-группу"""
     try:
-        media_group = [
-            InputMediaPhoto(
-                media=media.file_id,
-                caption=response.content if i == 0 else None,
-                parse_mode="HTML" if i == 0 else None,
-            )
-            for i, media in enumerate(response.media_items)
-            if media.media_type == "photo"
-        ]
+
+        media_group = []
+
+        # Создаем медиа группу
+        for i, media in enumerate(template.media_items):
+            if media.media_type == "photo":
+                media_group.append(
+                    InputMediaPhoto(
+                        media=media.file_id,
+                        caption=template.content if i == 0 else None,
+                        parse_mode="HTML" if i == 0 else None,
+                    )
+                )
+            elif media.media_type == "video":
+                media_group.append(
+                    InputMediaVideo(
+                        media=media.file_id,
+                        caption=template.content if i == 0 else None,
+                        parse_mode="HTML" if i == 0 else None,
+                    )
+                )
+            elif media.media_type == "animation":
+                media_group.append(
+                    InputMediaAnimation(
+                        media=media.file_id,
+                        caption=template.content if i == 0 else None,
+                        parse_mode="HTML" if i == 0 else None,
+                    )
+                )
+            elif media.media_type == "document":
+                media_group.append(
+                    InputMediaDocument(
+                        media=media.file_id,
+                        caption=template.content if i == 0 else None,
+                        parse_mode="HTML" if i == 0 else None,
+                    )
+                )
 
         if media_group:
             await message.bot.send_media_group(
@@ -138,7 +177,7 @@ async def send_media_group(
     except Exception:
         await message.bot.send_message(
             chat_id=message.chat.id,
-            text=response.content,
+            text=template.content,
             reply_to_message_id=reply_message_id,
             parse_mode="HTML",
         )
