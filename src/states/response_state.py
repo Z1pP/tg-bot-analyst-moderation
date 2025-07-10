@@ -1,7 +1,7 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
-class QuickResponseStateManager(StatesGroup):
+class TemplateStateManager(StatesGroup):
     templates_menu = State()
     select_template = State()
     select_category = State()

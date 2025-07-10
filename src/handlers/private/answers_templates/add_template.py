@@ -17,7 +17,7 @@ from repositories import (
     TemplateMediaRepository,
     UserRepository,
 )
-from states import QuickResponseStateManager
+from states import TemplateStateManager
 from utils.send_message import send_html_message_with_kb
 
 router = Router(name=__name__)
@@ -43,10 +43,10 @@ async def add_template_handler(message: Message, state: FSMContext):
         reply_markup=categories_inline_kb(categories=categories),
     )
 
-    await state.set_state(QuickResponseStateManager.process_template_category)
+    await state.set_state(TemplateStateManager.process_template_category)
 
 
-@router.message(QuickResponseStateManager.process_template_title)
+@router.message(TemplateStateManager.process_template_title)
 async def process_template_title_handler(message: Message, state: FSMContext):
     """Обработчик получения названия нового шаблона"""
     title = message.text
@@ -57,10 +57,10 @@ async def process_template_title_handler(message: Message, state: FSMContext):
         text=f"Отправьте контент для шаблона '{title}' (текст, фото или медиагруппу):",
     )
 
-    await state.set_state(QuickResponseStateManager.process_template_content)
+    await state.set_state(TemplateStateManager.process_template_content)
 
 
-@router.message(QuickResponseStateManager.process_template_content)
+@router.message(TemplateStateManager.process_template_content)
 async def process_template_content_handler(
     message: Message,
     state: FSMContext,
@@ -102,7 +102,7 @@ async def process_template_content_handler(
 
             await message.answer(f"✅ Шаблон '{title}' создан!")
 
-        await state.set_state(QuickResponseStateManager.templates_menu)
+        await state.set_state(TemplateStateManager.templates_menu)
     except Exception as e:
         logger.error(f"Error creating template: {str(e)}", exc_info=True)
         await message.reply(f"❌ Ошибка при создании шаблона: {str(e)}")
@@ -194,7 +194,7 @@ async def handle_media_group(
                     pass
 
             await message.reply(f"✅ Шаблон '{title}' создан!")
-            await state.set_state(QuickResponseStateManager.templates_menu)
+            await state.set_state(TemplateStateManager.templates_menu)
 
             # Очищаем кеш
             if group_id in media_groups:
@@ -223,7 +223,7 @@ async def save_template(
     try:
         # Получаем репозитории
         user_repo: UserRepository = container.resolve(UserRepository)
-        response_repo: MessageTemplateRepository = container.resolve(
+        template_repo: MessageTemplateRepository = container.resolve(
             MessageTemplateRepository
         )
         category_repo: TemplateCategoryRepository = container.resolve(
@@ -240,7 +240,7 @@ async def save_template(
             raise ValueError("User or category not found")
 
         # Создаем шаблон
-        new_template = await response_repo.create_template(
+        new_template = await template_repo.create_template(
             title=content.get("title", "Без названия"),
             content=content.get("text", ""),
             category_id=category.id,

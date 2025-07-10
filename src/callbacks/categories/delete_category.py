@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery
 from container import container
 from keyboards.inline.categories import conf_remove_category_kb
 from repositories import TemplateCategoryRepository
-from states.response_state import QuickResponseStateManager
+from states.response_state import TemplateStateManager
 
 router = Router(name=__name__)
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(
     F.data.startswith("remove_category__"),
-    QuickResponseStateManager.listing_categories,
+    TemplateStateManager.listing_categories,
 )
 async def remove_category_callback(
     query: CallbackQuery,
@@ -37,7 +37,7 @@ async def remove_category_callback(
         )
 
         await state.update_data(category_id=int(category_id))
-        await state.set_state(QuickResponseStateManager.removing_category)
+        await state.set_state(TemplateStateManager.removing_category)
 
         await query.message.edit_text(
             text="Вы уверены, что хотите удалить эту категорию?",
@@ -50,7 +50,7 @@ async def remove_category_callback(
 
 @router.callback_query(
     F.data.startswith("conf_remove_category__"),
-    QuickResponseStateManager.removing_category,
+    TemplateStateManager.removing_category,
 )
 async def confirmation_removing_category(
     query: CallbackQuery,
@@ -70,7 +70,7 @@ async def confirmation_removing_category(
         answer = query.data.split("__")[1]
 
         if answer != "yes":
-            await state.set_state(QuickResponseStateManager.templates_menu)
+            await state.set_state(TemplateStateManager.templates_menu)
             await query.message.edit_text(
                 text="❌ Удаление отменено",
             )
@@ -88,7 +88,7 @@ async def confirmation_removing_category(
         await query.message.edit_text(
             text="✅ Категория успешно удалена", reply_markup=None
         )
-        await state.set_state(QuickResponseStateManager.templates_menu)
+        await state.set_state(TemplateStateManager.templates_menu)
 
     except Exception as e:
         logger.error(f"Ошибка при удалении категории: {str(e)}", exc_info=True)

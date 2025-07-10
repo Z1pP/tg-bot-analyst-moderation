@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery
 from container import container
 from keyboards.inline.templates_answers import conf_remove_template_kb
 from repositories import MessageTemplateRepository
-from states.response_state import QuickResponseStateManager
+from states.response_state import TemplateStateManager
 
 router = Router(name=__name__)
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(
     F.data.startswith("remove_template__"),
-    QuickResponseStateManager.listing_templates,
+    TemplateStateManager.listing_templates,
 )
 async def remove_template_callback(
     query: CallbackQuery,
@@ -37,7 +37,7 @@ async def remove_template_callback(
         )
 
         await state.update_data(template_id=int(template_id))
-        await state.set_state(QuickResponseStateManager.removing_template)
+        await state.set_state(TemplateStateManager.removing_template)
 
         await query.message.edit_text(
             text="Вы уверены, что хотите удалить шаблон?",
@@ -50,7 +50,7 @@ async def remove_template_callback(
 
 @router.callback_query(
     F.data.startswith("conf_remove_template__"),
-    QuickResponseStateManager.removing_template,
+    TemplateStateManager.removing_template,
 )
 async def confirmation_removing_template(
     query: CallbackQuery,
@@ -70,7 +70,7 @@ async def confirmation_removing_template(
         answer = query.data.split("__")[1]
 
         if answer != "yes":
-            await state.set_state(QuickResponseStateManager.templates_menu)
+            await state.set_state(TemplateStateManager.templates_menu)
             await query.message.edit_text(
                 text="❌ Удаление отменено",
             )
@@ -88,7 +88,7 @@ async def confirmation_removing_template(
         await query.message.edit_text(
             text="✅ Шаблон успешно удален", reply_markup=None
         )
-        await state.set_state(QuickResponseStateManager.templates_menu)
+        await state.set_state(TemplateStateManager.templates_menu)
 
     except Exception as e:
         logger.error(f"Ошибка при удалении шаблона: {str(e)}", exc_info=True)

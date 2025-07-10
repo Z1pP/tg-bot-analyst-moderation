@@ -9,7 +9,7 @@ from container import container
 from keyboards.inline.templates_answers import templates_inline_kb
 from models import MessageTemplate
 from repositories import MessageTemplateRepository
-from states.response_state import QuickResponseStateManager
+from states.response_state import TemplateStateManager
 
 router = Router(name=__name__)
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    QuickResponseStateManager.process_template_category,
+    TemplateStateManager.process_template_category,
     F.data.startswith("category__"),
 )
 async def select_category_for_template_callback(
@@ -41,13 +41,13 @@ async def select_category_for_template_callback(
 
     await query.message.answer(text=text)
 
-    await state.set_state(QuickResponseStateManager.process_template_title)
+    await state.set_state(TemplateStateManager.process_template_title)
 
     await query.answer()
 
 
 @router.callback_query(
-    QuickResponseStateManager.listing_categories,
+    TemplateStateManager.listing_categories,
     F.data.startswith("category__"),
 )
 async def show_templates_by_category_callback(
@@ -74,7 +74,7 @@ async def show_templates_by_category_callback(
             reply_markup=templates_inline_kb(templates=templates),
         )
 
-        await state.set_state(QuickResponseStateManager.listing_templates)
+        await state.set_state(TemplateStateManager.listing_templates)
 
         await query.answer()
     except Exception as e:

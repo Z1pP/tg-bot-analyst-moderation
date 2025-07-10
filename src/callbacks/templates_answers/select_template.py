@@ -14,14 +14,14 @@ from aiogram.types import (
 from container import container
 from models import MessageTemplate, TemplateMedia
 from repositories import MessageTemplateRepository
-from states.response_state import QuickResponseStateManager
+from states.response_state import TemplateStateManager
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    QuickResponseStateManager.listing_templates,
+    TemplateStateManager.listing_templates,
     F.data.startswith("template__"),
 )
 async def select_template_callback(
