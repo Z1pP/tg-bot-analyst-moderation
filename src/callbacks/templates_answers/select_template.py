@@ -3,7 +3,13 @@ from typing import List
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InputMediaPhoto, Message
+from aiogram.types import (
+    CallbackQuery,
+    InputMediaAnimation,
+    InputMediaPhoto,
+    InputMediaVideo,
+    Message,
+)
 
 from container import container
 from models import MessageTemplate, TemplateMedia
@@ -86,8 +92,20 @@ async def send_single_media(
                 parse_mode="HTML",
             )
         elif media.media_type == "document":
-            await bot.send_document(
+            await message.reply_document(
                 document=media.file_id,
+                caption=response.content,
+                parse_mode="HTML",
+            )
+        elif media.media_type == "video":
+            await message.reply_video(
+                video=media.file_id,
+                caption=response.content,
+                parse_mode="HTML",
+            )
+        elif media.media_type == "animation":
+            await message.reply_animation(
+                animation=media.file_id,
                 caption=response.content,
                 parse_mode="HTML",
             )
@@ -112,6 +130,22 @@ async def send_media_group(
         if media.media_type == "photo":
             media_group.append(
                 InputMediaPhoto(
+                    media=media.file_id,
+                    caption=response.content if i == 0 else None,
+                    parse_mode="HTML" if i == 0 else None,
+                )
+            )
+        elif media.media_type == "video":
+            media_group.append(
+                InputMediaVideo(
+                    media=media.file_id,
+                    caption=response.content if i == 0 else None,
+                    parse_mode="HTML" if i == 0 else None,
+                )
+            )
+        elif media.media_type == "animation":
+            media_group.append(
+                InputMediaAnimation(
                     media=media.file_id,
                     caption=response.content if i == 0 else None,
                     parse_mode="HTML" if i == 0 else None,
