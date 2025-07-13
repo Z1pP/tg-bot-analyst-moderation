@@ -72,4 +72,7 @@ class StaffOnlyInlineFilter(BaseUserFilter):
             return False
 
         user = await self.get_user(username)
-        return user is not None and user.role in (UserRole.ADMIN, UserRole.MODERATOR)
+        if not user:
+            return False
+
+        return user.role in (UserRole.ADMIN, UserRole.MODERATOR)
