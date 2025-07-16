@@ -38,3 +38,8 @@ class ChatSession(BaseModel):
         "AdminChatAccess",
         back_populates="chat",
     )
+
+    templates = relationship(
+        "MessageTemplate",
+        back_populates="chat",
+    )
