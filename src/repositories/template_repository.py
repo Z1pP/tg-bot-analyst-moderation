@@ -124,7 +124,7 @@ class MessageTemplateRepository:
     async def get_templates_by_category_paginated(
         self,
         offset: int = 0,
-        limit: int = 7,
+        limit: int = 5,
         category_id: int = None,
     ) -> List[MessageTemplate]:
         async with async_session() as session:
@@ -145,7 +145,7 @@ class MessageTemplateRepository:
     async def get_templates_paginated(
         self,
         offset: int = 0,
-        limit: int = 7,
+        limit: int = 5,
     ) -> List[MessageTemplate]:
         async with async_session() as session:
             query = (
