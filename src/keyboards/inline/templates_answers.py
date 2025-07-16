@@ -35,7 +35,7 @@ def templates_inline_kb(
         )
 
     # Кнопки пагинации
-    page_size = 7
+    page_size = 5
     max_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
 
     pagination_buttons = []
