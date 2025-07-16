@@ -26,7 +26,7 @@ def templates_inline_kb(
         builder.row(
             InlineKeyboardButton(
                 text=f"{index + 1}. {template.title}",
-                callback_data=f"template__{template.id}__{template.title}",
+                callback_data=f"template__{template.id}",
             ),
             InlineKeyboardButton(
                 text="🗑",
