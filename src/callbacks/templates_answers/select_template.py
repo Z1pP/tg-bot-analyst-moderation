@@ -84,6 +84,7 @@ async def send_single_media(
     bot: Bot, message: Message, template: MessageTemplate, media: TemplateMedia
 ) -> None:
     """Отправляет одиночный медиа файл с текстом"""
+
     try:
 
         if media.media_type == "photo":
