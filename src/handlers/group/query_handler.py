@@ -65,6 +65,8 @@ async def handle_template_message(message: Message) -> None:
     try:
         # Извлекаем ID шаблона
         template_id = int(message.text.split("_")[1].split("🔸")[0])
+        chat_id = str(message.chat.id)
+
         reply_message_id = (
             message.reply_to_message.message_id if message.reply_to_message else None
         )
@@ -76,7 +78,12 @@ async def handle_template_message(message: Message) -> None:
         await message.delete()
 
         # Отправляем шаблон
-        await send_template(message, template_id, reply_message_id)
+        await send_template(
+            message=message,
+            template_id=template_id,
+            reply_message_id=reply_message_id,
+            chat_id=chat_id,
+        )
 
     except Exception as e:
         logger.error(f"Error handling template message: {e}")
@@ -85,6 +92,7 @@ async def handle_template_message(message: Message) -> None:
 async def send_template(
     message: Message,
     template_id: int,
+    chat_id: str,
     reply_message_id: Optional[int],
 ) -> None:
     """Отправляет ответ по шаблону"""
@@ -93,7 +101,8 @@ async def send_template(
     )
 
     template = await template_repo.get_template_and_increase_usage_count(
-        template_id=template_id
+        template_id=template_id,
+        chat_id=chat_id,
     )
 
     if not template:
@@ -176,17 +185,15 @@ async def send_media_group(
 
 async def get_variants(query: str) -> List[MessageTemplate]:
     """Получает варианты шаблонов по запросу"""
-    resp_repo: MessageTemplateRepository = container.resolve(MessageTemplateRepository)
-    templates = await resp_repo.get_all_templates()
+    template_repo: MessageTemplateRepository = container.resolve(
+        MessageTemplateRepository
+    )
+    templates = await template_repo.get_templates_by_query(query=query)
 
     # Сортируем шаблоны по количеству исользований от большего к меньшему
-    sorted_templates = sorted(templates, key=lambda x: -x.usage_count)
+    sorted_templates = list(sorted(templates, key=lambda x: -x.usage_count))
 
-    return [
-        template
-        for template in sorted_templates
-        if query.lower() in template.title.lower()
-    ]
+    return sorted_templates
 
 
 async def save_moderator_message(message: Message) -> None:
