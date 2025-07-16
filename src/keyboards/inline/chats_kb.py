@@ -1,3 +1,5 @@
+from typing import List
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -10,7 +12,7 @@ def chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
     for index, chat in enumerate(chats):
         builder.row(
             InlineKeyboardButton(
-                text=f"{index + 1}. {chat.title}",
+                text=f"{index + 1}. {chat.title[:30]}",
                 callback_data=f"chat__{chat.title}",
             )
         )
@@ -24,7 +26,8 @@ def tracked_chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
     if not chats:
         builder.row(
             InlineKeyboardButton(
-                text="🚫 Нет отслеживаемых чатов", callback_data="no_tracked_chats"
+                text="🚫 Нет отслеживаемых чатов",
+                callback_data="no_tracked_chats",
             )
         )
         return builder.as_markup()
@@ -33,11 +36,33 @@ def tracked_chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
         # Добавляем название чата
         builder.row(
             InlineKeyboardButton(
-                text=f"Группа: {chat.title}", callback_data=f"chat_info__{chat.id}"
+                text=f"Группа: {chat.title[:30]}",
+                callback_data=f"chat_info__{chat.id}",
             )
         )
 
     return builder.as_markup()
+
+
+def template_scope_selector_kb(chats: List[ChatSession]) -> InlineKeyboardMarkup:
+    """Клавиатура для выбора области применения шаблона"""
+    kb = InlineKeyboardBuilder()
+
+    kb.button(
+        text="🌐 Для всех чатов",
+        callback_data="template_scope__-1",
+    )
+
+    # Добавляем доступные чаты
+    for chat in chats:
+        kb.button(
+            text=f"💬 {chat.title[:30]}",
+            callback_data=f"template_scope__{chat.id}",
+        )
+
+    # Формируем сетку 1 кнопка в ряд
+    kb.adjust(1)
+    return kb.as_markup()
 
 
 def chat_info_inline_kb(access: AdminChatAccess):
