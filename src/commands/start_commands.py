@@ -1,12 +1,17 @@
 from aiogram import Bot
-from aiogram.types import BotCommand, BotCommandScopeDefault
+from aiogram.types import (
+    BotCommand,
+    BotCommandScopeAllChatAdministrators,
+)
 
 from constants import CommandList
 
 
 async def set_bot_commands(bot: Bot) -> None:
-    commands = [
+    general_commands = [
         BotCommand(command=comm.name.lower(), description=comm.value)
         for comm in CommandList
     ]
-    await bot.set_my_commands(commands=commands, scope=BotCommandScopeDefault())
+    await bot.set_my_commands(
+        commands=general_commands, scope=BotCommandScopeAllChatAdministrators()
+    )
