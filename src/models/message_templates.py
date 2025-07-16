@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import BaseModel
 
 if TYPE_CHECKING:
+    from .chat_session import ChatSession
     from .user import User
 
 
@@ -15,7 +16,7 @@ class MessageTemplate(BaseModel):
     title: Mapped[str] = mapped_column(
         String(200),
         nullable=False,
-        unique=True,
+        index=True,
     )
     content: Mapped[str] = mapped_column(
         Text,
@@ -24,6 +25,12 @@ class MessageTemplate(BaseModel):
     category_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("template_categories.id"),
+        nullable=True,
+        index=True,
+    )
+    chat_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("chat_sessions.id"),
         nullable=True,
         index=True,
     )
@@ -43,6 +50,10 @@ class MessageTemplate(BaseModel):
     author: Mapped["User"] = relationship(
         "User",
         back_populates="message_templates",
+    )
+    chat: Mapped[Optional["ChatSession"]] = relationship(
+        "ChatSession",
+        back_populates="templates",
     )
     category: Mapped["TemplateCategory"] = relationship(
         "TemplateCategory",
@@ -81,7 +92,7 @@ class TemplateCategory(BaseModel):
 class TemplateMedia(BaseModel):
     __tablename__ = "template_media"
 
-    template_id: Mapped[int] = mapped_column(  # Изменено с response_id
+    template_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("message_templates.id"),
         nullable=False,
