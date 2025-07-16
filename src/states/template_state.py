@@ -10,6 +10,7 @@ class TemplateStateManager(StatesGroup):
     process_category_name = State()
 
     process_template_category = State()
+    process_template_chat = State()
     process_template_title = State()
     process_template_content = State()
 
