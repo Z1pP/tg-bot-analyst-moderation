@@ -21,15 +21,16 @@ async def templates_list_handler(message: Message, state: FSMContext) -> None:
     """
 
     try:
-        # Состояние вывода списка чатов
+        await state.clear()  # Очистка состояния перед выводом списка чатов
         await state.set_state(TemplateStateManager.listing_templates)
 
         # Получение всех шаблонов из БД
         # TODO: Декомпозировать по сервисам и юзкейсам
-        response_repo: MessageTemplateRepository = container.resolve(
+        template_repo: MessageTemplateRepository = container.resolve(
             MessageTemplateRepository
         )
-        templates = await response_repo.get_all_templates()
+        templates = await template_repo.get_templates_paginated()
+        total_count = await template_repo.get_templates_count()
 
         if not templates:
             await send_html_message_with_kb(
@@ -41,8 +42,11 @@ async def templates_list_handler(message: Message, state: FSMContext) -> None:
 
         await send_html_message_with_kb(
             message=message,
-            text=f"Всего {len(templates)} шаблонов",
-            reply_markup=templates_inline_kb(templates=templates),
+            text=f"Всего {total_count} шаблонов",
+            reply_markup=templates_inline_kb(
+                templates=templates,
+                total_count=total_count,
+            ),
         )
     except Exception as e:
         await handle_exception(
