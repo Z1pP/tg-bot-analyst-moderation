@@ -11,13 +11,13 @@ from repositories import (
     TemplateMediaRepository,
     UserRepository,
 )
-from services.answers_templates import (
-    TemplateContentService,
-    TemplateService,
-)
 from services.caching import ICache, TTLEntityCache
 from services.categories import CategoryService
 from services.chat import ChatService
+from services.templates import (
+    TemplateContentService,
+    TemplateService,
+)
 from services.user import UserService
 from usecases.chat import (
     GetAllChatsUseCase,
