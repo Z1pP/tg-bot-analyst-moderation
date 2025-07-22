@@ -25,7 +25,7 @@ def templates_inline_kb(
     for index, template in enumerate(templates):
         builder.row(
             InlineKeyboardButton(
-                text=f"{index + 1}. {template.title}",
+                text=f"{template.title}",
                 callback_data=f"template__{template.id}",
             ),
             InlineKeyboardButton(
@@ -70,10 +70,11 @@ def templates_inline_kb(
         )
 
     builder.row(*pagination_buttons)
+
     return builder.as_markup()
 
 
-def conf_remove_template_kb() -> InlineKeyboardBuilder:
+def conf_remove_template_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.row(
