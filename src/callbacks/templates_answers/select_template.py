@@ -74,19 +74,20 @@ async def send_template(
         )
     elif len(media_items) == 1:
         # Одно фото с текстом
-        await send_single_media(bot, message, template, media_items[0])
+        await send_single_media(message, template, media_items[0])
     else:
         # Группа медиа
         await send_media_group(bot, message, template, media_items)
 
 
 async def send_single_media(
-    bot: Bot, message: Message, template: MessageTemplate, media: TemplateMedia
+    message: Message,
+    template: MessageTemplate,
+    media: TemplateMedia,
 ) -> None:
     """Отправляет одиночный медиа файл с текстом"""
 
     try:
-
         if media.media_type == "photo":
             await message.reply_photo(
                 photo=media.file_id,
@@ -111,7 +112,8 @@ async def send_single_media(
                 caption=template.content,
                 parse_mode="HTML",
             )
-    except Exception:
+    except Exception as e:
+        logger.error(f"Ошибка при отправке шаблона: {e}")
         await message.reply(
             f"❌ Медиа недоступно. Текст шаблона:\n\n{template.content}",
             parse_mode="HTML",
@@ -157,8 +159,12 @@ async def send_media_group(
     # Отправляем группу
     if media_group:
         try:
-            await bot.send_media_group(chat_id=message.chat.id, media=media_group)
-        except Exception:
+            await bot.send_media_group(
+                chat_id=message.chat.id,
+                media=media_group,
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при отправке медиа-группы: {e}")
             await message.reply(
                 f"❌ Медиа недоступно. Текст шаблона:\n\n{template.content}",
                 parse_mode="HTML",
