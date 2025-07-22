@@ -9,7 +9,7 @@ from constants import KbCommands
 from container import container
 from keyboards.inline.categories import categories_inline_kb
 from middlewares import AlbumMiddleware
-from services.answers_templates import TemplateContentService
+from services.templates import TemplateContentService
 from services.categories import CategoryService
 from states import TemplateStateManager
 from utils.send_message import send_html_message_with_kb
