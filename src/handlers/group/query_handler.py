@@ -29,42 +29,51 @@ logger = logging.getLogger(__name__)
 )
 async def handle_inline_query(query: InlineQuery) -> None:
     """Обработчик inline запросов"""
-    variants = await get_variants(query.query)
-    results = []
+    try:
+        variants = await get_variants(query.query)
+        results = []
 
-    for variant in variants:
-        cleaned_content = remove_html_tags(variant.content)
-        results.append(
-            InlineQueryResultArticle(
-                id=str(variant.id),
-                title=variant.title,
-                description=short_the_text(cleaned_content),
-                input_message_content=InputTextMessageContent(
-                    message_text=f"🔸TEMPLATE_{variant.id}🔸\n{variant.title}",
-                    parse_mode="HTML",
-                ),
+        for variant in variants:
+            cleaned_content = remove_html_tags(variant.content)
+            results.append(
+                InlineQueryResultArticle(
+                    id=str(variant.id),
+                    title=variant.title,
+                    description=short_the_text(cleaned_content),
+                    input_message_content=InputTextMessageContent(
+                        message_text=f"🔸TEMPLATE__{variant.id}",
+                        parse_mode="HTML",
+                    ),
+                )
             )
-        )
 
-    await query.answer(results, cache_time=1)
+        await query.answer(results, cache_time=1)
+    except Exception as e:
+        logger.error(f"Ошибка при обработке inline запроса: {e}")
+        # Отправляем пустой результат в случае ошибки
+        await query.answer([], cache_time=1)
 
 
 def remove_html_tags(text: str) -> str:
     """Удаляет HTML-теги из строки."""
+    if not text:
+        return ""
     return re.sub(r"<[^>]+>", "", text)
 
 
-def short_the_text(text: str, length: int = 75):
+def short_the_text(text: str, length: int = 75) -> str:
     """Сокращаем описание"""
+    if not text:
+        return ""
     return text[:length] + "..." if len(text) > length else text
 
 
-@router.message(F.text.startswith("🔸TEMPLATE_"))
+@router.message(F.text.startswith("🔸TEMPLATE__"))
 async def handle_template_message(message: Message) -> None:
     """Обработчик сообщений с маркером шаблона"""
     try:
         # Извлекаем ID шаблона
-        template_id = int(message.text.split("_")[1].split("🔸")[0])
+        template_id = int(message.text.replace("🔸TEMPLATE__", ""))
         chat_id = str(message.chat.id)
 
         reply_message_id = (
@@ -86,7 +95,7 @@ async def handle_template_message(message: Message) -> None:
         )
 
     except Exception as e:
-        logger.error(f"Error handling template message: {e}")
+        logger.error(f"Ошибка при отправке шаблона сообщения: {e}")
 
 
 async def send_template(
@@ -132,36 +141,19 @@ async def send_media_group(
     try:
 
         media_group = []
+        media_types = {
+            "photo": InputMediaPhoto,
+            "video": InputMediaVideo,
+            "animation": InputMediaAnimation,
+            "document": InputMediaDocument,
+        }
 
         # Создаем медиа группу
         for i, media in enumerate(template.media_items):
-            if media.media_type == "photo":
+            media_class = media_types.get(media.media_type)
+            if media_class:
                 media_group.append(
-                    InputMediaPhoto(
-                        media=media.file_id,
-                        caption=template.content if i == 0 else None,
-                        parse_mode="HTML" if i == 0 else None,
-                    )
-                )
-            elif media.media_type == "video":
-                media_group.append(
-                    InputMediaVideo(
-                        media=media.file_id,
-                        caption=template.content if i == 0 else None,
-                        parse_mode="HTML" if i == 0 else None,
-                    )
-                )
-            elif media.media_type == "animation":
-                media_group.append(
-                    InputMediaAnimation(
-                        media=media.file_id,
-                        caption=template.content if i == 0 else None,
-                        parse_mode="HTML" if i == 0 else None,
-                    )
-                )
-            elif media.media_type == "document":
-                media_group.append(
-                    InputMediaDocument(
+                    media_class(
                         media=media.file_id,
                         caption=template.content if i == 0 else None,
                         parse_mode="HTML" if i == 0 else None,
@@ -174,7 +166,9 @@ async def send_media_group(
                 media=media_group,
                 reply_to_message_id=reply_message_id,
             )
-    except Exception:
+    except Exception as e:
+        logger.error(f"Ошибка при отправке медиа-группы: {e}")
+        # Отправляем только текст в случае ошибки
         await message.bot.send_message(
             chat_id=message.chat.id,
             text=template.content,
