@@ -6,7 +6,7 @@ from constants import KbCommands
 from container import container
 from keyboards.inline.templates_answers import templates_inline_kb
 from keyboards.reply.menu import tamplates_menu_kb
-from services.answers_templates import TemplateService
+from services.templates import TemplateService
 from states import TemplateStateManager
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
