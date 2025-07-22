@@ -11,7 +11,12 @@ from repositories import (
     TemplateMediaRepository,
     UserRepository,
 )
+from services.answers_templates import (
+    TemplateContentService,
+    TemplateService,
+)
 from services.caching import ICache, TTLEntityCache
+from services.categories import CategoryService
 from services.chat import ChatService
 from services.user import UserService
 from usecases.chat import (
@@ -75,6 +80,9 @@ class ContainerSetup:
         container.register(ICache, TTLEntityCache)
         container.register(UserService)
         container.register(ChatService)
+        container.register(TemplateService)
+        container.register(TemplateContentService)
+        container.register(CategoryService)
 
     @staticmethod
     def _register_usecases(container: Container) -> None:
