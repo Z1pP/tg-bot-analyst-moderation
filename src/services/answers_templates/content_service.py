@@ -33,7 +33,7 @@ class TemplateContentService:
         # Берем первое сообщение для получения текста/подписи
         content = {
             "text": messages[0].html_text or messages[0].caption or "",
-            "media_type": None,
+            "media_types": [],
             "media_files": [],
             "media_unique_ids": [],
         }
@@ -51,12 +51,9 @@ class TemplateContentService:
                 if media_obj:
                     media = accessor(media_obj)
 
-                    # Если тип медиа еще не установлен, устанавливаем его
-                    if not content["media_type"]:
-                        content["media_type"] = media_type
+                    content["media_types"].append(media_type)
 
-                    # Если тип медиа совпадает с уже установленным, добавляем файл
-                    if content["media_type"] == media_type:
+                    if media_type in content["media_types"]:
                         content["media_files"].append(media.file_id)
                         content["media_unique_ids"].append(media.file_unique_id)
                     break
@@ -85,7 +82,8 @@ class TemplateContentService:
                 chat_id=content.get("chat_id"),
             )
 
-            await self.save_media_files(new_template.id, content)
+            # Сохраняем медиа с привязкой к шаблону
+            await self.save_media_files(template_id=new_template.id, content=content)
             return new_template
         except Exception as e:
             logger.error(f"Ошибка сохранения шаблона: {e}", exc_info=True)
@@ -99,13 +97,13 @@ class TemplateContentService:
         """Сохраняет медиа файлы в БД"""
         media_files = content.get("media_files", [])
         media_unique_ids = content.get("media_unique_ids", [])
-        media_type = content.get("media_type")
+        media_types = content.get("media_types", [])
 
-        if not media_files or not media_type:
+        if not media_files or not media_types:
             return
 
-        for position, (file_id, file_unique_id) in enumerate(
-            zip(media_files, media_unique_ids)
+        for position, (file_id, file_unique_id, media_type) in enumerate(
+            zip(media_files, media_unique_ids, media_types)
         ):
             try:
                 await self._media_repository.create_media(
