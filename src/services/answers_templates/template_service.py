@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from models import MessageTemplate
 from repositories import MessageTemplateRepository
@@ -33,7 +33,7 @@ class TemplateService:
         """Получает шаблоны с пагинацией"""
 
         offset = (page - 1) * page_size
-        return await self.repo.get_templates_paginated(
+        return await self._template_repository.get_templates_paginated(
             limit=page_size,
             offset=offset,
         )
@@ -49,3 +49,17 @@ class TemplateService:
         return await self._template_repository.get_templates_count_by_category(
             category_id=category_id,
         )
+
+    async def get_templates_with_count(
+        self,
+        page: int = 1,
+        page_size: int = 5,
+    ) -> Tuple[List[MessageTemplate], int]:
+        """
+        Получает список шаблонов с пагинацией и общее количество всех шаблонов
+        """
+
+        templates = await self.get_by_page(page=page, page_size=page_size)
+        total_count = await self.get_count()
+
+        return templates, total_count
