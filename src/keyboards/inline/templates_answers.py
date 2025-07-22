@@ -22,7 +22,7 @@ def templates_inline_kb(
         return builder.as_markup()
 
     # Добавляем кнопки шаблонов
-    for index, template in enumerate(templates):
+    for template in templates:
         builder.row(
             InlineKeyboardButton(
                 text=f"{template.title}",
@@ -33,7 +33,6 @@ def templates_inline_kb(
                 callback_data=f"remove_template__{template.id}",
             ),
         )
-
     # Кнопки пагинации
     page_size = 5
     max_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
