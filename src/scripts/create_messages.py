@@ -113,11 +113,7 @@ async def create_messages_and_replies(moderators, chats):
 
                     created_at = TimeZoneService.convert_to_local_time(
                         message_date
-<<<<<<< HEAD:src/create_messages.py
-                    ).replace(day=8)
-=======
                     ).replace(day=24)
->>>>>>> 39fd418b99a7222d77e447adeafbbc3bbda99d82:src/scripts/create_messages.py
 
                     message_id = f"{moderator.id}_{chat.id}_{i}"
                     message = ChatMessage(
