@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -118,6 +118,7 @@ async def generate_and_send_report(
     """
     Генерирует и отправляет отчет.
     """
+    await state.set_state(UserStateManager.report_full_selecting_period)
 
     adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
         start_date, end_date
@@ -131,8 +132,6 @@ async def generate_and_send_report(
 
     report_parts = await generate_report(report_dto)
 
-    await state.set_state(UserStateManager.report_full_selecting_period)
-
     for idx, part in enumerate(report_parts):
         if idx == len(report_parts) - 1:
             part = f"{part}\n\nДля продолжения выберите период, либо нажмите назад"
@@ -144,7 +143,7 @@ async def generate_and_send_report(
         )
 
 
-async def generate_report(report_dto: AllModeratorReportDTO) -> str:
+async def generate_report(report_dto: AllModeratorReportDTO) -> List[str]:
     """
     Генерирует отчет используя UseCase.
     """
