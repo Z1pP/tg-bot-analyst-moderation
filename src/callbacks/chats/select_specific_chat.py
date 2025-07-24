@@ -27,7 +27,7 @@ async def chat_selected_handler(
         await send_html_message_with_kb(
             message=query.message,
             text=f"Выбран чат: {chat_title}",
-            reply_markup=chat_actions_kb(chat_title=chat_title),
+            reply_markup=chat_actions_kb(),
         )
 
         await query.answer()

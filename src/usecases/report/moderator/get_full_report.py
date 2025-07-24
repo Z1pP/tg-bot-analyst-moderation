@@ -7,6 +7,7 @@ from constants import MAX_MSG_LENGTH
 from dto.report import AllModeratorReportDTO
 from models import ChatMessage, MessageReply, User
 from services.break_analysis_service import BreakAnalysisService
+from utils.formatter import format_seconds
 
 from .base import BaseReportUseCase
 
@@ -93,7 +94,7 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
     ) -> str:
         """Создает отчет для одного модератора"""
         if not messages:
-            return f"<b>👤 @{user.username}</b>\n" "Нет сообщений за указанный период"
+            return f"<b>👤 @{user.username}</b>\nНет сообщений за указанный период"
 
         sorted_messages = sorted(messages, key=lambda r: r.created_at)
 
@@ -116,8 +117,10 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
             min_time = round(min(response_times), 2)
             max_time = round(max(response_times), 2)
             response_stats = [
-                f"• <b>{min_time} сек.</b> и <b>{max_time / 60:.2f} мин.</b> - мин. и макс. время ответа",
-                f"• <b>{avg_time} сек.</b> и <b>{median_time} сек.</b> - сред. и медиан. время ответа",
+                f"• <b>{format_seconds(min_time)} сек.</b> и "
+                f"<b>{format_seconds(max_time)} мин.</b> - мин. и макс. время ответа",
+                f"• <b>{format_seconds(avg_time)} сек.</b> и "
+                f"<b>{format_seconds(median_time)} сек.</b> - сред. и медиан. время ответа",
             ]
         else:
             response_stats = []
