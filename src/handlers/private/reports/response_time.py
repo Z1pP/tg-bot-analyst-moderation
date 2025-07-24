@@ -176,7 +176,7 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
         await send_html_message_with_kb(
             message=message,
             text="Нет так нет.",
-            reply_markup=user_actions_kb(username=username),
+            reply_markup=user_actions_kb(),
         )
     except Exception as e:
         await handle_exception(message, e, "back_to_menu_handler")

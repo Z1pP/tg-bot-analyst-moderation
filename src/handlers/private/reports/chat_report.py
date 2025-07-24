@@ -149,7 +149,7 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
         await send_html_message_with_kb(
             message=message,
             text="Возврат к меню чата.",
-            reply_markup=chat_actions_kb(chat_title=chat_title),
+            reply_markup=chat_actions_kb(),
         )
     except Exception as e:
         await handle_exception(message, e, "back_to_menu_handler")
@@ -191,7 +191,6 @@ async def generate_and_send_report(
         await state.set_state(ChatStateManager.selecting_period)
 
         for idx, part in enumerate(report_parts):
-
             if idx == len(report_parts) - 1:
                 part = f"{part}\n\nДля продолжения выберите период, либо нажмите назад"
 
