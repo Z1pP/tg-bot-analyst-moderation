@@ -22,7 +22,8 @@ async def handle_exception(
     """
     if isinstance(exc, BotBaseException):
         logger.warning(
-            f"Обработано исключение{' в ' + context if context else ''}: {exc}"
+            f"Обработано исключение{' в ' + context if context else ''}: {exc}",
+            exc_info=True,
         )
         await send_html_message_with_kb(message=message, text=exc.get_user_message())
     else:
