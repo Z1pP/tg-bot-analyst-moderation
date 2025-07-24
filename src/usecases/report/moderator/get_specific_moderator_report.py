@@ -1,14 +1,13 @@
 import logging
-from dataclasses import dataclass
 from datetime import datetime
 from statistics import mean, median
-from typing import Optional
+from typing import List
 
+from constants import MAX_MSG_LENGTH
 from dto.report import ResponseTimeReportDTO
 from exceptions.user import UserNotFoundException
 from models import ChatMessage, MessageReply, User
 from services.break_analysis_service import BreakAnalysisService
-from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
@@ -17,17 +16,11 @@ from .base import BaseReportUseCase
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class Report:
-    text: str
-    chart: Optional[str] = None
-    excel: Optional[str] = None
-
-
 class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
-    """UseCase для генерации отчетов о времени ответа пользователей."""
-
-    async def execute(self, report_dto: ResponseTimeReportDTO) -> Report:
+    async def execute(self, report_dto: ResponseTimeReportDTO) -> List[str]:
+        """
+        Генерирует отчет по указанному модератору
+        """
         user = await self._user_repository.get_user_by_username(
             username=report_dto.username
         )
@@ -65,7 +58,7 @@ class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
             report_dto.end_date,
         )
 
-        return self._generate_report(
+        full_report = self._generate_report(
             replies=replies,
             messages=messages,
             user=user,
@@ -73,6 +66,8 @@ class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
             end_date=report_dto.end_date,
             selected_period=report_dto.selected_period,
         )
+
+        return self._split_report(full_report)
 
     def _generate_report(
         self,
@@ -82,17 +77,12 @@ class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
         start_date: datetime,
         end_date: datetime,
         selected_period: str = None,
-    ) -> Report:
+    ) -> str:
         """Формирует текстовый отчет о времени ответа."""
         period = format_selected_period(selected_period)
 
         if not messages:
-            return Report(
-                text=(
-                    f"<b>📊 Отчёт: @{user.username} за {period}</b>\n\n"
-                    "⚠️ Нет данных за указанный период."
-                )
-            )
+            return "⚠️ Нет данных за указанный период."
 
         # Сортируем сообщения по времени
         sorted_messages = sorted(messages, key=lambda r: r.created_at)
@@ -152,4 +142,44 @@ class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
         else:
             report_lines.append("<b>⏸️ Перерывы:</b> отсутствуют")
 
-        return Report(text="\n".join(report_lines))
+        return "\n".join(report_lines)
+
+    def _split_report(self, report: str) -> List[str]:
+        """
+        Разделяет отчет на части, если он превышает максимальную длину.
+
+        Args:
+            report: Полный текст отчета
+
+        Returns:
+            Список частей отчета
+        """
+        if len(report) <= MAX_MSG_LENGTH:
+            return [report]
+
+        # Разделяем отчет на заголовок и отчеты по модераторам
+        parts = report.split("\n\n")
+        title = parts[0]
+        moderator_reports = parts[1:] if len(parts) > 1 else []
+
+        result = [title]
+        current_part = ""
+
+        # Добавляем отчеты по модераторам
+        for mod_report in moderator_reports:
+            # Если добавление отчета превысит лимит, создаем новую часть
+            if len(current_part) + len(mod_report) + 2 > MAX_MSG_LENGTH:
+                if current_part:
+                    result.append(current_part)
+                current_part = mod_report
+            else:
+                if current_part:
+                    current_part += "\n\n" + mod_report
+                else:
+                    current_part = mod_report
+
+        # Добавляем последнюю часть
+        if current_part:
+            result.append(current_part)
+
+        return result
