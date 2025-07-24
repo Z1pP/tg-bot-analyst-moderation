@@ -6,8 +6,6 @@ from sqlalchemy import select
 
 from constants.enums import UserRole
 from database.session import async_session
-from dto.message import CreateMessageDTO
-from dto.message_reply import CreateMessageReplyDTO
 from models import ChatMessage, ChatSession, MessageReply, User
 from services.time_service import TimeZoneService
 
@@ -97,7 +95,7 @@ async def create_chats():
 async def create_messages_and_replies(moderators, chats):
     """Создает тестовые сообщения и ответы для каждого модератора в каждом чате."""
     # Начальная дата для сообщений (сегодня в 10:00)
-    base_date = datetime.now().replace(hour=10, minute=0, second=0, microsecond=0)
+    base_date = datetime.now().replace(hour=7, minute=0, second=0, microsecond=0)
 
     async with async_session() as session:
         message_count = 0
@@ -110,12 +108,12 @@ async def create_messages_and_replies(moderators, chats):
                 for i in range(20):
                     # Случайное время в рабочие часы (10:00 - 18:00)
                     message_date = base_date + timedelta(
-                        hours=random.randint(0, 8), minutes=random.randint(0, 59)
+                        hours=random.randint(0, 1), minutes=random.randint(0, 59)
                     )
 
                     created_at = TimeZoneService.convert_to_local_time(
                         message_date
-                    ).replace(day=7)
+                    ).replace(day=8)
 
                     message_id = f"{moderator.id}_{chat.id}_{i}"
                     message = ChatMessage(
