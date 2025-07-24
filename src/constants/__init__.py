@@ -18,6 +18,8 @@ class KbCommands:
     SELECT_CHAT = "💬 Выбрать чат"
     ADD_MODERATOR = "➕ Добавить модератора"
     REMOVE_MODERATOR = "➖ Удалить модератора"
+    ADD_CHAT = "➕ Добавить чат"
+    REMOVE_CHAT = "➖ Удалить чат"
     TRACKED_CHATS = "📊 Отслеживаемые чаты"
     SELECTED_USER = "Выбран: {username}"
     SELECTED_CHAT = "Выбран: {chat_title}"
