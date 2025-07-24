@@ -28,7 +28,7 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
 
         if not users:
             logger.error("Количество найденных модераторов = %s", len(users))
-            return ["⚠️ Не выбран не один модератор!"]
+            return ["⚠️ Список модераторов пуст, добавьте модератора!"]
 
         selected_period = self._format_selected_period(dto.selected_period)
         report_title = f"<b>📈 Отчет по модераторам за {selected_period}</b>"
