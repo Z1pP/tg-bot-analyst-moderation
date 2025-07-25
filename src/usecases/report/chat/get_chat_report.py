@@ -152,7 +152,7 @@ class GetReportOnSpecificChatUseCase:
 
         # Разделяем отчет на основную часть и информацию о перерывах
 
-        parts = report.split("Перерывы:\n")
+        parts = report.split("<b>⏸️ Перерывы:</b>")
         main_part = parts[0]
         breaks_part = parts[1] if len(parts) > 1 else ""
 
