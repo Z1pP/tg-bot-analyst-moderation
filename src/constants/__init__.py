@@ -1,6 +1,7 @@
 from enum import Enum
 
 MAX_MSG_LENGTH = 4000  # Указывает максимальную длину сообщения для вывода
+BREAK_TIME = 30  # Время перерыва между сообщенями
 
 
 class CommandList(str, Enum):
