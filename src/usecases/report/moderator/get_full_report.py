@@ -117,10 +117,10 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
             min_time = round(min(response_times), 2)
             max_time = round(max(response_times), 2)
             response_stats = [
-                f"• <b>{format_seconds(min_time)} сек.</b> и "
-                f"<b>{format_seconds(max_time)} мин.</b> - мин. и макс. время ответа",
-                f"• <b>{format_seconds(avg_time)} сек.</b> и "
-                f"<b>{format_seconds(median_time)} сек.</b> - сред. и медиан. время ответа",
+                f"• <b>{format_seconds(min_time)}</b> и "
+                f"<b>{format_seconds(max_time)}</b> - мин. и макс. время ответа",
+                f"• <b>{format_seconds(avg_time)}</b> и "
+                f"<b>{format_seconds(median_time)}</b> - сред. и медиан. время ответа",
             ]
         else:
             response_stats = []
