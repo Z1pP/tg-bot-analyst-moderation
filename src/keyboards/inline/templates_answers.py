@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -10,7 +10,6 @@ def templates_inline_kb(
     templates: List[MessageTemplate],
     page: int = 1,
     total_count: int = 0,
-    category_id: Optional[int] = None,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
