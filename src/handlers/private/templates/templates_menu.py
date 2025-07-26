@@ -15,10 +15,10 @@ router = Router(name=__name__)
 async def templates_menu_handler(message: Message, state: FSMContext):
     """Обработчик меню шаблонов"""
 
-    text = "Выбери действие:"
+    message_text = "Выбери действие:"
 
     await send_html_message_with_kb(
         message=message,
-        text=text,
+        text=message_text,
         reply_markup=tamplates_menu_kb(),
     )
