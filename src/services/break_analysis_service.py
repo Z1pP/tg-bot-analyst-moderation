@@ -2,6 +2,7 @@ from typing import List
 
 from models import ChatMessage
 from services.time_service import TimeZoneService
+from utils.formatter import format_seconds
 
 
 class BreakAnalysisService:
@@ -59,13 +60,18 @@ class BreakAnalysisService:
             # Добавляем информацию о дне, если есть перерывы
             if day_breaks:
                 date_str = date.strftime("%d.%m.%Y")
-                avg_break = round(total_break_time / len(day_breaks), 1)
+                # avg_break = round(total_break_time / len(day_breaks), 1)
+                total_formatted = cls._format_break_time(total_break_time)
 
                 result.append(f"<code>{date_str}</code>")
                 result.append(
-                    f"<b>{avg_break} мин.</b> - средн. время перерыва за день"
+                    f"<b>{total_formatted}</b> - общее время перерыва за день"
                 )
                 result.extend([f"• {br}" for br in day_breaks])
                 result.append("")
 
         return result
+
+    def _format_break_time(minutes: float) -> str:
+        """Форматирует время перерыва из минут в читаемый формат."""
+        return format_seconds(seconds=minutes * 60)
