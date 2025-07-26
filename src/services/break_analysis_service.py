@@ -1,5 +1,6 @@
 from typing import List
 
+from constants import BREAK_TIME
 from models import ChatMessage
 from services.time_service import TimeZoneService
 from utils.formatter import format_seconds
@@ -10,7 +11,7 @@ class BreakAnalysisService:
 
     @classmethod
     def calculate_breaks(
-        cls, messages: List[ChatMessage], min_break_minutes: int = 30
+        cls, messages: List[ChatMessage], min_break_minutes: int = BREAK_TIME
     ) -> List[str]:
         """
         Считает перерывы между сообщениями в пределах одного дня.
