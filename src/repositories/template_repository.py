@@ -135,7 +135,7 @@ class MessageTemplateRepository:
                     selectinload(MessageTemplate.category),
                 )
                 .where(MessageTemplate.category_id == category_id)
-                .order_by(MessageTemplate.usage_count.desc())
+                .order_by(MessageTemplate.title)
                 .limit(limit)
                 .offset(offset)
             )
@@ -154,7 +154,7 @@ class MessageTemplateRepository:
                     selectinload(MessageTemplate.media_items),
                     selectinload(MessageTemplate.category),
                 )
-                .order_by(MessageTemplate.usage_count.desc())
+                .order_by(MessageTemplate.title)
                 .limit(limit)
                 .offset(offset)
             )
