@@ -5,7 +5,6 @@ from aiogram.types import Message
 from constants import KbCommands
 from container import container
 from keyboards.inline.templates_answers import templates_inline_kb
-from keyboards.reply.menu import tamplates_menu_kb
 from services.templates import TemplateService
 from states import TemplateStateManager
 from utils.exception_handler import handle_exception
@@ -28,17 +27,13 @@ async def templates_list_handler(message: Message, state: FSMContext) -> None:
 
         templates, total_count = await template_service.get_templates_with_count()
 
-        if not templates:
-            await send_html_message_with_kb(
-                message=message,
-                text="Список шаблонов пуст. Добавьте шаблон",
-                reply_markup=tamplates_menu_kb(),
-            )
-            return
+        message_text = (
+            f"Найдено {total_count} шаблонов:" if total_count else "У вас нет шаблонов!"
+        )
 
         await send_html_message_with_kb(
             message=message,
-            text=f"Найдено {total_count} шаблонов:",
+            text=message_text,
             reply_markup=templates_inline_kb(
                 templates=templates,
                 total_count=total_count,
