@@ -12,11 +12,19 @@ def format_seconds(seconds: float) -> str:
     """
     Форматирует секунды в читаемый формат.
     """
-    if seconds < 60:
-        return f"{round(seconds, 1)} сек."
-    elif seconds < 3600:
-        minutes = seconds / 60
-        return f"{round(minutes, 1)} мин."
-    else:
-        hours = seconds / 3600
-        return f"{round(hours, 1)} ч."
+    if seconds < 1:
+        return "0 сек."
+
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+
+    parts = []
+    if hours > 0:
+        parts.append(f"{hours}ч.")
+    if minutes > 0:
+        parts.append(f"{minutes}мин.")
+    if secs > 0:
+        parts.append(f"{secs}сек.")
+
+    return " ".join(parts)
