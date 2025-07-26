@@ -150,21 +150,35 @@ async def send_media_group(
 
         # Создаем медиа группу
         for i, media in enumerate(template.media_items):
-            media_class = media_types.get(media.media_type)
-            if media_class:
-                media_group.append(
-                    media_class(
-                        media=media.file_id,
-                        caption=template.content if i == 0 else None,
-                        parse_mode="HTML" if i == 0 else None,
+            try:
+                # Проверяем файл на доступолность
+                await message.bot.get_file(file_id=media.file_id)
+
+                media_class = media_types.get(media.media_type)
+                if media_class:
+                    media_group.append(
+                        media_class(
+                            media=media.file_id,
+                            caption=template.content if i == 0 else None,
+                            parse_mode="HTML" if i == 0 else None,
+                        )
                     )
-                )
+            except Exception as e:
+                logger.error(f"Файл {media.file_id} недоступен: {e}")
+                continue
 
         if media_group:
             await message.bot.send_media_group(
                 chat_id=message.chat.id,
                 media=media_group,
                 reply_to_message_id=reply_message_id,
+            )
+        else:
+            await message.bot.send_message(
+                chat_id=message.chat.id,
+                text=f"{template.content}\n\n⚠️ Медиафайлы временно недоступны",
+                reply_to_message_id=reply_message_id,
+                parse_mode="HTML",
             )
     except Exception as e:
         logger.error(f"Ошибка при отправке медиа-группы: {e}")
