@@ -6,8 +6,40 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from models import AdminChatAccess, ChatSession
 
 
+def remove_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    if not chats:
+        builder.row(
+            InlineKeyboardButton(
+                text="Список чатов пуст. Добавьте бот в чат и выдайте ему админ права",
+                callback_data="no_chat",
+            )
+        )
+        return builder.as_markup()
+
+    for index, chat in enumerate(chats):
+        builder.row(
+            InlineKeyboardButton(
+                text=f"Удалить {chat.title[:30]}",
+                callback_data=f"untrack_chat__{chat.id}",
+            )
+        )
+
+    return builder.as_markup()
+
+
 def chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+
+    if not chats:
+        builder.row(
+            InlineKeyboardButton(
+                text="Список чатов пуст. Добавьте бот в чат и выдайте ему админ права",
+                callback_data="no_chat",
+            )
+        )
+        return builder.as_markup()
 
     for index, chat in enumerate(chats):
         builder.row(

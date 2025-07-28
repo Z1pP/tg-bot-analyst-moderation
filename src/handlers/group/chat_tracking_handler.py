@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from aiogram import Bot, Router
@@ -18,8 +17,13 @@ router = Router(name=__name__)
 
 
 @router.message(Command("track"), GroupTypeFilter(), AdminOnlyFilter())
-async def chat_added_to_tracking_handler(message: Message, bot: Bot) -> None:
+async def chat_added_to_tracking_handler(message: Message) -> None:
     """Обработчик команды /track для добавления чата в отслеживание."""
+
+    logger.info(
+        f"Получена команда /track от {message.from_user.username} "
+        "в чате '{message.chat.title}' (ID: {message.chat.id})"
+    )
 
     admin, chat = await _get_admin_and_chat(message=message)
 
@@ -28,70 +32,178 @@ async def chat_added_to_tracking_handler(message: Message, bot: Bot) -> None:
         return
 
     try:
+        logger.info(f"Проверка прав бота в чате '{chat.title}' (ID: {chat.chat_id})")
+
+        bot_status = await check_bot_permissions(
+            bot=message.bot,
+            chat_id=chat.chat_id,
+        )
+
+        if not bot_status["is_admin"]:
+            logger.warning(
+                f"Недостаточно прав бота в чате '{chat.title}'. "
+                "Статус: {bot_status['status']}"
+            )
+            await send_permission_error(message, admin, chat, bot_status)
+            await message.delete()
+            return
+
+        logger.info(f"Права бота проверены успешно. Статус: {bot_status['status']}")
+
         # Добавляем чат в отслеживание
         usecase: AddChatToTrackUseCase = container.resolve(AddChatToTrackUseCase)
         await usecase.execute(chat=chat, admin=admin)
 
-        # Удаляем команду пользователя и отправляем подтверждение
-        await delete_command_and_send_confirmation(message, bot)
+        logger.info(
+            f"Чат '{chat.title}' успешно добавлен "
+            "в отслеживание админом {admin.username}"
+        )
+
+        await send_admin_notification(
+            message=message,
+            admin=admin,
+            chat=chat,
+        )
+        await message.delete()
+
     except Exception as e:
         logger.error("Ошибка при обработке команды /track: %s", str(e), exc_info=True)
 
 
-async def delete_command_and_send_confirmation(message: Message, bot: Bot) -> None:
-    """Удаляет команду пользователя и отправляет подтверждение с автоудалением."""
+async def send_permission_error(
+    message: Message, admin: User, chat: ChatSession, bot_status: dict
+) -> None:
+    """Отправляет сообщение об ошибке прав в приватный чат"""
     try:
-        # Удаляем команду пользователя
-        try:
-            await message.delete()
-        except Exception as e:
-            logger.warning("Не удалось удалить команду: %s", str(e))
+        admin_telegram_id = message.from_user.id
 
-        # Отправляем подтверждение
-        sent_message = await bot.send_message(
-            chat_id=message.chat.id,
-            text="✅ <b>Чат добавлен в отслеживание</b>",
-            parse_mode="HTML",
-            disable_notification=True,
+        logger.debug(
+            "Отправка уведомления об ошибке "
+            "прав админу {admin.username} (ID: {admin_telegram_id})"
         )
 
-        # Запускаем обратный отсчет и удаление
-        asyncio.create_task(countdown_delete(sent_message, 5))
-    except Exception as e:
-        logger.error("Ошибка при отправке подтверждения: %s", str(e), exc_info=True)
-
-
-async def countdown_delete(message: Message, seconds: int = 5) -> None:
-    """
-    Обратный отсчет с последующим удалением сообщения.
-
-    Args:
-        message: Сообщение для редактирования и удаления
-        seconds: Количество секунд до удаления
-    """
-    await asyncio.sleep(1)
-
-    for i in range(seconds, 0, -1):
-        try:
-            await message.edit_text(
-                f"✅ <b>Чат добавлен в отслеживание</b>\n<i>Автоудаление через {i} сек.</i>",
-                parse_mode="HTML",
+        if not bot_status["is_member"]:
+            error_text = (
+                "❌ <b>Ошибка добавления чата</b>\n\n"
+                f"📋 <b>Чат:</b> {chat.title}\n"
+                f"🆔 <b>ID:</b> <code>{chat.chat_id}</code>\n\n"
+                f"⚠️ <b>Проблема:</b> Бот не добавлен в чат\n\n"
+                f"<b>Решение:</b>\n"
+                f"1. Добавьте бота в чат\n"
+                f"2. Повторите команду /track"
             )
-            await asyncio.sleep(1)
-        except Exception as e:
-            logger.debug("Ошибка при обновлении сообщения: %s", str(e))
-            break
+        else:
+            error_text = (
+                "❌ <b>Ошибка добавления чата</b>\n\n"
+                f"📋 <b>Чат:</b> {chat.title}\n"
+                f"🆔 <b>ID:</b> <code>{chat.chat_id}</code>\n\n"
+                f"⚠️ <b>Проблема:</b> Недостаточно прав\n"
+                f"🤖 <b>Статус бота:</b> {bot_status['status']}\n\n"
+                f"<b>Решение:</b>\n"
+                f"1. Дайте боту права администратора\n"
+                f"2. Включите права:\n"
+                f"   • Чтение всех сообщений\n"
+                f"   • Удаление сообщений\n"
+                f"3. Повторите команду /track"
+            )
 
-    try:
-        await message.delete()
+        await message.bot.send_message(
+            chat_id=admin_telegram_id,
+            text=error_text,
+            parse_mode="HTML",
+        )
+
+        logger.info(f"Уведомление об ошибке прав отправлено админу {admin.username}")
+
     except Exception as e:
-        logger.debug("Не удалось удалить сообщение: %s", str(e))
+        logger.error(f"Ошибка при отправке уведомления об ошибке: {e}")
+
+
+async def send_admin_notification(
+    message: Message,
+    admin: User,
+    chat: ChatSession,
+) -> None:
+    try:
+        admin_telegram_id = message.from_user.id
+
+        logger.debug(
+            "Отправка уведомления об успехе "
+            "админу {admin.username} (ID: {admin_telegram_id})"
+        )
+
+        notification_text = (
+            "✅ <b>Чат успешно добавлен в отслеживание</b>\n\n"
+            f"📋 <b>Название:</b> {chat.title}\n"
+            f"🆔 <b>ID чата:</b> <code>{chat.chat_id}</code>\n"
+            f"👤 <b>Добавил:</b> @{admin.username}"
+        )
+
+        await message.bot.send_message(
+            chat_id=admin_telegram_id, text=notification_text, parse_mode="HTML"
+        )
+
+        logger.info(
+            f"Уведомление об успешном добавлении отправлено админу {admin.username}"
+        )
+
+    except Exception as e:
+        logger.error(f"Ошибка при отправке уведомления об успехе: {e}")
+
+
+async def check_bot_permissions(bot: Bot, chat_id: str) -> dict:
+    try:
+        logger.debug(f"Проверка прав бота в чате {chat_id}")
+
+        # Получаем информацию о боте в чате
+        bot_member = await bot.get_chat_member(chat_id=chat_id, user_id=bot.id)
+
+        is_member = bot_member.status in ["member", "administrator", "creator"]
+        is_admin = bot_member.status in ["administrator", "creator"]
+
+        permissions = {}
+        if hasattr(bot_member, "can_read_all_group_messages"):
+            permissions = {
+                "can_read_messages": getattr(
+                    bot_member, "can_read_all_group_messages", False
+                ),
+                "can_delete_messages": getattr(
+                    bot_member, "can_delete_messages", False
+                ),
+                "can_restrict_members": getattr(
+                    bot_member, "can_restrict_members", False
+                ),
+            }
+
+        result = {
+            "is_member": is_member,
+            "is_admin": is_admin,
+            "status": bot_member.status,
+            "permissions": permissions,
+        }
+
+        logger.debug(
+            f"Статус бота в чате {chat_id}: {bot_member.status}, админ: {is_admin}"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.warning(f"Не удалось получить информацию о боте в чате {chat_id}: {e}")
+        # Если бот не может получить информацию, значит его нет в чате
+        return {
+            "is_member": False,
+            "is_admin": False,
+            "status": "not_member",
+            "permissions": {},
+        }
 
 
 async def _get_admin_and_chat(message: Message) -> tuple[User, ChatSession]:
-    """
-    Получает пользователя и чат из сообщения.
-    """
+    """Получает пользователя и чат из сообщения."""
+
+    logger.debug(f"Получение данных админа и чата для {message.from_user.username}")
+
     # Получаем сервисы
     user_service: UserService = container.resolve(UserService)
     chat_service: ChatService = container.resolve(ChatService)
@@ -102,18 +214,19 @@ async def _get_admin_and_chat(message: Message) -> tuple[User, ChatSession]:
 
     if not username:
         logger.warning("Пользователь без username: %s", message.from_user.id)
-        return
+        return None, None
 
     admin = await user_service.get_user(username)
     if not admin:
         logger.warning("Пользователь не найден в базе данных: %s", username)
-        return
+        return None, None
 
     chat = await chat_service.get_or_create_chat(
         chat_id=chat_id, title=message.chat.title or "Без названия"
     )
     if not chat:
         logger.error("Не удалось получить или создать чат: %s", chat_id)
-        return
+        return None, None
 
+    logger.debug(f"Данные получены: админ {admin.username}, чат '{chat.title}'")
     return admin, chat
