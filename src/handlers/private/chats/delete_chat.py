@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -8,8 +9,10 @@ from constants import KbCommands
 from container import container
 from keyboards.inline.chats_kb import remove_inline_kb
 from keyboards.reply.menu import get_back_kb
+from models import ChatSession
 from repositories import ChatTrackingRepository
 from services.user import UserService
+from states import ChatStateManager
 from utils.send_message import send_html_message_with_kb
 
 logger = logging.getLogger(__name__)
@@ -23,13 +26,18 @@ async def delete_chat_handler(
 ) -> None:
     """Хендлер для команды удаления чата из отслеживания"""
 
-    logger.info(f"Получена команда удаления чата от {message.from_user.username}")
+    username = message.from_user.username
+
+    logger.info(f"Получена команда удаления чата от {username}")
 
     try:
+        user_service: UserService = container.resolve(UserService)
+        user = await user_service.get_user(username=username)
+
+        await state.update_data(user_id=user.id)
+
         # Получаем отслеживаемые чаты пользователя
-        tracked_chats = await get_user_tracked_chats(
-            username=message.from_user.username
-        )
+        tracked_chats = await get_user_tracked_chats(user_id=user.id)
 
         if not tracked_chats:
             message_text = (
@@ -74,25 +82,46 @@ async def process_untracking_chat(
     query: CallbackQuery,
     state: FSMContext,
 ) -> None:
-    pass
+    data = await state.get_data()
+    chat_id = int(query.data.split("__")[1])
+    user_id = data.get("user_id", None)
+
+    if not chat_id or not user_id:
+        logger.error("Нет чат айди или юзер айди")
+
+    try:
+        tracking_repository: ChatTrackingRepository = container.resolve(
+            ChatTrackingRepository
+        )
+
+        await tracking_repository.remove_chat_from_tracking(
+            admin_id=int(user_id),
+            chat_id=chat_id,
+        )
+
+        await query.message.edit_text("Группа успешно удалена из отслеживаемых!")
+    except Exception as e:
+        logger.error(f"Ошибка при удалении чата из отслеживания:{e}")
+        await query.message.edit_text("Ошибка при отвязывании группы!")
+    finally:
+        await query.answer()
 
 
-async def get_user_tracked_chats(username: str) -> list:
+async def get_user_tracked_chats(user_id: int) -> List[ChatSession]:
     """Получает список отслеживаемых чатов пользователя"""
     try:
         # Получаем сервисы
         tracking_repository: ChatTrackingRepository = container.resolve(
             ChatTrackingRepository
         )
-        user_service: UserService = container.resolve(UserService)
-
-        user = await user_service.get_user(username=username)
 
         tracked_chats = await tracking_repository.get_all_tracked_chats(
-            admin_id=user.id
+            admin_id=user_id
         )
 
-        logger.debug(f"Найдено {len(tracked_chats)} отслеживаемых чатов для {username}")
+        logger.debug(
+            f"Найдено {len(tracked_chats)} отслеживаемых чатов для user_id={user_id}"
+        )
 
         return tracked_chats
 
