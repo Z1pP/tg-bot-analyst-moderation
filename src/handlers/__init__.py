@@ -29,11 +29,6 @@ def registry_group_routers(dispatcher: Dispatcher):
 
     staff_router = Router(name="staff_router")
 
-    # Регистрируем фильтр: только публичные чаты и все работники
-    staff_router.message.filter(
-        GroupTypeFilter(),
-        StaffOnlyFilter(),
-    )
     staff_router.include_router(group_router)
 
     dispatcher.include_router(staff_router)
