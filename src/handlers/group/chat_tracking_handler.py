@@ -52,11 +52,19 @@ async def chat_added_to_tracking_handler(message: Message) -> None:
 
         # Добавляем чат в отслеживание
         usecase: AddChatToTrackUseCase = container.resolve(AddChatToTrackUseCase)
-        await usecase.execute(chat=chat, admin=admin)
+        _, is_exists = await usecase.execute(chat=chat, admin=admin)
+
+        if is_exists:
+            await send_already_tracked_notification(
+                message=message,
+                admin=admin,
+                chat=chat,
+            )
+            return
 
         logger.info(
             f"Чат '{chat.title}' успешно добавлен "
-            "в отслеживание админом {admin.username}"
+            f"в отслеживание админом {admin.username}"
         )
 
         await send_admin_notification(
@@ -64,10 +72,10 @@ async def chat_added_to_tracking_handler(message: Message) -> None:
             admin=admin,
             chat=chat,
         )
-        await message.delete()
-
     except Exception as e:
-        logger.error("Ошибка при обработке команды /track: %s", str(e), exc_info=True)
+        logger.error(f"Ошибка при обработке команды /track: {e}", exc_info=True)
+    finally:
+        await message.delete()
 
 
 async def send_permission_error(
@@ -119,17 +127,44 @@ async def send_permission_error(
         logger.error(f"Ошибка при отправке уведомления об ошибке: {e}")
 
 
+async def send_already_tracked_notification(
+    message: Message,
+    admin: User,
+    chat: ChatSession,
+) -> None:
+    try:
+        logger.debug(
+            f"Отправка уведомления админу {admin.username} что чат уже отслеживается"
+        )
+
+        notification_text = (
+            "ℹ️ <b>Чат уже отслеживается</b>\n\n"
+            f"📋 <b>Название:</b> {chat.title}\n"
+            f"🆔 <b>ID чата:</b> <code>{chat.chat_id}</code>\n\n"
+            f"Этот чат уже добавлен в ваш список отслеживания.\n"
+            f"Повторное добавление не требуется."
+        )
+
+        await send_notification(
+            bot=message.bot,
+            chat_id=message.from_user.id,
+            message_text=notification_text,
+        )
+
+        logger.info(f"Уведомление отправлено админу {admin.username}")
+    except Exception as e:
+        logger.error(f"Ошибка при отправке уведомления что чат уже отслеживается: {e}")
+
+
 async def send_admin_notification(
     message: Message,
     admin: User,
     chat: ChatSession,
 ) -> None:
     try:
-        admin_telegram_id = message.from_user.id
-
         logger.debug(
             "Отправка уведомления об успехе "
-            "админу {admin.username} (ID: {admin_telegram_id})"
+            f"админу {admin.username} (ID: {message.from_user.id})"
         )
 
         notification_text = (
@@ -139,8 +174,10 @@ async def send_admin_notification(
             f"👤 <b>Добавил:</b> @{admin.username}"
         )
 
-        await message.bot.send_message(
-            chat_id=admin_telegram_id, text=notification_text, parse_mode="HTML"
+        await send_notification(
+            bot=message.bot,
+            chat_id=message.from_user.id,
+            message_text=notification_text,
         )
 
         logger.info(
@@ -149,6 +186,23 @@ async def send_admin_notification(
 
     except Exception as e:
         logger.error(f"Ошибка при отправке уведомления об успехе: {e}")
+
+
+async def send_notification(
+    bot: Bot,
+    chat_id: int,
+    message_text: str,
+    parse_mode: str = "HTML",
+) -> None:
+    try:
+        await bot.send_message(
+            chat_id=chat_id,
+            text=message_text,
+            parse_mode=parse_mode,
+        )
+        logger.info(f"Отправлено сообщения в чат с chat_id={chat_id}")
+    except Exception as e:
+        logger.error(f"Ошибка при отправке уведомления в чат с chat_id={chat_id}: {e}")
 
 
 async def check_bot_permissions(bot: Bot, chat_id: str) -> dict:
