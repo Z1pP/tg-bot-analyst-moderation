@@ -103,7 +103,7 @@ class UserRepository:
         self,
         tg_id: str = None,
         username: str = None,
-        role: Optional[UserRole] = None,
+        role: Optional[UserRole] = UserRole.USER,
     ) -> User:
         """Создает нового пользователя."""
         if tg_id is None and username is None:
