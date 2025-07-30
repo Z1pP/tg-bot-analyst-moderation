@@ -26,9 +26,9 @@ from usecases.chat import (
 )
 from usecases.chat_tracking import AddChatToTrackUseCase
 from usecases.message import (
-    ProcessMessageUseCase,
-    ProcessReplyMessageUseCase,
     SaveMessageUseCase,
+    SaveModeratorMessageUseCase,
+    SaveModeratorReplyMessageUseCase,
 )
 from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.report import (
@@ -125,8 +125,8 @@ class ContainerSetup:
         """Регистрация use cases для сообщений."""
         message_usecases = [
             SaveMessageUseCase,
-            ProcessMessageUseCase,
-            ProcessReplyMessageUseCase,
+            SaveModeratorMessageUseCase,
+            SaveModeratorReplyMessageUseCase,
         ]
 
         for usecase in message_usecases:

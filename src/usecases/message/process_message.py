@@ -9,7 +9,7 @@ from usecases.moderator_activity import (
 from .save_message import SaveMessageUseCase
 
 
-class ProcessMessageUseCase:
+class SaveModeratorMessageUseCase:
     def __init__(
         self,
         save_message_use_case: SaveMessageUseCase,
