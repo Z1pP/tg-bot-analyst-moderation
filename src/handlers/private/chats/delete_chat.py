@@ -12,7 +12,6 @@ from keyboards.reply.menu import get_back_kb
 from models import ChatSession
 from repositories import ChatTrackingRepository
 from services.user import UserService
-from states import ChatStateManager
 from utils.send_message import send_html_message_with_kb
 
 logger = logging.getLogger(__name__)
