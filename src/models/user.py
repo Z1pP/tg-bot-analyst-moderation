@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .message import ChatMessage
     from .message_templates import MessageTemplate
     from .moderator_activity import ModeratorActivity
+    from .reaction import MessageReaction
 
 
 class User(BaseModel):
@@ -60,6 +61,11 @@ class User(BaseModel):
     message_templates: Mapped[list["MessageTemplate"]] = relationship(
         "MessageTemplate",
         back_populates="author",
+    )
+    reactions: Mapped[list["MessageReaction"]] = relationship(
+        "MessageReaction",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (
