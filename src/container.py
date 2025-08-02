@@ -4,6 +4,7 @@ from repositories import (
     ActivityRepository,
     ChatRepository,
     ChatTrackingRepository,
+    MessageReactionRepository,
     MessageReplyRepository,
     MessageRepository,
     MessageTemplateRepository,
@@ -31,6 +32,7 @@ from usecases.message import (
     SaveModeratorReplyMessageUseCase,
 )
 from usecases.moderator_activity import TrackModeratorActivityUseCase
+from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
     GetAllModeratorsReportUseCase,
     GetReportOnSpecificChatUseCase,
@@ -69,6 +71,7 @@ class ContainerSetup:
             TemplateCategoryRepository,
             TemplateMediaRepository,
             MessageTemplateRepository,
+            MessageReactionRepository,
         ]
 
         for repo in repositories:
@@ -93,6 +96,18 @@ class ContainerSetup:
         ContainerSetup._register_activity_usecases(container)
         ContainerSetup._register_report_usecases(container)
         ContainerSetup._register_tracking_usecases(container)
+        ContainerSetup._register_reaction_usecases(container)
+
+    @staticmethod
+    def _register_reaction_usecases(container: Container) -> None:
+        """Регистрация use cases для реакций."""
+        reaction_usecases = [
+            SaveMessageReactionUseCase,
+            GetUserReactionsUseCase,
+        ]
+
+        for usecase in reaction_usecases:
+            container.register(usecase)
 
     @staticmethod
     def _register_user_usecases(container: Container) -> None:
