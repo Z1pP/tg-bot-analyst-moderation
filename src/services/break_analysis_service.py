@@ -1,52 +1,60 @@
-from typing import List
+from datetime import datetime
+from typing import List, Tuple
 
 from constants import BREAK_TIME
-from models import ChatMessage
+from models import ChatMessage, MessageReaction
 from services.time_service import TimeZoneService
 from utils.formatter import format_seconds
 
 
 class BreakAnalysisService:
-    """Сервис для анализа перерывов в сообщениях."""
+    """Сервис для анализа перерывов в сообщениях с учетом реакций."""
 
     @classmethod
     def calculate_breaks(
-        cls, messages: List[ChatMessage], min_break_minutes: int = BREAK_TIME
+        cls,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        min_break_minutes: int = BREAK_TIME,
     ) -> List[str]:
         """
-        Считает перерывы между сообщениями в пределах одного дня.
+        Считает перерывы между активностью (сообщения + реакции) в пределах одного дня.
 
         Args:
             messages: Список сообщений
+            reactions: Список реакций на сообщения
             min_break_minutes: Минимальная продолжительность перерыва в минутах
 
         Returns:
             Список строк с информацией о перерывах
         """
-        if len(messages) < 2:
+        # Объединяем сообщения и реакции в единый список активности
+        activities = cls._merge_activities(messages, reactions)
+
+        if len(activities) < 2:
             return []
 
         result = []
-        # Группируем сообщения по дате
-        messages_by_date = {}
+        # Группируем активность по дате
+        activities_by_date = {}
 
-        for msg in messages:
-            local_time = TimeZoneService.convert_to_local_time(msg.created_at)
+        for activity_time, activity_type in activities:
+            local_time = TimeZoneService.convert_to_local_time(activity_time)
             date_key = local_time.date()
-            if date_key not in messages_by_date:
-                messages_by_date[date_key] = []
-            messages_by_date[date_key].append((local_time, msg))
+            if date_key not in activities_by_date:
+                activities_by_date[date_key] = []
+            activities_by_date[date_key].append((local_time, activity_type))
 
         # Обрабатываем каждый день отдельно
-        for date, day_messages in sorted(messages_by_date.items()):
-            day_messages.sort(key=lambda x: x[0])
+        for date, day_activities in sorted(activities_by_date.items()):
+            day_activities.sort(key=lambda x: x[0])
             day_breaks = []
             total_break_time = 0
 
             # Ищем перерывы в пределах одного дня
-            for i in range(1, len(day_messages)):
-                prev_time, prev_msg = day_messages[i - 1]
-                curr_time, curr_msg = day_messages[i]
+            for i in range(1, len(day_activities)):
+                prev_time, prev_type = day_activities[i - 1]
+                curr_time, curr_type = day_activities[i]
 
                 minutes_diff = (curr_time - prev_time).total_seconds() / 60
 
@@ -61,7 +69,6 @@ class BreakAnalysisService:
             # Добавляем информацию о дне, если есть перерывы
             if day_breaks:
                 date_str = date.strftime("%d.%m.%Y")
-                # avg_break = round(total_break_time / len(day_breaks), 1)
                 total_formatted = cls._format_break_time(total_break_time)
 
                 result.append(f"<code>{date_str}</code>")
@@ -73,6 +80,31 @@ class BreakAnalysisService:
 
         return result
 
-    def _format_break_time(minutes: float) -> str:
+    @classmethod
+    def _merge_activities(
+        cls, messages: List[ChatMessage], reactions: List[MessageReaction]
+    ) -> List[Tuple[datetime, str]]:
+        """
+        Объединяет сообщения и реакции в единый список активности.
+
+        Returns:
+            Список кортежей (время, тип_активности)
+        """
+        activities = []
+
+        # Добавляем сообщения
+        for msg in messages:
+            activities.append((msg.created_at, "message"))
+
+        # Добавляем реакции
+        for reaction in reactions:
+            activities.append((reaction.created_at, "reaction"))
+
+        # Сортируем по времени
+        activities.sort(key=lambda x: x[0])
+        return activities
+
+    @classmethod
+    def _format_break_time(cls, minutes: float) -> str:
         """Форматирует время перерыва из минут в читаемый формат."""
         return format_seconds(seconds=minutes * 60)
