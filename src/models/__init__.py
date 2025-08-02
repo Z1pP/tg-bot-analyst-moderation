@@ -5,6 +5,7 @@ from .message import ChatMessage
 from .message_reply import MessageReply
 from .message_templates import MessageTemplate, TemplateCategory, TemplateMedia
 from .moderator_activity import ModeratorActivity
+from .reaction import MessageReaction
 from .user import User
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "TemplateCategory",
     "MessageTemplate",
     "TemplateMedia",
+    "MessageReaction",
 ]
