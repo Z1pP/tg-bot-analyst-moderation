@@ -2,8 +2,9 @@ import logging
 from datetime import datetime
 from typing import Awaitable, Callable, List, TypeVar
 
-from models import ChatMessage, MessageReply
+from models import ChatMessage, MessageReaction, MessageReply
 from repositories import (
+    MessageReactionRepository,
     MessageReplyRepository,
     MessageRepository,
     UserRepository,
@@ -23,10 +24,12 @@ class BaseReportUseCase:
         msg_reply_repository: MessageReplyRepository,
         message_repository: MessageRepository,
         user_repository: UserRepository,
+        reaction_repository: MessageReactionRepository,
     ):
         self._msg_reply_repository = msg_reply_repository
         self._user_repository = user_repository
         self._message_repository = message_repository
+        self._reaction_repository = reaction_repository
 
     async def _get_processed_items(
         self,
@@ -79,4 +82,17 @@ class BaseReportUseCase:
         return (
             f"• {first_message.created_at.strftime('%H:%M')} - первое сообщение "
             f"{first_message.created_at.strftime('%d.%m.%Y')}"
+        )
+
+    def get_time_first_reaction(self, reactions: List[MessageReaction]) -> str:
+        """Возвращает время первой реакции."""
+        if not reactions:
+            return ""
+
+        sorted_reactions = sorted(reactions, key=lambda r: r.created_at)
+        first_reaction = sorted_reactions[0]
+
+        return (
+            f"• {first_reaction.created_at.strftime('%H:%M')} - первая реакция "
+            f"{first_reaction.created_at.strftime('%d.%m.%Y')}"
         )
