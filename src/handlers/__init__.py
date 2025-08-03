@@ -1,7 +1,7 @@
 from aiogram import Dispatcher, Router
 from aiogram.enums import ChatType
 
-from filters import AdminOnlyFilter, AllRolesFilter, ChatTypeFilter, GroupTypeFilter
+from filters import AdminOnlyFilter, ChatTypeFilter, GroupTypeFilter, StaffOnlyFilter
 
 from .group import router as group_router
 from .private import router as private_router
@@ -29,11 +29,6 @@ def registry_group_routers(dispatcher: Dispatcher):
 
     staff_router = Router(name="staff_router")
 
-    # Регистрируем фильтр: только публичные чаты и все работники
-    staff_router.message.filter(
-        GroupTypeFilter(),
-        AllRolesFilter(),
-    )
     staff_router.include_router(group_router)
 
     dispatcher.include_router(staff_router)

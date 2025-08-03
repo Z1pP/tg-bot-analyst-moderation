@@ -12,3 +12,5 @@ class ChatStateManager(StatesGroup):
 
     selecting_period = State()
     selecting_custom_period = State()
+
+    waiting_for_chat_message = State()

@@ -1,66 +1,81 @@
 import logging
 import re
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from aiogram import F, Router
 from aiogram.types import (
     InlineQuery,
     InlineQueryResultArticle,
+    InputMediaAnimation,
+    InputMediaDocument,
     InputMediaPhoto,
+    InputMediaVideo,
     InputTextMessageContent,
     Message,
 )
 
 from container import container
-from filters import AllRolesFilter, GroupTypeFilter
-from models import QuickResponse
-from repositories import QuickResponseRepository
+from filters import StaffOnlyInlineFilter
+from models import MessageTemplate
+from repositories import MessageTemplateRepository
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
-local_memory: Dict[str, QuickResponse] = {}
 
-
-@router.inline_query(F.query)
+@router.inline_query(
+    F.query,
+    StaffOnlyInlineFilter(),
+)
 async def handle_inline_query(query: InlineQuery) -> None:
     """Обработчик inline запросов"""
-    variants = await get_variants(query.query)
-    results = []
+    try:
+        variants = await get_variants(query.query)
+        results = []
 
-    for variant in variants:
-        cleaned_content = remove_html_tags(variant.content)
-        results.append(
-            InlineQueryResultArticle(
-                id=str(variant.id),
-                title=variant.title,
-                description=short_the_text(cleaned_content),
-                input_message_content=InputTextMessageContent(
-                    message_text=f"🔸TEMPLATE_{variant.id}🔸\n{variant.title}",
-                    parse_mode="HTML",
-                ),
+        for variant in variants:
+            cleaned_content = remove_html_tags(variant.content)
+            results.append(
+                InlineQueryResultArticle(
+                    id=str(variant.id),
+                    title=variant.title,
+                    description=short_the_text(cleaned_content),
+                    input_message_content=InputTextMessageContent(
+                        message_text=f"🔸TEMPLATE__{variant.id}",
+                        parse_mode="HTML",
+                    ),
+                )
             )
-        )
 
-    await query.answer(results, cache_time=1)
+        await query.answer(results, cache_time=1)
+    except Exception as e:
+        logger.error(f"Ошибка при обработке inline запроса: {e}")
+        # Отправляем пустой результат в случае ошибки
+        await query.answer([], cache_time=1)
 
 
 def remove_html_tags(text: str) -> str:
     """Удаляет HTML-теги из строки."""
+    if not text:
+        return ""
     return re.sub(r"<[^>]+>", "", text)
 
 
-def short_the_text(text: str, length: int = 75):
+def short_the_text(text: str, length: int = 75) -> str:
     """Сокращаем описание"""
+    if not text:
+        return ""
     return text[:length] + "..." if len(text) > length else text
 
 
-@router.message(F.text.startswith("🔸TEMPLATE_"))
+@router.message(F.text.startswith("🔸TEMPLATE__"))
 async def handle_template_message(message: Message) -> None:
     """Обработчик сообщений с маркером шаблона"""
     try:
         # Извлекаем ID шаблона
-        template_id = int(message.text.split("_")[1].split("🔸")[0])
+        template_id = int(message.text.replace("🔸TEMPLATE__", ""))
+        chat_id = str(message.chat.id)
+
         reply_message_id = (
             message.reply_to_message.message_id if message.reply_to_message else None
         )
@@ -72,47 +87,85 @@ async def handle_template_message(message: Message) -> None:
         await message.delete()
 
         # Отправляем шаблон
-        await send_template_response(message, template_id, reply_message_id)
+        await send_template(
+            message=message,
+            template_id=template_id,
+            reply_message_id=reply_message_id,
+            chat_id=chat_id,
+        )
 
     except Exception as e:
-        logger.error(f"Error handling template message: {e}")
+        logger.error(f"Ошибка при отправке шаблона сообщения: {e}")
 
 
-async def send_template_response(
-    message: Message, template_id: int, reply_message_id: Optional[int]
+async def send_template(
+    message: Message,
+    template_id: int,
+    chat_id: str,
+    reply_message_id: Optional[int],
 ) -> None:
     """Отправляет ответ по шаблону"""
-    response_repo = container.resolve(QuickResponseRepository)
-    response = await response_repo.get_quick_response_by_id(template_id)
+    template_repo: MessageTemplateRepository = container.resolve(
+        MessageTemplateRepository
+    )
 
-    if not response:
+    template = await template_repo.get_template_and_increase_usage_count(
+        template_id=template_id,
+        chat_id=chat_id,
+    )
+
+    if not template:
         return
 
-    if response.media_items:
-        await send_media_group(message, response, reply_message_id)
+    if template.media_items:
+        await send_media_group(
+            message=message,
+            template=template,
+            reply_message_id=reply_message_id,
+        )
     else:
         await message.bot.send_message(
             chat_id=message.chat.id,
-            text=response.content,
+            text=template.content,
             reply_to_message_id=reply_message_id,
             parse_mode="HTML",
         )
 
 
 async def send_media_group(
-    message: Message, response: QuickResponse, reply_message_id: Optional[int]
+    message: Message,
+    template: MessageTemplate,
+    reply_message_id: Optional[int],
 ) -> None:
     """Отправляет медиа-группу"""
     try:
-        media_group = [
-            InputMediaPhoto(
-                media=media.file_id,
-                caption=response.content if i == 0 else None,
-                parse_mode="HTML" if i == 0 else None,
-            )
-            for i, media in enumerate(response.media_items)
-            if media.media_type == "photo"
-        ]
+
+        media_group = []
+        media_types = {
+            "photo": InputMediaPhoto,
+            "video": InputMediaVideo,
+            "animation": InputMediaAnimation,
+            "document": InputMediaDocument,
+        }
+
+        # Создаем медиа группу
+        for i, media in enumerate(template.media_items):
+            try:
+                # Проверяем файл на доступолность
+                await message.bot.get_file(file_id=media.file_id)
+
+                media_class = media_types.get(media.media_type)
+                if media_class:
+                    media_group.append(
+                        media_class(
+                            media=media.file_id,
+                            caption=template.content if i == 0 else None,
+                            parse_mode="HTML" if i == 0 else None,
+                        )
+                    )
+            except Exception as e:
+                logger.error(f"Файл {media.file_id} недоступен: {e}")
+                continue
 
         if media_group:
             await message.bot.send_media_group(
@@ -120,29 +173,35 @@ async def send_media_group(
                 media=media_group,
                 reply_to_message_id=reply_message_id,
             )
-    except Exception:
+        else:
+            await message.bot.send_message(
+                chat_id=message.chat.id,
+                text=f"{template.content}\n\n⚠️ Медиафайлы временно недоступны",
+                reply_to_message_id=reply_message_id,
+                parse_mode="HTML",
+            )
+    except Exception as e:
+        logger.error(f"Ошибка при отправке медиа-группы: {e}")
+        # Отправляем только текст в случае ошибки
         await message.bot.send_message(
             chat_id=message.chat.id,
-            text=response.content,
+            text=template.content,
             reply_to_message_id=reply_message_id,
             parse_mode="HTML",
         )
 
 
-async def get_variants(query: str) -> List[QuickResponse]:
+async def get_variants(query: str) -> List[MessageTemplate]:
     """Получает варианты шаблонов по запросу"""
-    if not local_memory:
-        resp_repo = container.resolve(QuickResponseRepository)
-        responses = await resp_repo.get_all_quick_responses()
+    template_repo: MessageTemplateRepository = container.resolve(
+        MessageTemplateRepository
+    )
+    templates = await template_repo.get_templates_by_query(query=query)
 
-        for resp in responses:
-            local_memory[resp.title] = resp
+    # Сортируем шаблоны по количеству исользований от большего к меньшему
+    sorted_templates = list(sorted(templates, key=lambda x: -x.usage_count))
 
-    return [
-        instance
-        for title, instance in local_memory.items()
-        if query.lower() in instance.title.lower()
-    ]
+    return sorted_templates
 
 
 async def save_moderator_message(message: Message) -> None:

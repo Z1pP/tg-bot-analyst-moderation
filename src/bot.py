@@ -8,8 +8,6 @@ from commands import start_commands
 from config import settings
 from handlers import registry_routers
 
-# from handlers.inline_query import register_handlers_inline_query
-
 
 async def init_bot() -> tuple[Bot, Dispatcher]:
     print(settings.model_dump())
@@ -26,6 +24,5 @@ async def init_bot() -> tuple[Bot, Dispatcher]:
     dp = Dispatcher(storage=storage)
     registry_routers(dispatcher=dp)
     register_callback_routers(dispatcher=dp)
-    # register_handlers_inline_query(dispatcher=dp)
 
     return bot, dp

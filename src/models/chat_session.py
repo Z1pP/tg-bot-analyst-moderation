@@ -6,8 +6,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import BaseModel
 
 if TYPE_CHECKING:
+    from .admin_chat_access import AdminChatAccess
     from .message import ChatMessage
     from .message_reply import MessageReply
+    from .message_templates import MessageTemplate
+    from .reaction import MessageReaction
 
 
 class ChatSession(BaseModel):
@@ -34,7 +37,17 @@ class ChatSession(BaseModel):
         back_populates="chat_session",
     )
 
-    admin_access = relationship(
+    admin_access: Mapped[list["AdminChatAccess"]] = relationship(
         "AdminChatAccess",
         back_populates="chat",
+    )
+
+    templates: Mapped[list["MessageTemplate"]] = relationship(
+        "MessageTemplate",
+        back_populates="chat",
+    )
+    reactions: Mapped[list["MessageReaction"]] = relationship(
+        "MessageReaction",
+        back_populates="chat",
+        cascade="all, delete-orphan",
     )

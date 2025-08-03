@@ -3,8 +3,9 @@ from .base import Base
 from .chat_session import ChatSession
 from .message import ChatMessage
 from .message_reply import MessageReply
+from .message_templates import MessageTemplate, TemplateCategory, TemplateMedia
 from .moderator_activity import ModeratorActivity
-from .quick_response import QuickResponse, QuickResponseCategory, QuickResponseMedia
+from .reaction import MessageReaction
 from .user import User
 
 __all__ = [
@@ -15,7 +16,8 @@ __all__ = [
     "ModeratorActivity",
     "User",
     "AdminChatAccess",
-    "QuickResponseCategory",
-    "QuickResponse",
-    "QuickResponseMedia",
+    "TemplateCategory",
+    "MessageTemplate",
+    "TemplateMedia",
+    "MessageReaction",
 ]

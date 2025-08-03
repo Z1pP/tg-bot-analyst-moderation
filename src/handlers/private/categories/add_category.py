@@ -5,8 +5,8 @@ from aiogram.types import Message
 from constants import KbCommands
 from container import container
 from keyboards.reply.menu import tamplates_menu_kb
-from repositories import QuickResponseCategoryRepository
-from states import QuickResponseStateManager
+from repositories import TemplateCategoryRepository
+from states import TemplateStateManager
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 
@@ -23,18 +23,16 @@ async def add_category_handler(message: Message, state: FSMContext):
         message=message,
         text=text,
     )
-    await state.set_state(QuickResponseStateManager.process_category_name)
+    await state.set_state(TemplateStateManager.process_category_name)
 
 
-@router.message(QuickResponseStateManager.process_category_name)
+@router.message(TemplateStateManager.process_category_name)
 async def process_category_name_handler(message: Message, state: FSMContext):
     """Обработчик названия категории"""
 
     category_name = _validate_category_name(name=message.text)
 
-    repo: QuickResponseCategoryRepository = container.resolve(
-        QuickResponseCategoryRepository
-    )
+    repo: TemplateCategoryRepository = container.resolve(TemplateCategoryRepository)
 
     try:
         category = await repo.create_category(name=category_name)
@@ -47,7 +45,7 @@ async def process_category_name_handler(message: Message, state: FSMContext):
             reply_markup=tamplates_menu_kb(),
         )
 
-        await state.set_state(QuickResponseStateManager.templates_menu)
+        await state.set_state(TemplateStateManager.templates_menu)
     except Exception as e:
         await handle_exception(
             message=message,

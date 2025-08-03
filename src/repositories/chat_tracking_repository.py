@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import joinedload
 
 from database.session import async_session
@@ -47,6 +47,7 @@ class ChatTrackingRepository:
                         AdminChatAccess.admin_id == admin_id,
                         AdminChatAccess.is_target,
                     )
+                    .distinct()
                 )
                 result = await session.execute(query)
                 chats = result.scalars().all()
@@ -99,18 +100,17 @@ class ChatTrackingRepository:
         """Удаляет доступ к чату для администратора."""
         async with async_session() as session:
             try:
-                query = select(AdminChatAccess).where(
+                query = delete(AdminChatAccess).where(
                     AdminChatAccess.admin_id == admin_id,
                     AdminChatAccess.chat_id == chat_id,
                 )
                 result = await session.execute(query)
-                chat_access = result.scalars().first()
+                await session.commit()
 
-                if chat_access:
-                    await session.delete(chat_access)
-                    await session.commit()
+                if result.rowcount > 0:
                     logger.info(
-                        "Удален доступ к чату для администратора: admin_id=%s, chat_id=%s",
+                        "Удалено %d записей доступа к чату для администратора: admin_id=%s, chat_id=%s",
+                        result.rowcount,
                         admin_id,
                         chat_id,
                     )

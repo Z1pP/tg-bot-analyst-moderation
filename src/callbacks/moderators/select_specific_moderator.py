@@ -24,7 +24,7 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
         await send_html_message_with_kb(
             message=callback.message,
             text=f"Выбран пользователь: {username}",
-            reply_markup=user_actions_kb(username=username),
+            reply_markup=user_actions_kb(),
         )
 
         await callback.answer()

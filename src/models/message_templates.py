@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,16 +6,17 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import BaseModel
 
 if TYPE_CHECKING:
-    from .quick_response import QuickResponse
+    from .chat_session import ChatSession
     from .user import User
 
 
-class QuickResponse(BaseModel):
-    __tablename__ = "quick_responses"
+class MessageTemplate(BaseModel):
+    __tablename__ = "message_templates"
 
     title: Mapped[str] = mapped_column(
         String(200),
         nullable=False,
+        index=True,
     )
     content: Mapped[str] = mapped_column(
         Text,
@@ -23,7 +24,13 @@ class QuickResponse(BaseModel):
     )
     category_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("quick_response_categories.id"),
+        ForeignKey("template_categories.id"),
+        nullable=True,
+        index=True,
+    )
+    chat_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("chat_sessions.id"),
         nullable=True,
         index=True,
     )
@@ -42,22 +49,26 @@ class QuickResponse(BaseModel):
     # Relationships
     author: Mapped["User"] = relationship(
         "User",
-        back_populates="quick_responses",
+        back_populates="message_templates",
     )
-    category: Mapped["QuickResponseCategory"] = relationship(
-        "QuickResponseCategory",
-        back_populates="responses",
+    chat: Mapped[Optional["ChatSession"]] = relationship(
+        "ChatSession",
+        back_populates="templates",
     )
-    media_items: Mapped[List["QuickResponseMedia"]] = relationship(
-        "QuickResponseMedia",
-        back_populates="response",
-        order_by="QuickResponseMedia.position",
+    category: Mapped["TemplateCategory"] = relationship(
+        "TemplateCategory",
+        back_populates="templates",
+    )
+    media_items: Mapped[List["TemplateMedia"]] = relationship(
+        "TemplateMedia",
+        back_populates="template",
+        order_by="TemplateMedia.position",
         cascade="all, delete-orphan",
     )
 
 
-class QuickResponseCategory(BaseModel):
-    __tablename__ = "quick_response_categories"
+class TemplateCategory(BaseModel):
+    __tablename__ = "template_categories"
 
     name: Mapped[str] = mapped_column(
         String,
@@ -72,18 +83,18 @@ class QuickResponseCategory(BaseModel):
     )
 
     # Relationships
-    responses: Mapped[list["QuickResponse"]] = relationship(
-        "QuickResponse",
+    templates: Mapped[list["MessageTemplate"]] = relationship(
+        "MessageTemplate",
         back_populates="category",
     )
 
 
-class QuickResponseMedia(BaseModel):
-    __tablename__ = "quick_response_media"
+class TemplateMedia(BaseModel):
+    __tablename__ = "template_media"
 
-    response_id: Mapped[int] = mapped_column(
+    template_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("quick_responses.id"),
+        ForeignKey("message_templates.id"),
         nullable=False,
     )
     file_id: Mapped[str] = mapped_column(
@@ -94,7 +105,7 @@ class QuickResponseMedia(BaseModel):
         String(256),
         nullable=False,
         unique=True,
-    )  # Telegram file_id of the media
+    )
     media_type: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
@@ -105,7 +116,7 @@ class QuickResponseMedia(BaseModel):
     )
 
     # Relationships
-    response: Mapped["QuickResponse"] = relationship(
-        "QuickResponse",
+    template: Mapped["MessageTemplate"] = relationship(
+        "MessageTemplate",
         back_populates="media_items",
     )

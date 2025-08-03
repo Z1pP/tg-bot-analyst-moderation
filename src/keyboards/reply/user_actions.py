@@ -3,11 +3,8 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from constants import KbCommands
 
 
-def user_actions_kb(username: str):
+def user_actions_kb() -> ReplyKeyboardMarkup:
     buttons = [
-        [
-            KeyboardButton(text=KbCommands.SELECTED_USER.format(username=username)),
-        ],
         [
             KeyboardButton(text=KbCommands.GET_REPORT),
         ],
@@ -22,7 +19,7 @@ def user_actions_kb(username: str):
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 
-def all_users_actions_kb():
+def all_users_actions_kb() -> ReplyKeyboardMarkup:
     buttons = [
         [
             KeyboardButton(text=KbCommands.FULL_REPORT),

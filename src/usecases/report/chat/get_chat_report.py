@@ -1,17 +1,23 @@
+import logging
 from datetime import datetime
 from statistics import mean, median
-from typing import Awaitable, Callable, List, Optional, TypeVar
+from typing import List, Optional
 
 from constants import MAX_MSG_LENGTH
 from dto.report import ChatReportDTO
-from models import ChatMessage, ChatSession, MessageReply
-from repositories import ChatRepository, MessageReplyRepository, MessageRepository
+from models import ChatMessage, ChatSession, MessageReaction, MessageReply
+from repositories import (
+    ChatRepository,
+    MessageReactionRepository,
+    MessageReplyRepository,
+    MessageRepository,
+)
 from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
-T = TypeVar("T", ChatMessage, MessageReply)
+logger = logging.getLogger(__name__)
 
 
 class GetReportOnSpecificChatUseCase:
@@ -22,110 +28,64 @@ class GetReportOnSpecificChatUseCase:
         msg_reply_repository: MessageReplyRepository,
         message_repository: MessageRepository,
         chat_repository: ChatRepository,
+        reaction_repository: MessageReactionRepository,
     ):
         self._message_repository = message_repository
         self._msg_reply_repository = msg_reply_repository
         self._chat_repository = chat_repository
+        self._reaction_repository = reaction_repository
 
     async def execute(self, dto: ChatReportDTO) -> List[str]:
-        """
-        Генерирует отчет по конкретному чату за указанный период.
+        """Генерирует отчет по конкретному чату за указанный период."""
+        chat = await self._get_chat(dto.chat_title)
+        chat_data = await self._get_chat_data(chat, dto)
 
-        Args:
-            dto: Объект с параметрами для генерации отчета
+        report = self._generate_report(
+            chat_data, chat, dto.start_date, dto.end_date, dto.selected_period
+        )
 
-        Returns:
-            Строка с отформатированным отчетом
+        return self._split_report(report)
 
-        Raises:
-            ValueError: Если чат не найден
-        """
-        chat = await self._chat_repository.get_chat_by_title(title=dto.chat_title)
+    async def _get_chat(self, chat_title: str) -> ChatSession:
+        """Получает чат по названию."""
+        chat = await self._chat_repository.get_chat_by_title(chat_title)
         if not chat:
             raise ValueError("Чат не найден")
+        return chat
 
-        # Получаем сообщения за период
+    async def _get_chat_data(self, chat: ChatSession, dto: ChatReportDTO) -> dict:
+        """Получает все данные чата за период."""
         messages = await self._get_processed_items(
-            repository_method=self._message_repository.get_messages_by_chat_id_and_period,
-            chat_id=chat.id,
-            start_date=dto.start_date,
-            end_date=dto.end_date,
+            self._message_repository.get_messages_by_chat_id_and_period,
+            chat.id,
+            dto.start_date,
+            dto.end_date,
         )
 
-        # Получаем ответы за период
         replies = await self._get_processed_items(
-            repository_method=self._msg_reply_repository.get_replies_by_chat_id_and_period,
-            chat_id=chat.id,
-            start_date=dto.start_date,
-            end_date=dto.end_date,
+            self._msg_reply_repository.get_replies_by_chat_id_and_period,
+            chat.id,
+            dto.start_date,
+            dto.end_date,
         )
 
-        # Генерируем отчет
-        report = self._generate_report(
-            replies=replies,
-            messages=messages,
-            chat=chat,
-            start_date=dto.start_date,
-            end_date=dto.end_date,
-            selected_period=dto.selected_period,
+        reactions = await self._get_processed_items(
+            self._reaction_repository.get_reactions_by_chat_and_period,
+            chat.id,
+            dto.start_date,
+            dto.end_date,
         )
 
-        return self._split_report(report=report)
-
-    def _generate_report(
-        self,
-        replies: List[MessageReply],
-        messages: List[ChatMessage],
-        chat: ChatSession,
-        start_date: datetime,
-        end_date: datetime,
-        selected_period: Optional[str] = None,
-    ) -> str:
-        """
-        Формирует текстовый отчет на основе полученных данных.
-        """
-        if not messages:
-            return "\n⚠️ Нет данных за указанный период."
-
-        # Основные показатели
-        period = format_selected_period(selected_period)
-        total_messages = len(messages)
-        total_replies = len(replies)
-        working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
-        messages_per_hour = self._calculate_messages_per_hour(
-            total_messages, working_hours
+        logger.info(
+            f"Чат {chat.title}: {len(messages)} сообщений, {len(replies)} ответов, {len(reactions)} реакций"
         )
 
-        # Статистика по времени ответа
-        response_stats = self._calculate_response_stats(replies)
-
-        # Информация о первых сообщениях
-        first_messages_info = self._get_first_messages_by_day(messages)
-
-        # Информация о перерывах
-        breaks_info = self._get_breaks_info(messages)
-
-        # Формируем отчет
-        return (
-            f"<b>📈 Отчёт по: {chat.title} за {period}</b>\n\n"
-            f"{first_messages_info}\n"
-            f"• <b>{total_messages}</b> - <b>всего сообщений</b>\n"
-            f"• <b>{working_hours}</b> - кол-во рабочих часов\n"
-            f"• <b>{messages_per_hour}</b> - сообщений в час\n"
-            f"• Из них <b>{total_replies}</b> ответ(-ов)\n"
-            f"{response_stats}\n\n"
-            f"<code>Подробную информацию о перерывах смотри в отчете модераторов </code>"
-            f"<code>за день</code>\n"
-            f"{breaks_info}"
-        )
+        return {"messages": messages, "replies": replies, "reactions": reactions}
 
     async def _get_processed_items(
-        self,
-        repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],
-        chat_id: int,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> List[T]:
+        self, repository_method, chat_id: int, start_date: datetime, end_date: datetime
+    ):
+        """Получает и обрабатывает элементы из репозитория."""
         items = await repository_method(
             chat_id=chat_id,
             start_date=start_date,
@@ -137,92 +97,119 @@ class GetReportOnSpecificChatUseCase:
 
         return items
 
-    def _split_report(self, report: str) -> List[str]:
-        """
-        Разделяет отчет на части, если он превышает максимальную длину.
+    def _generate_report(
+        self,
+        data: dict,
+        chat: ChatSession,
+        start_date: datetime,
+        end_date: datetime,
+        selected_period: Optional[str] = None,
+    ) -> str:
+        """Формирует текстовый отчет."""
+        messages, replies, reactions = (
+            data["messages"],
+            data["replies"],
+            data["reactions"],
+        )
 
-        Args:
-            report: Полный текст отчета
+        if not messages and not reactions:
+            return "⚠️ Нет данных за указанный период."
 
-        Returns:
-            Список частей отчета
-        """
-        if len(report) <= MAX_MSG_LENGTH:
-            return [report]
+        period = format_selected_period(selected_period)
 
-        # Разделяем отчет на основную часть и информацию о перерывах
+        report_parts = [
+            f"<b>📈 Отчёт по: {chat.title} за {period}</b>\n",
+            self._generate_basic_stats(
+                messages, replies, reactions, start_date, end_date
+            ),
+            self._generate_response_stats(replies),
+            self._generate_breaks_section(messages, reactions),
+        ]
 
-        parts = report.split("Перерывы:\n")
-        main_part = parts[0]
-        breaks_part = parts[1] if len(parts) > 1 else ""
+        return "\n".join(filter(None, report_parts))
 
-        result = []
+    def _generate_basic_stats(
+        self,
+        messages: List[ChatMessage],
+        replies: List[MessageReply],
+        reactions: List[MessageReaction],
+        start_date: datetime,
+        end_date: datetime,
+    ) -> str:
+        """Генерирует базовую статистику."""
+        stats_parts = []
 
-        # Добавляем основную часть
-        result.append(main_part + "Перерывы: см. следующее сообщение")
+        # Первые сообщения по дням
+        if messages:
+            first_messages_info = self._get_first_messages_by_day(messages)
+            stats_parts.append(first_messages_info)
 
-        # Если есть информация о перерывах, разделяем ее на части
-        if breaks_part:
-            breaks_lines = breaks_part.split("\n")
-            current_part = "<b>⏸️ Перерывы:</b>"
+        # Статистика активности
+        working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
+        total_activity = len(messages) + len(reactions)
+        activity_per_hour = self._calculate_activity_per_hour(
+            total_activity, working_hours
+        )
 
-            for line in breaks_lines:
-                # Если добавление строки превысит лимит, создаем новую часть
-                if len(current_part) + len(line) + 1 > MAX_MSG_LENGTH:
-                    result.append(current_part)
-                    current_part = "<b>⏸️ Перерывы (продолжение):</b>"
+        stats_parts.extend(
+            [
+                f"• <b>{len(messages)}</b> - всего сообщений",
+                f"• <b>{len(reactions)}</b> - всего реакций",
+                f"• <b>{working_hours}</b> - кол-во рабочих часов",
+                f"• <b>{activity_per_hour}</b> - активности в час",
+                f"• Из них <b>{len(replies)}</b> ответ(-ов)\n",
+            ]
+        )
 
-                current_part += "\n" + line
+        return "\n".join(stats_parts)
 
-            # Добавляем последнюю часть
-            if current_part:
-                result.append(current_part)
-
-        return result
-
-    def _calculate_messages_per_hour(
-        self, messages_count: int, work_hours: float
-    ) -> float:
-        """Рассчитывает количество сообщений в час рабочего времени."""
-        if messages_count < 2 or work_hours <= 0:
-            return 1.0
-        return round(messages_count / work_hours, 2)
-
-    def _calculate_response_stats(self, replies: List[MessageReply]) -> str:
-        """Рассчитывает статистику по времени ответа."""
+    def _generate_response_stats(self, replies: List[MessageReply]) -> str:
+        """Генерирует статистику времени ответа."""
         if not replies:
-            return "• <b>Нет ответов</b> за указанный период"
+            return "• <b>Нет ответов</b> за указанный период\n"
 
         response_times = [reply.response_time_seconds for reply in replies]
+        stats = {
+            "avg": mean(response_times),
+            "median": median(response_times),
+            "min": min(response_times),
+            "max": max(response_times),
+        }
 
-        avg_time = mean(response_times)
-        median_time = median(response_times)
-        min_time = min(response_times)
-        max_time = max(response_times)
-
-        return (
-            f"• <b>{format_seconds(min_time)}</b> и "
-            f"<b>{format_seconds(max_time)}</b> - мин. и макс. время ответов\n"
-            f"• <b>{format_seconds(avg_time)}</b> и "
-            f"<b>{format_seconds(median_time)}</b> - сред. и медиан. время ответа"
+        return "\n".join(
+            [
+                f"• <b>{format_seconds(stats['min'])}</b> и <b>{format_seconds(stats['max'])}</b> - мин. и макс. время ответов",
+                f"• <b>{format_seconds(stats['avg'])}</b> и <b>{format_seconds(stats['median'])}</b> - сред. и медиан. время ответа\n",
+            ]
         )
+
+    def _generate_breaks_section(
+        self, messages: List[ChatMessage], reactions: List[MessageReaction]
+    ) -> str:
+        """Генерирует секцию с перерывами."""
+        if not messages and not reactions:
+            return "<b>⏸️ Перерывы:</b> отсутствуют"
+
+        sorted_messages = sorted(messages, key=lambda m: m.created_at)
+        breaks = BreakAnalysisService.calculate_breaks(sorted_messages, reactions)
+
+        if breaks:
+            return "<b>⏸️ Перерывы:</b>\n" + "\n".join(breaks)
+        return "<b>⏸️ Перерывы:</b> отсутствуют"
 
     def _get_first_messages_by_day(self, messages: List[ChatMessage]) -> str:
         """Возвращает список времени первого сообщения в день."""
         if not messages:
             return ""
 
-        # Сортируем сообщения по времени
         sorted_messages = sorted(messages, key=lambda m: m.created_at)
-
-        # Группируем по дате
         first_messages_by_day = {}
+
         for message in sorted_messages:
             date = message.created_at.date()
             if date not in first_messages_by_day:
                 first_messages_by_day[date] = message
 
-        # Формируем строки с информацией
         result = []
         for date, message in sorted(first_messages_by_day.items()):
             result.append(
@@ -232,23 +219,36 @@ class GetReportOnSpecificChatUseCase:
 
         return "\n".join(result) + "\n"
 
-    def _get_breaks_info(self, messages: List[ChatMessage]) -> str:
-        """Получает информацию о перерывах."""
-        if not messages:
-            return "<b>⏸️ Перерывы:</b> отсутствуют"
+    def _calculate_activity_per_hour(
+        self, activity_count: int, work_hours: float
+    ) -> float:
+        """Рассчитывает количество активности в час рабочего времени."""
+        if activity_count < 1 or work_hours <= 0:
+            return 0.0
+        return round(activity_count / work_hours, 2)
 
-        # Сортируем сообщения по времени
-        sorted_messages = sorted(messages, key=lambda m: m.created_at)
+    def _split_report(self, report: str) -> List[str]:
+        """Разделяет отчет на части по лимиту длины."""
+        if len(report) <= MAX_MSG_LENGTH:
+            return [report]
 
-        # Получаем перерывы
-        breaks = BreakAnalysisService.calculate_breaks(messages=sorted_messages)
+        parts = report.split("<b>⏸️ Перерывы:</b>")
+        main_part = parts[0]
+        breaks_part = parts[1] if len(parts) > 1 else ""
 
-        if not breaks:
-            return "<b>⏸️ Перерывы:</b> отсутствуют"
+        result = [main_part + "Перерывы: см. следующее сообщение"]
 
-        # Формируем строки с информацией
-        result = ["<b>⏸️ Перерывы:</b>"]
-        for break_info in breaks:
-            result.append(f"{break_info}")
+        if breaks_part:
+            breaks_lines = breaks_part.split("\n")
+            current_part = "<b>⏸️ Перерывы:</b>"
 
-        return "\n".join(result)
+            for line in breaks_lines:
+                if len(current_part) + len(line) + 1 > MAX_MSG_LENGTH:
+                    result.append(current_part)
+                    current_part = "<b>⏸️ Перерывы (продолжение):</b>"
+                current_part += "\n" + line
+
+            if current_part:
+                result.append(current_part)
+
+        return result

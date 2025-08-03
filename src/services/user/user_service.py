@@ -25,3 +25,11 @@ class UserService:
         if user:
             self._cache.set(username, user)
         return user
+
+    async def get_or_create(self, username: str, tg_id: str = None) -> User:
+        user = await self.get_user(username=username)
+
+        if not user:
+            return await self.create_user(username=username, tg_id=tg_id)
+
+        return user

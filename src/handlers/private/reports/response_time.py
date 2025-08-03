@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -15,7 +15,6 @@ from keyboards.reply.user_actions import user_actions_kb
 from services.work_time_service import WorkTimeService
 from states.user_states import UserStateManager
 from usecases.report import GetReportOnSpecificModeratorUseCase
-from usecases.report.moderator.get_specific_moderator_report import Report
 from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -176,7 +175,7 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
         await send_html_message_with_kb(
             message=message,
             text="Нет так нет.",
-            reply_markup=user_actions_kb(username=username),
+            reply_markup=user_actions_kb(),
         )
     except Exception as e:
         await handle_exception(message, e, "back_to_menu_handler")
@@ -204,21 +203,22 @@ async def generate_and_send_report(
             selected_period=selected_period,
         )
 
-        report = await generate_report(report_dto=report_dto)
-        text = f"{report.text}\n\nДля продолжения выберите период, либо нажмите назад"
+        report_parts = await generate_report(report_dto=report_dto)
 
-        await state.set_state(UserStateManager.process_select_time_period)
+        for idx, part in enumerate(report_parts):
+            if idx == len(report_parts) - 1:
+                part = f"{part}\n\nДля продолжения выберите период, либо нажмите назад"
 
-        await send_html_message_with_kb(
-            message=message,
-            text=text,
-            reply_markup=get_time_period_kb(),
-        )
+            await send_html_message_with_kb(
+                message=message,
+                text=part,
+                reply_markup=get_time_period_kb(),
+            )
     except Exception as e:
         await handle_exception(message, e, "generate_and_send_report")
 
 
-async def generate_report(report_dto: ResponseTimeReportDTO) -> Report:
+async def generate_report(report_dto: ResponseTimeReportDTO) -> List[str]:
     """
     Генерирует отчет используя UseCase.
     """

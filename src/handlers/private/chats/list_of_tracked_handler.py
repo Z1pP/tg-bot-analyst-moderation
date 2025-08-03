@@ -32,8 +32,7 @@ async def list_of_tracking_chats_handler(message: Message, state: FSMContext) ->
         chats = await usecase.execute(username)
 
         text = (
-            "<b>Управление отслеживаемыми чатами</b>\n\n"
-            "Укажите группы куда рассылать очет."
+            "<b>Управление отслеживаемыми чатами</b>\n\n" "Пожалуйста, выберу группу:"
         )
 
         # Отправляем сообщение с кнопками для выбора действия

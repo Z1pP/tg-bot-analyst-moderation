@@ -56,6 +56,7 @@ async def send_daily_report(bot: Bot) -> None:
 
     # Собираем чаты для каждого администратора
     admin_chats: Dict[str, List[ChatSession]] = {}
+
     for admin in admins:
         chats = await chat_repo.get_admin_target_chats(admin_id=admin.id)
         if chats:  # Добавляем только если есть чаты

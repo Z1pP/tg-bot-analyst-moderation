@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple
 
 from models import AdminChatAccess, ChatSession, User
 from repositories import ChatRepository, ChatTrackingRepository
@@ -23,24 +24,36 @@ class AddChatToTrackUseCase:
         self,
         chat: ChatSession,
         admin: User,
-    ) -> AdminChatAccess:
+    ) -> Tuple[AdminChatAccess, bool]:
         """
-        Добавляет чат в отслеживание.
+        Проверяет отслеживается уже чат. Если нет, то заносит в список для
+        отслеживания
 
         Args:
             chat: Объект ChatSession
             admin: Объект User
 
         Returns:
-            Объект AdminChatAccess
+            Объекты AdminChatAccess, bool
         """
         try:
-            # Создаем связь между чатом и админом
-            await self._chat_tracking_repository.add_chat_to_tracking(
+            # Проверяем чтобы чат уже не отслеживался
+            existing_access = await self._chat_tracking_repository.get_access(
                 admin_id=admin.id,
                 chat_id=chat.id,
-                is_source=False,
-                is_target=False,
+            )
+            if existing_access:
+                return existing_access, True
+
+            # Добавляем чат в список отслеживаемых
+            return (
+                await self._chat_tracking_repository.add_chat_to_tracking(
+                    admin_id=admin.id,
+                    chat_id=chat.id,
+                    is_source=False,
+                    is_target=False,
+                ),
+                False,
             )
         except Exception as e:
             logger.error(

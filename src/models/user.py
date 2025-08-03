@@ -12,8 +12,9 @@ from .base import BaseModel
 if TYPE_CHECKING:
     from .admin_chat_access import AdminChatAccess
     from .message import ChatMessage
+    from .message_templates import MessageTemplate
     from .moderator_activity import ModeratorActivity
-    from .quick_response import QuickResponse
+    from .reaction import MessageReaction
 
 
 class User(BaseModel):
@@ -57,9 +58,14 @@ class User(BaseModel):
         "AdminChatAccess",
         back_populates="admin",
     )
-    quick_responses: Mapped[list["QuickResponse"]] = relationship(
-        "QuickResponse",
+    message_templates: Mapped[list["MessageTemplate"]] = relationship(
+        "MessageTemplate",
         back_populates="author",
+    )
+    reactions: Mapped[list["MessageReaction"]] = relationship(
+        "MessageReaction",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (

@@ -37,9 +37,7 @@ def tamplates_menu_kb():
         ],
     ]
 
-    return ReplyKeyboardMarkup(
-        keyboard=buttons, resize_keyboard=True, one_time_keyboard=True
-    )
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 
 def moderator_menu_kb():
@@ -66,8 +64,12 @@ def chat_menu_kb():
             KeyboardButton(text=KbCommands.SELECT_CHAT),
         ],
         [
-            KeyboardButton(text=KbCommands.TRACKED_CHATS),
+            KeyboardButton(text=KbCommands.ADD_CHAT),
+            KeyboardButton(text=KbCommands.REMOVE_CHAT),
         ],
+        # [
+        #     KeyboardButton(text=KbCommands.TRACKED_CHATS),
+        # ],
         [
             KeyboardButton(text=KbCommands.MENU),
         ],

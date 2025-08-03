@@ -14,3 +14,9 @@ class UserRole(Enum):
     ADMIN = "admin"
     MODERATOR = "moderator"
     USER = "user"
+
+
+class ReactionAction(str, Enum):
+    ADDED = "added"
+    REMOVED = "removed"
+    CHANGED = "changed"

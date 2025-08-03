@@ -4,20 +4,18 @@ from typing import Optional, Sequence
 from sqlalchemy import select
 
 from database.session import async_session
-from models import QuickResponseCategory
+from models import TemplateCategory
 
 logger = logging.getLogger(__name__)
 
 
-class QuickResponseCategoryRepository:
-    async def get_all_categories(self) -> Sequence[QuickResponseCategory]:
+class TemplateCategoryRepository:
+    async def get_all_categories(self) -> Sequence[TemplateCategory]:
         """Получает список всех категорий шаблонов быстрых сообщений"""
         async with async_session() as session:
             try:
                 result = await session.execute(
-                    select(QuickResponseCategory).order_by(
-                        QuickResponseCategory.sort_order
-                    )
+                    select(TemplateCategory).order_by(TemplateCategory.sort_order)
                 )
 
                 categories = result.scalars().all()
@@ -28,13 +26,13 @@ class QuickResponseCategoryRepository:
                 logger.error("Ошибка при получении списка категорий: %s", e)
                 return []
 
-    async def get_last_category(self) -> Optional[QuickResponseCategory]:
+    async def get_last_category(self) -> Optional[TemplateCategory]:
         """Получаем последнюю созданную категорию"""
         async with async_session() as session:
             try:
                 result = await session.execute(
-                    select(QuickResponseCategory).order_by(
-                        QuickResponseCategory.sort_order.desc()
+                    select(TemplateCategory).order_by(
+                        TemplateCategory.sort_order.desc()
                     )
                 )
 
@@ -46,12 +44,12 @@ class QuickResponseCategoryRepository:
                 logger.error("Ошибка при получении последней категории: %s", str(e))
                 return None
 
-    async def get_category_by_id(self, id: int) -> Optional[QuickResponseCategory]:
+    async def get_category_by_id(self, id: int) -> Optional[TemplateCategory]:
         """Получаем категорию по имени"""
         async with async_session() as session:
             try:
                 result = await session.execute(
-                    select(QuickResponseCategory).where(QuickResponseCategory.id == id)
+                    select(TemplateCategory).where(TemplateCategory.id == id)
                 )
 
                 category = result.scalars().first()
@@ -62,7 +60,7 @@ class QuickResponseCategoryRepository:
                 logger.error("Ошибка при получении категории c id: %d", str(e))
                 return None
 
-    async def create_category(self, name: str) -> Optional[QuickResponseCategory]:
+    async def create_category(self, name: str) -> Optional[TemplateCategory]:
         """Создаем новую категорию"""
         async with async_session() as session:
             try:
@@ -70,7 +68,7 @@ class QuickResponseCategoryRepository:
                 sort_order = last_category.sort_order + 1 if last_category else 1
 
                 # Создаем новую категорию
-                new_category = QuickResponseCategory(
+                new_category = TemplateCategory(
                     name=name,
                     sort_order=sort_order,
                 )
@@ -85,3 +83,20 @@ class QuickResponseCategoryRepository:
             except Exception as e:
                 logger.error("Ошибка при создании новой категории: %s", str(e))
                 raise Exception("Ошибка при создании репозитория")
+
+    async def delete_category(self, category_id: int) -> None:
+        """Удаляем категорию"""
+        async with async_session() as session:
+            try:
+                category = await self.get_category_by_id(category_id)
+                if category:
+                    await session.delete(category)
+                    await session.commit()
+                    logger.info('Категория "%s" удалена', category.name)
+                else:
+                    logger.warning("Категория с id %d не найдена", category_id)
+            except Exception as e:
+                logger.error("Ошибка при удалении категории: %s", str(e))
+                raise Exception("Ошибка при удалении категории")
+            finally:
+                await session.close()

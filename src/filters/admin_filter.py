@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from aiogram.filters import Filter
-from aiogram.types import Message
+from aiogram.types import InlineQuery, Message, MessageReactionUpdated
 
 from constants.enums import UserRole
 from container import container
@@ -39,7 +39,7 @@ class BaseUserFilter(Filter):
             return None
 
 
-class AllRolesFilter(BaseUserFilter):
+class StaffOnlyFilter(BaseUserFilter):
     """Фильтр для всех ролей пользователей"""
 
     async def __call__(self, message: Message) -> bool:
@@ -61,3 +61,33 @@ class AdminOnlyFilter(BaseUserFilter):
 
         user = await self.get_user(username)
         return user is not None and user.role == UserRole.ADMIN
+
+
+class StaffOnlyInlineFilter(BaseUserFilter):
+    """Фильтр только для администраторов"""
+
+    async def __call__(self, inline_query: InlineQuery) -> bool:
+        username = inline_query.from_user.username
+        if not username:
+            return False
+
+        user = await self.get_user(username)
+        if not user:
+            return False
+
+        return user.role in (UserRole.ADMIN, UserRole.MODERATOR)
+
+
+class StaffOnlyReactionFilter(BaseUserFilter):
+    """Фильтр только для администраторов"""
+
+    async def __call__(self, event: MessageReactionUpdated) -> bool:
+        username = event.user.username
+        if not username:
+            return False
+
+        user = await self.get_user(username)
+        if not user:
+            return False
+
+        return user.role in (UserRole.ADMIN, UserRole.MODERATOR)
