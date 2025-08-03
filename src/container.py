@@ -28,7 +28,6 @@ from usecases.chat import (
 from usecases.chat_tracking import AddChatToTrackUseCase
 from usecases.message import (
     SaveMessageUseCase,
-    SaveModeratorMessageUseCase,
     SaveModeratorReplyMessageUseCase,
 )
 from usecases.moderator_activity import TrackModeratorActivityUseCase
@@ -140,7 +139,6 @@ class ContainerSetup:
         """Регистрация use cases для сообщений."""
         message_usecases = [
             SaveMessageUseCase,
-            SaveModeratorMessageUseCase,
             SaveModeratorReplyMessageUseCase,
         ]
 
