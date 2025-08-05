@@ -1,4 +1,5 @@
 from .admin_chat_access import AdminChatAccess
+from .associations import admin_user_tracking
 from .base import Base
 from .chat_session import ChatSession
 from .message import ChatMessage
@@ -13,11 +14,11 @@ __all__ = [
     "ChatSession",
     "ChatMessage",
     "MessageReply",
-    "ModeratorActivity",
     "User",
     "AdminChatAccess",
     "TemplateCategory",
     "MessageTemplate",
     "TemplateMedia",
     "MessageReaction",
+    "admin_user_tracking",
 ]
