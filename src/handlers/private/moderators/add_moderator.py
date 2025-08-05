@@ -34,19 +34,26 @@ async def process_adding_moderator(message: Message, state: FSMContext) -> None:
     Обработчик для добавления нового модератора.
     """
 
+    admin_username = message.from_user.username
+
     if message.text == KbCommands.BACK:
         await back_to_menu_handler(message, state)
         return
 
     if message.forward_from:
         username = message.forward_from.username
+        user_id = str(message.forward_from.id)
     else:
         username = validate_username(message.text)
+        user_id = "Неизвестно"
 
     if not username:
         await send_html_message_with_kb(
             message=message,
-            text=Dialog.Error.INVALID_USERNAME_FORMAT,
+            text=Dialog.Error.ADD_USER_ERROR.format(
+                problem="неверный формат username",
+                solution=Dialog.Error.SOLUTION_CHECK_USERNAME,
+            ),
         )
         return
 
@@ -59,14 +66,21 @@ async def process_adding_moderator(message: Message, state: FSMContext) -> None:
         if user.is_existed:
             await send_html_message_with_kb(
                 message=message,
-                text=Dialog.ALREADY_MODERATOR.format(username=username),
+                text=Dialog.Error.ADD_USER_ERROR.format(
+                    problem=Dialog.Error.USER_ALREADY_TRACKED,
+                    solution=Dialog.Error.SOLUTION_USER_EXISTS,
+                ),
                 reply_markup=admin_menu_kb(),
             )
             return
 
         await send_html_message_with_kb(
             message=message,
-            text=Dialog.SUCCESS_ADD_MODERATOR.format(username=username),
+            text=Dialog.SUCCESS_ADD_MODERATOR.format(
+                forward_username=username,
+                forward_user_id=user_id,
+                admin_username=admin_username,
+            ),
             reply_markup=admin_menu_kb(),
         )
     except Exception as e:
