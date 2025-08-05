@@ -21,4 +21,5 @@ __all__ = [
     "TemplateMedia",
     "MessageReaction",
     "admin_user_tracking",
+    "ModeratorActivity",
 ]

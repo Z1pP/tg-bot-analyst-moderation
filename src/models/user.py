@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .admin_chat_access import AdminChatAccess
     from .message import ChatMessage
     from .message_templates import MessageTemplate
+    from .moderator_activity import ModeratorActivity
     from .reaction import MessageReaction
 
 
@@ -75,6 +76,13 @@ class User(BaseModel):
         primaryjoin="User.id == admin_user_tracking.c.tracked_user_id",
         secondaryjoin="User.id == admin_user_tracking.c.admin_id",
         back_populates="tracked_users",
+    )
+
+    activities: Mapped[list["ModeratorActivity"]] = relationship(
+        "ModeratorActivity",
+        foreign_keys="ModeratorActivity.user_id",
+        cascade="all, delete-orphan",
+        back_populates="user",
     )
 
     __table_args__ = (
