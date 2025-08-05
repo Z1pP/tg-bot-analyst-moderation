@@ -55,4 +55,6 @@ class MessageReaction(BaseModel):
         Index("idx_reaction_chat_message", "chat_id", "message_id"),
         Index("idx_reaction_user", "user_id"),
         Index("idx_reaction_created_at", "created_at"),
+        Index("idx_reaction_user_created", "user_id", "created_at"),
+        Index("idx_reaction_chat_created", "chat_id", "created_at"),
     )
