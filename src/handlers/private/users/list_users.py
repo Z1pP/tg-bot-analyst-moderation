@@ -1,3 +1,5 @@
+import logging
+
 from aiogram import F, Router
 from aiogram.types import Message
 
@@ -5,40 +7,45 @@ from constants import KbCommands
 from container import container
 from keyboards.inline.moderators import moderators_inline_kb
 from keyboards.reply.menu import admin_menu_kb
+from states import MenuStates
 from usecases.user import GetAllUsersUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 
 router = Router(name=__name__)
+logger = logging.getLogger(__name__)
 
 
-@router.message(F.text == KbCommands.SELECT_USER)
-async def moderators_list_handler(message: Message) -> None:
-    """
-    Обработчик команды для получения списка модераторов.
-    """
-
+@router.message(F.text == KbCommands.GET_REPORT, MenuStates.users_menu)
+async def users_list_handler(message: Message) -> None:
+    """Обработчик команды для получения списка пользователей."""
     try:
-        usecase: GetAllUsersUseCase = container.resolve(GetAllUsersUseCase)
+        logger.info(
+            f"Пользователь {message.from_user.id} запросил список пользователей для отчета"
+        )
 
+        usecase: GetAllUsersUseCase = container.resolve(GetAllUsersUseCase)
         users = await usecase.execute()
 
         if not users:
+            logger.info("Список пользователей пуст")
+            message_text = (
+                "❗Чтобы получать отчёты по пользователям, "
+                "необходимо добавить юзера в отслеживаемые, "
+                "а также пользователей для сбора статистики"
+            )
             await send_html_message_with_kb(
                 message=message,
-                text="Список модераторов пуст. Добавьте модераторов",
+                text=message_text,
                 reply_markup=admin_menu_kb(),
             )
             return
 
+        logger.info(f"Найдено {len(users)} пользователей для отчета")
         await send_html_message_with_kb(
             message=message,
-            text=f"Всего {len(users)} модераторов",
+            text=f"Всего {len(users)} пользователей",
             reply_markup=moderators_inline_kb(users),
         )
     except Exception as e:
-        await handle_exception(
-            message=message,
-            exc=e,
-            context="moderators_list_handler",
-        )
+        await handle_exception(message, e, "users_list_handler")
