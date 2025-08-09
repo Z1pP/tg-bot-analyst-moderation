@@ -9,7 +9,7 @@ def user_actions_kb() -> ReplyKeyboardMarkup:
             KeyboardButton(text=KbCommands.GET_REPORT),
         ],
         [
-            KeyboardButton(text=KbCommands.SELECT_MODERATOR),
+            KeyboardButton(text=KbCommands.SELECT_USER),
         ],
         [
             KeyboardButton(text=KbCommands.MENU),
@@ -25,7 +25,7 @@ def all_users_actions_kb() -> ReplyKeyboardMarkup:
             KeyboardButton(text=KbCommands.FULL_REPORT),
         ],
         [
-            KeyboardButton(text=KbCommands.SELECT_MODERATOR),
+            KeyboardButton(text=KbCommands.SELECT_USER),
         ],
         [
             KeyboardButton(text=KbCommands.MENU),
