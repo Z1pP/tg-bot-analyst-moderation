@@ -15,7 +15,7 @@ async def start_handler(message: Message) -> None:
     Выводит приветственное сообщение
     """
     username = message.from_user.full_name
-    welcome_text = Dialog.START_TEXT.format(username=username)
+    welcome_text = Dialog.MENU_TEXT.format(username=username)
 
     await send_html_message_with_kb(
         message=message,
