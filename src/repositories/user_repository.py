@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from constants.enums import UserRole
 from database.session import async_session
@@ -32,6 +32,30 @@ class UserRepository:
             except Exception as e:
                 logger.error(
                     "Ошибка при получении пользователя по tg_id=%s: %s", tg_id, e
+                )
+                return None
+
+    async def get_user_by_id(self, user_id: int) -> Optional[User]:
+        """Получает пользователя по ID."""
+        async with async_session() as session:
+            try:
+                result = await session.execute(select(User).where(User.id == user_id))
+                user = result.scalars().first()
+
+                if user:
+                    logger.info(
+                        "Получен пользователь по id=%d: username=%s, role=%s",
+                        user_id,
+                        user.username,
+                        user.role,
+                    )
+                else:
+                    logger.info("Пользователь с id=%d не найден", user_id)
+
+                return user
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении пользователя по id=%d: %s", user_id, e
                 )
                 return None
 
@@ -134,18 +158,24 @@ class UserRepository:
                 await session.rollback()
                 raise e
 
-    async def delete_user(self, user: User) -> None:
-        """Удаляет пользователя."""
+    async def delete_user(self, user_id: int) -> bool:
+        """Удаляет пользователя по его ID"""
         async with async_session() as session:
             try:
-                await session.delete(user)
-                await session.flush()
+                query = delete(User).where(User.id == user_id)
+                result = await session.execute(query)
                 await session.commit()
 
-                logger.info(
-                    "Удален пользователь: id=%s, username=%s", user.id, user.username
-                )
+                deleted_count = result.rowcount
+                if deleted_count > 0:
+                    logger.info(f"Удален пользователь с ID={user_id}")
+                    return True
+                else:
+                    logger.warning(
+                        f"Пользователь с ID={user_id} не найден для удаления"
+                    )
+                    return False
             except Exception as e:
-                logger.error("Ошибка при удалении пользователя (id=%s): %s", user.id, e)
+                logger.error(f"Ошибка при удалении пользователя с ID={user_id}:{e}")
                 await session.rollback()
                 raise e
