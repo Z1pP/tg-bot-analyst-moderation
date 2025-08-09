@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import Dialog, KbCommands
-from keyboards.reply.menu import admin_menu_kb, chat_menu_kb, moderator_menu_kb
+from keyboards.reply.menu import admin_menu_kb, chat_menu_kb, user_menu_kb
 from utils.send_message import send_html_message_with_kb
 
 router = Router(name=__name__)
@@ -33,12 +33,12 @@ async def menu_handler(message: Message, state: FSMContext) -> None:
 
 
 @router.message(F.text == KbCommands.USERS_MENU)
-async def moderators_menu_handler(message: Message) -> None:
+async def users_menu_handler(message: Message) -> None:
 
     await send_html_message_with_kb(
         message=message,
-        text=Dialog.MODERATORS_MENU_TEXT,
-        reply_markup=moderator_menu_kb(),
+        text=Dialog.USER_MENU_TEXT,
+        reply_markup=user_menu_kb(),
     )
 
 

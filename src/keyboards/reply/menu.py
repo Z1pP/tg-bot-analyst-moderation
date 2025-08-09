@@ -40,7 +40,7 @@ def tamplates_menu_kb():
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 
-def moderator_menu_kb():
+def user_menu_kb():
     buttons = [
         [
             KeyboardButton(text=KbCommands.SELECT_USER),

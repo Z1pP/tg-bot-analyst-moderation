@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery, Message
 from constants import KbCommands
 from container import container
 from keyboards.inline.moderators import conf_remove_user_kb, remove_inline_kb
-from keyboards.reply.menu import admin_menu_kb, moderator_menu_kb
+from keyboards.reply.menu import admin_menu_kb, user_menu_kb
 from usecases.user import (
     DeleteUserUseCase,
     GetAllUsersUseCase,

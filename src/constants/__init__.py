@@ -104,7 +104,7 @@ class Dialog:
 
     """
 
-    MODERATORS_MENU_TEXT = """
+    USER_MENU_TEXT = """
     Выберите нужный пункт ниже
     """
 
