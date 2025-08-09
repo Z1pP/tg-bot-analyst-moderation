@@ -105,8 +105,8 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
         await send_html_message_with_kb(
             message=message,
             text=Dialog.SUCCESS_ADD_MODERATOR.format(
-                username=username,
-                user_id=user_id,
+                forward_username=username,
+                forward_user_id=user_id,
                 admin_username=admin_username,
             ),
             reply_markup=admin_menu_kb(),
