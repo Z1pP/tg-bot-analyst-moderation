@@ -32,7 +32,7 @@ async def menu_handler(message: Message, state: FSMContext) -> None:
     )
 
 
-@router.message(F.text == KbCommands.MODERATORS_MENU)
+@router.message(F.text == KbCommands.USERS_MENU)
 async def moderators_menu_handler(message: Message) -> None:
 
     await send_html_message_with_kb(
