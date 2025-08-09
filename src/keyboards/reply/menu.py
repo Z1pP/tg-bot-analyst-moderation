@@ -6,7 +6,7 @@ from constants import KbCommands
 def admin_menu_kb():
     buttons = [
         [
-            KeyboardButton(text=KbCommands.MODERATORS_MENU),
+            KeyboardButton(text=KbCommands.USERS_MENU),
             KeyboardButton(text=KbCommands.CHATS_MENU),
         ],
         [
@@ -43,11 +43,11 @@ def tamplates_menu_kb():
 def moderator_menu_kb():
     buttons = [
         [
-            KeyboardButton(text=KbCommands.SELECT_MODERATOR),
+            KeyboardButton(text=KbCommands.SELECT_USER),
         ],
         [
-            KeyboardButton(text=KbCommands.ADD_MODERATOR),
-            KeyboardButton(text=KbCommands.REMOVE_MODERATOR),
+            KeyboardButton(text=KbCommands.ADD_USER),
+            KeyboardButton(text=KbCommands.REMOVE_USER),
         ],
         [
             KeyboardButton(text=KbCommands.MENU),
