@@ -15,9 +15,9 @@ class KbCommands:
     # Users
     USERS_MENU = "😀 Пользователи"
     SELECT_USER = "👥 Выбрать пользователя"
-    ADD_USER = "➕ Добавить пользователя"
-    REMOVE_USER = "➖ Удалить пользователя"
-    SELECTED_USER = "Выбран: {username}"
+    ADD_USER = "Добавить"
+    REMOVE_USER = "Удалить"
+    # SELECTED_USER = "Выбран: {username}"
 
     # Chats
     CHATS_MENU = "📝 Чаты"
@@ -25,10 +25,10 @@ class KbCommands:
     ADD_CHAT = "➕ Добавить чат"
     REMOVE_CHAT = "➖ Удалить чат"
     TRACKED_CHATS = "📊 Отслеживаемые чаты"
-    SELECTED_CHAT = "Выбран: {chat_title}"
+    # SELECTED_CHAT = "Выбран: {chat_title}"
 
     # Reports
-    GET_REPORT = "⏱ Получить отчет"
+    GET_REPORT = "📊 Статистика"
     FULL_REPORT = "📋 Общий отчет"
 
     # Templates
@@ -46,7 +46,7 @@ class KbCommands:
 
 
 class Dialog:
-    START_TEXT = """
+    MENU_TEXT = """
     <b>Привет, {username}!</b> ✨
     <i>Рад видеть тебя здесь!</i>
 
