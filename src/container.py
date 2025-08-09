@@ -42,7 +42,8 @@ from usecases.user import (
     DeleteUserUseCase,
     GetAllUsersUseCase,
     GetOrCreateUserIfNotExistUserCase,
-    GetUserFromDatabaseUseCase,
+    GetUserByIdUseCase,
+    GetUserByUsernameUseCase,
 )
 
 
@@ -115,8 +116,9 @@ class ContainerSetup:
             GetOrCreateUserIfNotExistUserCase,
             CreateNewUserUserCase,
             DeleteUserUseCase,
-            GetUserFromDatabaseUseCase,
+            GetUserByUsernameUseCase,
             GetAllUsersUseCase,
+            GetUserByIdUseCase,
         ]
 
         for usecase in user_usecases:
