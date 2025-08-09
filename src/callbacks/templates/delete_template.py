@@ -23,6 +23,8 @@ async def remove_template_callback(
     state: FSMContext,
 ):
     try:
+        await state.set_state(TemplateStateManager.removing_template)
+
         try:
             template_id = int(query.data.split("__")[1])
         except (IndexError, ValueError):
@@ -37,7 +39,6 @@ async def remove_template_callback(
         )
 
         await state.update_data(template_id=int(template_id))
-        await state.set_state(TemplateStateManager.removing_template)
 
         await query.message.edit_text(
             text="Вы уверены, что хотите удалить шаблон?",
@@ -45,7 +46,9 @@ async def remove_template_callback(
         )
     except Exception as e:
         logger.error(f"Ошибка в remove_template_callback: {e}", exc_info=True)
-        await query.answer("⚠️ Произошла ошибка", show_alert=True)
+        await query.message.answer("⚠️ Произошла ошибка при удалении шаблонаs")
+    finally:
+        await query.answer()
 
 
 @router.callback_query(
