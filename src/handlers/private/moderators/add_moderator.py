@@ -14,7 +14,7 @@ from utils.username_validator import validate_username
 router = Router(name=__name__)
 
 
-@router.message(F.text == KbCommands.ADD_MODERATOR)
+@router.message(F.text == KbCommands.ADD_USER)
 async def add_moderator_handler(message: Message, state: FSMContext) -> None:
     """
     Хендлер для команды добавления модератора.
