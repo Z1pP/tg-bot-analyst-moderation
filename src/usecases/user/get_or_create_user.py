@@ -39,7 +39,7 @@ class GetOrCreateUserIfNotExistUserCase:
         if not tg_id and not username:
             raise ValueError("Either tg_id or username must be provided")
 
-        user = await self._get_user(tg_id, username)
+        user = await self._get_user(tg_id=tg_id, username=username)
 
         if user:
             return UserResult(user=user, is_existed=True)
