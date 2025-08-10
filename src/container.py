@@ -35,7 +35,7 @@ from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCa
 from usecases.report import (
     GetAllUsersReportUseCase,
     GetReportOnSpecificChatUseCase,
-    GetReportOnSpecificUserUseCase,
+    GetSingleUserReportUseCase,
 )
 from usecases.user import (
     CreateNewUserUserCase,
@@ -156,7 +156,7 @@ class ContainerSetup:
     def _register_report_usecases(container: Container) -> None:
         """Регистрация use cases для отчетов."""
         report_usecases = [
-            GetReportOnSpecificUserUseCase,
+            GetSingleUserReportUseCase,
             GetAllUsersReportUseCase,
             GetReportOnSpecificChatUseCase,
         ]
