@@ -8,7 +8,7 @@ from container import container
 from keyboards.inline.users import users_inline_kb
 from keyboards.reply.menu import admin_menu_kb
 from states import MenuStates
-from usecases.user import GetAllUsersUseCase
+from usecases.user_tracking import GetListTrackedUsersUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 
@@ -25,8 +25,10 @@ async def users_list_handler(message: Message) -> None:
             f"Пользователь {message.from_user.id} запросил список пользователей для отчета"
         )
 
-        usecase: GetAllUsersUseCase = container.resolve(GetAllUsersUseCase)
-        users = await usecase.execute()
+        usecase: GetListTrackedUsersUseCase = container.resolve(
+            GetListTrackedUsersUseCase
+        )
+        users = await usecase.execute(admin_username=message.from_user.username)
 
         if not users:
             logger.info("Список пользователей пуст")
