@@ -19,7 +19,7 @@ import logging
 from constants.enums import UserRole
 from container import container
 from usecases.user import GetOrCreateUserIfNotExistUserCase
-from utils.username_validator import validate_username
+from utils.username_validator import parse_and_validate_username
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -43,7 +43,7 @@ async def get_or_create_admin(username: str, role: str) -> None:
         Exception: При ошибках доступа к базе данных или других проблемах
     """
     # Валидируем username
-    valid_username = validate_username(username)
+    valid_username = parse_and_validate_username(username)
     if not valid_username:
         logger.error(f"Invalid username: {username}")
         raise ValueError(f"Invalid username format: {username}")
