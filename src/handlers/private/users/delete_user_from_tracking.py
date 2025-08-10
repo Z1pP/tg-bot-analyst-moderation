@@ -9,10 +9,10 @@ from container import container
 from keyboards.inline.users import conf_remove_user_kb, remove_user_inline_kb
 from keyboards.reply.menu import admin_menu_kb
 from states import MenuStates
-from usecases.user import (
-    DeleteUserUseCase,
-    GetAllUsersUseCase,
-    GetUserByIdUseCase,
+from usecases.user import GetUserByIdUseCase
+from usecases.user_tracking import (
+    GetListTrackedUsersUseCase,
+    RemoveUserFromTrackingUseCase,
 )
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -35,10 +35,12 @@ async def remove_user_from_tracking_handler(message: Message) -> None:
             f"Пользователь {message.from_user.id} запросил список пользователей для удаления"
         )
 
-        usecase: GetAllUsersUseCase = container.resolve(GetAllUsersUseCase)
-        users = await usecase.execute()
+        usecase: GetListTrackedUsersUseCase = container.resolve(
+            GetListTrackedUsersUseCase
+        )
+        tracked_users = await usecase.execute(admin_username=message.from_user.username)
 
-        if not users:
+        if not tracked_users:
             logger.info("Список пользователей пуст")
             message_text = (
                 "❗Чтобы получать отчёты по пользователям, "
@@ -52,11 +54,11 @@ async def remove_user_from_tracking_handler(message: Message) -> None:
             )
             return
 
-        logger.info(f"Найдено {len(users)} пользователей для удаления")
+        logger.info(f"Найдено {len(tracked_users)} пользователей для удаления")
         await send_html_message_with_kb(
             message=message,
-            text=f"Всего {len(users)} пользователей",
-            reply_markup=remove_user_inline_kb(users),
+            text=f"Всего {len(tracked_users)} пользователей",
+            reply_markup=remove_user_inline_kb(tracked_users),
         )
     except Exception as e:
         await handle_exception(
@@ -86,7 +88,7 @@ async def process_removing_user(
             await callback.answer("Пользователь не найден", show_alert=True)
             return
 
-        await state.update_data(user_id=user_id, username=user.username)
+        await state.update_data(username=user.username)
         logger.info(f"Запрос подтверждения удаления пользователя: {user.username}")
 
         message_text = (
@@ -114,18 +116,23 @@ async def confirmation_removing_user(
     """
     try:
         data = await state.get_data()
-        user_id = data.get("user_id")
         username = data.get("username")
+        admin_username = callback.from_user.username
         answer = callback.data.split("__")[1]
 
         logger.info(f"Подтверждение удаления пользователя {username}: {answer}")
 
         if answer == "yes":
-            delete_usecase: DeleteUserUseCase = container.resolve(DeleteUserUseCase)
-            success = await delete_usecase.execute(user_id=user_id)
+            usecase: RemoveUserFromTrackingUseCase = container.resolve(
+                RemoveUserFromTrackingUseCase
+            )
+            success = await usecase.execute(
+                admin_username=admin_username,
+                user_username=username,
+            )
 
             if success:
-                logger.info(f"Пользователь {username} успешно удален")
+                logger.info(f"Пользователь {username} успешно удален из отслеживания")
                 text = (
                     f"✅ Готово! @{username} удалён из отлеживания!\n\n"
                     "❗️Вы всегда можете вернуть пользователя "
