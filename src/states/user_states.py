@@ -21,3 +21,14 @@ class UsernameManagement(StatesGroup):
     """Состояние для задавания имени пользователя"""
 
     imput_username = State()
+
+
+class SingleUserReportPeriod(StatesGroup):
+    selecting_period = State()
+    waiting_cutom_period = State()
+
+
+class AllUsersReportStates(StatesGroup):
+    selected_all_users = State()
+    selecting_period = State()
+    waiting_custom_period = State()
