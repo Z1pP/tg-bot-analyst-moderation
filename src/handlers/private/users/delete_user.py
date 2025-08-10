@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, Message
 
 from constants import KbCommands
 from container import container
-from keyboards.inline.moderators import conf_remove_user_kb, remove_inline_kb
+from keyboards.inline.users import conf_remove_user_kb, remove_user_inline_kb
 from keyboards.reply.menu import admin_menu_kb
 from states import MenuStates
 from usecases.user import (
@@ -56,7 +56,7 @@ async def remove_user_from_tracking_handler(message: Message) -> None:
         await send_html_message_with_kb(
             message=message,
             text=f"Всего {len(users)} пользователей",
-            reply_markup=remove_inline_kb(users),
+            reply_markup=remove_user_inline_kb(users),
         )
     except Exception as e:
         await handle_exception(

@@ -5,7 +5,7 @@ from aiogram.types import Message
 
 from constants import KbCommands
 from container import container
-from keyboards.inline.moderators import moderators_inline_kb
+from keyboards.inline.users import users_inline_kb
 from keyboards.reply.menu import admin_menu_kb
 from states import MenuStates
 from usecases.user import GetAllUsersUseCase
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.message(F.text == KbCommands.GET_REPORT, MenuStates.users_menu)
+@router.message(F.text == KbCommands.SELECT_USER)
 async def users_list_handler(message: Message) -> None:
     """Обработчик команды для получения списка пользователей."""
     try:
@@ -45,7 +46,7 @@ async def users_list_handler(message: Message) -> None:
         await send_html_message_with_kb(
             message=message,
             text=f"Всего {len(users)} пользователей",
-            reply_markup=moderators_inline_kb(users),
+            reply_markup=users_inline_kb(users),
         )
     except Exception as e:
         await handle_exception(message, e, "users_list_handler")

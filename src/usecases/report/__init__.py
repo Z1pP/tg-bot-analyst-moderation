@@ -1,9 +1,9 @@
 from .chat.get_chat_report import GetReportOnSpecificChatUseCase
-from .moderator.get_full_report import GetAllModeratorsReportUseCase
-from .moderator.get_specific_moderator_report import GetReportOnSpecificModeratorUseCase
+from .user.get_all_users_report import GetAllUsersReportUseCase
+from .user.get_single_user_report import GetSingleUserReportUseCase
 
 __all__ = [
-    "GetReportOnSpecificModeratorUseCase",
-    "GetAllModeratorsReportUseCase",
+    "GetSingleUserReportUseCase",
+    "GetAllUsersReportUseCase",
     "GetReportOnSpecificChatUseCase",
 ]
