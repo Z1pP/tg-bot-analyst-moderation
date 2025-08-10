@@ -14,7 +14,7 @@ class CommandList(str, Enum):
 class KbCommands:
     # Users
     USERS_MENU = "😀 Пользователи"
-    SELECT_USER = "👥 Выбрать пользователя"
+    SELECT_USER = "🔄 Выбрать другого пользователя"
     ADD_USER = "Добавить"
     REMOVE_USER = "Удалить"
     # SELECTED_USER = "Выбран: {username}"
@@ -28,8 +28,9 @@ class KbCommands:
     # SELECTED_CHAT = "Выбран: {chat_title}"
 
     # Reports
-    GET_REPORT = "📊 Статистика"
+    GET_REPORT = "⏱️ Получить отчет"
     FULL_REPORT = "📋 Общий отчет"
+    GET_STATISTICS = "📊 Статистика"
 
     # Templates
     TEMPLATES_MENU = "🚀 Шаблоны ответов"
