@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from container import container
-from keyboards.inline.templates_answers import conf_remove_template_kb
+from keyboards.inline.templates import conf_remove_template_kb
 from repositories import MessageTemplateRepository
 from states import TemplateStateManager
 
