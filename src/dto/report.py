@@ -21,14 +21,14 @@ class AVGReportDTO:
 
 @dataclass
 class ResponseTimeReportDTO:
-    username: str
+    user_id: int
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
 
 
 @dataclass
-class AllModeratorReportDTO:
+class AllUsersReportDTO:
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
