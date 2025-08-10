@@ -11,6 +11,7 @@ from repositories import (
     TemplateCategoryRepository,
     TemplateMediaRepository,
     UserRepository,
+    UserTrackingRepository,
 )
 from services.caching import ICache, TTLEntityCache
 from services.categories import CategoryService
@@ -45,6 +46,10 @@ from usecases.user import (
     GetUserByIdUseCase,
     GetUserByUsernameUseCase,
 )
+from usecases.user_tracking import (
+    AddUserToTrackingUseCase,
+    GetListTrackedUsersUseCase,
+)
 
 
 class ContainerSetup:
@@ -72,6 +77,7 @@ class ContainerSetup:
             TemplateMediaRepository,
             MessageTemplateRepository,
             MessageReactionRepository,
+            UserTrackingRepository,
         ]
 
         for repo in repositories:
@@ -166,8 +172,18 @@ class ContainerSetup:
 
     @staticmethod
     def _register_tracking_usecases(container: Container) -> None:
-        """Регистрация use cases для отслеживания."""
+        """Регистрация use cases для отслеживания чатов."""
         container.register(AddChatToTrackUseCase)
+
+    def _register_tracking_usecases(container: Container) -> None:
+        """Регистрация use cases для отслеживания пользователей."""
+        tracking_usecases = [
+            AddUserToTrackingUseCase,
+            GetListTrackedUsersUseCase,
+        ]
+
+        for usecase in tracking_usecases:
+            container.register(usecase)
 
 
 # Создаем и экспортируем контейнер
