@@ -4,7 +4,7 @@ from statistics import mean, median
 from typing import List
 
 from constants import MAX_MSG_LENGTH
-from dto.report import AllModeratorReportDTO
+from dto.report import AllUsersReportDTO
 from models import ChatMessage, MessageReaction, MessageReply, User
 from services.break_analysis_service import BreakAnalysisService
 from utils.formatter import format_seconds
@@ -14,17 +14,17 @@ from .base import BaseReportUseCase
 logger = logging.getLogger(__name__)
 
 
-class GetAllModeratorsReportUseCase(BaseReportUseCase):
-    async def execute(self, dto: AllModeratorReportDTO) -> List[str]:
-        """Генерирует отчет по всем модераторам за указанный период."""
+class GetAllUsersReportUseCase(BaseReportUseCase):
+    async def execute(self, dto: AllUsersReportDTO) -> List[str]:
+        """Генерирует отчет по всем пользователям за выбранным период."""
         users = await self._user_repository.get_all_moderators()
 
         if not users:
-            logger.error(f"Количество найденных модераторов = {len(users)}")
-            return ["⚠️ Список модераторов пуст, добавьте модератора!"]
+            logger.error(f"Количество пользователей = {len(users)}")
+            return ["⚠️ Список пользователей пуст, добавьте пользователя!"]
 
         selected_period = self._format_selected_period(dto.selected_period)
-        report_title = f"<b>📈 Отчет по модераторам за {selected_period}</b>"
+        report_title = f"<b>📈 Отчет по пользователям за {selected_period}</b>"
 
         reports = []
         for user in users:
@@ -40,7 +40,7 @@ class GetAllModeratorsReportUseCase(BaseReportUseCase):
         full_report = "\n\n".join([report_title] + reports)
         return self._split_report(full_report)
 
-    async def _get_user_data(self, user: User, dto: AllModeratorReportDTO) -> dict:
+    async def _get_user_data(self, user: User, dto: AllUsersReportDTO) -> dict:
         """Получает все данные пользователя за период."""
         replies = await self._get_processed_items(
             self._msg_reply_repository.get_replies_by_period_date,

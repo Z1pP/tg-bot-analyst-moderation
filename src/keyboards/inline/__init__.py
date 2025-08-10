@@ -1,6 +1,6 @@
-from .moderators import moderators_inline_kb, remove_inline_kb
+from .users import remove_user_inline_kb, users_inline_kb
 
 __all__ = [
-    "moderators_inline_kb",
-    "remove_inline_kb",
+    "users_inline_kb",
+    "remove_user_inline_kb",
 ]

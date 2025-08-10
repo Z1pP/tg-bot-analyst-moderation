@@ -7,12 +7,12 @@ from apscheduler.triggers.cron import CronTrigger
 
 from constants.period import TimePeriod
 from container import container
-from dto.report import AllModeratorReportDTO
+from dto.report import AllUsersReportDTO
 from models import ChatSession
 from repositories import ChatTrackingRepository, UserRepository
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
-from usecases.report import GetAllModeratorsReportUseCase
+from usecases.report import GetAllUsersReportUseCase
 
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
@@ -70,15 +70,13 @@ async def send_daily_report(bot: Bot) -> None:
         start_date, end_date
     )
 
-    report_dto = AllModeratorReportDTO(
+    report_dto = AllUsersReportDTO(
         start_date=adjusted_start,
         end_date=adjusted_end,
         selected_period=selected_period,
     )
 
-    usecase: GetAllModeratorsReportUseCase = container.resolve(
-        GetAllModeratorsReportUseCase
-    )
+    usecase: GetAllUsersReportUseCase = container.resolve(GetAllUsersReportUseCase)
     report_parts = await usecase.execute(dto=report_dto)
 
     for part in report_parts:

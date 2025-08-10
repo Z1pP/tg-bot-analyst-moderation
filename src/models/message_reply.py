@@ -53,4 +53,11 @@ class MessageReply(BaseModel):
         back_populates="replies",
     )
 
-    __table_args__ = (Index("idx_reply_time", "created_at"),)
+    __table_args__ = (
+        Index("idx_reply_time", "created_at"),
+        Index("idx_reply_user", "reply_user_id"),
+        Index("idx_reply_chat", "chat_id"),
+        Index("idx_reply_user_created", "reply_user_id", "created_at"),
+        Index("idx_reply_chat_created", "chat_id", "created_at"),
+        Index("idx_reply_response_time", "response_time_seconds"),
+    )

@@ -93,4 +93,8 @@ class ChatMessage(BaseModel):
         Index("idx_message_user", "user_id"),
         Index("idx_message_chat", "chat_id"),
         Index("idx_message_created", "created_at"),
+        Index("idx_message_chat_created", "chat_id", "created_at"),
+        Index("idx_message_user_created", "user_id", "created_at"),
+        Index("idx_message_type", "message_type"),
+        Index("idx_message_user_type", "user_id", "message_type"),
     )

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String
+from sqlalchemy import Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -50,4 +50,9 @@ class ChatSession(BaseModel):
         "MessageReaction",
         back_populates="chat",
         cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        Index("idx_chat_session_chat_id", "chat_id"),
+        Index("idx_chat_session_title", "title"),
     )

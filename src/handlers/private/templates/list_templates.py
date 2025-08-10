@@ -4,7 +4,7 @@ from aiogram.types import Message
 
 from constants import KbCommands
 from container import container
-from keyboards.inline.templates_answers import templates_inline_kb
+from keyboards.inline.templates import templates_inline_kb
 from services.templates import TemplateService
 from states import TemplateStateManager
 from utils.exception_handler import handle_exception

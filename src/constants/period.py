@@ -10,8 +10,6 @@ class TimePeriod(Enum):
     Перечисления для указания выбора периода создания отчета 📅 🔧
     """
 
-    THREE_HOURS = "📅 За 3 часа"
-    SIX_HOURS = "📅 За 6 часов"
     TODAY = "📅 За сегодня"
     YESTERDAY = "📅 За вчера"
     ONE_WEEK = "📅 За неделю"
@@ -43,13 +41,7 @@ class TimePeriod(Enum):
         # Текущий день
         start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        if period == cls.THREE_HOURS.value:
-            return now - timedelta(hours=3), now
-
-        elif period == cls.SIX_HOURS.value:
-            return now - timedelta(hours=6), now
-
-        elif period == cls.TODAY.value:
+        if period == cls.TODAY.value:
             return start_of_today, now
 
         elif period == cls.YESTERDAY.value:

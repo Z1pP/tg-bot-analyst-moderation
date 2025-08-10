@@ -16,11 +16,12 @@ from .base import BaseReportUseCase
 logger = logging.getLogger(__name__)
 
 
-class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
+class GetSingleUserReportUseCase(BaseReportUseCase):
     async def execute(self, report_dto: ResponseTimeReportDTO) -> List[str]:
-        """Генерирует отчет по указанному модератору."""
-        user = await self._get_user(report_dto.username)
-        user_data = await self._get_user_data(user, report_dto)
+        """Генерирует отчет по выбранному пользователю."""
+
+        user = await self._get_user(user_id=report_dto.user_id)
+        user_data = await self._get_user_data(user=user, dto=report_dto)
 
         full_report = self._generate_report(
             user_data,
@@ -32,11 +33,11 @@ class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
 
         return self._split_report(full_report)
 
-    async def _get_user(self, username: str) -> User:
-        """Получает пользователя по username."""
-        user = await self._user_repository.get_user_by_username(username)
+    async def _get_user(self, user_id: int) -> User:
+        """Получает пользователя по user_id."""
+        user = await self._user_repository.get_user_by_id(user_id=user_id)
         if not user:
-            logger.error(f"Пользователь не найден: {username}")
+            logger.error(f"Пользователь с ID={user_id} не найден")
             raise UserNotFoundException()
         return user
 
@@ -64,7 +65,8 @@ class GetReportOnSpecificModeratorUseCase(BaseReportUseCase):
         )
 
         logger.info(
-            f"Пользователь {user.username}: {len(messages)} сообщений, {len(replies)} ответов, {len(reactions)} реакций"
+            f"Пользователь {user.username}: {len(messages)} сообщений, "
+            f"{len(replies)} ответов, {len(reactions)} реакций"
         )
 
         return {"replies": replies, "messages": messages, "reactions": reactions}

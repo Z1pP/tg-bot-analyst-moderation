@@ -13,7 +13,7 @@ from services.chat import ChatService
 from services.time_service import TimeZoneService
 from services.user import UserService
 from usecases.message import (
-    SaveModeratorMessageUseCase,
+    SaveMessageUseCase,
     SaveModeratorReplyMessageUseCase,
 )
 
@@ -86,6 +86,14 @@ async def process_user_message(
         created_at=message_date,
     )
 
+    try:
+        message_usecase: SaveMessageUseCase = container.resolve(SaveMessageUseCase)
+        saved_message = await message_usecase.execute(message_dto=msg_dto)
+
+        logger.info(f"Сообщение сохранено: {saved_message}")
+    except Exception as e:
+        logger.error(f"Ошибка при сохранении пользотваельного сообщения: {e}")
+
 
 async def process_reply_message(
     message: Message,
@@ -116,9 +124,7 @@ async def process_reply_message(
 
     try:
         # Сохраняем reply как обычное сообщение
-        message_usecase: SaveModeratorMessageUseCase = container.resolve(
-            SaveModeratorMessageUseCase
-        )
+        message_usecase: SaveMessageUseCase = container.resolve(SaveMessageUseCase)
         saved_message = await message_usecase.execute(message_dto=msg_dto)
 
         # Создаем ссылку на оригинальное сообщение
@@ -170,9 +176,7 @@ async def process_reqular_message(
     )
 
     try:
-        usecase: SaveModeratorMessageUseCase = container.resolve(
-            SaveModeratorMessageUseCase
-        )
+        usecase: SaveMessageUseCase = container.resolve(SaveMessageUseCase)
         await usecase.execute(message_dto=msg_dto)
     except Exception as e:
         logger.error("Error saving message: %s", str(e))

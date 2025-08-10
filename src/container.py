@@ -28,22 +28,22 @@ from usecases.chat import (
 from usecases.chat_tracking import AddChatToTrackUseCase
 from usecases.message import (
     SaveMessageUseCase,
-    SaveModeratorMessageUseCase,
     SaveModeratorReplyMessageUseCase,
 )
 from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
-    GetAllModeratorsReportUseCase,
+    GetAllUsersReportUseCase,
     GetReportOnSpecificChatUseCase,
-    GetReportOnSpecificModeratorUseCase,
+    GetSingleUserReportUseCase,
 )
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
     GetAllUsersUseCase,
     GetOrCreateUserIfNotExistUserCase,
-    GetUserFromDatabaseUseCase,
+    GetUserByIdUseCase,
+    GetUserByUsernameUseCase,
 )
 
 
@@ -116,8 +116,9 @@ class ContainerSetup:
             GetOrCreateUserIfNotExistUserCase,
             CreateNewUserUserCase,
             DeleteUserUseCase,
-            GetUserFromDatabaseUseCase,
+            GetUserByUsernameUseCase,
             GetAllUsersUseCase,
+            GetUserByIdUseCase,
         ]
 
         for usecase in user_usecases:
@@ -140,7 +141,6 @@ class ContainerSetup:
         """Регистрация use cases для сообщений."""
         message_usecases = [
             SaveMessageUseCase,
-            SaveModeratorMessageUseCase,
             SaveModeratorReplyMessageUseCase,
         ]
 
@@ -156,8 +156,8 @@ class ContainerSetup:
     def _register_report_usecases(container: Container) -> None:
         """Регистрация use cases для отчетов."""
         report_usecases = [
-            GetReportOnSpecificModeratorUseCase,
-            GetAllModeratorsReportUseCase,
+            GetSingleUserReportUseCase,
+            GetAllUsersReportUseCase,
             GetReportOnSpecificChatUseCase,
         ]
 

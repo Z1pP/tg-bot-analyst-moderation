@@ -1,4 +1,3 @@
-import re
 from typing import Optional
 
 from aiogram.enums import ParseMode
@@ -12,11 +11,8 @@ def validate_username(username: str) -> Optional[str]:
     username = username.strip()
     if username.startswith("@"):
         username = username[1:]
-
-    if not re.match(r"^[a-zA-Z0-9_]{5,32}$", username):
-        return None
-
-    return username
+        return username
+    return None
 
 
 async def get_valid_username(message: Message) -> str | None:

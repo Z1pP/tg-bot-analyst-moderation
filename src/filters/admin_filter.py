@@ -8,7 +8,7 @@ from constants.enums import UserRole
 from container import container
 from models.user import User
 from services.caching import ICache
-from usecases.user import GetUserFromDatabaseUseCase
+from usecases.user import GetUserByUsernameUseCase
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class BaseUserFilter(Filter):
     async def _get_user_from_db(self, username: str) -> Optional[User]:
         """Получает пользователя из БД"""
         try:
-            usecase = container.resolve(GetUserFromDatabaseUseCase)
+            usecase = container.resolve(GetUserByUsernameUseCase)
             return await usecase.execute(username=username)
         except Exception:
             return None

@@ -24,17 +24,19 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message(
-    ChatStateManager.selecting_chat,
-    F.text == KbCommands.GET_REPORT,
-)
-async def specific_chat_report(message: Message, state: FSMContext) -> None:
+@router.message(ChatStateManager.selecting_chat, F.text == KbCommands.GET_REPORT)
+async def single_chat_report_handler(message: Message, state: FSMContext) -> None:
     """Обработчик запроса на создание отчета по конкретному чату."""
     try:
         data = await state.get_data()
         chat_title = data.get("chat_title")
 
+        logger.info(
+            f"Пользователь {message.from_user.id} запросил отчет по чату: {chat_title}"
+        )
+
         if not chat_title:
+            logger.warning("Отсутствует название чата в состоянии")
             await select_chat_again(message=message, state=state)
             return
 
@@ -45,16 +47,11 @@ async def specific_chat_report(message: Message, state: FSMContext) -> None:
             reply_markup=get_time_period_kb(),
         )
     except Exception as e:
-        await handle_exception(
-            message=message,
-            exc=e,
-            context="specific_chat_report",
-        )
+        await handle_exception(message, e, "specific_chat_report")
 
 
 @router.message(
-    ChatStateManager.selecting_period,
-    F.text.in_(TimePeriod.get_all_periods()),
+    ChatStateManager.selecting_period, F.text.in_(TimePeriod.get_all_periods())
 )
 async def process_report_input(message: Message, state: FSMContext) -> None:
     """Обрабатывает выбор периода для отчета."""
@@ -62,11 +59,15 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
         data = await state.get_data()
         chat_title = data.get("chat_title")
 
+        logger.info(f"Выбран период для чата {chat_title}: {message.text}")
+
         if not chat_title:
+            logger.warning("Отсутствует название чата при выборе периода")
             await select_chat_again(message=message, state=state)
             return
 
         if message.text == TimePeriod.CUSTOM.value:
+            logger.info("Запрос пользовательского периода для чата")
             await state.set_state(ChatStateManager.selecting_custom_period)
             await send_html_message_with_kb(
                 message=message,
@@ -76,6 +77,10 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
             return
 
         start_date, end_date = TimePeriod.to_datetime(message.text)
+        logger.info(
+            f"Генерация отчета по чату {chat_title} за период: {start_date} - {end_date}"
+        )
+
         await generate_and_send_report(
             message=message,
             state=state,
@@ -85,11 +90,7 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
             selected_period=message.text,
         )
     except Exception as e:
-        await handle_exception(
-            message=message,
-            exc=e,
-            context="process_report_input",
-        )
+        await handle_exception(message, e, "process_report_input")
 
 
 @router.message(ChatStateManager.selecting_custom_period)
@@ -99,13 +100,20 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
         data = await state.get_data()
         chat_title = data.get("chat_title")
 
+        logger.info(
+            f"Получен пользовательский период для чата {chat_title}: {message.text}"
+        )
+
         if not chat_title:
+            logger.warning("Отсутствует название чата при вводе периода")
             await select_chat_again(message=message, state=state)
             return
 
         try:
             start_date, end_date = parse_date(message.text)
+            logger.info(f"Парсинг периода успешен: {start_date} - {end_date}")
         except ValueError as e:
+            logger.warning(f"Некорректный формат даты: {message.text}, ошибка: {e}")
             await send_html_message_with_kb(
                 message=message,
                 text=f"❌ Некорректный формат даты: {str(e)}\n"
@@ -124,22 +132,17 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
             selected_period=message.text,
         )
     except Exception as e:
-        await handle_exception(
-            message=message,
-            exc=e,
-            context="process_custom_period_input",
-        )
+        await handle_exception(message, e, "process_custom_period_input")
 
 
-@router.message(
-    ChatStateManager.selecting_period,
-    F.text == KbCommands.BACK,
-)
+@router.message(ChatStateManager.selecting_period, F.text == KbCommands.BACK)
 async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
     """Обработчик для возврата в меню чата."""
     try:
         data = await state.get_data()
         chat_title = data.get("chat_title")
+
+        logger.info(f"Возврат в меню чата: {chat_title}")
 
         if not chat_title:
             await select_chat_again(message=message, state=state)
@@ -157,6 +160,7 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
 
 async def select_chat_again(message: Message, state: FSMContext) -> None:
     """Повторно запрашивает выбор чата."""
+    logger.info("Запрос повторного выбора чата")
     await state.clear()
     await send_html_message_with_kb(
         message=message,
@@ -175,6 +179,10 @@ async def generate_and_send_report(
 ) -> None:
     """Генерирует и отправляет отчет по чату."""
     try:
+        logger.info(
+            f"Начало генерации отчета по чату {chat_title} за период {start_date} - {end_date}"
+        )
+
         adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
             start_date, end_date
         )
@@ -187,6 +195,9 @@ async def generate_and_send_report(
         )
 
         report_parts = await generate_report(report_dto)
+        logger.info(
+            f"Отчет по чату {chat_title} сгенерирован, частей: {len(report_parts)}"
+        )
 
         await state.set_state(ChatStateManager.selecting_period)
 
@@ -199,7 +210,10 @@ async def generate_and_send_report(
                 text=part,
                 reply_markup=get_time_period_kb(),
             )
+
+        logger.info(f"Отчет по чату {chat_title} успешно отправлен")
     except Exception as e:
+        logger.error(f"Ошибка при генерации/отправке отчета по чату {chat_title}: {e}")
         await handle_exception(message, e, "generate_and_send_report")
 
 
@@ -212,4 +226,4 @@ async def generate_report(report_dto: ChatReportDTO) -> List[str]:
         return await usecase.execute(dto=report_dto)
     except Exception as e:
         logger.error("Ошибка генерации отчета: %s", str(e), exc_info=True)
-        raise e
+        raise
