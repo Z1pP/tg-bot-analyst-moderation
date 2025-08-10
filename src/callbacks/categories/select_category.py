@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery
 
 from container import container
 from keyboards.inline.chats_kb import template_scope_selector_kb
-from keyboards.inline.templates_answers import templates_inline_kb
+from keyboards.inline.templates import templates_inline_kb
 from services.templates import TemplateService
 from states import TemplateStateManager
 from usecases.chat import GetTrackedChatsUseCase
