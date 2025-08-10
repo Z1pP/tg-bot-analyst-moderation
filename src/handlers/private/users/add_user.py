@@ -8,7 +8,7 @@ from constants import Dialog, KbCommands
 from container import container
 from keyboards.reply import admin_menu_kb, get_back_kb
 from states import MenuStates
-from states.user_states import UsernameManagement
+from states.user_states import UsernameStates
 from usecases.user import GetOrCreateUserIfNotExistUserCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -29,13 +29,14 @@ async def add_user_to_tracking_handler(message: Message, state: FSMContext) -> N
     """
     try:
         logger.info(
-            f"Пользователь {message.from_user.id} начал добавление нового пользователя"
+            f"Пользователь {message.from_user.id} начал добавление "
+            "нового пользователя в отслеживание"
         )
 
         await log_and_set_state(
             message=message,
             state=state,
-            new_state=UsernameManagement.imput_username,
+            new_state=UsernameStates.imput_username,
         )
 
         await send_html_message_with_kb(
@@ -47,7 +48,7 @@ async def add_user_to_tracking_handler(message: Message, state: FSMContext) -> N
         await handle_exception(message, e, "add_user_to_tracking_handler")
 
 
-@router.message(UsernameManagement.imput_username)
+@router.message(UsernameStates.imput_username)
 async def process_adding_user(message: Message, state: FSMContext) -> None:
     """
     Обработчик для получения @username нового пользователя.

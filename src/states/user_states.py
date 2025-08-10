@@ -17,13 +17,13 @@ class UserStateManager(StatesGroup):
     report_full_waiting_input_period = State()
 
 
-class UsernameManagement(StatesGroup):
+class UsernameStates(StatesGroup):
     """Состояние для задавания имени пользователя"""
 
     imput_username = State()
 
 
-class SingleUserReportPeriod(StatesGroup):
+class SingleUserReportStates(StatesGroup):
     selecting_period = State()
     waiting_cutom_period = State()
 
