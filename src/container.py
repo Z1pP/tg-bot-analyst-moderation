@@ -49,6 +49,7 @@ from usecases.user import (
 from usecases.user_tracking import (
     AddUserToTrackingUseCase,
     GetListTrackedUsersUseCase,
+    RemoveUserFromTrackingUseCase,
 )
 
 
@@ -180,6 +181,7 @@ class ContainerSetup:
         tracking_usecases = [
             AddUserToTrackingUseCase,
             GetListTrackedUsersUseCase,
+            RemoveUserFromTrackingUseCase,
         ]
 
         for usecase in tracking_usecases:
