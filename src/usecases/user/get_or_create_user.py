@@ -4,6 +4,7 @@ from typing import Optional
 from constants.enums import UserRole
 from models import User
 from repositories.user_repository import UserRepository
+from services.caching import ICache
 
 
 @dataclass
@@ -13,8 +14,13 @@ class UserResult:
 
 
 class GetOrCreateUserIfNotExistUserCase:
-    def __init__(self, user_repository: UserRepository):
+    def __init__(
+        self,
+        user_repository: UserRepository,
+        cache_service: ICache,
+    ):
         self.user_repository = user_repository
+        self.cache_service = cache_service
 
     async def execute(
         self,
@@ -58,8 +64,17 @@ class GetOrCreateUserIfNotExistUserCase:
         Получает пользователя по tg_id или username
         """
         if tg_id:
-            return await self.user_repository.get_user_by_tg_id(tg_id)
-        return await self.user_repository.get_user_by_username(username)
+            user = self.cache_service.get(key=tg_id)
+            if user:
+                return user
+
+            user = user = await self.user_repository.get_user_by_tg_id(tg_id)
+            if user:
+                self.cache_service.set(key=tg_id, value=user)
+                return user
+        if username:
+            return await self.user_repository.get_user_by_username(username)
+        return None
 
     async def _create_user(
         self,
@@ -70,8 +85,10 @@ class GetOrCreateUserIfNotExistUserCase:
         """
         Создает нового пользователя
         """
-        return await self.user_repository.create_user(
+        user = await self.user_repository.create_user(
             tg_id=tg_id,
             username=username,
             role=role,
         )
+        self.cache_service.set(key=tg_id, value=user)
+        return user
