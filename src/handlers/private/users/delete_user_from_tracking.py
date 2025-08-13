@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, Message
 from constants import KbCommands
 from container import container
 from keyboards.inline.users import conf_remove_user_kb, remove_user_inline_kb
-from keyboards.reply.menu import admin_menu_kb
+from keyboards.reply.menu import user_menu_kb
 from states import MenuStates
 from usecases.user import GetUserByIdUseCase
 from usecases.user_tracking import (
@@ -43,14 +43,13 @@ async def remove_user_from_tracking_handler(message: Message) -> None:
         if not tracked_users:
             logger.info("Список пользователей пуст")
             message_text = (
-                "❗Чтобы получать отчёты по пользователям, "
-                "необходимо добавить юзера в отслеживаемые, "
-                "а также пользователей для сбора статистики"
+                "⚠ Удаление невозможно, так как в отслеживание "
+                "ещё не добавлен ни один пользователь."
             )
             await send_html_message_with_kb(
                 message=message,
                 text=message_text,
-                reply_markup=admin_menu_kb(),
+                reply_markup=user_menu_kb(),
             )
             return
 
