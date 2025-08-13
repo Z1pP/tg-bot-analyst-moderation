@@ -19,13 +19,14 @@ class UserTrackingRepository:
         """Добавляет пользователя в список отслеживания админа."""
         async with async_session() as session:
             try:
-                # Загружаем админа с уже привязанными пользователями
+                # Используем first() вместо scalar_one_or_none() для обработки дубликатов
                 admin_result = await session.execute(
                     select(User)
                     .options(selectinload(User.tracked_users))
                     .where(User.username == admin_username)
                 )
-                admin_user = admin_result.scalar_one_or_none()
+                admin_user = admin_result.first()
+                admin_user = admin_user[0] if admin_user else None
 
                 if not admin_user:
                     logger.warning(f"Админ c username={admin_username} не найден")
@@ -34,7 +35,8 @@ class UserTrackingRepository:
                 tracking_result = await session.execute(
                     select(User).where(User.username == user_username)
                 )
-                tracking_user = tracking_result.scalar_one_or_none()
+                tracking_user = tracking_result.first()
+                tracking_user = tracking_user[0] if tracking_user else None
 
                 if not tracking_user:
                     logger.warning(f"Пользователь c username={user_username} не найден")
@@ -43,8 +45,7 @@ class UserTrackingRepository:
                 # Проверяем существующую связь
                 if tracking_user in admin_user.tracked_users:
                     logger.info(
-                        f"Пользователь {user_username} уже отслеживается "
-                        f"админом {admin_username}"
+                        f"Пользователь {user_username} уже отслеживается админом {admin_username}"
                     )
                     return True
 
@@ -52,8 +53,7 @@ class UserTrackingRepository:
                 await session.commit()
 
                 logger.info(
-                    f"Пользователь {user_username} добавлен в отслеживание "
-                    f"админом {admin_username}"
+                    f"Пользователь {user_username} добавлен в отслеживание админом {admin_username}"
                 )
                 return True
 
@@ -75,7 +75,8 @@ class UserTrackingRepository:
                     .options(selectinload(User.tracked_users))
                     .where(User.username == admin_username)
                 )
-                admin_user = admin_result.scalar_one_or_none()
+                admin_user = admin_result.first()
+                admin_user = admin_user[0] if admin_user else None
 
                 if not admin_user:
                     logger.warning(f"Админ не найден: admin_username={admin_username}")
