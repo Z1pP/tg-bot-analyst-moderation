@@ -44,7 +44,7 @@ from usecases.user import (
     GetAllUsersUseCase,
     GetOrCreateUserIfNotExistUserCase,
     GetUserByIdUseCase,
-    GetUserByUsernameUseCase,
+    GetUserByTgIdUseCase,
 )
 from usecases.user_tracking import (
     AddUserToTrackingUseCase,
@@ -123,7 +123,7 @@ class ContainerSetup:
             GetOrCreateUserIfNotExistUserCase,
             CreateNewUserUserCase,
             DeleteUserUseCase,
-            GetUserByUsernameUseCase,
+            GetUserByTgIdUseCase,
             GetAllUsersUseCase,
             GetUserByIdUseCase,
         ]
