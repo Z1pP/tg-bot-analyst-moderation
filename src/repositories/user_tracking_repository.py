@@ -85,7 +85,8 @@ class UserTrackingRepository:
                 tracking_result = await session.execute(
                     select(User).where(User.username == user_username)
                 )
-                tracking_user = tracking_result.scalar_one_or_none()
+                tracking_user = tracking_result.first()
+                tracking_user = tracking_user[0] if tracking_user else None
 
                 if not tracking_user:
                     logger.warning(
@@ -111,26 +112,28 @@ class UserTrackingRepository:
                 await session.rollback()
                 return False
 
-    async def get_tracked_users_by_admin(self, admin_username: str) -> list[User]:
-        """Получает список отслеживаемых пользователей для админа."""
-        async with async_session() as session:
-            try:
-                result = await session.execute(
-                    select(User)
-                    .options(selectinload(User.tracked_users))
-                    .where(User.username == admin_username)
-                )
-                admin_user = result.scalar_one_or_none()
 
-                if not admin_user:
-                    logger.warning(f"Админ не найден: admin_username={admin_username}")
-                    return []
+async def get_tracked_users_by_admin(self, admin_username: str) -> list[User]:
+    """Получает список отслеживаемых пользователей для админа."""
+    async with async_session() as session:
+        try:
+            result = await session.execute(
+                select(User)
+                .options(selectinload(User.tracked_users))
+                .where(User.username == admin_username)
+            )
+            admin_user = result.first()
+            admin_user = admin_user[0] if admin_user else None
 
-                return list(admin_user.tracked_users)
-
-            except SQLAlchemyError as e:
-                logger.error(f"Ошибка получения отслеживаемых пользователей: {e}")
+            if not admin_user:
+                logger.warning(f"Админ не найден: admin_username={admin_username}")
                 return []
+
+            return list(admin_user.tracked_users)
+
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка получения отслеживаемых пользователей: {e}")
+            return []
 
     async def is_user_tracked_by_admin(
         self, admin_username: str, user_username: str
