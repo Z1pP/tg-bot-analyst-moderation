@@ -112,28 +112,27 @@ class UserTrackingRepository:
                 await session.rollback()
                 return False
 
+    async def get_tracked_users_by_admin(self, admin_username: str) -> list[User]:
+        """Получает список отслеживаемых пользователей для админа."""
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(User)
+                    .options(selectinload(User.tracked_users))
+                    .where(User.username == admin_username)
+                )
+                admin_user = result.first()
+                admin_user = admin_user[0] if admin_user else None
 
-async def get_tracked_users_by_admin(self, admin_username: str) -> list[User]:
-    """Получает список отслеживаемых пользователей для админа."""
-    async with async_session() as session:
-        try:
-            result = await session.execute(
-                select(User)
-                .options(selectinload(User.tracked_users))
-                .where(User.username == admin_username)
-            )
-            admin_user = result.first()
-            admin_user = admin_user[0] if admin_user else None
+                if not admin_user:
+                    logger.warning(f"Админ не найден: admin_username={admin_username}")
+                    return []
 
-            if not admin_user:
-                logger.warning(f"Админ не найден: admin_username={admin_username}")
+                return list(admin_user.tracked_users)
+
+            except SQLAlchemyError as e:
+                logger.error(f"Ошибка получения отслеживаемых пользователей: {e}")
                 return []
-
-            return list(admin_user.tracked_users)
-
-        except SQLAlchemyError as e:
-            logger.error(f"Ошибка получения отслеживаемых пользователей: {e}")
-            return []
 
     async def is_user_tracked_by_admin(
         self, admin_username: str, user_username: str
