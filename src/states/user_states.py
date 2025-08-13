@@ -20,7 +20,7 @@ class UserStateManager(StatesGroup):
 class UsernameStates(StatesGroup):
     """Состояние для задавания имени пользователя"""
 
-    waiting_username_input = State()
+    waiting_user_data_input = State()
 
 
 class SingleUserReportStates(StatesGroup):
