@@ -6,7 +6,7 @@ from aiogram.types import Message
 from constants import KbCommands
 from container import container
 from keyboards.inline.users import users_inline_kb
-from keyboards.reply.menu import admin_menu_kb
+from keyboards.reply.menu import user_menu_kb
 from states import MenuStates
 from usecases.user_tracking import GetListTrackedUsersUseCase
 from utils.exception_handler import handle_exception
@@ -40,7 +40,7 @@ async def users_list_handler(message: Message) -> None:
             await send_html_message_with_kb(
                 message=message,
                 text=message_text,
-                reply_markup=admin_menu_kb(),
+                reply_markup=user_menu_kb(),
             )
             return
 
