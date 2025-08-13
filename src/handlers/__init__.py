@@ -26,7 +26,6 @@ def registry_admin_routers(dispatcher: Dispatcher):
 
 def registry_group_routers(dispatcher: Dispatcher):
     # Регистриуем групповой роутер
-
     staff_router = Router(name="staff_router")
     staff_router.message.filter(GroupTypeFilter())
 
