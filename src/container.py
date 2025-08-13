@@ -173,15 +173,12 @@ class ContainerSetup:
 
     @staticmethod
     def _register_tracking_usecases(container: Container) -> None:
-        """Регистрация use cases для отслеживания чатов."""
-        container.register(AddChatToTrackUseCase)
-
-    def _register_tracking_usecases(container: Container) -> None:
         """Регистрация use cases для отслеживания пользователей."""
         tracking_usecases = [
             AddUserToTrackingUseCase,
             GetListTrackedUsersUseCase,
             RemoveUserFromTrackingUseCase,
+            AddChatToTrackUseCase,
         ]
 
         for usecase in tracking_usecases:
