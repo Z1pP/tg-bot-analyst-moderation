@@ -37,18 +37,22 @@ class GetReportOnSpecificChatUseCase:
 
     async def execute(self, dto: ChatReportDTO) -> List[str]:
         """Генерирует отчет по конкретному чату за указанный период."""
-        chat = await self._get_chat(dto.chat_title)
+        chat = await self._get_chat(dto.chat_id)
         chat_data = await self._get_chat_data(chat, dto)
 
         report = self._generate_report(
-            chat_data, chat, dto.start_date, dto.end_date, dto.selected_period
+            data=chat_data,
+            chat=chat,
+            start_date=dto.start_date,
+            end_date=dto.end_date,
+            selected_period=dto.selected_period,
         )
 
         return self._split_report(report)
 
-    async def _get_chat(self, chat_title: str) -> ChatSession:
+    async def _get_chat(self, chat_id: int) -> ChatSession:
         """Получает чат по названию."""
-        chat = await self._chat_repository.get_chat_by_title(chat_title)
+        chat = await self._chat_repository.get_chat(chat_id)
         if not chat:
             raise ValueError("Чат не найден")
         return chat
