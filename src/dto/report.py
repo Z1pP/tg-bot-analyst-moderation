@@ -36,7 +36,7 @@ class AllUsersReportDTO:
 
 @dataclass
 class ChatReportDTO:
-    chat_title: str
+    chat_id: int
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
