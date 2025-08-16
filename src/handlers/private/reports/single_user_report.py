@@ -18,6 +18,7 @@ from usecases.report import GetSingleUserReportUseCase
 from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
+from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -31,7 +32,11 @@ async def single_user_report_handler(message: Message, state: FSMContext) -> Non
             f"Пользователь {message.from_user.id} запросил отчет по времени ответа"
         )
 
-        await state.set_state(UserStateManager.process_select_time_period)
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=UserStateManager.process_select_time_period,
+        )
 
         await send_html_message_with_kb(
             message=message,
