@@ -2,7 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
-from keyboards.reply.chat_actions import all_chats_actions_kb
+from keyboards.reply import chat_actions_kb
 from states import ChatStateManager
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -22,7 +22,7 @@ async def all_chats_handler(callback: CallbackQuery, state: FSMContext) -> None:
         await send_html_message_with_kb(
             message=callback.message,
             text="Выбрано: все чаты",
-            reply_markup=all_chats_actions_kb(),
+            reply_markup=chat_actions_kb(),
         )
 
     except Exception as e:
