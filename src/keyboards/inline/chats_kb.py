@@ -29,47 +29,14 @@ def remove_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
+def tracked_chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-
-    if not chats:
-        builder.row(
-            InlineKeyboardButton(
-                text="Список чатов пуст. Добавьте бот в чат и выдайте ему админ права",
-                callback_data="no_chat",
-            )
-        )
-        return builder.as_markup()
 
     for index, chat in enumerate(chats):
         builder.row(
             InlineKeyboardButton(
                 text=f"{index + 1}. {chat.title[:30]}",
-                callback_data=f"chat__{chat.title}",
-            )
-        )
-
-    return builder.as_markup()
-
-
-def tracked_chats_inline_kb(chats: list[ChatSession]) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-
-    if not chats:
-        builder.row(
-            InlineKeyboardButton(
-                text="🚫 Нет отслеживаемых чатов",
-                callback_data="no_tracked_chats",
-            )
-        )
-        return builder.as_markup()
-
-    for chat in chats:
-        # Добавляем название чата
-        builder.row(
-            InlineKeyboardButton(
-                text=f"Группа: {chat.title[:30]}",
-                callback_data=f"chat_info__{chat.id}",
+                callback_data=f"chat__{chat.id}",
             )
         )
 
