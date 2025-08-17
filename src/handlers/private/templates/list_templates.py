@@ -27,6 +27,15 @@ async def templates_list_handler(message: Message, state: FSMContext) -> None:
 
         templates, total_count = await template_service.get_templates_with_count()
 
+        if not templates:
+            message_text = "❗ Шаблонов не найдено, создайте шаблон"
+            await send_html_message_with_kb(
+                message=message,
+                text=message_text,
+                reply_markup=None,
+            )
+            return
+
         message_text = (
             f"Найдено {total_count} шаблонов:" if total_count else "У вас нет шаблонов!"
         )
