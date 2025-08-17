@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.message(
-    F.text == KbCommands.GET_STATISTICS,
+    F.text == KbCommands.GET_REPORT,
     AllUsersReportStates.selected_all_users,
 )
 async def all_users_report_handler(message: Message, state: FSMContext) -> None:
