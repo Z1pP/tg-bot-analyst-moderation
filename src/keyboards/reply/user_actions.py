@@ -6,7 +6,7 @@ from constants import KbCommands
 def user_actions_kb() -> ReplyKeyboardMarkup:
     buttons = [
         [
-            KeyboardButton(text=KbCommands.GET_STATISTICS),
+            KeyboardButton(text=KbCommands.GET_REPORT),
         ],
         [
             KeyboardButton(text=KbCommands.SELECT_USER),
