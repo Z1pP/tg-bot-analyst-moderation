@@ -13,13 +13,6 @@ def templates_inline_kb(
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
-    if not templates:
-        builder.button(
-            text="Шаблонов не найдено, создайте шаблон",
-            callback_data="templates_not_found",
-        )
-        return builder.as_markup()
-
     # Добавляем кнопки шаблонов
     for template in templates:
         builder.row(
