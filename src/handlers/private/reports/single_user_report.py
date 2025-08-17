@@ -13,7 +13,7 @@ from dto.report import ResponseTimeReportDTO
 from keyboards.reply import admin_menu_kb, get_time_period_kb
 from keyboards.reply.user_actions import user_actions_kb
 from services.work_time_service import WorkTimeService
-from states.user_states import UserStateManager
+from states import SingleUserReportStates, UserStateManager
 from usecases.report import GetSingleUserReportUseCase
 from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
@@ -24,7 +24,10 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message(F.text == KbCommands.GET_STATISTICS)
+@router.message(
+    F.text == KbCommands.GET_REPORT,
+    SingleUserReportStates.selected_single_user,
+)
 async def single_user_report_handler(message: Message, state: FSMContext) -> None:
     """Обработчик запроса на создание отчета о времени ответа."""
     try:
@@ -61,7 +64,7 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
 
         if not user_id:
             logger.warning("Отсутствует user_id в состоянии")
-            await state.clear()
+
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
@@ -71,7 +74,13 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
 
         if message.text == TimePeriod.CUSTOM.value:
             logger.info("Запрос пользовательского периода")
-            await state.set_state(UserStateManager.process_custom_period_input)
+
+            await log_and_set_state(
+                message=message,
+                state=state,
+                new_state=UserStateManager.process_custom_period_input,
+            )
+
             await send_html_message_with_kb(
                 message=message,
                 text="Введите период в формате DD.MM-DD.MM\n"
@@ -109,7 +118,6 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
 
         if not user_id:
             logger.warning("Отсутствует user_id при вводе периода")
-            await state.clear()
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
@@ -141,7 +149,10 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
         await handle_exception(message, e, "process_custom_period_input")
 
 
-@router.message(UserStateManager.process_select_time_period, F.text == KbCommands.BACK)
+@router.message(
+    UserStateManager.process_select_time_period,
+    F.text == KbCommands.BACK,
+)
 async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
     """Обработчик для возврата в меню пользователя."""
     try:
@@ -151,7 +162,6 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
         logger.info(f"Возврат в меню пользователя {user_id}")
 
         if not user_id:
-            await state.clear()
             await send_html_message_with_kb(
                 message=message,
                 text="Выберите пользователя заново",
@@ -159,7 +169,12 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
             )
             return
 
-        await state.set_state(UserStateManager.report_menu)
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=UserStateManager.report_menu,
+        )
+
         await send_html_message_with_kb(
             message=message,
             text="Возвращаемся в меню",
@@ -180,7 +195,8 @@ async def generate_and_send_report(
     """Генерирует и отправляет отчет."""
     try:
         logger.info(
-            f"Начало генерации отчета для пользователя {user_id} за период {start_date} - {end_date}"
+            f"Начало генерации отчета для пользователя {user_id} за "
+            f"период {start_date} - {end_date}"
         )
 
         adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
