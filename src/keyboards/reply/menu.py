@@ -43,7 +43,7 @@ def tamplates_menu_kb():
 def user_menu_kb():
     buttons = [
         [
-            KeyboardButton(text=KbCommands.GET_REPORT),
+            KeyboardButton(text=KbCommands.GET_STATISTICS),
         ],
         [
             KeyboardButton(text=KbCommands.ADD_USER),
