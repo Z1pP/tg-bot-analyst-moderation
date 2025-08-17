@@ -8,6 +8,7 @@ from container import container
 from filters.admin_filter import AdminOnlyFilter
 from filters.group_filter import GroupTypeFilter
 from models import ChatSession, User
+from repositories import ChatTrackingRepository
 from services.chat import ChatService
 from services.user import UserService
 from usecases.chat_tracking import AddChatToTrackUseCase
@@ -74,6 +75,67 @@ async def chat_added_to_tracking_handler(message: Message) -> None:
         )
     except Exception as e:
         logger.error(f"Ошибка при обработке команды /track: {e}", exc_info=True)
+    finally:
+        await message.delete()
+
+
+@router.message(Command("untrack"), GroupTypeFilter(), AdminOnlyFilter())
+async def chat_removed_from_tracking_handler(message: Message) -> None:
+    """Обработчик команды /untrack для удаления чата из отслеживания."""
+
+    logger.info(
+        f"Получена команда /untrack от {message.from_user.username} "
+        f"в чате '{message.chat.title}' (ID: {message.chat.id})"
+    )
+
+    admin, chat = await _get_admin_and_chat(message=message)
+
+    if not admin or not chat:
+        logger.error("Не удалось получить данные о пользователе или чате")
+        return
+
+    try:
+        tracking_repository: ChatTrackingRepository = container.resolve(
+            ChatTrackingRepository
+        )
+
+        success = await tracking_repository.remove_chat_from_tracking(
+            admin_id=admin.id,
+            chat_id=int(chat.id),
+        )
+
+        if success:
+            logger.info(
+                f"Чат '{chat.title}' успешно удален "
+                f"из отслеживания админом {admin.username}"
+            )
+
+            notification_text = (
+                "✅ <b>Чат удален из отслеживания</b>\n\n"
+                f"📋 <b>Название:</b> {chat.title}\n"
+                f"🆔 <b>ID чата:</b> <code>{chat.chat_id}</code>\n"
+                f"👤 <b>Удалил:</b> @{admin.username}\n\n"
+                "❗️Вы всегда можете вернуть чат в отслеживаемые "
+                "и продолжить собирать статистику"
+            )
+        else:
+            logger.warning(f"Чат '{chat.title}' не найден в отслеживании")
+
+            notification_text = (
+                "ℹ️ <b>Чат не отслеживается</b>\n\n"
+                f"📋 <b>Название:</b> {chat.title}\n"
+                f"🆔 <b>ID чата:</b> <code>{chat.chat_id}</code>\n\n"
+                "Этот чат не находится в списке отслеживания."
+            )
+
+        await send_notification(
+            bot=message.bot,
+            chat_id=message.from_user.id,
+            message_text=notification_text,
+        )
+
+    except Exception as e:
+        logger.error(f"Ошибка при обработке команды /untrack: {e}", exc_info=True)
     finally:
         await message.delete()
 
