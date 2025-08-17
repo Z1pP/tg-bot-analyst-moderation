@@ -32,7 +32,7 @@ def users_inline_kb(users: list[UserDTO]):
 def remove_user_inline_kb(users: list[UserDTO]):
     keyboards = []
 
-    for index, user in enumerate(users):
+    for user in users:
         keyboards.append(
             [
                 InlineKeyboardButton(
