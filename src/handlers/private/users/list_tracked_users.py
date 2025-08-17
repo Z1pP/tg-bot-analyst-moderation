@@ -16,10 +16,12 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message(F.text == KbCommands.GET_REPORT, MenuStates.users_menu)
+@router.message(F.text == KbCommands.GET_STATISTICS, MenuStates.users_menu)
 @router.message(F.text == KbCommands.SELECT_USER)
 async def users_list_handler(message: Message) -> None:
-    """Обработчик команды для получения списка пользователей."""
+    """Обработчик команды для отображения списка пользователей.
+    Через inline клавиатуру
+    """
     try:
         logger.info(
             f"Пользователь {message.from_user.id} запросил список пользователей для отчета"
@@ -31,11 +33,9 @@ async def users_list_handler(message: Message) -> None:
         users = await usecase.execute(admin_username=message.from_user.username)
 
         if not users:
-            logger.info("Список пользователей пуст")
             message_text = (
                 "❗Чтобы получать отчёты по пользователям, "
-                "необходимо добавить юзера в отслеживаемые, "
-                "а также пользователей для сбора статистики"
+                "необходимо добавить пользователя в отслеживаемые"
             )
             await send_html_message_with_kb(
                 message=message,
