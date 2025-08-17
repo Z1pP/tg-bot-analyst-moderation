@@ -10,9 +10,7 @@ from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
-from keyboards.reply.chat_actions import chat_actions_kb
-from keyboards.reply.menu import admin_menu_kb
-from keyboards.reply.time_period import get_time_period_kb
+from keyboards.reply import admin_menu_kb, chat_actions_kb, get_time_period_kb
 from services.work_time_service import WorkTimeService
 from states import ChatStateManager
 from usecases.report import GetReportOnSpecificChatUseCase
