@@ -145,7 +145,7 @@ async def confirmation_removing_user(
         else:
             logger.info(f"Удаление пользователя {username} отменено")
             await callback.message.edit_text(
-                text=f"❌ Удаление @{username} отменено!",
+                text=f"❌ Удаление @{username} из отслеживания отменено!",
             )
     except Exception as e:
         await handle_exception(callback.message, e, "confirmation_removing_user")
