@@ -96,7 +96,7 @@ class ChatTrackingRepository:
         self,
         admin_id: int,
         chat_id: int,
-    ) -> None:
+    ) -> bool:
         """Удаляет доступ к чату для администратора."""
         async with async_session() as session:
             try:
@@ -114,12 +114,14 @@ class ChatTrackingRepository:
                         admin_id,
                         chat_id,
                     )
+                    return True
                 else:
                     logger.warning(
                         "Доступ к чату не найден для администратора: admin_id=%s, chat_id=%s",
                         admin_id,
                         chat_id,
                     )
+                    return False
             except Exception as e:
                 logger.error("Произошла ошибка при удалении доступа к чату: %s", e)
                 await session.rollback()
