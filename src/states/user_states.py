@@ -24,6 +24,7 @@ class UsernameStates(StatesGroup):
 
 
 class SingleUserReportStates(StatesGroup):
+    selected_single_user = State()
     selecting_period = State()
     waiting_cutom_period = State()
 
