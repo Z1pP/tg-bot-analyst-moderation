@@ -90,3 +90,20 @@ def chat_info_inline_kb(access: AdminChatAccess):
     )
 
     return builder.as_markup()
+
+
+def conf_remove_chat_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text="Да",
+            callback_data="conf_remove_chat__yes",
+        ),
+        InlineKeyboardButton(
+            text="Нет",
+            callback_data="conf_remove_chat__no",
+        ),
+        width=2,
+    )
+    return builder.as_markup()
