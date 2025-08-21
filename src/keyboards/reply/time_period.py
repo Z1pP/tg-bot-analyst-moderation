@@ -34,7 +34,7 @@ def get_time_period_for_full_report() -> ReplyKeyboardMarkup:
         row = periods[i : i + 2]
         buttons.append([KeyboardButton(text=p) for p in row])
 
-    buttons.append([KeyboardButton(text=KbCommands.MENU)])
+    buttons.append([KeyboardButton(text=KbCommands.BACK)])
 
     # Создаем клавиатуру
     return ReplyKeyboardMarkup(
