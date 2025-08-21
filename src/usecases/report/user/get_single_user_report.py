@@ -9,7 +9,7 @@ from exceptions.user import UserNotFoundException
 from models import ChatMessage, MessageReaction, MessageReply, User
 from services.break_analysis_service import BreakAnalysisService
 from services.work_time_service import WorkTimeService
-from utils.formatter import format_seconds, format_selected_period
+from utils.formatter import format_seconds
 
 from .base import BaseReportUseCase
 
@@ -80,7 +80,7 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         selected_period: str = None,
     ) -> str:
         """Формирует текстовый отчет."""
-        period = format_selected_period(selected_period)
+        period = self._format_selected_period(start_date, end_date)
         replies, messages, reactions = (
             data["replies"],
             data["messages"],
@@ -93,7 +93,11 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         report_parts = [
             f"<b>📈 Отчёт: @{user.username} за {period}</b>\n",
             self._generate_basic_stats(
-                messages, replies, reactions, start_date, end_date
+                messages=messages,
+                replies=replies,
+                reactions=reactions,
+                start_date=start_date,
+                end_date=end_date,
             ),
             self._generate_response_stats(replies),
             self._generate_breaks_section(messages, reactions),

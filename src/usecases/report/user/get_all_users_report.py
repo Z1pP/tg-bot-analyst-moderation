@@ -23,7 +23,10 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             logger.error(f"Количество пользователей = {len(users)}")
             return ["⚠️ Список пользователей пуст, добавьте пользователя!"]
 
-        selected_period = self._format_selected_period(dto.selected_period)
+        selected_period = self._format_selected_period(
+            start_date=dto.start_date,
+            end_date=dto.end_date,
+        )
         report_title = f"<b>📈 Отчет по пользователям за {selected_period}</b>"
 
         reports = []
