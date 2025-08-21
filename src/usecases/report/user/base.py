@@ -11,6 +11,7 @@ from repositories import (
 )
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
+from utils.formatter import format_selected_period
 
 T = TypeVar("T", ChatMessage, MessageReply)
 logger = logging.getLogger(__name__)
@@ -50,11 +51,9 @@ class BaseReportUseCase:
 
         return WorkTimeService.filter_by_work_time(items=items)
 
-    def _format_selected_period(self, selected_period: str) -> str:
+    def _format_selected_period(self, start_date: datetime, end_date: datetime) -> str:
         """Форматирует выбранный период в читаемый формат"""
-        if not selected_period:
-            return "<b>указанный период</b>"
-        return selected_period.split("За")[-1].strip()
+        return format_selected_period(start_date, end_date)
 
     def _messages_per_hour(
         self, messages_count: int, start_date: datetime, end_date: datetime
