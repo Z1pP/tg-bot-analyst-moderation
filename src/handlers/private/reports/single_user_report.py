@@ -13,7 +13,7 @@ from dto.report import ResponseTimeReportDTO
 from keyboards.reply import admin_menu_kb, get_time_period_kb
 from keyboards.reply.user_actions import user_actions_kb
 from services.work_time_service import WorkTimeService
-from states import SingleUserReportStates, UserStateManager
+from states import SingleUserReportStates
 from usecases.report import GetSingleUserReportUseCase
 from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
@@ -38,7 +38,7 @@ async def single_user_report_handler(message: Message, state: FSMContext) -> Non
         await log_and_set_state(
             message=message,
             state=state,
-            new_state=UserStateManager.process_select_time_period,
+            new_state=SingleUserReportStates.selecting_period,
         )
 
         await send_html_message_with_kb(
@@ -51,7 +51,7 @@ async def single_user_report_handler(message: Message, state: FSMContext) -> Non
 
 
 @router.message(
-    UserStateManager.process_select_time_period,
+    SingleUserReportStates.selecting_period,
     F.text.in_(TimePeriod.get_all_periods()),
 )
 async def process_period_selection(message: Message, state: FSMContext) -> None:
@@ -78,7 +78,7 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
             await log_and_set_state(
                 message=message,
                 state=state,
-                new_state=UserStateManager.process_custom_period_input,
+                new_state=SingleUserReportStates.waiting_cutom_period,
             )
 
             await send_html_message_with_kb(
@@ -105,7 +105,7 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
         await handle_exception(message, e, "process_period_selection")
 
 
-@router.message(UserStateManager.process_custom_period_input)
+@router.message(SingleUserReportStates.waiting_cutom_period)
 async def process_custom_period_input(message: Message, state: FSMContext) -> None:
     """Обрабатывает ввод пользовательского периода для отчета."""
     try:
@@ -145,12 +145,18 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
             start_date=start_date,
             end_date=end_date,
         )
+
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=SingleUserReportStates.selecting_period,
+        )
     except Exception as e:
         await handle_exception(message, e, "process_custom_period_input")
 
 
 @router.message(
-    UserStateManager.process_select_time_period,
+    SingleUserReportStates.selecting_period,
     F.text == KbCommands.BACK,
 )
 async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
@@ -172,7 +178,7 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
         await log_and_set_state(
             message=message,
             state=state,
-            new_state=UserStateManager.report_menu,
+            new_state=SingleUserReportStates.selected_single_user,
         )
 
         await send_html_message_with_kb(
