@@ -111,14 +111,14 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
     """Обрабатывает ввод пользовательского периода для отчета."""
     try:
         data = await state.get_data()
-        chat_title = data.get("chat_title")
+        chat_id = data.get("chat_id")
 
         logger.info(
-            f"Получен пользовательский период для чата {chat_title}: {message.text}"
+            f"Получен пользовательский период для чата chat_id={chat_id}: {message.text}"
         )
 
-        if not chat_title:
-            logger.warning("Отсутствует название чата при вводе периода")
+        if not chat_id:
+            logger.warning("Отсутствует chat_id при вводе периода")
             await select_chat_again(message=message, state=state)
             return
 
@@ -141,14 +141,17 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
             state=state,
             start_date=start_date,
             end_date=end_date,
-            chat_id=chat_title,
+            chat_id=chat_id,
             selected_period=message.text,
         )
     except Exception as e:
         await handle_exception(message, e, "process_custom_period_input")
 
 
-@router.message(ChatStateManager.selecting_period, F.text == KbCommands.BACK)
+@router.message(
+    ChatStateManager.selecting_period,
+    F.text == KbCommands.BACK,
+)
 async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
     """Обработчик для возврата в меню чата."""
     try:
@@ -159,7 +162,12 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
             await select_chat_again(message=message, state=state)
             return
 
-        await state.set_state(ChatStateManager.selecting_chat)
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=ChatStateManager.selecting_chat,
+        )
+
         await send_html_message_with_kb(
             message=message,
             text="Возврат к меню чата.",
