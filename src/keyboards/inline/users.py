@@ -3,6 +3,7 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
 
 
@@ -10,7 +11,7 @@ def users_inline_kb(
     users: List[UserDTO],
     page: int = 1,
     total_count: int = 0,
-    page_size: int = 5,
+    page_size: int = USERS_PAGE_SIZE,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -65,20 +66,59 @@ def users_inline_kb(
     return builder.as_markup()
 
 
-def remove_user_inline_kb(users: list[UserDTO]):
-    keyboards = []
+def remove_user_inline_kb(
+    users: List[UserDTO],
+    page: int = 1,
+    total_count: int = 0,
+    page_size: int = USERS_PAGE_SIZE,
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
 
-    for user in users:
-        keyboards.append(
-            [
-                InlineKeyboardButton(
-                    text=f"Удалить {user.username}",
-                    callback_data=f"remove_user__{user.id}",
-                )
-            ]
+    # Кнопки удаления пользователей
+    start_index = (page - 1) * page_size
+    for index, user in enumerate(users):
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{start_index + index + 1}. Удалить {user.username}",
+                callback_data=f"remove_user__{user.id}",
+            )
         )
 
-    return InlineKeyboardMarkup(inline_keyboard=keyboards)
+    # Пагинация (только если больше одной страницы)
+    if total_count > page_size:
+        max_pages = (total_count + page_size - 1) // page_size
+        pagination_buttons = []
+
+        # Кнопка "Назад"
+        if page > 1:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text="◀️", callback_data=f"prev_remove_users_page__{page}"
+                )
+            )
+
+        # Информация о странице
+        start_item = (page - 1) * page_size + 1
+        end_item = min(page * page_size, total_count)
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=f"{start_item}-{end_item} из {total_count}",
+                callback_data="remove_users_page_info",
+            )
+        )
+
+        # Кнопка "Вперед"
+        if page < max_pages:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text="▶️", callback_data=f"next_remove_users_page__{page}"
+                )
+            )
+
+        if pagination_buttons:
+            builder.row(*pagination_buttons)
+
+    return builder.as_markup()
 
 
 def conf_remove_user_kb() -> InlineKeyboardMarkup:
