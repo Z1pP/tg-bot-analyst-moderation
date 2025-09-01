@@ -45,10 +45,20 @@ async def users_list_handler(message: Message) -> None:
             return
 
         logger.info(f"Найдено {len(users)} пользователей для отчета")
+
+        # Показываем первую страницу (5 пользователей)
+        page_size = 5
+        first_page_users = users[:page_size]
+
         await send_html_message_with_kb(
             message=message,
             text=f"Всего {len(users)} пользователей",
-            reply_markup=users_inline_kb(users),
+            reply_markup=users_inline_kb(
+                users=first_page_users,
+                page=1,
+                total_count=len(users),
+                page_size=page_size,
+            ),
         )
     except Exception as e:
         await handle_exception(message, e, "users_list_handler")
