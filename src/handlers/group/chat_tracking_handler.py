@@ -325,16 +325,16 @@ async def _get_admin_and_chat(message: Message) -> tuple[User, ChatSession]:
     chat_service: ChatService = container.resolve(ChatService)
 
     # Получаем пользователя и чат
-    username = message.from_user.username
+    user_tg_id = str(message.from_user.id)
     chat_id = str(message.chat.id)
 
-    if not username:
-        logger.warning("Пользователь без username: %s", message.from_user.id)
+    if not user_tg_id:
+        logger.warning("Пользователь без tg_id: %s", message.from_user.id)
         return None, None
 
-    admin = await user_service.get_user(username)
+    admin = await user_service.get_user(user_tg_id)
     if not admin:
-        logger.warning("Пользователь не найден в базе данных: %s", username)
+        logger.warning("Пользователь не найден в базе данных: %s", user_tg_id)
         return None, None
 
     chat = await chat_service.get_or_create_chat(

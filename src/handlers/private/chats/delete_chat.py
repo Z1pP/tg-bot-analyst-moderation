@@ -34,7 +34,8 @@ async def delete_chat_handler(
 
     try:
         user_service: UserService = container.resolve(UserService)
-        user = await user_service.get_user(username=username)
+        tg_id = str(message.from_user.id)
+        user = await user_service.get_user(tg_id=tg_id)
 
         await state.update_data(user_id=user.id)
 

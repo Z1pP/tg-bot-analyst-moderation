@@ -104,7 +104,7 @@ async def _get_sender_and_chat(
 
     # Получаем пользователя и чат
     username = event.user.username
-    tg_id = str(event.chat.id)
+    tg_id = str(event.user.id)
     chat_id = str(event.chat.id)
 
     if not username:
