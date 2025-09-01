@@ -10,6 +10,7 @@ from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import AllUsersReportDTO
+from keyboards.inline.report import order_details_kb
 from keyboards.reply import get_time_period_for_full_report
 from keyboards.reply.user_actions import user_actions_kb
 from services.work_time_service import WorkTimeService
@@ -164,8 +165,13 @@ async def generate_and_send_report(
             selected_period=selected_period,
         )
 
-        report_parts = await generate_report(report_dto)
-        logger.info(f"Отчет сгенерирован, частей: {len(report_parts)}")
+        usecase: GetAllUsersReportUseCase = container.resolve(GetAllUsersReportUseCase)
+        is_single_day = usecase.is_single_day_report(report_dto)
+        report_parts = await usecase.execute(report_dto)
+
+        # Сохраняем report_dto для детализации (только для многодневных отчетов)
+        if not is_single_day:
+            await state.update_data(all_users_report_dto=report_dto)
 
         for idx, part in enumerate(report_parts):
             if idx == len(report_parts) - 1:
@@ -174,20 +180,10 @@ async def generate_and_send_report(
             await send_html_message_with_kb(
                 message=message,
                 text=part,
-                reply_markup=get_time_period_for_full_report(),
+                reply_markup=order_details_kb(show_details=not is_single_day),
             )
 
         logger.info("Отчет успешно отправлен пользователю")
     except Exception as e:
         logger.error(f"Ошибка при генерации/отправке отчета: {e}")
-        raise
-
-
-async def generate_report(report_dto: AllUsersReportDTO) -> List[str]:
-    """Генерирует отчет используя UseCase."""
-    try:
-        usecase: GetAllUsersReportUseCase = container.resolve(GetAllUsersReportUseCase)
-        return await usecase.execute(dto=report_dto)
-    except Exception as e:
-        logger.error("Ошибка генерации отчета: %s", str(e), exc_info=True)
         raise

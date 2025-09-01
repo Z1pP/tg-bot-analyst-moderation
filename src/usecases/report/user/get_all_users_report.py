@@ -25,11 +25,19 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             logger.error(f"Количество пользователей = {len(users)}")
             return ["⚠️ Список пользователей пуст, добавьте пользователя!"]
 
-        selected_period = self._format_selected_period(
+        # Определяем тип отчета
+        is_single_day = self._is_single_day_report(
+            selected_period=dto.selected_period,
             start_date=dto.start_date,
             end_date=dto.end_date,
         )
-        report_title = f"<b>📈 Отчет по пользователям за {selected_period}</b>"
+
+        period = self._format_selected_period(
+            start_date=dto.start_date,
+            end_date=dto.end_date,
+        )
+        period_text = "период " if not is_single_day else ""
+        report_title = f"<b>📈 Отчет по пользователям за {period_text}{period}</b>"
 
         reports = []
         for user in users:
@@ -37,8 +45,8 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             if not user_data["messages"] and not user_data["reactions"]:
                 continue
 
-            report = self._generate_user_report(
-                user_data, user, dto.start_date, dto.end_date
+            report = self._generate_unified_user_report(
+                user_data, user, dto.start_date, dto.end_date, is_single_day
             )
             reports.append(report)
 
@@ -74,73 +82,153 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
 
         return {"replies": replies, "messages": messages, "reactions": reactions}
 
-    def _generate_user_report(
-        self, data: dict, user: User, start_date: datetime, end_date: datetime
+    def _generate_unified_user_report(
+        self,
+        data: dict,
+        user: User,
+        start_date: datetime,
+        end_date: datetime,
+        is_single_day: bool,
     ) -> str:
-        """Создает отчет для одного пользователя."""
-        replies, messages, reactions = (
-            data["replies"],
-            data["messages"],
-            data["reactions"],
-        )
+        """Универсальный генератор отчетов для одного пользователя."""
+        replies = data.get("replies", [])
+        messages = data.get("messages", [])
+        reactions = data.get("reactions", [])
 
         if not messages and not reactions:
-            return f"<b>👤 @{user.username}</b>\nНет активности за указанный период"
+            no_data_text = "день" if is_single_day else "период"
+            return (
+                f"<b>👤 @{user.username}</b>\n⚠️ Нет данных за указанный {no_data_text}."
+            )
 
         report_parts = [f"<b>👤 @{user.username}</b>\n"]
 
-        # Статистика реакций
-        if reactions:
-            report_parts.extend(
-                [
-                    f"{self.get_time_first_reaction(reactions)}",
-                    f"• <b>{len(reactions)}</b> - всего реакций на сообщения\n",
-                ]
-            )
+        # Выбираем методы в зависимости от типа отчета
+        stats_method = (
+            self._generate_messages_and_reactions_stats
+            if is_single_day
+            else self._generate_avg_messages_and_reactions_stats
+        )
+        breaks_method = (
+            self._generate_breaks_section
+            if is_single_day
+            else self._generate_breaks_multiday_section
+        )
 
-        # Статистика сообщений
-        if messages:
-            avg_per_hour = self._avg_messages_per_hour(
-                len(messages), start_date, end_date
-            )
-            report_parts.extend(
-                [
-                    f"{self.get_time_first_message(messages)}",
-                    f"• <b>{len(messages)}</b> - всего сообщений",
-                    f"• <b>{avg_per_hour:.2f}</b> - сред. кол-во сообщ. в час\n",
-                ]
-            )
+        report_parts.extend(
+            [
+                stats_method(messages, reactions, start_date, end_date),
+                self._generate_replies_stats(replies),
+                breaks_method(messages, reactions),
+            ]
+        )
 
-        # Статистика ответов
-        if replies:
-            response_stats = self._calculate_response_stats(replies)
-            report_parts.append(f"• Из них <b>{len(replies)}</b> ответ(-ов)")
-            report_parts.extend(response_stats)
+        return "\n".join(filter(None, report_parts))
+
+    def _generate_avg_messages_and_reactions_stats(
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        start_date: datetime,
+        end_date: datetime,
+    ) -> str:
+        """Генерирует средние значения по сообщениям и реакциям"""
+        msg_count = len(messages)
+        return "\n".join(
+            [
+                f"• <b>{self.get_avg_time_first_messages(messages)}</b> - среднее время отправки 1-х сообщений",
+                f"• <b>{self.get_avg_time_first_reaction(reactions)}</b> - среднее время 1-й реакции на сообщение",
+                "",
+                f"• <b>{self._avg_messages_per_hour(msg_count, start_date, end_date)}</b> - сред. кол-во сообщ./час",
+                f"• <b>{self._avg_message_per_day(msg_count, start_date, end_date)}</b> - сред. кол-во сообщ./день",
+                f"• <b>{msg_count}</b> - всего сообщ. за период",
+            ]
+        )
+
+    def _generate_messages_and_reactions_stats(
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        start_date: datetime,
+        end_date: datetime,
+    ) -> str:
+        """Генерирует статистику по сообщениям и реакциям"""
+        msg_count = len(messages)
+        return "\n".join(
+            [
+                f"• <b>{self.get_time_first_message(messages)}</b> - 1-е сообщение",
+                f"• <b>{self.get_time_first_reaction(reactions)}</b> - 1-я реакция на сообщение",
+                "",
+                f"• <b>{self._avg_messages_per_hour(msg_count, start_date, end_date)}</b> - сред. кол-во сообщ./час",
+                f"• <b>{msg_count}</b> - всего сообщений",
+            ]
+        )
+
+    def _generate_replies_stats(self, replies: List[MessageReply]) -> str:
+        """Генерирует статистику по времени ответа"""
+        if not replies:
+            return "• <b>Нет ответов</b> за указанный период"
+
+        times = [reply.response_time_seconds for reply in replies]
+        return "\n".join(
+            [
+                f"Из них <b>{len(replies)}</b> ответов:",
+                f"• <b>{format_seconds(min(times))}</b> - мин. время ответа",
+                f"• <b>{format_seconds(max(times))}</b> - макс. время ответа",
+                f"• <b>{format_seconds(int(mean(times)))}</b> - сред. время ответа",
+                f"• <b>{format_seconds(int(median(times)))}</b> - медиан. время ответа",
+                "",
+            ]
+        )
+
+    def _generate_breaks_multiday_section(
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+    ) -> str:
+        avg_breaks_time = BreakAnalysisService.avg_breaks_time(messages, reactions)
+        if avg_breaks_time:
+            breaks_text = (
+                "<b>⏸️ Перерывы:</b>\n"
+                f"• <b>{avg_breaks_time}</b> - средн. время перерыва между сообщ. и реакциями"
+            )
         else:
-            report_parts.append("• <b>Нет ответов</b> за указанный период")
+            breaks_text = "<b>⏸️ Перерывы:</b> отсутствуют"
 
-        # Перерывы
-        report_parts.extend(["", self._generate_breaks_section(messages, reactions)])
+        return breaks_text
 
-        return "\n".join(report_parts)
+    def is_single_day_report(self, report_dto: AllUsersReportDTO) -> bool:
+        """Проверяет, является ли отчет однодневным."""
+        return self._is_single_day_report(
+            selected_period=report_dto.selected_period,
+            start_date=report_dto.start_date,
+            end_date=report_dto.end_date,
+        )
 
-    def _calculate_response_stats(self, replies: List[MessageReply]) -> List[str]:
-        """Вычисляет статистику времени ответа."""
-        response_times = [reply.response_time_seconds for reply in replies]
-        if not response_times:
-            return []
+    def _is_single_day_report(
+        self,
+        selected_period: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> bool:
+        """Определяет, является ли отчет за один день."""
+        from constants.period import TimePeriod
 
-        stats = {
-            "avg": round(mean(response_times), 2),
-            "median": round(median(response_times), 2),
-            "min": round(min(response_times), 2),
-            "max": round(max(response_times), 2),
-        }
+        if selected_period:
+            return selected_period in [
+                TimePeriod.TODAY.value,
+                TimePeriod.YESTERDAY.value,
+            ]
 
-        return [
-            f"• <b>{format_seconds(stats['min'])}</b> и <b>{format_seconds(stats['max'])}</b> - мин. и макс. время ответа",
-            f"• <b>{format_seconds(stats['avg'])}</b> и <b>{format_seconds(stats['median'])}</b> - сред. и медиан. время ответа",
-        ]
+        return (end_date.date() - start_date.date()).days <= 1
+
+    def is_single_day_report(self, report_dto: AllUsersReportDTO) -> bool:
+        """Проверяет, является ли отчет однодневным."""
+        return self._is_single_day_report(
+            selected_period=report_dto.selected_period,
+            start_date=report_dto.start_date,
+            end_date=report_dto.end_date,
+        )
 
     def _generate_breaks_section(
         self, messages: List[ChatMessage], reactions: List[MessageReaction]
