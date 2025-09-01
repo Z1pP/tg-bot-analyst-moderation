@@ -1,13 +1,14 @@
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
 from database.session import async_session
+from dto.daily_activity import UserDailyActivityDTO
 from dto.message import CreateMessageDTO
-from models import ChatMessage
+from models import ChatMessage, User
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,11 @@ class MessageRepository:
                 return []
 
     async def get_messages_by_chat_id_and_period(
-        self, chat_id: int, start_date: datetime, end_date: datetime, tracked_user_ids: list[int] = None
+        self,
+        chat_id: int,
+        start_date: datetime,
+        end_date: datetime,
+        tracked_user_ids: list[int] = None,
     ) -> list[ChatMessage]:
         """
         Получает сообщения из чата за период времени для отслеживаемых пользователей.
@@ -104,15 +109,14 @@ class MessageRepository:
             query = (
                 select(ChatMessage)
                 .options(
-                    joinedload(ChatMessage.chat_session),
-                    joinedload(ChatMessage.user)
+                    joinedload(ChatMessage.chat_session), joinedload(ChatMessage.user)
                 )
                 .where(
                     ChatMessage.chat_id == chat_id,
                     ChatMessage.created_at.between(start_date, end_date),
                 )
             )
-            
+
             # Фильтруем только по отслеживаемым пользователям
             if tracked_user_ids:
                 query = query.where(ChatMessage.user_id.in_(tracked_user_ids))
@@ -133,6 +137,66 @@ class MessageRepository:
                     chat_id,
                     start_date,
                     end_date,
+                    e,
+                )
+                return []
+
+    async def get_daily_top_users(
+        self, chat_id: int, date: datetime, limit: int = 10
+    ) -> List[UserDailyActivityDTO]:
+        """
+        Получает топ активных пользователей за день в чате.
+        """
+        async with async_session() as session:
+            try:
+                start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_date = date.replace(
+                    hour=23, minute=59, second=59, microsecond=999999
+                )
+
+                query = (
+                    select(
+                        User.id,
+                        User.username,
+                        func.count(ChatMessage.id).label("message_count"),
+                    )
+                    .join(ChatMessage, User.id == ChatMessage.user_id)
+                    .where(
+                        ChatMessage.chat_id == chat_id,
+                        ChatMessage.created_at.between(start_date, end_date),
+                    )
+                    .group_by(User.id, User.username)
+                    .order_by(func.count(ChatMessage.id).desc())
+                    .limit(limit)
+                )
+
+                result = await session.execute(query)
+                rows = result.fetchall()
+
+                top_users = []
+                for rank, row in enumerate(rows, 1):
+                    top_users.append(
+                        UserDailyActivityDTO(
+                            user_id=row.id,
+                            username=row.username or "Без имени",
+                            message_count=row.message_count,
+                            rank=rank,
+                        )
+                    )
+
+                logger.info(
+                    "Получен топ-%d пользователей для chat_id=%s за %s",
+                    len(top_users),
+                    chat_id,
+                    date.strftime("%Y-%m-%d"),
+                )
+                return top_users
+
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении топа пользователей: chat_id=%s, дата=%s, %s",
+                    chat_id,
+                    date.strftime("%Y-%m-%d"),
                     e,
                 )
                 return []
