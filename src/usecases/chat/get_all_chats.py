@@ -12,8 +12,8 @@ class GetAllChatsUseCase:
         self._chat_tracking_repository = chat_tracking_repository
         self._user_service = user_service
 
-    async def execute(self, username: str):
-        user = await self._user_service.get_user(username)
+    async def execute(self, tg_id: str):
+        user = await self._user_service.get_user(tg_id)
 
         if not user:
             raise UserNotFoundException()
