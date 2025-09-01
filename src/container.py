@@ -34,6 +34,7 @@ from usecases.message import (
 from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
+    GetAllUsersBreaksDetailReportUseCase,
     GetAllUsersReportUseCase,
     GetBreaksDetailReportUseCase,
     GetReportOnSpecificChatUseCase,
@@ -167,6 +168,7 @@ class ContainerSetup:
             GetSingleUserReportUseCase,
             GetBreaksDetailReportUseCase,
             GetAllUsersReportUseCase,
+            GetAllUsersBreaksDetailReportUseCase,
             GetReportOnSpecificChatUseCase,
         ]
 
