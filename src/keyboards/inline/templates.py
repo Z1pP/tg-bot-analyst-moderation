@@ -23,6 +23,10 @@ def templates_inline_kb(
                 callback_data=f"template__{template.id}",
             ),
             InlineKeyboardButton(
+                text="✏️",
+                callback_data=f"edit_template__{template.id}",
+            ),
+            InlineKeyboardButton(
                 text="🗑",
                 callback_data=f"remove_template__{template.id}",
             ),
@@ -56,6 +60,33 @@ def templates_inline_kb(
 
         if pagination_buttons:
             builder.row(*pagination_buttons)
+
+    return builder.as_markup()
+
+
+def edit_template_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text="✏️ Изменить название",
+            callback_data="edit_title",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text="📝 Изменить содержимое",
+            callback_data="edit_content",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text="❌ Отмена",
+            callback_data="cancel_edit",
+        )
+    )
 
     return builder.as_markup()
 
