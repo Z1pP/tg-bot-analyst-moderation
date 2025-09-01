@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
     F.data.startswith("category__"),
 )
 async def select_category_for_template_callback(
-    query: CallbackQuery,
+    callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
     """Обработчик выбора категории при создании нового шаблона"""
-    category_id = int(query.data.split("__")[1])
-    username = query.from_user.username
+    category_id = int(callback.data.split("__")[1])
+    username = callback.from_user.username
 
     logger.info(
         "Была выбрана категория id=%s пользователем - %s",
@@ -38,16 +38,16 @@ async def select_category_for_template_callback(
 
     try:
         usecase: GetTrackedChatsUseCase = container.resolve(GetTrackedChatsUseCase)
-        chats = await usecase.execute(username=username)
-        await query.message.answer(
+        chats = await usecase.execute(tg_id=str(callback.from_user.id))
+        await callback.message.answer(
             text="Выбери группу для шаблона:",
             reply_markup=template_scope_selector_kb(chats=chats),
         )
     except Exception as e:
         logger.error("Ошибка при получении чатов: %s", e)
-        await query.message.answer(f"Ошибка: {e}")
+        await callback.message.answer(f"Ошибка: {e}")
     finally:
-        await query.answer()
+        await callback.answer()
 
 
 @router.callback_query(
