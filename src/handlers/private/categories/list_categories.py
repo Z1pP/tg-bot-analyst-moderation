@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import KbCommands
+from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
 from keyboards.inline.categories import categories_inline_kb
 from repositories import TemplateCategoryRepository
@@ -22,12 +23,21 @@ async def list_categories_handler(message: Message, state: FSMContext):
     repo: TemplateCategoryRepository = container.resolve(TemplateCategoryRepository)
 
     try:
-        categories = await repo.get_all_categories()
+        # Получаем первую страницу категорий
+        categories = await repo.get_categories_paginated(
+            limit=CATEGORIES_PAGE_SIZE,
+            offset=0,
+        )
+        total_count = await repo.get_categories_count()
 
         await send_html_message_with_kb(
             message=message,
-            text="Выберите категорию:",
-            reply_markup=categories_inline_kb(categories=categories),
+            text=f"Выберите категорию (всего {total_count}):",
+            reply_markup=categories_inline_kb(
+                categories=categories,
+                page=1,
+                total_count=total_count,
+            ),
         )
     except Exception as e:
         await handle_exception(
