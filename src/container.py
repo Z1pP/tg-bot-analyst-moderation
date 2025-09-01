@@ -27,7 +27,11 @@ from usecases.chat import (
     GetOrCreateChatUseCase,
     GetTrackedChatsUseCase,
 )
-from usecases.chat_tracking import AddChatToTrackUseCase
+from usecases.chat_tracking import (
+    AddChatToTrackUseCase,
+    GetUserTrackedChatsUseCase,
+    RemoveChatFromTrackingUseCase,
+)
 from usecases.message import (
     SaveMessageUseCase,
     SaveModeratorReplyMessageUseCase,
@@ -50,6 +54,18 @@ from usecases.user import (
     GetOrCreateUserIfNotExistUserCase,
     GetUserByIdUseCase,
     GetUserByTgIdUseCase,
+)
+from usecases.categories import (
+    CreateCategoryUseCase,
+    DeleteCategoryUseCase,
+    GetCategoriesPaginatedUseCase,
+    UpdateCategoryNameUseCase,
+)
+from usecases.templates import (
+    DeleteTemplateUseCase,
+    GetTemplateAndIncreaseUsageUseCase,
+    GetTemplatesByQueryUseCase,
+    UpdateTemplateTitleUseCase,
 )
 from usecases.user_tracking import (
     AddUserToTrackingUseCase,
@@ -108,6 +124,7 @@ class ContainerSetup:
         ContainerSetup._register_activity_usecases(container)
         ContainerSetup._register_report_usecases(container)
         ContainerSetup._register_tracking_usecases(container)
+        ContainerSetup._register_template_usecases(container)
         ContainerSetup._register_reaction_usecases(container)
 
     @staticmethod
@@ -188,9 +205,28 @@ class ContainerSetup:
             GetListTrackedUsersUseCase,
             RemoveUserFromTrackingUseCase,
             AddChatToTrackUseCase,
+            GetUserTrackedChatsUseCase,
+            RemoveChatFromTrackingUseCase,
         ]
 
         for usecase in tracking_usecases:
+            container.register(usecase)
+
+    @staticmethod
+    def _register_template_usecases(container: Container) -> None:
+        """Регистрация use cases для шаблонов."""
+        template_usecases = [
+            CreateCategoryUseCase,
+            DeleteCategoryUseCase,
+            DeleteTemplateUseCase,
+            GetCategoriesPaginatedUseCase,
+            GetTemplateAndIncreaseUsageUseCase,
+            GetTemplatesByQueryUseCase,
+            UpdateCategoryNameUseCase,
+            UpdateTemplateTitleUseCase,
+        ]
+
+        for usecase in template_usecases:
             container.register(usecase)
 
 
