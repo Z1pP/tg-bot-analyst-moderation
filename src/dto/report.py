@@ -29,6 +29,7 @@ class SingleUserReportDTO:
 
 @dataclass
 class AllUsersReportDTO:
+    user_tg_id: str
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
