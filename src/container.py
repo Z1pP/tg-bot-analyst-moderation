@@ -37,6 +37,7 @@ from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
     GetAllUsersReportUseCase,
     GetBreaksDetailReportUseCase,
+    GetChatBreaksDetailReportUseCase,
     GetReportOnSpecificChatUseCase,
     GetSingleUserReportUseCase,
 )
@@ -170,6 +171,7 @@ class ContainerSetup:
             GetAllUsersReportUseCase,
             GetAllUsersBreaksDetailReportUseCase,
             GetReportOnSpecificChatUseCase,
+            GetChatBreaksDetailReportUseCase,
         ]
 
         for usecase in report_usecases:
