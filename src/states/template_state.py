@@ -16,6 +16,7 @@ class TemplateStateManager(StatesGroup):
 
     listing_categories = State()
     listing_templates = State()
+    selecting_template_scope = State()
 
     removing_template = State()
     removing_category = State()

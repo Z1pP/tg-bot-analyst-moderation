@@ -16,37 +16,23 @@ router = Router(name=__name__)
 @router.message(F.text == KbCommands.SELECT_TEMPLATE)
 async def templates_list_handler(message: Message, state: FSMContext) -> None:
     """
-    Обработчик команды для получения списка шаблонов сообщений.
+    Обработчик команды для выбора области шаблонов.
     """
+    from keyboards.inline.template_scope import template_scope_selection_kb
+    from usecases.chat import GetTrackedChatsUseCase
 
     try:
-        await state.clear()  # Очистка состояния перед выводом списка чатов
-        await state.set_state(TemplateStateManager.listing_templates)
+        await state.clear()
+        await state.set_state(TemplateStateManager.selecting_template_scope)
 
-        template_service: TemplateService = container.resolve(TemplateService)
-
-        templates, total_count = await template_service.get_templates_with_count()
-
-        if not templates:
-            message_text = "❗ Шаблонов не найдено, создайте шаблон"
-            await send_html_message_with_kb(
-                message=message,
-                text=message_text,
-                reply_markup=None,
-            )
-            return
-
-        message_text = (
-            f"Найдено {total_count} шаблонов:" if total_count else "У вас нет шаблонов!"
-        )
+        # Получаем список чатов пользователя
+        usecase: GetTrackedChatsUseCase = container.resolve(GetTrackedChatsUseCase)
+        chats = await usecase.execute(tg_id=str(message.from_user.id))
 
         await send_html_message_with_kb(
             message=message,
-            text=message_text,
-            reply_markup=templates_inline_kb(
-                templates=templates,
-                total_count=total_count,
-            ),
+            text="Выберите область шаблонов:",
+            reply_markup=template_scope_selection_kb(chats),
         )
     except Exception as e:
         await handle_exception(
