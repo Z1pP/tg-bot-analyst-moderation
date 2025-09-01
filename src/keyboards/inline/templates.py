@@ -3,6 +3,7 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants.pagination import TEMPLATES_PAGE_SIZE
 from models import MessageTemplate
 
 
@@ -10,7 +11,7 @@ def templates_inline_kb(
     templates: List[MessageTemplate],
     page: int = 1,
     total_count: int = 0,
-    page_size: int = 5,
+    page_size: int = TEMPLATES_PAGE_SIZE,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
