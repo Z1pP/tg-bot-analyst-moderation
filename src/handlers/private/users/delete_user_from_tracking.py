@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from constants import KbCommands
+from constants.pagination import USERS_PAGE_SIZE
 from container import container
 from keyboards.inline.users import conf_remove_user_kb, remove_user_inline_kb
 from keyboards.reply.menu import user_menu_kb
@@ -54,10 +55,18 @@ async def remove_user_from_tracking_handler(message: Message) -> None:
             return
 
         logger.info(f"Найдено {len(tracked_users)} пользователей для удаления")
+
+        # Показываем первую страницу
+        first_page_users = tracked_users[:USERS_PAGE_SIZE]
+
         await send_html_message_with_kb(
             message=message,
             text=f"Всего {len(tracked_users)} пользователей",
-            reply_markup=remove_user_inline_kb(tracked_users),
+            reply_markup=remove_user_inline_kb(
+                users=first_page_users,
+                page=1,
+                total_count=len(tracked_users),
+            ),
         )
     except Exception as e:
         await handle_exception(
