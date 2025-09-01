@@ -17,7 +17,10 @@ from aiogram.types import (
 from container import container
 from filters import StaffOnlyInlineFilter
 from models import MessageTemplate
-from usecases.templates import GetTemplateAndIncreaseUsageUseCase, GetTemplatesByQueryUseCase
+from usecases.templates import (
+    GetTemplateAndIncreaseUsageUseCase,
+    GetTemplatesByQueryUseCase,
+)
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -193,9 +196,7 @@ async def send_media_group(
 
 async def get_variants(query: str) -> List[MessageTemplate]:
     """Получает варианты шаблонов по запросу"""
-    usecase: GetTemplatesByQueryUseCase = container.resolve(
-        GetTemplatesByQueryUseCase
-    )
+    usecase: GetTemplatesByQueryUseCase = container.resolve(GetTemplatesByQueryUseCase)
     return await usecase.execute(query=query)
 
 
