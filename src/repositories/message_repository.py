@@ -103,7 +103,10 @@ class MessageRepository:
         async with async_session() as session:
             query = (
                 select(ChatMessage)
-                .options(joinedload(ChatMessage.chat_session))
+                .options(
+                    joinedload(ChatMessage.chat_session),
+                    joinedload(ChatMessage.user)
+                )
                 .where(
                     ChatMessage.chat_id == chat_id,
                     ChatMessage.created_at.between(start_date, end_date),

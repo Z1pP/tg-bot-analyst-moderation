@@ -119,15 +119,21 @@ class GetReportOnSpecificChatUseCase:
         if not messages and not reactions:
             return "⚠️ Нет данных за указанный период."
 
-        period = format_selected_period(selected_period)
+        # Определяем тип отчета
+        is_single_day = self._is_single_day_report(
+            selected_period=selected_period,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        period = format_selected_period(start_date, end_date)
+        period_text = "период " if not is_single_day else ""
 
         report_parts = [
-            f"<b>📈 Отчёт по: {chat.title} за {period}</b>\n",
-            self._generate_basic_stats(
-                messages, replies, reactions, start_date, end_date
+            f"<b>📈 Отчёт: «{chat.title}» за {period_text}{period}</b>\n",
+            self._generate_users_stats_by_chat(
+                messages, replies, reactions, start_date, end_date, is_single_day
             ),
-            self._generate_response_stats(replies),
-            self._generate_breaks_section(messages, reactions),
         ]
 
         return "\n".join(filter(None, report_parts))
@@ -222,6 +228,293 @@ class GetReportOnSpecificChatUseCase:
             )
 
         return "\n".join(result) + "\n"
+
+    def _generate_users_stats_by_chat(
+        self,
+        messages: List[ChatMessage],
+        replies: List[MessageReply],
+        reactions: List[MessageReaction],
+        start_date: datetime,
+        end_date: datetime,
+        is_single_day: bool,
+    ) -> str:
+        """Генерирует статистику по пользователям в чате"""
+        # Группируем данные по пользователям
+        users_data = {}
+
+        # Группируем сообщения по пользователям
+        for message in messages:
+            user_id = message.user_id
+            if user_id not in users_data:
+                # Извлекаем username сразу, пока сессия активна
+                username = (
+                    message.user.username
+                    if (
+                        message.user
+                        and hasattr(message.user, "username")
+                        and message.user.username
+                    )
+                    else f"user_{user_id}"
+                )
+                users_data[user_id] = {
+                    "username": username,
+                    "messages": [],
+                    "replies": [],
+                    "reactions": [],
+                }
+            users_data[user_id]["messages"].append(message)
+
+        # Группируем ответы
+        for reply in replies:
+            user_id = reply.reply_user_id
+            if user_id in users_data:
+                users_data[user_id]["replies"].append(reply)
+
+        # Группируем реакции
+        for reaction in reactions:
+            user_id = reaction.user_id
+            if user_id not in users_data:
+                # Извлекаем username сразу, пока сессия активна
+                username = (
+                    reaction.user.username
+                    if (
+                        reaction.user
+                        and hasattr(reaction.user, "username")
+                        and reaction.user.username
+                    )
+                    else f"user_{user_id}"
+                )
+                users_data[user_id] = {
+                    "username": username,
+                    "messages": [],
+                    "replies": [],
+                    "reactions": [],
+                }
+            users_data[user_id]["reactions"].append(reaction)
+
+        # Генерируем отчет по каждому пользователю
+        user_reports = []
+        for user_id, data in users_data.items():
+            if not data["messages"] and not data["reactions"]:
+                continue
+
+            user_report = self._generate_single_user_report(
+                data, start_date, end_date, is_single_day
+            )
+            user_reports.append(user_report)
+
+        if not user_reports:
+            return "⚠️ Нет активности за указанный период"
+
+        result = "\n\n".join(user_reports)
+
+        # Добавляем призыв к детализации для многодневных отчетов
+        if not is_single_day:
+            result += "\n\n❗Чтобы получить детализацию перерывов по датам, нажмите соответствующую кнопку"
+
+        return result
+
+    def _generate_single_user_report(
+        self, data: dict, start_date: datetime, end_date: datetime, is_single_day: bool
+    ) -> str:
+        username = data["username"]
+        messages = data["messages"]
+        replies = data["replies"]
+        reactions = data["reactions"]
+
+        report_parts = [f"@{username}:"]
+
+        # Статистика сообщений и реакций
+        if is_single_day:
+            stats = self._generate_single_day_stats(
+                messages, reactions, start_date, end_date
+            )
+        else:
+            stats = self._generate_multi_day_stats(
+                messages, reactions, start_date, end_date
+            )
+
+        report_parts.append(stats)
+
+        # Статистика ответов
+        replies_stats = self._generate_replies_stats(replies)
+        report_parts.append(replies_stats)
+
+        # Перерывы
+        if is_single_day:
+            breaks_stats = self._generate_breaks_section(messages, reactions)
+        else:
+            breaks_stats = self._generate_breaks_multiday_section(messages, reactions)
+
+        report_parts.append(breaks_stats)
+
+        return "\n".join(filter(None, report_parts))
+
+    def _generate_single_day_stats(
+        self, messages, reactions, start_date, end_date
+    ) -> str:
+        stats = []
+        if messages:
+            first_msg = min(messages, key=lambda m: m.created_at)
+            stats.append(
+                f"• <b>{first_msg.created_at.strftime('%H:%M')}</b> — 1-е сообщение"
+            )
+
+        if reactions:
+            first_reaction = min(reactions, key=lambda r: r.created_at)
+            stats.append(
+                f"• <b>{first_reaction.created_at.strftime('%H:%M')}</b> — 1-я реакция на сообщение"
+            )
+
+        stats.append("")
+
+        msg_count = len(messages)
+        working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
+        avg_per_hour = round(msg_count / working_hours, 2) if working_hours > 0 else 0
+
+        stats.extend(
+            [
+                f"• <b>{avg_per_hour}</b> — сред. кол-во сообщ./час",
+                f"• <b>{msg_count}</b> — всего сообщений",
+            ]
+        )
+
+        return "\n".join(stats)
+
+    def _generate_multi_day_stats(
+        self, messages, reactions, start_date, end_date
+    ) -> str:
+        stats = []
+
+        # Среднее время первых сообщений
+        if messages:
+            avg_first_msg_time = self._get_avg_first_message_time(messages)
+            stats.append(
+                f"• <b>{avg_first_msg_time}</b> — среднее время отправки 1-х сообщений"
+            )
+
+        if reactions:
+            avg_first_reaction_time = self._get_avg_first_reaction_time(reactions)
+            stats.append(
+                f"• <b>{avg_first_reaction_time}</b> — среднее время 1-й реакции на сообщение"
+            )
+
+        stats.append("")
+
+        msg_count = len(messages)
+        working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
+        days = (end_date.date() - start_date.date()).days + 1
+
+        avg_per_hour = round(msg_count / working_hours, 2) if working_hours > 0 else 0
+        avg_per_day = round(msg_count / days, 2) if days > 0 else 0
+
+        stats.extend(
+            [
+                f"• <b>{avg_per_hour}</b> — сред. кол-во сообщ./час",
+                f"• <b>{avg_per_day}</b> — сред. кол-во сообщ./день",
+                f"• <b>{msg_count}</b> — всего сообщ. за период",
+            ]
+        )
+
+        return "\n".join(stats)
+
+    def _generate_replies_stats(self, replies) -> str:
+        if not replies:
+            return "Из них всего <b>0</b> ответов"
+
+        times = [reply.response_time_seconds for reply in replies]
+        return "\n".join(
+            [
+                f"Из них всего <b>{len(replies)}</b> ответов:",
+                f"• <b>{format_seconds(min(times))}</b> — мин. время ответа",
+                f"• <b>{format_seconds(max(times))}</b> — макс. время ответа",
+                f"• <b>{format_seconds(int(mean(times)))}</b> — сред. время ответа",
+                f"• <b>{format_seconds(int(median(times)))}</b> — медиан. время ответа",
+            ]
+        )
+
+    def _generate_breaks_multiday_section(self, messages, reactions) -> str:
+        avg_breaks_time = BreakAnalysisService.avg_breaks_time(messages, reactions)
+        if avg_breaks_time:
+            return f"Перерывы:\n• <b>{avg_breaks_time}</b> — средн. время перерыва между сообщ. и реакциями"
+        return "Перерывы: отсутствуют"
+
+    def _get_avg_first_message_time(self, messages) -> str:
+        from collections import defaultdict
+
+        daily_first_messages = defaultdict(list)
+        for message in messages:
+            date = message.created_at.date()
+            daily_first_messages[date].append(message)
+
+        first_times = []
+        for date, msgs in daily_first_messages.items():
+            first_msg = min(msgs, key=lambda m: m.created_at)
+            first_times.append(first_msg.created_at.time())
+
+        if not first_times:
+            return "н/д"
+
+        # Вычисляем среднее время
+        total_seconds = sum(
+            t.hour * 3600 + t.minute * 60 + t.second for t in first_times
+        )
+        avg_seconds = total_seconds // len(first_times)
+
+        hours = avg_seconds // 3600
+        minutes = (avg_seconds % 3600) // 60
+
+        return f"{hours:02d}:{minutes:02d}"
+
+    def _get_avg_first_reaction_time(self, reactions) -> str:
+        from collections import defaultdict
+
+        daily_first_reactions = defaultdict(list)
+        for reaction in reactions:
+            date = reaction.created_at.date()
+            daily_first_reactions[date].append(reaction)
+
+        first_times = []
+        for date, reacts in daily_first_reactions.items():
+            first_react = min(reacts, key=lambda r: r.created_at)
+            first_times.append(first_react.created_at.time())
+
+        if not first_times:
+            return "н/д"
+
+        # Вычисляем среднее время
+        total_seconds = sum(
+            t.hour * 3600 + t.minute * 60 + t.second for t in first_times
+        )
+        avg_seconds = total_seconds // len(first_times)
+
+        hours = avg_seconds // 3600
+        minutes = (avg_seconds % 3600) // 60
+
+        return f"{hours:02d}:{minutes:02d}"
+
+    def _is_single_day_report(
+        self,
+        selected_period: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> bool:
+        from constants.period import TimePeriod
+
+        if selected_period:
+            return selected_period in [
+                TimePeriod.TODAY.value,
+                TimePeriod.YESTERDAY.value,
+            ]
+
+        return (end_date.date() - start_date.date()).days <= 1
+
+    def is_single_day_report(self, report_dto: ChatReportDTO) -> bool:
+        return self._is_single_day_report(
+            selected_period=report_dto.selected_period,
+            start_date=report_dto.start_date,
+            end_date=report_dto.end_date,
+        )
 
     def _calculate_activity_per_hour(
         self, activity_count: int, work_hours: float

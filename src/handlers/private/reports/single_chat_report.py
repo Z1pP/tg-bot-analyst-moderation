@@ -10,6 +10,7 @@ from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
+from keyboards.inline import order_details_kb
 from keyboards.reply import admin_menu_kb, chat_actions_kb, get_time_period_kb
 from services.work_time_service import WorkTimeService
 from states import ChatStateManager
@@ -218,10 +219,19 @@ async def generate_and_send_report(
             selected_period=selected_period,
         )
 
-        report_parts = await generate_report(report_dto)
+        usecase: GetReportOnSpecificChatUseCase = container.resolve(
+            GetReportOnSpecificChatUseCase
+        )
+        is_single_day = usecase.is_single_day_report(report_dto)
+        report_parts = await usecase.execute(dto=report_dto)
+        
         logger.info(
             f"Отчет по чату {chat_id} сгенерирован, частей: {len(report_parts)}"
         )
+
+        # Сохраняем report_dto для детализации (только для многодневных отчетов)
+        if not is_single_day:
+            await state.update_data(chat_report_dto=report_dto)
 
         await state.set_state(ChatStateManager.selecting_period)
 
@@ -232,7 +242,7 @@ async def generate_and_send_report(
             await send_html_message_with_kb(
                 message=message,
                 text=part,
-                reply_markup=get_time_period_kb(),
+                reply_markup=order_details_kb(show_details=not is_single_day),
             )
 
         logger.info(f"Отчет по чату {chat_id} успешно отправлен")
@@ -241,13 +251,4 @@ async def generate_and_send_report(
         await handle_exception(message, e, "generate_and_send_report")
 
 
-async def generate_report(report_dto: ChatReportDTO) -> List[str]:
-    """Генерирует отчет используя UseCase."""
-    try:
-        usecase: GetReportOnSpecificChatUseCase = container.resolve(
-            GetReportOnSpecificChatUseCase
-        )
-        return await usecase.execute(dto=report_dto)
-    except Exception as e:
-        logger.error("Ошибка генерации отчета: %s", str(e), exc_info=True)
-        raise
+
