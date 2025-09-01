@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import KbCommands
+from constants.pagination import CHATS_PAGE_SIZE
 from container import container
 from keyboards.inline.chats_kb import tracked_chats_inline_kb
 from keyboards.reply import chat_menu_kb
@@ -49,11 +50,18 @@ async def list_of_tracking_chats_handler(message: Message, state: FSMContext) ->
             state=state,
             new_state=ChatStateManager.listing_tracking_chats,
         )
+        # Показываем первую страницу
+        first_page_chats = chats[:CHATS_PAGE_SIZE]
+        
         # Отправляем сообщение с кнопками для выбора действия
         await send_html_message_with_kb(
             message=message,
             text=f"Найдено {len(chats)} чат(-ов):",
-            reply_markup=tracked_chats_inline_kb(chats=chats),
+            reply_markup=tracked_chats_inline_kb(
+                chats=first_page_chats,
+                page=1,
+                total_count=len(chats),
+            ),
         )
     except Exception as e:
         await handle_exception(
