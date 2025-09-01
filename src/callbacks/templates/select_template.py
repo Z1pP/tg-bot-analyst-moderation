@@ -33,9 +33,7 @@ async def select_template_callback(
     template_id = query.data.split("__")[1]
 
     logger.info(
-        "Был выбран шаблон c ID:%d пользователем - %s",
-        template_id,
-        query.from_user.username,
+        f"Был выбран шаблон c ID={template_id} пользователем - {query.from_user.username}"
     )
 
     await send_template(
