@@ -11,6 +11,7 @@ from repositories import (
     MessageReactionRepository,
     MessageReplyRepository,
     MessageRepository,
+    UserRepository,
 )
 from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
@@ -29,16 +30,20 @@ class GetReportOnSpecificChatUseCase:
         message_repository: MessageRepository,
         chat_repository: ChatRepository,
         reaction_repository: MessageReactionRepository,
+        user_repository: UserRepository,
     ):
         self._message_repository = message_repository
         self._msg_reply_repository = msg_reply_repository
         self._chat_repository = chat_repository
         self._reaction_repository = reaction_repository
+        self._user_repository = user_repository
 
     async def execute(self, dto: ChatReportDTO) -> List[str]:
         """Генерирует отчет по конкретному чату за указанный период."""
         chat = await self._get_chat(dto.chat_id)
-        chat_data = await self._get_chat_data(chat, dto)
+        tracked_users = await self._user_repository.get_tracked_users_for_admin(dto.admin_tg_id)
+        tracked_user_ids = [user.id for user in tracked_users]
+        chat_data = await self._get_chat_data(chat, dto, tracked_user_ids)
 
         report = self._generate_report(
             data=chat_data,
@@ -57,13 +62,14 @@ class GetReportOnSpecificChatUseCase:
             raise ValueError("Чат не найден")
         return chat
 
-    async def _get_chat_data(self, chat: ChatSession, dto: ChatReportDTO) -> dict:
-        """Получает все данные чата за период."""
-        messages = await self._get_processed_items(
+    async def _get_chat_data(self, chat: ChatSession, dto: ChatReportDTO, tracked_user_ids: list[int]) -> dict:
+        """Получает все данные чата за период для отслеживаемых пользователей."""
+        messages = await self._get_processed_items_with_users(
             self._message_repository.get_messages_by_chat_id_and_period,
             chat.id,
             dto.start_date,
             dto.end_date,
+            tracked_user_ids,
         )
 
         replies = await self._get_processed_items(
@@ -94,6 +100,22 @@ class GetReportOnSpecificChatUseCase:
             chat_id=chat_id,
             start_date=start_date,
             end_date=end_date,
+        )
+
+        for item in items:
+            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
+
+        return items
+
+    async def _get_processed_items_with_users(
+        self, repository_method, chat_id: int, start_date: datetime, end_date: datetime, tracked_user_ids: list[int]
+    ):
+        """Получает и обрабатывает элементы из репозитория с фильтрацией по пользователям."""
+        items = await repository_method(
+            chat_id=chat_id,
+            start_date=start_date,
+            end_date=end_date,
+            tracked_user_ids=tracked_user_ids,
         )
 
         for item in items:
