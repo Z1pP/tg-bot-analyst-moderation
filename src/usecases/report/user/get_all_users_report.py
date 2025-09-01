@@ -98,7 +98,9 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
 
         # Статистика сообщений
         if messages:
-            avg_per_hour = self._messages_per_hour(len(messages), start_date, end_date)
+            avg_per_hour = self._avg_messages_per_hour(
+                len(messages), start_date, end_date
+            )
             report_parts.extend(
                 [
                     f"{self.get_time_first_message(messages)}",

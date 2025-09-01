@@ -35,10 +35,10 @@ def format_seconds(seconds: float) -> str:
 
     parts = []
     if hours > 0:
-        parts.append(f"{hours}ч.")
+        parts.append(f"{hours} ч.")
     if minutes > 0:
-        parts.append(f"{minutes}мин.")
+        parts.append(f"{minutes} мин.")
     if secs > 0:
-        parts.append(f"{secs}сек.")
+        parts.append(f"{secs} сек.")
 
     return " ".join(parts)

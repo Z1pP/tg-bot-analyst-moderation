@@ -1,0 +1,57 @@
+from .base import BotBaseException
+
+
+# Database exceptions
+class DatabaseException(BotBaseException):
+    default_message = "Ошибка работы с базой данных"
+
+
+class UserNotFoundException(DatabaseException):
+    default_message = "❌ Пользователь не найден"
+
+
+class ChatNotFoundException(DatabaseException):
+    default_message = "❌ Чат не найден"
+
+
+class DuplicateRecordException(DatabaseException):
+    default_message = "❌ Запись уже существует"
+
+
+# Validation exceptions
+class ValidationException(BotBaseException):
+    default_message = "❌ Неверные данные"
+
+
+class InvalidUsernameException(ValidationException):
+    default_message = "❌ Неверный формат username"
+
+
+class InvalidUserIdException(ValidationException):
+    default_message = "❌ Неверный формат ID пользователя"
+
+
+# Telegram API exceptions
+class TelegramApiException(BotBaseException):
+    default_message = "❌ Ошибка Telegram API"
+
+
+class UserNotInChatException(TelegramApiException):
+    default_message = "❌ Пользователь не найден в чате"
+
+
+class BotPermissionException(TelegramApiException):
+    default_message = "❌ Недостаточно прав у бота"
+
+
+# Business logic exceptions
+class BusinessLogicException(BotBaseException):
+    default_message = "❌ Ошибка выполнения операции"
+
+
+class UserAlreadyTrackedException(BusinessLogicException):
+    default_message = "⚠ Пользователь уже отслеживается"
+
+
+class EmptyTrackingListException(BusinessLogicException):
+    default_message = "⚠ Список отслеживания пуст"

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -9,7 +9,8 @@ from aiogram.types import Message
 from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
-from dto.report import ResponseTimeReportDTO
+from dto.report import SingleUserReportDTO
+from keyboards.inline import order_details_kb
 from keyboards.reply import admin_menu_kb, get_time_period_kb
 from keyboards.reply.user_actions import user_actions_kb
 from services.work_time_service import WorkTimeService
@@ -24,6 +25,21 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
+async def _validate_user_id(message: Message, state: FSMContext) -> Optional[int]:
+    """Валидирует наличие user_id в состоянии."""
+    user_data = await state.get_data()
+    user_id = user_data.get("user_id")
+
+    if not user_id:
+        await send_html_message_with_kb(
+            message=message,
+            text="Выберите пользователя заново",
+            reply_markup=admin_menu_kb(),
+        )
+
+    return user_id
+
+
 @router.message(
     F.text == KbCommands.GET_REPORT,
     SingleUserReportStates.selected_single_user,
@@ -31,10 +47,6 @@ logger = logging.getLogger(__name__)
 async def single_user_report_handler(message: Message, state: FSMContext) -> None:
     """Обработчик запроса на создание отчета о времени ответа."""
     try:
-        logger.info(
-            f"Пользователь {message.from_user.id} запросил отчет по времени ответа"
-        )
-
         await log_and_set_state(
             message=message,
             state=state,
@@ -57,24 +69,11 @@ async def single_user_report_handler(message: Message, state: FSMContext) -> Non
 async def process_period_selection(message: Message, state: FSMContext) -> None:
     """Обрабатывает выбор периода для отчета о времени ответа."""
     try:
-        user_data = await state.get_data()
-        user_id = user_data.get("user_id")
-
-        logger.info(f"Выбран период для пользователя {user_id}: {message.text}")
-
+        user_id = await _validate_user_id(message, state)
         if not user_id:
-            logger.warning("Отсутствует user_id в состоянии")
-
-            await send_html_message_with_kb(
-                message=message,
-                text="Выберите пользователя заново",
-                reply_markup=admin_menu_kb(),
-            )
             return
 
         if message.text == TimePeriod.CUSTOM.value:
-            logger.info("Запрос пользовательского периода")
-
             await log_and_set_state(
                 message=message,
                 state=state,
@@ -89,11 +88,7 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
             return
 
         start_date, end_date = TimePeriod.to_datetime(period=message.text)
-        logger.info(
-            f"Генерация отчета для пользователя {user_id} за период: {start_date} - {end_date}"
-        )
-
-        await generate_and_send_report(
+        await _generate_and_send_report(
             message=message,
             state=state,
             user_id=user_id,
@@ -109,27 +104,13 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
 async def process_custom_period_input(message: Message, state: FSMContext) -> None:
     """Обрабатывает ввод пользовательского периода для отчета."""
     try:
-        user_data = await state.get_data()
-        user_id = user_data.get("user_id")
-
-        logger.info(
-            f"Получен пользовательский период для пользователя {user_id}: {message.text}"
-        )
-
+        user_id = await _validate_user_id(message, state)
         if not user_id:
-            logger.warning("Отсутствует user_id при вводе периода")
-            await send_html_message_with_kb(
-                message=message,
-                text="Выберите пользователя заново",
-                reply_markup=admin_menu_kb(),
-            )
             return
 
         try:
             start_date, end_date = parse_date(message.text)
-            logger.info(f"Парсинг периода успешен: {start_date} - {end_date}")
         except ValueError as e:
-            logger.warning(f"Некорректный формат даты: {message.text}, ошибка: {e}")
             await send_html_message_with_kb(
                 message=message,
                 text=f"❌ Некорректный формат даты: {str(e)}\n"
@@ -138,7 +119,7 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
             )
             return
 
-        await generate_and_send_report(
+        await _generate_and_send_report(
             message=message,
             state=state,
             user_id=user_id,
@@ -162,17 +143,8 @@ async def process_custom_period_input(message: Message, state: FSMContext) -> No
 async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
     """Обработчик для возврата в меню пользователя."""
     try:
-        user_data = await state.get_data()
-        user_id = user_data.get("user_id")
-
-        logger.info(f"Возврат в меню пользователя {user_id}")
-
+        user_id = await _validate_user_id(message, state)
         if not user_id:
-            await send_html_message_with_kb(
-                message=message,
-                text="Выберите пользователя заново",
-                reply_markup=admin_menu_kb(),
-            )
             return
 
         await log_and_set_state(
@@ -190,7 +162,7 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
         await handle_exception(message, e, "back_to_menu_handler")
 
 
-async def generate_and_send_report(
+async def _generate_and_send_report(
     message: Message,
     state: FSMContext,
     user_id: int,
@@ -199,53 +171,31 @@ async def generate_and_send_report(
     selected_period: Optional[str] = None,
 ) -> None:
     """Генерирует и отправляет отчет."""
-    try:
-        logger.info(
-            f"Начало генерации отчета для пользователя {user_id} за "
-            f"период {start_date} - {end_date}"
+    adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
+        start_date, end_date
+    )
+
+    report_dto = SingleUserReportDTO(
+        user_id=user_id,
+        start_date=adjusted_start,
+        end_date=adjusted_end,
+        selected_period=selected_period,
+    )
+
+    usecase: GetSingleUserReportUseCase = container.resolve(GetSingleUserReportUseCase)
+    is_single_day = usecase.is_single_day_report(report_dto)
+    report_parts = await usecase.execute(report_dto=report_dto)
+
+    # Сохраняем report_dto для детализации (только для многодневных отчетов)
+    if not is_single_day:
+        await state.update_data(report_dto=report_dto)
+
+    for idx, part in enumerate(report_parts):
+        if idx == len(report_parts) - 1:
+            part = f"{part}"
+
+        await send_html_message_with_kb(
+            message=message,
+            text=part,
+            reply_markup=order_details_kb(show_details=not is_single_day),
         )
-
-        adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
-            start_date, end_date
-        )
-
-        report_dto = ResponseTimeReportDTO(
-            user_id=user_id,
-            start_date=adjusted_start,
-            end_date=adjusted_end,
-            selected_period=selected_period,
-        )
-
-        report_parts = await generate_report(report_dto=report_dto)
-        logger.info(
-            f"Отчет для пользователя {user_id} сгенерирован, частей: {len(report_parts)}"
-        )
-
-        for idx, part in enumerate(report_parts):
-            if idx == len(report_parts) - 1:
-                part = f"{part}\n\nДля продолжения выберите период, либо нажмите назад"
-
-            await send_html_message_with_kb(
-                message=message,
-                text=part,
-                reply_markup=get_time_period_kb(),
-            )
-
-        logger.info(f"Отчет для пользователя {user_id} успешно отправлен")
-    except Exception as e:
-        logger.error(
-            f"Ошибка при генерации/отправке отчета для пользователя {user_id}: {e}"
-        )
-        await handle_exception(message, e, "generate_and_send_report")
-
-
-async def generate_report(report_dto: ResponseTimeReportDTO) -> List[str]:
-    """Генерирует отчет используя UseCase."""
-    try:
-        usecase: GetSingleUserReportUseCase = container.resolve(
-            GetSingleUserReportUseCase
-        )
-        return await usecase.execute(report_dto=report_dto)
-    except Exception as e:
-        logger.error("Ошибка генерации отчета: %s", str(e), exc_info=True)
-        raise
