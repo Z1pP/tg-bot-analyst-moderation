@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
