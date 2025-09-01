@@ -4,6 +4,7 @@ from aiogram import F, Router
 from aiogram.types import Message
 
 from constants import KbCommands
+from constants.pagination import USERS_PAGE_SIZE
 from container import container
 from keyboards.inline.users import users_inline_kb
 from keyboards.reply.menu import user_menu_kb
@@ -46,9 +47,8 @@ async def users_list_handler(message: Message) -> None:
 
         logger.info(f"Найдено {len(users)} пользователей для отчета")
 
-        # Показываем первую страницу (5 пользователей)
-        page_size = 5
-        first_page_users = users[:page_size]
+        # Показываем первую страницу
+        first_page_users = users[:USERS_PAGE_SIZE]
 
         await send_html_message_with_kb(
             message=message,
@@ -57,7 +57,6 @@ async def users_list_handler(message: Message) -> None:
                 users=first_page_users,
                 page=1,
                 total_count=len(users),
-                page_size=page_size,
             ),
         )
     except Exception as e:
