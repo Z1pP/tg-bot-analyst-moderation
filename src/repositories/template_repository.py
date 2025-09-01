@@ -276,3 +276,72 @@ class MessageTemplateRepository:
                 logger.error(f"Ошибка при удалении шаблона: {e}")
                 await session.rollback()
                 raise
+
+    async def update_template_title(self, template_id: int, new_title: str) -> bool:
+        """Обновляет название шаблона"""
+        async with async_session() as session:
+            try:
+                query = select(MessageTemplate).where(MessageTemplate.id == template_id)
+                result = await session.execute(query)
+                template = result.scalar_one_or_none()
+
+                if template:
+                    template.title = new_title
+                    await session.commit()
+                    logger.info(
+                        f"Название шаблона {template_id} обновлено на '{new_title}'"
+                    )
+                    return True
+                return False
+            except Exception as e:
+                logger.error(f"Ошибка при обновлении названия шаблона: {e}")
+                await session.rollback()
+                raise
+
+    async def update_template_content(
+        self, template_id: int, content_data: dict
+    ) -> bool:
+        """Обновляет содержимое шаблона"""
+        from models import TemplateMedia
+
+        async with async_session() as session:
+            try:
+                query = (
+                    select(MessageTemplate)
+                    .options(selectinload(MessageTemplate.media_items))
+                    .where(MessageTemplate.id == template_id)
+                )
+                result = await session.execute(query)
+                template = result.scalar_one_or_none()
+
+                if template:
+                    # Обновляем текстовое содержимое
+                    if "text" in content_data:
+                        template.content = content_data["text"]
+
+                    # Удаляем старые медиа-файлы
+                    for media_item in template.media_items:
+                        await session.delete(media_item)
+
+                    # Добавляем новые медиа-файлы
+                    if "media_items" in content_data:
+                        for position, media_data in enumerate(
+                            content_data["media_items"]
+                        ):
+                            media_item = TemplateMedia(
+                                template_id=template_id,
+                                media_type=media_data["media_type"],
+                                file_id=media_data["file_id"],
+                                file_unique_id=media_data["file_unique_id"],
+                                position=position,
+                            )
+                            session.add(media_item)
+
+                    await session.commit()
+                    logger.info(f"Содержимое шаблона {template_id} обновлено")
+                    return True
+                return False
+            except Exception as e:
+                logger.error(f"Ошибка при обновлении содержимого шаблона: {e}")
+                await session.rollback()
+                raise
