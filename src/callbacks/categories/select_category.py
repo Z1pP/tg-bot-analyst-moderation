@@ -76,8 +76,8 @@ async def show_templates_by_category_callback(
             text="Выберите шаблон:",
             reply_markup=templates_inline_kb(
                 templates=templates,
+                page=1,
                 total_count=total_count,
-                category_id=category_id,  # Передаем ID категории для пагинации
             ),
         )
 
