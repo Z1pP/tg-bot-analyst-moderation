@@ -5,7 +5,7 @@ from sqlalchemy import delete, select
 
 from constants.enums import UserRole
 from database.session import async_session
-from models import User
+from models import User, admin_user_tracking
 
 logger = logging.getLogger(__name__)
 
@@ -113,12 +113,26 @@ class UserRepository:
                 return None
 
     async def get_tracked_users_for_admin(self, admin_tg_id: str) -> List[User]:
+
         async with async_session() as session:
             try:
+                # Получаем админа
+                admin_query = select(User).where(User.tg_id == admin_tg_id)
+                admin_result = await session.execute(admin_query)
+                admin = admin_result.scalar_one_or_none()
+
+                if not admin:
+                    logger.warning(f"Администратор с TG_ID:{admin_tg_id} не найден")
+                    return []
+
+                # Получаем отслеживаемых пользователей
                 query = (
                     select(User)
-                    .join(User.tracked_users)
-                    .where(User.tg_id == admin_tg_id)
+                    .join(
+                        admin_user_tracking,
+                        User.id == admin_user_tracking.c.tracked_user_id,
+                    )
+                    .where(admin_user_tracking.c.admin_id == admin.id)
                     .order_by(User.username)
                 )
                 result = await session.execute(query)
@@ -293,7 +307,9 @@ class UserRepository:
                     .offset(offset)
                 )
                 users = result.scalars().all()
-                logger.info(f"Получено {len(users)} пользователей (страница {offset//limit + 1})")
+                logger.info(
+                    f"Получено {len(users)} пользователей (страница {offset//limit + 1})"
+                )
                 return users
             except Exception as e:
                 logger.error(f"Ошибка при получении пользователей с пагинацией: {e}")
@@ -304,9 +320,9 @@ class UserRepository:
         async with async_session() as session:
             try:
                 from sqlalchemy import func
+
                 result = await session.execute(
-                    select(func.count(User.id))
-                    .where(User.role == UserRole.MODERATOR)
+                    select(func.count(User.id)).where(User.role == UserRole.MODERATOR)
                 )
                 count = result.scalar()
                 logger.info(f"Общее количество пользователей: {count}")
