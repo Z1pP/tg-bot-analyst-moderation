@@ -6,7 +6,7 @@ T = TypeVar("T")
 
 class ICache(ABC):
     @abstractmethod
-    def get(self, key: str) -> Optional[T]:
+    async def get(self, key: str) -> Optional[T]:
         """
         Получает значение из кеша по ключу.
 
@@ -19,7 +19,7 @@ class ICache(ABC):
         pass
 
     @abstractmethod
-    def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
         """
         Устанавливает значение в кеш по ключу.
 
@@ -31,7 +31,7 @@ class ICache(ABC):
         pass
 
     @abstractmethod
-    def delete(self, key: str) -> bool:
+    async def delete(self, key: str) -> bool:
         """
         Удаляет значение из кеша по ключу.
 
@@ -44,7 +44,7 @@ class ICache(ABC):
         pass
 
     @abstractmethod
-    def clear(self) -> None:
+    async def clear(self) -> None:
         """
         Очищает весь кеш.
         """

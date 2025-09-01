@@ -64,13 +64,13 @@ class GetOrCreateUserIfNotExistUserCase:
         Получает пользователя по tg_id или username
         """
         if tg_id:
-            user = self.cache_service.get(key=tg_id)
+            user = await self.cache_service.get(key=tg_id)
             if user:
                 return user
 
-            user = user = await self.user_repository.get_user_by_tg_id(tg_id)
+            user = await self.user_repository.get_user_by_tg_id(tg_id)
             if user:
-                self.cache_service.set(key=tg_id, value=user)
+                await self.cache_service.set(key=tg_id, value=user)
                 return user
         if username:
             return await self.user_repository.get_user_by_username(username)
@@ -90,5 +90,5 @@ class GetOrCreateUserIfNotExistUserCase:
             username=username,
             role=role,
         )
-        self.cache_service.set(key=tg_id, value=user)
+        await self.cache_service.set(key=tg_id, value=user)
         return user
