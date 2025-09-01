@@ -41,17 +41,35 @@ class RatingFormatter:
             f"📅 {stats.date.strftime('%Y-%m-%d')} | 💬 <b>{stats.chat_title}</b>\n\n"
         )
 
-        # Рейтинг пользователей
+        # Рейтинг по сообщениям
+        text += "💬 <b>По сообщениям:</b>\n"
         for user in stats.top_users:
             emoji = RatingFormatter.RANK_EMOJIS.get(user.rank, "💫")
             username = (
                 f"@{user.username}" if user.username != "Без имени" else "👤 Без имени"
             )
             text += f"{emoji} {username} — {user.message_count} сообщений\n"
+        
+        # Рейтинг по реакциям
+        if stats.top_reactors:
+            text += "\n😍 <b>По реакциям:</b>\n"
+            for user in stats.top_reactors:
+                emoji = RatingFormatter.RANK_EMOJIS.get(user.rank, "💫")
+                username = (
+                    f"@{user.username}" if user.username != "Без имени" else "👤 Без имени"
+                )
+                text += f"{emoji} {username} — {user.reaction_count} реакций\n"
+        
+        # Популярные реакции
+        if stats.popular_reactions:
+            text += "\n🔥 <b>Популярные реакции:</b>\n"
+            for reaction in stats.popular_reactions:
+                text += f"{reaction.emoji} — {reaction.count} раз\n"
 
         # Общая статистика
         text += (
             f"\n📊 <b>Всего сообщений:</b> {stats.total_messages}\n"
+            f"😍 <b>Всего реакций:</b> {stats.total_reactions}\n"
             f"👥 <b>Активных пользователей:</b> {stats.active_users_count}"
         )
 
