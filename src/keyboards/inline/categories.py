@@ -1,11 +1,17 @@
+from typing import List
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants.pagination import CATEGORIES_PAGE_SIZE
 from models import TemplateCategory
 
 
 def categories_inline_kb(
-    categories: list[TemplateCategory],
+    categories: List[TemplateCategory],
+    page: int = 1,
+    total_count: int = 0,
+    page_size: int = CATEGORIES_PAGE_SIZE,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -18,10 +24,12 @@ def categories_inline_kb(
         )
         return builder.as_markup()
 
+    # Кнопки категорий
+    start_index = (page - 1) * page_size
     for index, category in enumerate(categories):
         builder.row(
             InlineKeyboardButton(
-                text=f"{index + 1}. {category.name}",
+                text=f"{start_index + index + 1}. {category.name}",
                 callback_data=f"category__{category.id}",
             ),
             InlineKeyboardButton(
@@ -30,6 +38,40 @@ def categories_inline_kb(
             ),
             width=2,
         )
+
+    # Пагинация (только если больше одной страницы)
+    if total_count > page_size:
+        max_pages = (total_count + page_size - 1) // page_size
+        pagination_buttons = []
+
+        # Кнопка "Назад"
+        if page > 1:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text="◀️", callback_data=f"prev_categories_page__{page}"
+                )
+            )
+
+        # Информация о странице
+        start_item = (page - 1) * page_size + 1
+        end_item = min(page * page_size, total_count)
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=f"{start_item}-{end_item} из {total_count}",
+                callback_data="categories_page_info",
+            )
+        )
+
+        # Кнопка "Вперед"
+        if page < max_pages:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text="▶️", callback_data=f"next_categories_page__{page}"
+                )
+            )
+
+        if pagination_buttons:
+            builder.row(*pagination_buttons)
 
     return builder.as_markup()
 
