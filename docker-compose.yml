@@ -18,7 +18,7 @@ services:
       - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
       - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
       - BOT_TOKEN=${BOT_TOKEN}
-      - REDIS_URL=${REDIS_URL}
+      - REDIS_URL=redis://redis:6379/0 
     volumes:
       - ./logs:/app/logs 
 
