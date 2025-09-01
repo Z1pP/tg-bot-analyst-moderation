@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from constants import KbCommands
+from constants.pagination import CHATS_PAGE_SIZE
 from container import container
 from keyboards.inline.chats_kb import conf_remove_chat_kb, remove_inline_kb
 from models import ChatSession
@@ -60,10 +61,17 @@ async def delete_chat_handler(
             "📋 <b>Ваши отслеживаемые чаты:</b>"
         )
 
+        # Показываем первую страницу
+        first_page_chats = tracked_chats[:CHATS_PAGE_SIZE]
+
         await send_html_message_with_kb(
             message=message,
             text=message_text,
-            reply_markup=remove_inline_kb(tracked_chats),
+            reply_markup=remove_inline_kb(
+                chats=first_page_chats,
+                page=1,
+                total_count=len(tracked_chats),
+            ),
         )
 
         logger.info(
