@@ -95,20 +95,27 @@ class MessageRepository:
                 return []
 
     async def get_messages_by_chat_id_and_period(
-        self, chat_id: int, start_date: datetime, end_date: datetime
+        self, chat_id: int, start_date: datetime, end_date: datetime, tracked_user_ids: list[int] = None
     ) -> list[ChatMessage]:
         """
-        Получает сообщения из чата за период времени.
+        Получает сообщения из чата за период времени для отслеживаемых пользователей.
         """
         async with async_session() as session:
             query = (
                 select(ChatMessage)
-                .options(joinedload(ChatMessage.chat_session))
+                .options(
+                    joinedload(ChatMessage.chat_session),
+                    joinedload(ChatMessage.user)
+                )
                 .where(
                     ChatMessage.chat_id == chat_id,
                     ChatMessage.created_at.between(start_date, end_date),
                 )
             )
+            
+            # Фильтруем только по отслеживаемым пользователям
+            if tracked_user_ids:
+                query = query.where(ChatMessage.user_id.in_(tracked_user_ids))
             try:
                 result = await session.execute(query)
                 messages = result.scalars().all()

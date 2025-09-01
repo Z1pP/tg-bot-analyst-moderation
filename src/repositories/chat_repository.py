@@ -10,13 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class ChatRepository:
-    async def get_chat(self, chat_id: str) -> Optional[ChatSession]:
+    async def get_chat(self, chat_id: int) -> Optional[ChatSession]:
         """Получает чат по идентификатору."""
         async with async_session() as session:
             try:
-                chat = await session.scalar(
-                    select(ChatSession).where(ChatSession.chat_id == chat_id)
-                )
+                chat = await session.get(ChatSession, chat_id)
                 if chat:
                     logger.info(
                         "Получен чат: chat_id=%s, title=%s", chat_id, chat.title

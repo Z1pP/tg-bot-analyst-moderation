@@ -43,7 +43,7 @@ def tamplates_menu_kb():
 def user_menu_kb():
     buttons = [
         [
-            KeyboardButton(text=KbCommands.GET_REPORT),
+            KeyboardButton(text=KbCommands.GET_STATISTICS),
         ],
         [
             KeyboardButton(text=KbCommands.ADD_USER),
@@ -61,15 +61,12 @@ def user_menu_kb():
 def chat_menu_kb():
     buttons = [
         [
-            KeyboardButton(text=KbCommands.SELECT_CHAT),
+            KeyboardButton(text=KbCommands.GET_STATISTICS),
         ],
         [
             KeyboardButton(text=KbCommands.ADD_CHAT),
             KeyboardButton(text=KbCommands.REMOVE_CHAT),
         ],
-        # [
-        #     KeyboardButton(text=KbCommands.TRACKED_CHATS),
-        # ],
         [
             KeyboardButton(text=KbCommands.MENU),
         ],

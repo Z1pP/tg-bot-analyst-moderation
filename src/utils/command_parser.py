@@ -4,7 +4,7 @@ from typing import Tuple
 
 from exceptions.date import IncorrectDateFormatError
 from services.time_service import TimeZoneService
-from utils.username_validator import validate_username
+from utils.username_validator import parse_and_validate_username
 
 
 def parse_date(custom_period: str) -> Tuple[datetime, datetime]:
@@ -93,7 +93,7 @@ def parse_time(text: str) -> timedelta | None:
 
 
 def parse_username(text: str) -> str:
-    return validate_username(username=text)
+    return parse_and_validate_username(text=text)
 
 
 def parse_days(text: str) -> int:

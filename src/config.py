@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     TIMEZONE: str = Field(
         "Europe/Moscow", alias="TIMEZONE", description="Default timezone "
     )
+    REDIS_URL: str = Field(alias="REDIS_URL")
 
     @property
     def ALEMBIC_DB_URL(self) -> str:

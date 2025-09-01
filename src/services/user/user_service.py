@@ -8,14 +8,14 @@ class UserService:
         self._user_repository = user_repository
         self._cache = cache
 
-    async def get_user(self, username: str) -> User:
-        user = self._cache.get(username)
+    async def get_user(self, tg_id: str) -> User:
+        user = await self._cache.get(tg_id)
         if user:
             return user
 
-        user = await self._user_repository.get_user_by_username(username)
+        user = await self._user_repository.get_user_by_tg_id(tg_id)
         if user:
-            self._cache.set(username, user)
+            await self._cache.set(tg_id, user)
 
         return user
 
@@ -23,11 +23,11 @@ class UserService:
         user = await self._user_repository.create_user(tg_id=tg_id, username=username)
 
         if user:
-            self._cache.set(username, user)
+            await self._cache.set(tg_id, user)
         return user
 
-    async def get_or_create(self, username: str, tg_id: str = None) -> User:
-        user = await self.get_user(username=username)
+    async def get_or_create(self, username: str, tg_id: str) -> User:
+        user = await self.get_user(tg_id=tg_id)
 
         if not user:
             return await self.create_user(username=username, tg_id=tg_id)

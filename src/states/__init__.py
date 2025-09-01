@@ -3,17 +3,17 @@ from .menu_states import MenuStates
 from .template_state import TemplateStateManager
 from .user_states import (
     AllUsersReportStates,
-    SingleUserReportPeriod,
-    UsernameManagement,
+    SingleUserReportStates,
+    UsernameStates,
     UserStateManager,
 )
 
 __all__ = [
     "ChatStateManager",
     "UserStateManager",
-    "UsernameManagement",
+    "UsernameStates",
     "AllUsersReportStates",
-    "SingleUserReportPeriod",
+    "SingleUserReportStates",
     "TemplateStateManager",
     "MenuStates",
 ]

@@ -100,3 +100,61 @@ class TemplateCategoryRepository:
                 raise Exception("Ошибка при удалении категории")
             finally:
                 await session.close()
+
+    async def get_categories_paginated(
+        self, limit: int = 5, offset: int = 0
+    ) -> Sequence[TemplateCategory]:
+        """Получает категории с пагинацией."""
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(TemplateCategory)
+                    .order_by(TemplateCategory.sort_order)
+                    .limit(limit)
+                    .offset(offset)
+                )
+                categories = result.scalars().all()
+                logger.info(
+                    f"Получено {len(categories)} категорий (страница {offset//limit + 1})"
+                )
+                return categories
+            except Exception as e:
+                logger.error(f"Ошибка при получении категорий с пагинацией: {e}")
+                return []
+
+    async def get_categories_count(self) -> int:
+        """Получает общее количество категорий."""
+        async with async_session() as session:
+            try:
+                from sqlalchemy import func
+
+                result = await session.execute(select(func.count(TemplateCategory.id)))
+                count = result.scalar()
+                logger.info(f"Общее количество категорий: {count}")
+                return count or 0
+            except Exception as e:
+                logger.error(f"Ошибка при подсчете категорий: {e}")
+                return 0
+
+    async def update_category_name(self, category_id: int, new_name: str) -> bool:
+        """Обновляет название категории"""
+        async with async_session() as session:
+            try:
+                query = select(TemplateCategory).where(
+                    TemplateCategory.id == category_id
+                )
+                result = await session.execute(query)
+                category = result.scalar_one_or_none()
+
+                if category:
+                    category.name = new_name
+                    await session.commit()
+                    logger.info(
+                        f"Название категории {category_id} обновлено на '{new_name}'"
+                    )
+                    return True
+                return False
+            except Exception as e:
+                logger.error(f"Ошибка при обновлении названия категории: {e}")
+                await session.rollback()
+                raise

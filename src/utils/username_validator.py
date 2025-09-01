@@ -4,14 +4,24 @@ from aiogram.enums import ParseMode
 from aiogram.types import Message
 
 
-def validate_username(username: str) -> Optional[str]:
-    if not username or not username.strip():
+def parse_and_validate_username(text: str) -> Optional[str]:
+    if not text or not text.strip():
         return None
 
-    username = username.strip()
-    if username.startswith("@"):
-        username = username[1:]
-        return username
+    text = text.strip()
+    if text.startswith("@"):
+        text = text[1:]
+        return text
+    return None
+
+
+def parse_and_validate_tg_id(tg_id: str) -> Optional[str]:
+    if not tg_id or not tg_id.strip():
+        return None
+
+    tg_id = tg_id.strip()
+    if tg_id.isdigit():
+        return tg_id
     return None
 
 
@@ -30,7 +40,7 @@ async def get_valid_username(message: Message) -> str | None:
         )
         return None
 
-    username = validate_username(username=username)
+    username = parse_and_validate_username(text=username)
     if username is None:
         await message.answer(
             text="Указан некорректный username. Проверьте формат и попробуйте снова.",

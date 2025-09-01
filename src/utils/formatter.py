@@ -1,11 +1,25 @@
-def format_selected_period(selected_period: str) -> str:
-    """
-    Форматирует выбранный период в читаемый формат.
-    """
-    if not selected_period:
-        return "указанный период"
-    period = selected_period.split("За")[-1]
-    return period.strip()
+from datetime import datetime
+
+
+def format_selected_period(start_date: datetime, end_date: datetime) -> str:
+    months = (
+        "янв.",
+        "февр.",
+        "мар.",
+        "апр.",
+        "мая",
+        "июн.",
+        "июл.",
+        "авг.",
+        "сент.",
+        "окт.",
+        "нояб.",
+        "дек.",
+    )
+    start_month = months[start_date.month - 1]
+    end_month = months[end_date.month - 1]
+
+    return f"{start_date.day} {start_month} - {end_date.day} {end_month}"
 
 
 def format_seconds(seconds: float) -> str:
@@ -21,10 +35,10 @@ def format_seconds(seconds: float) -> str:
 
     parts = []
     if hours > 0:
-        parts.append(f"{hours}ч.")
+        parts.append(f"{hours} ч.")
     if minutes > 0:
-        parts.append(f"{minutes}мин.")
+        parts.append(f"{minutes} мин.")
     if secs > 0:
-        parts.append(f"{secs}сек.")
+        parts.append(f"{secs} сек.")
 
     return " ".join(parts)

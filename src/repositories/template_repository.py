@@ -276,3 +276,120 @@ class MessageTemplateRepository:
                 logger.error(f"Ошибка при удалении шаблона: {e}")
                 await session.rollback()
                 raise
+
+    async def update_template_title(self, template_id: int, new_title: str) -> bool:
+        """Обновляет название шаблона"""
+        async with async_session() as session:
+            try:
+                query = select(MessageTemplate).where(MessageTemplate.id == template_id)
+                result = await session.execute(query)
+                template = result.scalar_one_or_none()
+
+                if template:
+                    template.title = new_title
+                    await session.commit()
+                    logger.info(
+                        f"Название шаблона {template_id} обновлено на '{new_title}'"
+                    )
+                    return True
+                return False
+            except Exception as e:
+                logger.error(f"Ошибка при обновлении названия шаблона: {e}")
+                await session.rollback()
+                raise
+
+    async def update_template_content(
+        self, template_id: int, content_data: dict
+    ) -> bool:
+        """Обновляет содержимое шаблона"""
+        from models import TemplateMedia
+
+        async with async_session() as session:
+            try:
+                query = (
+                    select(MessageTemplate)
+                    .options(selectinload(MessageTemplate.media_items))
+                    .where(MessageTemplate.id == template_id)
+                )
+                result = await session.execute(query)
+                template = result.scalar_one_or_none()
+
+                if template:
+                    # Обновляем текстовое содержимое
+                    if "text" in content_data:
+                        template.content = content_data["text"]
+
+                    # Удаляем старые медиа-файлы
+                    for media_item in template.media_items:
+                        await session.delete(media_item)
+
+                    # Добавляем новые медиа-файлы
+                    if "media_items" in content_data:
+                        for position, media_data in enumerate(
+                            content_data["media_items"]
+                        ):
+                            media_item = TemplateMedia(
+                                template_id=template_id,
+                                media_type=media_data["media_type"],
+                                file_id=media_data["file_id"],
+                                file_unique_id=media_data["file_unique_id"],
+                                position=position,
+                            )
+                            session.add(media_item)
+
+                    await session.commit()
+                    logger.info(f"Содержимое шаблона {template_id} обновлено")
+                    return True
+                return False
+            except Exception as e:
+                logger.error(f"Ошибка при обновлении содержимого шаблона: {e}")
+                await session.rollback()
+                raise
+
+    async def get_global_templates_paginated(self, offset: int = 0, limit: int = 5) -> List[MessageTemplate]:
+        """Получает глобальные шаблоны (без привязки к чату)"""
+        async with async_session() as session:
+            query = (
+                select(MessageTemplate)
+                .options(
+                    selectinload(MessageTemplate.media_items),
+                    selectinload(MessageTemplate.category),
+                )
+                .where(MessageTemplate.chat_id.is_(None))
+                .order_by(MessageTemplate.title)
+                .limit(limit)
+                .offset(offset)
+            )
+            result = await session.execute(query)
+            return result.scalars().all()
+
+    async def get_global_templates_count(self) -> int:
+        """Получает количество глобальных шаблонов"""
+        async with async_session() as session:
+            query = select(func.count(MessageTemplate.id)).where(MessageTemplate.chat_id.is_(None))
+            result = await session.execute(query)
+            return result.scalar_one()
+
+    async def get_chat_templates_paginated(self, chat_id: int, offset: int = 0, limit: int = 5) -> List[MessageTemplate]:
+        """Получает шаблоны для конкретного чата"""
+        async with async_session() as session:
+            query = (
+                select(MessageTemplate)
+                .options(
+                    selectinload(MessageTemplate.media_items),
+                    selectinload(MessageTemplate.category),
+                )
+                .where(MessageTemplate.chat_id == chat_id)
+                .order_by(MessageTemplate.title)
+                .limit(limit)
+                .offset(offset)
+            )
+            result = await session.execute(query)
+            return result.scalars().all()
+
+    async def get_chat_templates_count(self, chat_id: int) -> int:
+        """Получает количество шаблонов для конкретного чата"""
+        async with async_session() as session:
+            query = select(func.count(MessageTemplate.id)).where(MessageTemplate.chat_id == chat_id)
+            result = await session.execute(query)
+            return result.scalar_one()

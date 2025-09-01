@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from keyboards.reply.user_actions import user_actions_kb
-from states.user_states import UserStateManager
+from states.user_states import SingleUserReportStates
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
@@ -22,7 +22,7 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
         await log_and_set_state(
             message=callback.message,
             state=state,
-            new_state=UserStateManager.viewing_user,
+            new_state=SingleUserReportStates.selected_single_user,
         )
         await state.update_data(user_id=user_id)
 

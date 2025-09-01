@@ -115,3 +115,35 @@ class TemplateContentService:
                 )
             except Exception as e:
                 logger.error(f"Ошибка сохранения медиа {file_id}: {e}", exc_info=True)
+
+    async def update_template_content(
+        self, template_id: int, content: Dict[str, Any]
+    ) -> bool:
+        """Обновляет содержимое шаблона"""
+        try:
+            # Преобразуем данные в формат для репозитория
+            media_items = []
+            media_files = content.get("media_files", [])
+            media_unique_ids = content.get("media_unique_ids", [])
+            media_types = content.get("media_types", [])
+
+            for file_id, file_unique_id, media_type in zip(
+                media_files, media_unique_ids, media_types
+            ):
+                media_items.append(
+                    {
+                        "file_id": file_id,
+                        "file_unique_id": file_unique_id,
+                        "media_type": media_type,
+                    }
+                )
+
+            content_data = {"text": content.get("text", ""), "media_items": media_items}
+
+            return await self._template_repository.update_template_content(
+                template_id, content_data
+            )
+
+        except Exception as e:
+            logger.error(f"Ошибка обновления содержимого шаблона: {e}", exc_info=True)
+            return False

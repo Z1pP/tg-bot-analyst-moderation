@@ -1,17 +1,3 @@
-"""
-Скрипт для создания администраторов в системе.
-
-Этот скрипт позволяет добавлять новых администраторов в базу данных
-или проверять существование уже созданных администраторов.
-
-Использование:
-    python create_admin.py --username <username> [--role <role>]
-
-Аргументы:
-    --username: Имя пользователя администратора (обязательный)
-    --role: Роль пользователя (по умолчанию "creator")
-"""
-
 import argparse
 import asyncio
 import logging
@@ -19,7 +5,7 @@ import logging
 from constants.enums import UserRole
 from container import container
 from usecases.user import GetOrCreateUserIfNotExistUserCase
-from utils.username_validator import validate_username
+from utils.username_validator import parse_and_validate_tg_id
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -27,66 +13,65 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def get_or_create_admin(username: str, role: str) -> None:
+async def get_or_create_admin(tg_id: str, role: str) -> None:
     """
     Создает нового администратора или проверяет его существование.
 
     Args:
-        username (str): Имя пользователя для создания/проверки
+        tg_id (str): Telegram ID пользователя для создания/проверки
         role (str): Роль пользователя в системе
 
-    Returns:
-        None
-
     Raises:
-        ValueError: Если имя пользователя недействительно
-        Exception: При ошибках доступа к базе данных или других проблемах
+        ValueError: Если tg_id недействителен
+        Exception: При ошибках доступа к базе данных
     """
-    # Валидируем username
-    valid_username = validate_username(username)
-    if not valid_username:
-        logger.error(f"Invalid username: {username}")
-        raise ValueError(f"Invalid username format: {username}")
+    valid_tg_id = parse_and_validate_tg_id(tg_id=tg_id)
+    if not valid_tg_id:
+        raise ValueError(f"Invalid TG_ID format: {tg_id}")
 
-    # Получаем usecase из контейнера
     usecase: GetOrCreateUserIfNotExistUserCase = container.resolve(
         GetOrCreateUserIfNotExistUserCase
     )
 
     try:
-        # Создаем или получаем пользователя
         result = await usecase.execute(
-            username=valid_username,
+            tg_id=valid_tg_id,
             role=UserRole(role),
         )
 
         if result.is_existed:
             logger.info(
-                f"User {username} already exists with role {result.user.role.value}"
+                f"User with TG_ID:{tg_id} already exists with role {result.user.role.value}"
             )
-            print(f"User {username} already exists")
-            return
+            print(f"User with TG_ID:{tg_id} already exists")
+        else:
+            logger.info(f"User TG_ID:{tg_id} created with role {role}")
+            print(f"User TG_ID:{tg_id} created")
 
-        logger.info(f"User {username} created with role {role}")
-        print(f"User {username} created")
     except Exception as e:
         logger.error(f"Error creating/checking admin user: {e}", exc_info=True)
         print(f"An error occurred: {e}")
+        raise
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description="Create or check admin users in the system"
     )
-    parser.add_argument("--username", type=str, required=True, help="Admin username")
+    parser.add_argument(
+        "--tg_id", type=str, required=True, help="Admin telegram user_id"
+    )
     parser.add_argument(
         "--role",
         type=str,
-        required=False,
         default="admin",
         choices=["admin", "moderator", "user"],
         help="User role (default: admin)",
     )
-    args = parser.parse_args()
 
-    asyncio.run(get_or_create_admin(username=args.username, role=args.role))
+    args = parser.parse_args()
+    asyncio.run(get_or_create_admin(tg_id=args.tg_id, role=args.role))
+
+
+if __name__ == "__main__":
+    main()

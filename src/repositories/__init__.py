@@ -8,6 +8,7 @@ from .message_repository import MessageRepository
 from .reaction_repository import MessageReactionRepository
 from .template_repository import MessageTemplateRepository
 from .user_repository import UserRepository
+from .user_tracking_repository import UserTrackingRepository
 
 __all__ = [
     "ActivityRepository",
@@ -20,4 +21,5 @@ __all__ = [
     "MessageTemplateRepository",
     "TemplateMediaRepository",
     "MessageReactionRepository",
+    "UserTrackingRepository",
 ]

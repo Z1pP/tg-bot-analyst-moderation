@@ -1,5 +1,6 @@
 from punq import Container
 
+from config import settings
 from repositories import (
     ActivityRepository,
     ChatRepository,
@@ -11,8 +12,9 @@ from repositories import (
     TemplateCategoryRepository,
     TemplateMediaRepository,
     UserRepository,
+    UserTrackingRepository,
 )
-from services.caching import ICache, TTLEntityCache
+from services.caching import ICache, RedisCache
 from services.categories import CategoryService
 from services.chat import ChatService
 from services.templates import (
@@ -33,7 +35,10 @@ from usecases.message import (
 from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
+    GetAllUsersBreaksDetailReportUseCase,
     GetAllUsersReportUseCase,
+    GetBreaksDetailReportUseCase,
+    GetChatBreaksDetailReportUseCase,
     GetReportOnSpecificChatUseCase,
     GetSingleUserReportUseCase,
 )
@@ -43,7 +48,12 @@ from usecases.user import (
     GetAllUsersUseCase,
     GetOrCreateUserIfNotExistUserCase,
     GetUserByIdUseCase,
-    GetUserByUsernameUseCase,
+    GetUserByTgIdUseCase,
+)
+from usecases.user_tracking import (
+    AddUserToTrackingUseCase,
+    GetListTrackedUsersUseCase,
+    RemoveUserFromTrackingUseCase,
 )
 
 
@@ -72,6 +82,7 @@ class ContainerSetup:
             TemplateMediaRepository,
             MessageTemplateRepository,
             MessageReactionRepository,
+            UserTrackingRepository,
         ]
 
         for repo in repositories:
@@ -80,7 +91,7 @@ class ContainerSetup:
     @staticmethod
     def _register_services(container: Container) -> None:
         """Регистрация сервисов."""
-        container.register(ICache, TTLEntityCache)
+        container.register(ICache, lambda: RedisCache(settings.REDIS_URL))
         container.register(UserService)
         container.register(ChatService)
         container.register(TemplateService)
@@ -116,7 +127,7 @@ class ContainerSetup:
             GetOrCreateUserIfNotExistUserCase,
             CreateNewUserUserCase,
             DeleteUserUseCase,
-            GetUserByUsernameUseCase,
+            GetUserByTgIdUseCase,
             GetAllUsersUseCase,
             GetUserByIdUseCase,
         ]
@@ -157,8 +168,11 @@ class ContainerSetup:
         """Регистрация use cases для отчетов."""
         report_usecases = [
             GetSingleUserReportUseCase,
+            GetBreaksDetailReportUseCase,
             GetAllUsersReportUseCase,
+            GetAllUsersBreaksDetailReportUseCase,
             GetReportOnSpecificChatUseCase,
+            GetChatBreaksDetailReportUseCase,
         ]
 
         for usecase in report_usecases:
@@ -166,8 +180,16 @@ class ContainerSetup:
 
     @staticmethod
     def _register_tracking_usecases(container: Container) -> None:
-        """Регистрация use cases для отслеживания."""
-        container.register(AddChatToTrackUseCase)
+        """Регистрация use cases для отслеживания пользователей."""
+        tracking_usecases = [
+            AddUserToTrackingUseCase,
+            GetListTrackedUsersUseCase,
+            RemoveUserFromTrackingUseCase,
+            AddChatToTrackUseCase,
+        ]
+
+        for usecase in tracking_usecases:
+            container.register(usecase)
 
 
 # Создаем и экспортируем контейнер

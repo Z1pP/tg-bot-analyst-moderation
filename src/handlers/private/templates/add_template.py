@@ -6,11 +6,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import KbCommands
+from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
 from keyboards.inline.categories import categories_inline_kb
 from middlewares import AlbumMiddleware
-from services.templates import TemplateContentService
 from services.categories import CategoryService
+from services.templates import TemplateContentService
 from states import TemplateStateManager
 from utils.send_message import send_html_message_with_kb
 
@@ -30,10 +31,17 @@ async def add_template_handler(message: Message, state: FSMContext):
         # Устанавливаем состояние для выбора категории
         await state.set_state(TemplateStateManager.process_template_category)
 
+        # Показываем первые категории
+        first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
+
         await send_html_message_with_kb(
             message=message,
-            text="Пожалуйста, выберите категорию шаблона:",
-            reply_markup=categories_inline_kb(categories=categories),
+            text=f"Пожалуйста, выберите категорию шаблона (всего {len(categories)}):",
+            reply_markup=categories_inline_kb(
+                categories=first_page_categories,
+                page=1,
+                total_count=len(categories),
+            ),
         )
 
     except Exception as e:

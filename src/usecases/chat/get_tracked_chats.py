@@ -1,22 +1,23 @@
-from repositories import ChatTrackingRepository
-from services.user import UserService
+from repositories import ChatTrackingRepository, UserRepository
 
 
 class GetTrackedChatsUseCase:
     def __init__(
         self,
         chat_tracking_repository: ChatTrackingRepository,
-        user_service: UserService,
+        user_repository: UserRepository,
     ):
         self._chat_tracking_repository = chat_tracking_repository
-        self._user_service = user_service
+        self._user_repository = user_repository
 
-    async def execute(self, username: str):
-        user = await self._user_service.get_user(username)
+    async def execute(self, tg_id: str):
+        user = await self._user_repository.get_user_by_tg_id(tg_id=tg_id)
 
         if not user:
             return []
 
-        chats = await self._chat_tracking_repository.get_all_tracked_chats(user.id)
+        chats = await self._chat_tracking_repository.get_all_tracked_chats(
+            admin_id=user.id
+        )
 
         return chats

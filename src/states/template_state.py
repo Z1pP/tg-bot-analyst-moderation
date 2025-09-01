@@ -16,6 +16,15 @@ class TemplateStateManager(StatesGroup):
 
     listing_categories = State()
     listing_templates = State()
+    selecting_template_scope = State()
 
     removing_template = State()
     removing_category = State()
+
+    # Состояния для редактирования шаблонов
+    editing_template = State()
+    editing_title = State()
+    editing_content = State()
+
+    # Состояния для редактирования категорий
+    editing_category_name = State()

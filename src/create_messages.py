@@ -15,7 +15,7 @@ async def create_test_data():
     print("Создание тестовых данных...")
 
     # Создаем модераторов
-    moderators = await create_moderators()
+    moderators = await create_test_users()
 
     # Создаем чаты
     chats = await create_chats()
@@ -26,12 +26,12 @@ async def create_test_data():
     print("Тестовые данные успешно созданы!")
 
 
-async def create_moderators():
-    """Создает тестовых модераторов."""
+async def create_test_users():
+    """Создает тестовых пользователей."""
     moderators = [
-        {"username": "moderator1", "tg_id": "1001"},
-        {"username": "moderator2", "tg_id": "1002"},
-        {"username": "moderator3", "tg_id": "1003"},
+        {"username": "test_user1", "tg_id": "1001"},
+        {"username": "test_user2", "tg_id": "1002"},
+        {"username": "test_user3", "tg_id": "1003"},
     ]
 
     result = []
@@ -46,7 +46,7 @@ async def create_moderators():
                     user = User(
                         username=mod["username"],
                         tg_id=mod["tg_id"],
-                        role=UserRole.MODERATOR,
+                        role=UserRole.USER,
                     )
                     session.add(user)
                 result.append(user)
@@ -54,7 +54,7 @@ async def create_moderators():
                 print(f"Ошибка при создании модератора {mod['username']}: {e}")
 
         await session.commit()
-        print(f"Создано {len(result)} модераторов")
+        print(f"Создано {len(result)} пользователей")
         return result
 
 
@@ -90,9 +90,11 @@ async def create_chats():
         return result
 
 
-async def create_messages_replies_and_reactions(moderators, chats):
+async def create_messages_replies_and_reactions(users, chats):
     """Создает тестовые сообщения, ответы и реакции."""
-    base_date = datetime.now().replace(hour=7, minute=0, second=0, microsecond=0)
+    base_date = TimeZoneService.now().replace(
+        hour=10, minute=0, second=0, microsecond=0
+    )
     emojis = ["👍", "❤️", "😊", "🔥", "👏", "😢", "😡", "🤔"]
 
     async with async_session() as session:
@@ -100,27 +102,28 @@ async def create_messages_replies_and_reactions(moderators, chats):
         reply_count = 0
         reaction_count = 0
 
-        for moderator in moderators:
+        for user in users:
             for chat in chats:
-                # Создаем 20 сообщений
+                # Создаем 15 сообщений
                 messages = []
-                for i in range(20):
+                for i in range(15):
                     message_date = base_date + timedelta(
-                        hours=random.randint(0, 4), minutes=random.randint(0, 59)
+                        hours=random.randint(0, 12),
+                        minutes=random.choice((5, 15, 45, 55)),
                     )
 
                     created_at = TimeZoneService.convert_to_local_time(
                         message_date
                     ).replace(day=datetime.now().day)
 
-                    message_id = f"{moderator.id}_{chat.id}_{i}"
+                    message_id = f"{user.id}_{chat.id}_{i}"
                     message = ChatMessage(
-                        user_id=moderator.id,
+                        user_id=user.id,
                         chat_id=chat.id,
                         message_id=message_id,
                         message_type="message",
                         content_type="text",
-                        text=f"Тестовое сообщение {i} от {moderator.username} в {chat.title}",
+                        text=f"Тестовое сообщение {i} от {user.username} в {chat.title}",
                         created_at=created_at,
                     )
                     session.add(message)
@@ -132,19 +135,19 @@ async def create_messages_replies_and_reactions(moderators, chats):
                 for i in range(5):
                     original_message = random.choice(messages)
                     reply_date = original_message.created_at + timedelta(
-                        minutes=random.randint(1, 35)
+                        minutes=random.choice((5, 15, 45, 55))
                     )
                     response_time = (
                         reply_date - original_message.created_at
                     ).total_seconds()
 
                     reply_msg = ChatMessage(
-                        user_id=moderator.id,
+                        user_id=user.id,
                         chat_id=chat.id,
-                        message_id=f"reply_msg_{moderator.id}_{chat.id}_{i}",
+                        message_id=f"reply_msg_{user.id}_{chat.id}_{i}",
                         message_type="reply",
                         content_type="text",
-                        text=f"Ответ {i} от {moderator.username} в {chat.title}",
+                        text=f"Ответ {i} от {user.username} в {chat.title}",
                         created_at=reply_date,
                     )
                     session.add(reply_msg)
@@ -154,7 +157,7 @@ async def create_messages_replies_and_reactions(moderators, chats):
                         chat_id=chat.id,
                         original_message_url=f"https://t.me/c/{chat.chat_id}/{original_message.message_id}",
                         reply_message_id=reply_msg.id,
-                        reply_user_id=moderator.id,
+                        reply_user_id=user.id,
                         response_time_seconds=int(response_time),
                         created_at=reply_date,
                     )
@@ -162,15 +165,15 @@ async def create_messages_replies_and_reactions(moderators, chats):
                     reply_count += 1
 
                 # Создаем реакции на случайные сообщения
-                for _ in range(20):  # 10 реакций на чат
+                for _ in range(10):  # 10 реакций на чат
                     target_message = random.choice(messages)
                     reaction_date = target_message.created_at + timedelta(
-                        minutes=random.randint(1, 59)
+                        minutes=random.choice((5, 15, 45, 55))
                     )
 
                     reaction = MessageReaction(
                         chat_id=chat.id,
-                        user_id=moderator.id,
+                        user_id=user.id,
                         message_id=target_message.message_id,
                         action=random.choice(list(ReactionAction)),
                         emoji=random.choice(emojis),
