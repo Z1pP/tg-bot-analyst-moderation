@@ -158,6 +158,7 @@ async def generate_and_send_report(
         )
 
         report_dto = AllUsersReportDTO(
+            user_tg_id=str(message.from_user.id),
             start_date=adjusted_start,
             end_date=adjusted_end,
             selected_period=selected_period,
