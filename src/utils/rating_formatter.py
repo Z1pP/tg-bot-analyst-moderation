@@ -1,0 +1,58 @@
+from dto.daily_activity import ChatDailyStatsDTO
+
+
+class RatingFormatter:
+    """Форматирует рейтинг пользователей для красивого вывода."""
+
+    RANK_EMOJIS = {
+        1: "🥇",
+        2: "🥈",
+        3: "🥉",
+        4: "🏅",
+        5: "🎖️",
+        6: "🏵️",
+        7: "🎗️",
+        8: "🌟",
+        9: "⭐",
+        10: "✨",
+    }
+
+    @staticmethod
+    def format_daily_rating(stats: ChatDailyStatsDTO) -> str:
+        """
+        Форматирует дневной рейтинг пользователей.
+
+        Args:
+            stats: Статистика чата за день
+
+        Returns:
+            Отформатированная строка с рейтингом
+        """
+        if not stats.top_users:
+            return (
+                f"🏆 <b>ТОП-10 АКТИВНЫХ ЗА СУТКИ</b>\n"
+                f"📅 {stats.date.strftime('%Y-%m-%d')} | 💬 <b>{stats.chat_title}</b>\n\n"
+                f"😴 <i>Сегодня никто не писал в чате</i>"
+            )
+
+        # Заголовок
+        text = (
+            f"🏆 <b>ТОП-10 АКТИВНЫХ ЗА СУТКИ</b>\n"
+            f"📅 {stats.date.strftime('%Y-%m-%d')} | 💬 <b>{stats.chat_title}</b>\n\n"
+        )
+
+        # Рейтинг пользователей
+        for user in stats.top_users:
+            emoji = RatingFormatter.RANK_EMOJIS.get(user.rank, "💫")
+            username = (
+                f"@{user.username}" if user.username != "Без имени" else "👤 Без имени"
+            )
+            text += f"{emoji} {username} — {user.message_count} сообщений\n"
+
+        # Общая статистика
+        text += (
+            f"\n📊 <b>Всего сообщений:</b> {stats.total_messages}\n"
+            f"👥 <b>Активных пользователей:</b> {stats.active_users_count}"
+        )
+
+        return text
