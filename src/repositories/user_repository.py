@@ -280,3 +280,37 @@ class UserRepository:
                 logger.error(f"Ошибка при удалении пользователя с ID={user_id}:{e}")
                 await session.rollback()
                 raise e
+
+    async def get_users_paginated(self, limit: int = 5, offset: int = 0) -> List[User]:
+        """Получает пользователей с пагинацией."""
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(User)
+                    .where(User.role == UserRole.MODERATOR)
+                    .order_by(User.username)
+                    .limit(limit)
+                    .offset(offset)
+                )
+                users = result.scalars().all()
+                logger.info(f"Получено {len(users)} пользователей (страница {offset//limit + 1})")
+                return users
+            except Exception as e:
+                logger.error(f"Ошибка при получении пользователей с пагинацией: {e}")
+                return []
+
+    async def get_users_count(self) -> int:
+        """Получает общее количество пользователей."""
+        async with async_session() as session:
+            try:
+                from sqlalchemy import func
+                result = await session.execute(
+                    select(func.count(User.id))
+                    .where(User.role == UserRole.MODERATOR)
+                )
+                count = result.scalar()
+                logger.info(f"Общее количество пользователей: {count}")
+                return count or 0
+            except Exception as e:
+                logger.error(f"Ошибка при подсчете пользователей: {e}")
+                return 0
