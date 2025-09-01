@@ -9,6 +9,9 @@ def chat_actions_kb():
             KeyboardButton(text=KbCommands.GET_REPORT),
         ],
         [
+            KeyboardButton(text=KbCommands.DAILY_RATING),
+        ],
+        [
             KeyboardButton(text=KbCommands.SELECT_CHAT),
         ],
         [
