@@ -10,6 +10,7 @@ def templates_inline_kb(
     templates: List[MessageTemplate],
     page: int = 1,
     total_count: int = 0,
+    page_size: int = 5,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -25,42 +26,35 @@ def templates_inline_kb(
                 callback_data=f"remove_template__{template.id}",
             ),
         )
-    # Кнопки пагинации
-    page_size = 5
-    max_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
 
-    pagination_buttons = []
+    if total_count > page_size:
+        max_pages = (total_count + page_size - 1) // page_size
+        pagination_buttons = []
 
-    # Кнопка "Назад"
-    if page > 1:
+        # Кнопка "Назад"
+        if page > 1:
+            pagination_buttons.append(
+                InlineKeyboardButton(text="◀️", callback_data=f"prev_page__{page}")
+            )
+
+        # Информация о странице
+        start_item = (page - 1) * page_size + 1
+        end_item = min(page * page_size, total_count)
         pagination_buttons.append(
-            InlineKeyboardButton(text="◀️", callback_data=f"prev_page__{page}")
-        )
-    else:
-        pagination_buttons.append(
-            InlineKeyboardButton(text="◀️", callback_data="no_prev")
-        )
-
-    # Информация о странице
-    start_item = (page - 1) * page_size + 1
-    end_item = min(page * page_size, total_count)
-    pagination_buttons.append(
-        InlineKeyboardButton(
-            text=f"{start_item}-{end_item} из {total_count}", callback_data="page_info"
-        )
-    )
-
-    # Кнопка "Вперед"
-    if page < max_pages:
-        pagination_buttons.append(
-            InlineKeyboardButton(text="▶️", callback_data=f"next_page__{page}")
-        )
-    else:
-        pagination_buttons.append(
-            InlineKeyboardButton(text="▶️", callback_data="no_next")
+            InlineKeyboardButton(
+                text=f"{start_item}-{end_item} из {total_count}",
+                callback_data="page_info",
+            )
         )
 
-    builder.row(*pagination_buttons)
+        # Кнопка "Вперед"
+        if page < max_pages:
+            pagination_buttons.append(
+                InlineKeyboardButton(text="▶️", callback_data=f"next_page__{page}")
+            )
+
+        if pagination_buttons:
+            builder.row(*pagination_buttons)
 
     return builder.as_markup()
 
