@@ -1,5 +1,6 @@
 from punq import Container
 
+from config import settings
 from repositories import (
     ActivityRepository,
     ChatRepository,
@@ -13,7 +14,7 @@ from repositories import (
     UserRepository,
     UserTrackingRepository,
 )
-from services.caching import ICache, TTLEntityCache
+from services.caching import ICache, RedisCache
 from services.categories import CategoryService
 from services.chat import ChatService
 from services.templates import (
@@ -90,7 +91,7 @@ class ContainerSetup:
     @staticmethod
     def _register_services(container: Container) -> None:
         """Регистрация сервисов."""
-        container.register(ICache, TTLEntityCache)
+        container.register(ICache, lambda: RedisCache(settings.REDIS_URL))
         container.register(UserService)
         container.register(ChatService)
         container.register(TemplateService)
