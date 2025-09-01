@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 class GetAllUsersReportUseCase(BaseReportUseCase):
     async def execute(self, dto: AllUsersReportDTO) -> List[str]:
         """Генерирует отчет по всем пользователям за выбранным период."""
-        users = await self._user_repository.get_all_moderators()
+        users = await self._user_repository.get_tracked_users_for_admin(
+            admin_tg_id=dto.user_tg_id,
+        )
 
         if not users:
             logger.error(f"Количество пользователей = {len(users)}")
