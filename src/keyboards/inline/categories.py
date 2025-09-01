@@ -31,6 +31,12 @@ def categories_inline_kb(
             InlineKeyboardButton(
                 text=f"{start_index + index + 1}. {category.name}",
                 callback_data=f"category__{category.id}",
+            )
+        )
+        builder.row(
+            InlineKeyboardButton(
+                text="✏️ Редактировать",
+                callback_data=f"edit_category__{category.id}",
             ),
             InlineKeyboardButton(
                 text="🗑 Удалить",
