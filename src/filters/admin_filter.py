@@ -21,12 +21,12 @@ class BaseUserFilter(Filter):
 
     async def get_user(self, tg_id: str, current_username: str) -> Optional[User]:
         """Получает пользователя из кеша или БД с проверкой username"""
-        user = self._cache.get(key=tg_id)
+        user = await self._cache.get(key=tg_id)
 
         if not user:
             user = await self._get_user_from_db(tg_id=tg_id)
             if user:
-                self._cache.set(key=tg_id, value=user)
+                await self._cache.set(key=tg_id, value=user)
 
         # Проверяем username
         if user and current_username and user.username != current_username:
@@ -56,7 +56,7 @@ class BaseUserFilter(Filter):
 
             # Обновляем кеш только если обновление прошло успешно
             if updated_user:
-                self._cache.set(key=tg_id, value=updated_user)
+                await self._cache.set(key=tg_id, value=updated_user)
                 logger.info(
                     f"Обновлен username для tg_id={tg_id}: {user.username} → {new_username}"
                 )
