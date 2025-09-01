@@ -42,6 +42,7 @@ from usecases.report import (
     GetReportOnSpecificChatUseCase,
     GetSingleUserReportUseCase,
 )
+from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
@@ -173,6 +174,7 @@ class ContainerSetup:
             GetAllUsersBreaksDetailReportUseCase,
             GetReportOnSpecificChatUseCase,
             GetChatBreaksDetailReportUseCase,
+            GetDailyTopUsersUseCase,
         ]
 
         for usecase in report_usecases:
