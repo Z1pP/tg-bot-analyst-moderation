@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -9,10 +8,13 @@ from constants import KbCommands
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
 from keyboards.inline.chats_kb import conf_remove_chat_kb, remove_inline_kb
-from models import ChatSession
-from repositories import ChatTrackingRepository
+from services.chat import ChatService
 from services.user import UserService
 from states import MenuStates
+from usecases.chat_tracking import (
+    GetUserTrackedChatsUseCase,
+    RemoveChatFromTrackingUseCase,
+)
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
@@ -40,7 +42,10 @@ async def delete_chat_handler(
         await state.update_data(user_id=user.id)
 
         # Получаем отслеживаемые чаты пользователя
-        tracked_chats = await get_user_tracked_chats(user_id=user.id)
+        usecase: GetUserTrackedChatsUseCase = container.resolve(
+            GetUserTrackedChatsUseCase
+        )
+        tracked_chats = await usecase.execute(user=user)
 
         if not tracked_chats:
             message_text = (
@@ -128,14 +133,22 @@ async def confirmation_removing_chat(
         answer = callback.data.split("__")[1]
 
         if answer == "yes":
-            tracking_repository: ChatTrackingRepository = container.resolve(
-                ChatTrackingRepository
-            )
+            # Получаем пользователя и чат
+            user_service: UserService = container.resolve(UserService)
+            chat_service: ChatService = container.resolve(ChatService)
 
-            success = await tracking_repository.remove_chat_from_tracking(
-                admin_id=int(user_id),
-                chat_id=chat_id,
-            )
+            admin = await user_service.get_user_by_id(int(user_id))
+            chat = await chat_service.get_chat_by_id(chat_id)
+
+            if not admin or not chat:
+                logger.error(f"Не найден пользователь {user_id} или чат {chat_id}")
+                text = "❌ Ошибка: данные не найдены."
+            else:
+                usecase: RemoveChatFromTrackingUseCase = container.resolve(
+                    RemoveChatFromTrackingUseCase
+                )
+
+                success = await usecase.execute(admin=admin, chat=chat)
 
             if success:
                 logger.info("Чат успешно удален из отслеживания")
@@ -163,26 +176,3 @@ async def confirmation_removing_chat(
             state=state,
             new_state=MenuStates.chats_menu,
         )
-
-
-async def get_user_tracked_chats(user_id: int) -> List[ChatSession]:
-    """Получает список отслеживаемых чатов пользователя"""
-    try:
-        # Получаем сервисы
-        tracking_repository: ChatTrackingRepository = container.resolve(
-            ChatTrackingRepository
-        )
-
-        tracked_chats = await tracking_repository.get_all_tracked_chats(
-            admin_id=user_id
-        )
-
-        logger.debug(
-            f"Найдено {len(tracked_chats)} отслеживаемых чатов для user_id={user_id}"
-        )
-
-        return tracked_chats
-
-    except Exception as e:
-        logger.error(f"Ошибка при получении отслеживаемых чатов: {e}")
-        raise

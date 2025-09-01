@@ -7,9 +7,9 @@ from aiogram.types import Message
 
 from container import container
 from middlewares import AlbumMiddleware
-from repositories import MessageTemplateRepository
 from services.templates import TemplateContentService
 from states import TemplateStateManager
+from usecases.templates import UpdateTemplateTitleUseCase
 from utils.exception_handler import handle_exception
 
 router = Router(name=__name__)
@@ -31,15 +31,14 @@ async def process_edit_title(message: Message, state: FSMContext) -> None:
 
         new_title = message.text.strip()
 
-        # Обновляем название в БД
-        template_repo: MessageTemplateRepository = container.resolve(
-            MessageTemplateRepository
+        # Обновляем название через Use Case
+        usecase: UpdateTemplateTitleUseCase = container.resolve(
+            UpdateTemplateTitleUseCase
         )
-        success = await template_repo.update_template_title(template_id, new_title)
+        success = await usecase.execute(template_id, new_title)
 
         if success:
             await message.answer(f"✅ Название шаблона изменено на: <b>{new_title}</b>")
-            logger.info(f"Название шаблона {template_id} изменено на '{new_title}'")
         else:
             await message.answer("❌ Ошибка при обновлении названия")
 

@@ -5,7 +5,7 @@ from aiogram.types import Message
 from constants import KbCommands
 from container import container
 from keyboards.reply.menu import tamplates_menu_kb
-from repositories import TemplateCategoryRepository
+from usecases.categories import CreateCategoryUseCase
 from states import TemplateStateManager
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -30,12 +30,10 @@ async def add_category_handler(message: Message, state: FSMContext):
 async def process_category_name_handler(message: Message, state: FSMContext):
     """Обработчик названия категории"""
 
-    category_name = _validate_category_name(name=message.text)
-
-    repo: TemplateCategoryRepository = container.resolve(TemplateCategoryRepository)
+    usecase: CreateCategoryUseCase = container.resolve(CreateCategoryUseCase)
 
     try:
-        category = await repo.create_category(name=category_name)
+        category = await usecase.execute(name=message.text)
 
         text = f'🧩 Успешно создана новая категория - <b>"{category.name}"</b>'
 
@@ -54,14 +52,4 @@ async def process_category_name_handler(message: Message, state: FSMContext):
         )
 
 
-def _validate_category_name(name: str) -> str:
-    """Валидация названия категории"""
 
-    if len(name) > 50:
-        raise ValueError("Название категории не может быть длиннее 50 символов")
-    if len(name) < 3:
-        raise ValueError("Название категории не может быть короче 3 символов")
-
-    name = name.strip().upper()
-
-    return name

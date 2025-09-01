@@ -8,10 +8,10 @@ from container import container
 from filters.admin_filter import AdminOnlyFilter
 from filters.group_filter import GroupTypeFilter
 from models import ChatSession, User
-from repositories import ChatTrackingRepository
+
 from services.chat import ChatService
 from services.user import UserService
-from usecases.chat_tracking import AddChatToTrackUseCase
+from usecases.chat_tracking import AddChatToTrackUseCase, RemoveChatFromTrackingUseCase
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
@@ -95,14 +95,11 @@ async def chat_removed_from_tracking_handler(message: Message) -> None:
         return
 
     try:
-        tracking_repository: ChatTrackingRepository = container.resolve(
-            ChatTrackingRepository
+        usecase: RemoveChatFromTrackingUseCase = container.resolve(
+            RemoveChatFromTrackingUseCase
         )
 
-        success = await tracking_repository.remove_chat_from_tracking(
-            admin_id=admin.id,
-            chat_id=int(chat.id),
-        )
+        success = await usecase.execute(admin=admin, chat=chat)
 
         if success:
             logger.info(

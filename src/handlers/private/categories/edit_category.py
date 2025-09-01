@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from container import container
-from repositories import TemplateCategoryRepository
+from usecases.categories import UpdateCategoryNameUseCase
 from states import TemplateStateManager
 from utils.exception_handler import handle_exception
 
@@ -27,17 +27,14 @@ async def process_edit_category_name(message: Message, state: FSMContext) -> Non
 
         new_name = message.text.strip()
 
-        # Обновляем название в БД
-        category_repo: TemplateCategoryRepository = container.resolve(
-            TemplateCategoryRepository
-        )
-        success = await category_repo.update_category_name(category_id, new_name)
+        # Обновляем название через Use Case
+        usecase: UpdateCategoryNameUseCase = container.resolve(UpdateCategoryNameUseCase)
+        success = await usecase.execute(category_id, new_name)
 
         if success:
             await message.answer(
                 f"✅ Название категории изменено на: <b>{new_name}</b>"
             )
-            logger.info(f"Название категории {category_id} изменено на '{new_name}'")
         else:
             await message.answer("❌ Ошибка при обновлении названия категории")
 

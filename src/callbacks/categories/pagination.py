@@ -8,7 +8,7 @@ from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
 from keyboards.inline.categories import categories_inline_kb
 from models import TemplateCategory
-from repositories import TemplateCategoryRepository
+from usecases.categories import GetCategoriesPaginatedUseCase
 from utils.pagination_handler import BasePaginationHandler
 
 router = Router(name=__name__)
@@ -24,9 +24,9 @@ class CategoriesPaginationHandler(BasePaginationHandler):
         query: CallbackQuery,
         state: FSMContext,
     ) -> Tuple[List[TemplateCategory], int]:
-        categories = await get_categories_by_page(page=page)
-        total_count = await get_categories_count()
-        return categories, total_count
+        usecase: GetCategoriesPaginatedUseCase = container.resolve(GetCategoriesPaginatedUseCase)
+        offset = (page - 1) * CATEGORIES_PAGE_SIZE
+        return await usecase.execute(limit=CATEGORIES_PAGE_SIZE, offset=offset)
 
     async def build_keyboard(
         self,
@@ -60,19 +60,4 @@ async def next_categories_page_callback(
     await handler.handle_next_page(query, state)
 
 
-async def get_categories_by_page(
-    page: int = 1,
-    page_size: int = CATEGORIES_PAGE_SIZE,
-) -> List[TemplateCategory]:
-    category_repo: TemplateCategoryRepository = container.resolve(
-        TemplateCategoryRepository
-    )
-    offset = (page - 1) * page_size
-    return await category_repo.get_categories_paginated(limit=page_size, offset=offset)
 
-
-async def get_categories_count() -> int:
-    category_repo: TemplateCategoryRepository = container.resolve(
-        TemplateCategoryRepository
-    )
-    return await category_repo.get_categories_count()
