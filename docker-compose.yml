@@ -7,6 +7,8 @@ services:
     depends_on:
       db:
         condition: service_healthy 
+      redis:
+        condition: service_started
     env_file:
     - .env
     environment:
@@ -16,6 +18,7 @@ services:
       - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
       - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
       - BOT_TOKEN=${BOT_TOKEN}
+      - REDIS_URL=${REDIS_URL}
     volumes:
       - ./logs:/app/logs 
 
@@ -49,5 +52,14 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
 volumes:
   postgres_data:
+  redis_data:
