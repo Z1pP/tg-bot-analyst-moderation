@@ -8,8 +8,6 @@ from constants import KbCommands
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
 from keyboards.inline.chats_kb import conf_remove_chat_kb, remove_inline_kb
-from services.chat import ChatService
-from services.user import UserService
 from states import MenuStates
 from usecases.chat_tracking import (
     GetUserTrackedChatsUseCase,
@@ -35,17 +33,14 @@ async def delete_chat_handler(
     logger.info(f"Получена команда удаления чата от {username}")
 
     try:
-        user_service: UserService = container.resolve(UserService)
-        tg_id = str(message.from_user.id)
-        user = await user_service.get_user(tg_id=tg_id)
-
-        await state.update_data(user_id=user.id)
-
         # Получаем отслеживаемые чаты пользователя
         usecase: GetUserTrackedChatsUseCase = container.resolve(
             GetUserTrackedChatsUseCase
         )
-        tracked_chats = await usecase.execute(user=user)
+        tg_id = str(message.from_user.id)
+        tracked_chats, user_id = await usecase.execute(tg_id=tg_id)
+
+        await state.update_data(user_id=user_id)
 
         if not tracked_chats:
             message_text = (
@@ -133,33 +128,22 @@ async def confirmation_removing_chat(
         answer = callback.data.split("__")[1]
 
         if answer == "yes":
-            # Получаем пользователя и чат
-            user_service: UserService = container.resolve(UserService)
-            chat_service: ChatService = container.resolve(ChatService)
+            usecase: RemoveChatFromTrackingUseCase = container.resolve(
+                RemoveChatFromTrackingUseCase
+            )
 
-            admin = await user_service.get_user_by_id(int(user_id))
-            chat = await chat_service.get_chat_by_id(chat_id)
-
-            if not admin or not chat:
-                logger.error(f"Не найден пользователь {user_id} или чат {chat_id}")
-                text = "❌ Ошибка: данные не найдены."
-            else:
-                usecase: RemoveChatFromTrackingUseCase = container.resolve(
-                    RemoveChatFromTrackingUseCase
-                )
-
-                success = await usecase.execute(admin=admin, chat=chat)
+            success, error_msg = await usecase.execute(
+                user_id=int(user_id), chat_id=chat_id
+            )
 
             if success:
-                logger.info("Чат успешно удален из отслеживания")
                 text = (
                     "✅ Готово! Чат удалён из отлеживания!\n\n"
                     "❗️Вы всегда можете вернуть чат в отслеживаемые "
                     "и продолжить собирать статистику"
                 )
             else:
-                logger.warning(f"Не удалось удалить чат {chat_id} из отслеживания")
-                text = "❌ Чат не найден или уже удален."
+                text = f"❌ Ошибка: {error_msg or 'Чат не найден или уже удален'}"
 
             await callback.message.edit_text(text=text)
         else:
