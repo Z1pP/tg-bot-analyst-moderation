@@ -1,27 +1,48 @@
 import logging
+from typing import Optional
 
-from models import ChatSession, User
 from repositories import ChatTrackingRepository
+from services.chat import ChatService
+from services.user import UserService
 
 logger = logging.getLogger(__name__)
 
 
 class RemoveChatFromTrackingUseCase:
-    def __init__(self, chat_tracking_repository: ChatTrackingRepository):
+    def __init__(
+        self,
+        chat_tracking_repository: ChatTrackingRepository,
+        user_service: UserService,
+        chat_service: ChatService,
+    ):
         self.chat_tracking_repository = chat_tracking_repository
+        self.user_service = user_service
+        self.chat_service = chat_service
 
-    async def execute(self, admin: User, chat: ChatSession) -> bool:
+    async def execute(self, user_id: int, chat_id: int) -> tuple[bool, Optional[str]]:
         """
         Удаляет чат из отслеживания.
 
         Args:
-            admin: Администратор
-            chat: Чат для удаления
+            user_id: ID пользователя
+            chat_id: ID чата
 
         Returns:
-            bool: True если чат был удален, False если не найден
+            tuple[bool, Optional[str]]: (успех, сообщение об ошибке)
         """
         try:
+            # Получаем пользователя и чат
+            admin = await self.user_service.get_user_by_id(user_id)
+            chat = await self.chat_service.get_chat_by_id(chat_id)
+
+            if not admin:
+                logger.error(f"Пользователь {user_id} не найден")
+                return False, "Пользователь не найден"
+
+            if not chat:
+                logger.error(f"Чат {chat_id} не найден")
+                return False, "Чат не найден"
+
             success = await self.chat_tracking_repository.remove_chat_from_tracking(
                 admin_id=admin.id,
                 chat_id=chat.id,
@@ -31,10 +52,10 @@ class RemoveChatFromTrackingUseCase:
                 logger.info(
                     f"Чат '{chat.title}' успешно удален из отслеживания админом {admin.username}"
                 )
+                return True, None
             else:
                 logger.warning(f"Чат '{chat.title}' не найден в отслеживании")
-
-            return success
+                return False, "Чат не найден в отслеживании"
 
         except Exception as e:
             logger.error(f"Ошибка при удалении чата из отслеживания: {e}")
