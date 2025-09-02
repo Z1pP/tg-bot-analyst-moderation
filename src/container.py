@@ -22,6 +22,13 @@ from services.templates import (
     TemplateService,
 )
 from services.user import UserService
+from usecases.categories import (
+    CreateCategoryUseCase,
+    DeleteCategoryUseCase,
+    GetCategoriesPaginatedUseCase,
+    GetCategoryByIdUseCase,
+    UpdateCategoryNameUseCase,
+)
 from usecases.chat import (
     GetAllChatsUseCase,
     GetOrCreateChatUseCase,
@@ -47,6 +54,12 @@ from usecases.report import (
     GetSingleUserReportUseCase,
 )
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
+from usecases.templates import (
+    DeleteTemplateUseCase,
+    GetTemplateAndIncreaseUsageUseCase,
+    GetTemplatesByQueryUseCase,
+    UpdateTemplateTitleUseCase,
+)
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
@@ -54,18 +67,6 @@ from usecases.user import (
     GetOrCreateUserIfNotExistUserCase,
     GetUserByIdUseCase,
     GetUserByTgIdUseCase,
-)
-from usecases.categories import (
-    CreateCategoryUseCase,
-    DeleteCategoryUseCase,
-    GetCategoriesPaginatedUseCase,
-    UpdateCategoryNameUseCase,
-)
-from usecases.templates import (
-    DeleteTemplateUseCase,
-    GetTemplateAndIncreaseUsageUseCase,
-    GetTemplatesByQueryUseCase,
-    UpdateTemplateTitleUseCase,
 )
 from usecases.user_tracking import (
     AddUserToTrackingUseCase,
@@ -220,6 +221,7 @@ class ContainerSetup:
             DeleteCategoryUseCase,
             DeleteTemplateUseCase,
             GetCategoriesPaginatedUseCase,
+            GetCategoryByIdUseCase,
             GetTemplateAndIncreaseUsageUseCase,
             GetTemplatesByQueryUseCase,
             UpdateCategoryNameUseCase,
