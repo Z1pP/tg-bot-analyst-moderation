@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from container import container
+from dto import UpdateTemplateTitleDTO
 from middlewares import AlbumMiddleware
 from services.templates import TemplateContentService
 from states import TemplateStateManager
@@ -35,7 +36,10 @@ async def process_edit_title(message: Message, state: FSMContext) -> None:
         usecase: UpdateTemplateTitleUseCase = container.resolve(
             UpdateTemplateTitleUseCase
         )
-        success = await usecase.execute(template_id, new_title)
+        update_dto = UpdateTemplateTitleDTO(
+            template_id=template_id, new_title=new_title
+        )
+        success = await usecase.execute(update_dto)
 
         if success:
             await message.answer(f"✅ Название шаблона изменено на: <b>{new_title}</b>")

@@ -1,6 +1,6 @@
 import logging
 
-from models import TemplateCategory
+from dto import CategoryDTO, CreateCategoryDTO
 from repositories import TemplateCategoryRepository
 
 logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ class CreateCategoryUseCase:
     def __init__(self, category_repository: TemplateCategoryRepository):
         self.category_repository = category_repository
 
-    async def execute(self, name: str) -> TemplateCategory:
+    async def execute(self, create_dto: CreateCategoryDTO) -> CategoryDTO:
         """
         Создает новую категорию шаблонов.
 
@@ -18,11 +18,11 @@ class CreateCategoryUseCase:
             name: Название категории
 
         Returns:
-            TemplateCategory: Созданная категория
+            CategoryDTO: Созданная категория
         """
         try:
             # Валидация названия
-            validated_name = self._validate_category_name(name)
+            validated_name = self._validate_category_name(create_dto.name)
 
             # Создание категории
             category = await self.category_repository.create_category(
@@ -30,7 +30,7 @@ class CreateCategoryUseCase:
             )
 
             logger.info(f"Создана новая категория: '{category.name}'")
-            return category
+            return CategoryDTO.from_model(category)
 
         except Exception as e:
             logger.error(f"Ошибка при создании категории: {e}")

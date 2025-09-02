@@ -38,11 +38,11 @@ async def delete_chat_handler(
             GetUserTrackedChatsUseCase
         )
         tg_id = str(message.from_user.id)
-        tracked_chats, user_id = await usecase.execute(tg_id=tg_id)
+        user_chats_dto = await usecase.execute(tg_id=tg_id)
 
-        await state.update_data(user_id=user_id)
+        await state.update_data(user_id=user_chats_dto.user_id)
 
-        if not tracked_chats:
+        if not user_chats_dto.chats:
             message_text = (
                 "❌ У вас нет отслеживаемых чатов\n\n"
                 "Сначала добавьте чаты в отслеживание."
@@ -63,7 +63,7 @@ async def delete_chat_handler(
         )
 
         # Показываем первую страницу
-        first_page_chats = tracked_chats[:CHATS_PAGE_SIZE]
+        first_page_chats = user_chats_dto.chats[:CHATS_PAGE_SIZE]
 
         await send_html_message_with_kb(
             message=message,
@@ -71,12 +71,12 @@ async def delete_chat_handler(
             reply_markup=remove_inline_kb(
                 chats=first_page_chats,
                 page=1,
-                total_count=len(tracked_chats),
+                total_count=user_chats_dto.total_count,
             ),
         )
 
         logger.info(
-            f"Показан список из {len(tracked_chats)} отслеживаемых чатов "
+            f"Показан список из {user_chats_dto.total_count} отслеживаемых чатов "
             "для {message.from_user.username}"
         )
 

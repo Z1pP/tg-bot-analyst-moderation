@@ -4,9 +4,10 @@ from aiogram.types import Message
 
 from constants import KbCommands
 from container import container
+from dto import CreateCategoryDTO
 from keyboards.reply.menu import tamplates_menu_kb
-from usecases.categories import CreateCategoryUseCase
 from states import TemplateStateManager
+from usecases.categories import CreateCategoryUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 
@@ -33,9 +34,10 @@ async def process_category_name_handler(message: Message, state: FSMContext):
     usecase: CreateCategoryUseCase = container.resolve(CreateCategoryUseCase)
 
     try:
-        category = await usecase.execute(name=message.text)
+        create_dto = CreateCategoryDTO(name=message.text)
+        category_dto = await usecase.execute(create_dto=create_dto)
 
-        text = f'🧩 Успешно создана новая категория - <b>"{category.name}"</b>'
+        text = f'🧩 Успешно создана новая категория - <b>"{category_dto.name}"</b>'
 
         await send_html_message_with_kb(
             message=message,
@@ -50,6 +52,3 @@ async def process_category_name_handler(message: Message, state: FSMContext):
             exc=e,
             context="process_category_name_handler",
         )
-
-
-

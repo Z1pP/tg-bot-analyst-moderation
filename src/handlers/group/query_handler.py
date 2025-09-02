@@ -15,6 +15,7 @@ from aiogram.types import (
 )
 
 from container import container
+from dto import TemplateDTO
 from filters import StaffOnlyInlineFilter
 from models import MessageTemplate
 from usecases.templates import (
@@ -194,10 +195,11 @@ async def send_media_group(
         )
 
 
-async def get_variants(query: str) -> List[MessageTemplate]:
+async def get_variants(query: str) -> List[TemplateDTO]:
     """Получает варианты шаблонов по запросу"""
     usecase: GetTemplatesByQueryUseCase = container.resolve(GetTemplatesByQueryUseCase)
-    return await usecase.execute(query=query)
+    result = await usecase.execute(query=query)
+    return result.templates
 
 
 async def save_moderator_message(message: Message) -> None:
