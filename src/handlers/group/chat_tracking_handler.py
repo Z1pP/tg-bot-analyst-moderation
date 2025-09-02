@@ -8,7 +8,6 @@ from container import container
 from filters.admin_filter import AdminOnlyFilter
 from filters.group_filter import GroupTypeFilter
 from models import ChatSession, User
-
 from services.chat import ChatService
 from services.user import UserService
 from usecases.chat_tracking import AddChatToTrackUseCase, RemoveChatFromTrackingUseCase
@@ -99,7 +98,7 @@ async def chat_removed_from_tracking_handler(message: Message) -> None:
             RemoveChatFromTrackingUseCase
         )
 
-        success = await usecase.execute(admin=admin, chat=chat)
+        success, _ = await usecase.execute(user_id=admin.id, chat_id=chat.id)
 
         if success:
             logger.info(
