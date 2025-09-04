@@ -10,4 +10,4 @@ class SaveMessageUseCase:
         # Создаем и возвращаем новое сообщение
         message_db = await self.message_repository.create_new_message(dto=message_dto)
 
-        return ResultMessageDTO.from_entity(message_db)
+        return ResultMessageDTO.from_model(message_db)
