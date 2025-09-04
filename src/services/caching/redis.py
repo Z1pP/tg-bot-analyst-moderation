@@ -57,8 +57,11 @@ class RedisCache(ICache):
             if not await self._ensure_connection():
                 return None
             data = await self.redis.get(key)
-            return pickle.loads(data) if data else None
-        except Exception:
+            result = pickle.loads(data) if data else None
+            logger.debug(f"Redis GET {key}: {'HIT' if result else 'MISS'}")
+            return result
+        except Exception as e:
+            logger.error(f"Redis GET {key} failed: {e}")
             return None
 
     async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
@@ -68,15 +71,19 @@ class RedisCache(ICache):
             data = pickle.dumps(value)
             ttl = ttl or self.default_ttl
             await self.redis.set(key, data, ex=ttl)
-        except Exception:
-            pass
+            logger.debug(f"Redis SET {key}: OK (TTL: {ttl}s)")
+        except Exception as e:
+            logger.error(f"Redis SET {key} failed: {e}")
 
     async def delete(self, key: str) -> bool:
         try:
             if not await self._ensure_connection():
                 return False
-            return bool(await self.redis.delete(key))
-        except Exception:
+            result = bool(await self.redis.delete(key))
+            logger.debug(f"Redis DELETE {key}: {'OK' if result else 'NOT_FOUND'}")
+            return result
+        except Exception as e:
+            logger.error(f"Redis DELETE {key} failed: {e}")
             return False
 
     async def clear(self) -> None:
@@ -84,5 +91,6 @@ class RedisCache(ICache):
             if not await self._ensure_connection():
                 return
             await self.redis.flushdb()
-        except Exception:
-            pass
+            logger.debug("Redis CLEAR: OK")
+        except Exception as e:
+            logger.error(f"Redis CLEAR failed: {e}")
