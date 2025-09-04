@@ -1,10 +1,19 @@
+import asyncio
+import logging
 import pickle
 from typing import Optional, TypeVar
 
 import redis.asyncio as redis
+from redis.exceptions import (
+    AuthenticationError,
+    ConnectionError,
+    ResponseError,
+    TimeoutError,
+)
 
 from .base import ICache
 
+logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
@@ -19,7 +28,27 @@ class RedisCache(ICache):
             try:
                 await self.redis.ping()
                 self._connected = True
-            except Exception:
+            except (ConnectionError, OSError) as e:
+                self._connected = False
+                logger.error(f"Ошибка подключения Redis: {e}")
+                return False
+            except AuthenticationError as e:
+                self._connected = False
+                logger.error(f"Ошибка аутентификации Redis: {e}")
+                return False
+            except ResponseError as e:
+                self._connected = False
+                logger.error(f"Ошибка ответа Redis: {e}")
+                return False
+            except (TimeoutError, asyncio.TimeoutError) as e:
+                self._connected = False
+                logger.warning(
+                    f"Таймаут на соединение или выполнение команды Redis: {e}"
+                )
+                return False
+            except Exception as e:
+                self._connected = False
+                logger.exception(f"Неожиданная ошибка Redis: {e}")
                 return False
         return True
 
