@@ -1,6 +1,12 @@
+import logging
+
+from sqlalchemy.exc import IntegrityError
+
 from models import User
 from repositories import UserRepository
 from services.caching import ICache
+
+logger = logging.getLogger(__name__)
 
 
 class UserService:
@@ -30,6 +36,18 @@ class UserService:
         user = await self.get_user(tg_id=tg_id)
 
         if not user:
-            return await self.create_user(username=username, tg_id=tg_id)
+            try:
+                return await self.create_user(username=username, tg_id=tg_id)
+            except IntegrityError as e:
+                # Race condition: пользователь создан параллельно
+                if "tg_id" in str(e) and "duplicate key" in str(e):
+                    logger.warning(
+                        f"Race condition: пользователь с tg_id={tg_id} создан параллельно"
+                    )
+                    # Получаем созданного пользователя
+                    user = await self.get_user(tg_id=tg_id)
+                    if user:
+                        return user
+                raise
 
         return user
