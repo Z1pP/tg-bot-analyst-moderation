@@ -200,3 +200,28 @@ class MessageRepository:
                     e,
                 )
                 return []
+
+    async def get_messages_by_period_date_and_chats(
+        self,
+        user_id: int,
+        start_date: datetime,
+        end_date: datetime,
+        chat_ids: List[int],
+    ) -> List[ChatMessage]:
+        """Получает сообщения пользователя в определенных чатах за период"""
+        async with async_session() as session:
+            query = (
+                select(ChatMessage)
+                .options(joinedload(ChatMessage.chat_session))
+                .where(
+                    ChatMessage.user_id == user_id,
+                    ChatMessage.chat_id.in_(chat_ids),
+                    ChatMessage.created_at.between(start_date, end_date),
+                )
+            )
+            try:
+                result = await session.execute(query)
+                return result.scalars().all()
+            except Exception as e:
+                logger.error(f"Error getting messages by chats: {e}")
+                return []
