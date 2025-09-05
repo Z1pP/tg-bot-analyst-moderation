@@ -73,3 +73,21 @@ class ChatRepository:
                 logger.error("Произошла ошибка при создании чата: %s, %s", chat_id, e)
                 await session.rollback()
                 raise e
+
+    async def get_tracked_chats_for_admin(self, admin_tg_id: int) -> List[ChatSession]:
+        """Получает отслеживаемые чаты для администратора"""
+        async with async_session() as session:
+            try:
+                # Предполагаем, что все чаты отслеживаются для всех админов
+                # В реальности здесь должна быть связь admin -> tracked_chats
+                result = await session.execute(select(ChatSession))
+                chats = result.scalars().all()
+                logger.info(
+                    f"Получено {len(chats)} отслеживаемых чатов для admin {admin_tg_id}"
+                )
+                return chats
+            except Exception as e:
+                logger.error(
+                    f"Error getting tracked chats for admin {admin_tg_id}: {e}"
+                )
+                return []
