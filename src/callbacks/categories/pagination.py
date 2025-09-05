@@ -24,7 +24,9 @@ class CategoriesPaginationHandler(BasePaginationHandler):
         query: CallbackQuery,
         state: FSMContext,
     ) -> Tuple[List[TemplateCategory], int]:
-        usecase: GetCategoriesPaginatedUseCase = container.resolve(GetCategoriesPaginatedUseCase)
+        usecase: GetCategoriesPaginatedUseCase = container.resolve(
+            GetCategoriesPaginatedUseCase
+        )
         offset = (page - 1) * CATEGORIES_PAGE_SIZE
         return await usecase.execute(limit=CATEGORIES_PAGE_SIZE, offset=offset)
 
@@ -58,6 +60,3 @@ async def next_categories_page_callback(
     state: FSMContext,
 ) -> None:
     await handler.handle_next_page(query, state)
-
-
-
