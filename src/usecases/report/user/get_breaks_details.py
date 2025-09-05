@@ -35,18 +35,29 @@ class GetBreaksDetailReportUseCase(BaseReportUseCase):
 
     async def _get_user_data(self, user: User, dto: SingleUserReportDTO) -> dict:
         """Получает данные пользователя за период."""
-        messages = await self._get_processed_items(
-            repository_method=self._message_repository.get_messages_by_period_date,
+        # Проверяем наличие отслеживаемых чатов
+        tracked_chats = await self._chat_repository.get_tracked_chats_for_admin(
+            dto.admin_tg_id
+        )
+        if not tracked_chats:
+            return {"no_chats": True}
+
+        tracked_chat_ids = [chat.id for chat in tracked_chats]
+
+        messages = await self._get_processed_items_by_user_in_chats(
+            repository_method=self._message_repository.get_messages_by_period_date_and_chats,
             user_id=user.id,
             start_date=dto.start_date,
             end_date=dto.end_date,
+            chat_ids=tracked_chat_ids,
         )
 
-        reactions = await self._get_processed_items(
-            repository_method=self._reaction_repository.get_reactions_by_user_and_period,
+        reactions = await self._get_processed_items_by_user_in_chats(
+            repository_method=self._reaction_repository.get_reactions_by_user_and_period_and_chats,
             user_id=user.id,
             start_date=dto.start_date,
             end_date=dto.end_date,
+            chat_ids=tracked_chat_ids,
         )
 
         return {"messages": messages, "reactions": reactions}
@@ -59,11 +70,15 @@ class GetBreaksDetailReportUseCase(BaseReportUseCase):
         end_date: datetime,
     ) -> str:
         """Генерирует детализированный отчет по перерывам."""
-        messages = data.get("messages", [])
-        reactions = data.get("reactions", [])
-
         period = self._format_selected_period(start_date, end_date)
         header = f"<b>📈 Детализация перерывов: @{user.username} за {period}</b>\n\n"
+
+        # Проверяем наличие отслеживаемых чатов
+        if data.get("no_chats"):
+            return header + "⚠️ Необходимо добавить чат в отслеживание."
+
+        messages = data.get("messages", [])
+        reactions = data.get("reactions", [])
 
         if not messages and not reactions:
             return header + "⚠️ Нет данных за указанный период."
