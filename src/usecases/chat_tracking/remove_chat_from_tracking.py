@@ -1,9 +1,7 @@
 import logging
 from typing import Optional
 
-from repositories import ChatTrackingRepository
-from services.chat import ChatService
-from services.user import UserService
+from repositories import ChatRepository, ChatTrackingRepository, UserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -12,12 +10,12 @@ class RemoveChatFromTrackingUseCase:
     def __init__(
         self,
         chat_tracking_repository: ChatTrackingRepository,
-        user_service: UserService,
-        chat_service: ChatService,
+        user_reporitory: UserRepository,
+        chat_repository: ChatRepository,
     ):
         self.chat_tracking_repository = chat_tracking_repository
-        self.user_service = user_service
-        self.chat_service = chat_service
+        self.chat_repository = chat_repository
+        self.user_reporitory = user_reporitory
 
     async def execute(self, user_id: int, chat_id: int) -> tuple[bool, Optional[str]]:
         """
@@ -32,8 +30,8 @@ class RemoveChatFromTrackingUseCase:
         """
         try:
             # Получаем пользователя и чат
-            admin = await self.user_service.get_user_by_id(user_id)
-            chat = await self.chat_service.get_chat_by_id(chat_id)
+            admin = await self.user_reporitory.get_user_by_id(user_id)
+            chat = await self.chat_repository.get_chat(chat_id)
 
             if not admin:
                 logger.error(f"Пользователь {user_id} не найден")
