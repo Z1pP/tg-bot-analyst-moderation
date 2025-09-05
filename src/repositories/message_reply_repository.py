@@ -111,3 +111,28 @@ class MessageReplyRepository:
                     e,
                 )
                 return []
+
+    async def get_replies_by_period_date_and_chats(
+        self,
+        user_id: int,
+        start_date: datetime,
+        end_date: datetime,
+        chat_ids: list[int],
+    ) -> list[MessageReply]:
+        """Получает ответы пользователя в определенных чатах за период"""
+        async with async_session() as session:
+            query = (
+                select(MessageReply)
+                .options(joinedload(MessageReply.chat_session))
+                .where(
+                    MessageReply.reply_user_id == user_id,
+                    MessageReply.chat_id.in_(chat_ids),
+                    MessageReply.created_at.between(start_date, end_date),
+                )
+            )
+            try:
+                result = await session.execute(query)
+                return result.scalars().all()
+            except Exception as e:
+                logger.error(f"Error getting replies by chats: {e}")
+                return []
