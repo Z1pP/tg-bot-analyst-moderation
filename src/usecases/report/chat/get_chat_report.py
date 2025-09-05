@@ -41,7 +41,9 @@ class GetReportOnSpecificChatUseCase:
     async def execute(self, dto: ChatReportDTO) -> List[str]:
         """Генерирует отчет по конкретному чату за указанный период."""
         chat = await self._get_chat(dto.chat_id)
-        tracked_users = await self._user_repository.get_tracked_users_for_admin(dto.admin_tg_id)
+        tracked_users = await self._user_repository.get_tracked_users_for_admin(
+            dto.admin_tg_id
+        )
         tracked_user_ids = [user.id for user in tracked_users]
         chat_data = await self._get_chat_data(chat, dto, tracked_user_ids)
 
@@ -51,6 +53,7 @@ class GetReportOnSpecificChatUseCase:
             start_date=dto.start_date,
             end_date=dto.end_date,
             selected_period=dto.selected_period,
+            tracked_user_ids=tracked_user_ids,
         )
 
         return self._split_report(report)
@@ -62,7 +65,9 @@ class GetReportOnSpecificChatUseCase:
             raise ValueError("Чат не найден")
         return chat
 
-    async def _get_chat_data(self, chat: ChatSession, dto: ChatReportDTO, tracked_user_ids: list[int]) -> dict:
+    async def _get_chat_data(
+        self, chat: ChatSession, dto: ChatReportDTO, tracked_user_ids: list[int]
+    ) -> dict:
         """Получает все данные чата за период для отслеживаемых пользователей."""
         messages = await self._get_processed_items_with_users(
             self._message_repository.get_messages_by_chat_id_and_period,
@@ -108,7 +113,12 @@ class GetReportOnSpecificChatUseCase:
         return items
 
     async def _get_processed_items_with_users(
-        self, repository_method, chat_id: int, start_date: datetime, end_date: datetime, tracked_user_ids: list[int]
+        self,
+        repository_method,
+        chat_id: int,
+        start_date: datetime,
+        end_date: datetime,
+        tracked_user_ids: list[int],
     ):
         """Получает и обрабатывает элементы из репозитория с фильтрацией по пользователям."""
         items = await repository_method(
@@ -130,6 +140,7 @@ class GetReportOnSpecificChatUseCase:
         start_date: datetime,
         end_date: datetime,
         selected_period: Optional[str] = None,
+        tracked_user_ids: list[int] = None,
     ) -> str:
         """Формирует текстовый отчет."""
         messages, replies, reactions = (
@@ -137,6 +148,10 @@ class GetReportOnSpecificChatUseCase:
             data["replies"],
             data["reactions"],
         )
+
+        # Проверяем наличие отслеживаемых пользователей
+        if not tracked_user_ids:
+            return "⚠️ Нет пользователей в отслеживании."
 
         if not messages and not reactions:
             return "⚠️ Нет данных за указанный период."
