@@ -6,8 +6,8 @@ from aiogram.types import CallbackQuery
 
 from container import container
 from keyboards.inline.categories import conf_remove_category_kb
-from usecases.categories import DeleteCategoryUseCase
 from states import TemplateStateManager
+from usecases.categories import DeleteCategoryUseCase
 
 router = Router(name=__name__)
 
