@@ -115,16 +115,16 @@ class MessageReactionRepository:
 
                 query = (
                     select(
-                        User.id,
+                        MessageReaction.user_id,
                         User.username,
                         func.count(MessageReaction.id).label("reaction_count"),
                     )
-                    .join(MessageReaction, User.id == MessageReaction.user_id)
+                    .join(User, MessageReaction.user_id == User.id, isouter=True)
                     .where(
                         MessageReaction.chat_id == chat_id,
                         MessageReaction.created_at.between(start_date, end_date),
                     )
-                    .group_by(User.id, User.username)
+                    .group_by(MessageReaction.user_id, User.username)
                     .order_by(func.count(MessageReaction.id).desc())
                     .limit(limit)
                 )
@@ -136,8 +136,8 @@ class MessageReactionRepository:
                 for rank, row in enumerate(rows, 1):
                     top_reactors.append(
                         UserReactionActivityDTO(
-                            user_id=row.id,
-                            username=row.username or "Без имени",
+                            user_id=row.user_id,
+                            username=row.username or f"User ID: {row.user_id}",
                             reaction_count=row.reaction_count,
                             rank=rank,
                         )
