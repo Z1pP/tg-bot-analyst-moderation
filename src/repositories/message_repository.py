@@ -156,16 +156,16 @@ class MessageRepository:
 
                 query = (
                     select(
-                        User.id,
+                        ChatMessage.user_id,
                         User.username,
                         func.count(ChatMessage.id).label("message_count"),
                     )
-                    .join(ChatMessage, User.id == ChatMessage.user_id)
+                    .join(User, ChatMessage.user_id == User.id, isouter=True)
                     .where(
                         ChatMessage.chat_id == chat_id,
                         ChatMessage.created_at.between(start_date, end_date),
                     )
-                    .group_by(User.id, User.username)
+                    .group_by(ChatMessage.user_id, User.username)
                     .order_by(func.count(ChatMessage.id).desc())
                     .limit(limit)
                 )
@@ -177,8 +177,8 @@ class MessageRepository:
                 for rank, row in enumerate(rows, 1):
                     top_users.append(
                         UserDailyActivityDTO(
-                            user_id=row.id,
-                            username=row.username or "Без имени",
+                            user_id=row.user_id,
+                            username=row.username or f"User ID: {row.user_id}",
                             message_count=row.message_count,
                             rank=rank,
                         )
