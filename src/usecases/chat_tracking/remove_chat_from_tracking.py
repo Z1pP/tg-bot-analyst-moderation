@@ -10,12 +10,12 @@ class RemoveChatFromTrackingUseCase:
     def __init__(
         self,
         chat_tracking_repository: ChatTrackingRepository,
-        user_reporitory: UserRepository,
+        user_repository: UserRepository,
         chat_repository: ChatRepository,
     ):
         self.chat_tracking_repository = chat_tracking_repository
         self.chat_repository = chat_repository
-        self.user_reporitory = user_reporitory
+        self.user_repository = user_repository
 
     async def execute(self, user_id: int, chat_id: int) -> tuple[bool, Optional[str]]:
         """
@@ -30,7 +30,7 @@ class RemoveChatFromTrackingUseCase:
         """
         try:
             # Получаем пользователя и чат
-            admin = await self.user_reporitory.get_user_by_id(user_id)
+            admin = await self.user_repository.get_user_by_id(user_id)
             chat = await self.chat_repository.get_chat(chat_id)
 
             if not admin:
