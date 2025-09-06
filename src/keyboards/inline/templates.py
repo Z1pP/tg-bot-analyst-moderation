@@ -17,18 +17,20 @@ def templates_inline_kb(
 
     # Добавляем кнопки шаблонов
     for template in templates:
+        # Кнопка с названием шаблона в отдельной строке для лучшей читаемости
         builder.row(
             InlineKeyboardButton(
                 text=f"{template.title}",
                 callback_data=f"template__{template.id}",
+            )
+        )
+        # Кнопки действий под названием
+        builder.row(
+            InlineKeyboardButton(
+                text="✏️", callback_data=f"edit_template__{template.id}"
             ),
             InlineKeyboardButton(
-                text="✏️",
-                callback_data=f"edit_template__{template.id}",
-            ),
-            InlineKeyboardButton(
-                text="🗑",
-                callback_data=f"remove_template__{template.id}",
+                text="🗑", callback_data=f"remove_template__{template.id}"
             ),
         )
 

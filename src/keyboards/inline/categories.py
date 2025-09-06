@@ -25,19 +25,22 @@ def categories_inline_kb(
         return builder.as_markup()
 
     # Кнопки категорий
-    start_index = (page - 1) * page_size
-    for index, category in enumerate(categories):
+    for category in categories:
+        # Кнопка с названием категории в отдельной строке
         builder.row(
             InlineKeyboardButton(
-                text=f"{start_index + index + 1}. {category.name}",
+                text=f"{category.name}",
                 callback_data=f"category__{category.id}",
-            ),
+            )
+        )
+        # Кнопки действий под названием
+        builder.row(
             InlineKeyboardButton(
-                text="✏️ Редактировать",
+                text="✏️",
                 callback_data=f"edit_category__{category.id}",
             ),
             InlineKeyboardButton(
-                text="🗑 Удалить",
+                text="🗑",
                 callback_data=f"remove_category__{category.id}",
             ),
         )
