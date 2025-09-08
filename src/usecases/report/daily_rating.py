@@ -33,17 +33,23 @@ class GetDailyTopUsersUseCase:
 
         # Получаем топ пользователей
         top_users = await self.message_repository.get_daily_top_users(
-            chat_id=chat_id, date=date, limit=10
+            chat_id=chat_id,
+            date=date,
+            limit=10,
         )
 
         # Получаем топ по реакциям
         top_reactors = await self.reaction_repository.get_daily_top_reactors(
-            chat_id=chat_id, date=date, limit=10
+            chat_id=chat_id,
+            date=date,
+            limit=10,
         )
 
         # Получаем популярные реакции
         popular_reactions = await self.reaction_repository.get_daily_popular_reactions(
-            chat_id=chat_id, date=date, limit=3
+            chat_id=chat_id,
+            date=date,
+            limit=3,
         )
 
         # Подсчитываем общую статистику
