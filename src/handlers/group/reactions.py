@@ -6,7 +6,6 @@ from aiogram import Bot, Router, types
 from constants.enums import ReactionAction
 from container import container
 from dto import MessageReactionDTO
-from filters import StaffOnlyReactionFilter
 from models import ChatSession, User
 from services.chat import ChatService
 from services.user import UserService
@@ -16,7 +15,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message_reaction(StaffOnlyReactionFilter())
+@router.message_reaction()
 async def reaction_handler(event: types.MessageReactionUpdated, bot: Bot) -> None:
     try:
         sender, chat = await _get_sender_and_chat(event)
