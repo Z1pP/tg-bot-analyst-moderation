@@ -1,8 +1,9 @@
 import logging
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from statistics import mean, median
-from typing import List, Optional
+from typing import Awaitable, Callable, List, Optional, TypeVar
 
 from constants import MAX_MSG_LENGTH
 from dto.report import ChatReportDTO
@@ -20,6 +21,15 @@ from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+
+@dataclass
+class ChatData:
+    messages: List[ChatMessage]
+    reactions: List[MessageReaction]
+    replies: List[MessageReply]
 
 
 class GetReportOnSpecificChatUseCase:
@@ -67,66 +77,49 @@ class GetReportOnSpecificChatUseCase:
         return chat
 
     async def _get_chat_data(
-        self, chat: ChatSession, dto: ChatReportDTO, tracked_user_ids: list[int]
-    ) -> dict:
-        """Получает все данные чата за период для отслеживаемых пользователей."""
-        messages = await self._get_processed_items_with_users(
-            self._message_repository.get_messages_by_chat_id_and_period,
-            chat.id,
-            dto.start_date,
-            dto.end_date,
-            tracked_user_ids,
-        )
+        self,
+        chat: ChatSession,
+        dto: ChatReportDTO,
+        tracked_user_ids: list[int],
+    ) -> ChatData:
+        """
+        Получает все данные чата (сообщения. ответы, реакции) за период для
+        отслеживаемых пользователей.
+        """
 
-        replies = await self._get_processed_items_with_users(
-            self._msg_reply_repository.get_replies_by_chat_id_and_period,
-            chat.id,
-            dto.start_date,
-            dto.end_date,
-            tracked_user_ids,
-        )
+        methods = {
+            "messages": self._message_repository.get_messages_by_chat_id_and_period,
+            "replies": self._msg_reply_repository.get_replies_by_chat_id_and_period,
+            "reactions": self._reaction_repository.get_reactions_by_chat_and_period,
+        }
 
-        reactions = await self._get_processed_items_with_users(
-            self._reaction_repository.get_reactions_by_chat_and_period,
-            chat.id,
-            dto.start_date,
-            dto.end_date,
-            tracked_user_ids,
-        )
+        kwargs = (chat.id, dto.start_date, dto.end_date, tracked_user_ids)
+
+        results = {
+            key: await self._get_processed_items_with_users(method, *kwargs)
+            for key, method in methods.items()
+        }
+
+        data = ChatData(**results)
 
         logger.info(
-            f"Чат {chat.title}: {len(messages)} сообщений, {len(replies)} ответов, {len(reactions)} реакций"
+            "Чат %s: %d сообщений, %d ответов, %d реакций",
+            chat.title,
+            len(data.messages),
+            len(data.replies),
+            len(data.reactions),
         )
 
-        return {"messages": messages, "replies": replies, "reactions": reactions}
-
-    async def _get_processed_items(
-        self,
-        repository_method,
-        chat_id: int,
-        start_date: datetime,
-        end_date: datetime,
-    ):
-        """Получает и обрабатывает элементы из репозитория."""
-        items = await repository_method(
-            chat_id=chat_id,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        for item in items:
-            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
-
-        return items
+        return data
 
     async def _get_processed_items_with_users(
         self,
-        repository_method,
+        repository_method: Callable[..., Awaitable[List[T]]],
         chat_id: int,
         start_date: datetime,
         end_date: datetime,
         tracked_user_ids: list[int],
-    ):
+    ) -> List[T]:
         """Получает и обрабатывает элементы из репозитория с фильтрацией по пользователям."""
         items = await repository_method(
             chat_id=chat_id,
@@ -142,7 +135,7 @@ class GetReportOnSpecificChatUseCase:
 
     def _generate_report(
         self,
-        data: dict,
+        data: ChatData,
         chat: ChatSession,
         start_date: datetime,
         end_date: datetime,
@@ -151,9 +144,9 @@ class GetReportOnSpecificChatUseCase:
     ) -> str:
         """Формирует текстовый отчет."""
         messages, replies, reactions = (
-            data["messages"],
-            data["replies"],
-            data["reactions"],
+            data.messages,
+            data.replies,
+            data.reactions,
         )
 
         # Проверяем наличие отслеживаемых пользователей
