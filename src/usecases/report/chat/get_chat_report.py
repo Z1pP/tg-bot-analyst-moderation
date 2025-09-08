@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from datetime import datetime
 from statistics import mean, median
 from typing import List, Optional
@@ -392,7 +393,11 @@ class GetReportOnSpecificChatUseCase:
         return "\n".join(filter(None, report_parts))
 
     def _generate_single_day_stats(
-        self, messages, reactions, start_date, end_date
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        start_date: datetime,
+        end_date: datetime,
     ) -> str:
         stats = []
         if messages:
@@ -423,7 +428,11 @@ class GetReportOnSpecificChatUseCase:
         return "\n".join(stats)
 
     def _generate_multi_day_stats(
-        self, messages, reactions, start_date, end_date
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        start_date: datetime,
+        end_date: datetime,
     ) -> str:
         stats = []
 
@@ -459,7 +468,10 @@ class GetReportOnSpecificChatUseCase:
 
         return "\n".join(stats)
 
-    def _generate_replies_stats(self, replies) -> str:
+    def _generate_replies_stats(
+        self,
+        replies: List[MessageReply],
+    ) -> str:
         if not replies:
             return "Из них всего <b>0</b> ответов"
 
@@ -474,7 +486,11 @@ class GetReportOnSpecificChatUseCase:
             ]
         )
 
-    def _generate_breaks_multiday_section(self, messages, reactions) -> str:
+    def _generate_breaks_multiday_section(
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+    ) -> str:
         avg_breaks_time = BreakAnalysisService.avg_breaks_time(messages, reactions)
         if avg_breaks_time:
             return (
@@ -483,7 +499,10 @@ class GetReportOnSpecificChatUseCase:
             )
         return "Перерывы: отсутствуют"
 
-    def _get_avg_first_message_time(self, messages) -> str:
+    def _get_avg_first_message_time(
+        self,
+        messages: List[ChatMessage],
+    ) -> str:
         from collections import defaultdict
 
         daily_first_messages = defaultdict(list)
@@ -510,8 +529,10 @@ class GetReportOnSpecificChatUseCase:
 
         return f"{hours:02d}:{minutes:02d}"
 
-    def _get_avg_first_reaction_time(self, reactions) -> str:
-        from collections import defaultdict
+    def _get_avg_first_reaction_time(
+        self,
+        reactions: List[MessageReaction],
+    ) -> str:
 
         daily_first_reactions = defaultdict(list)
         for reaction in reactions:
@@ -553,7 +574,10 @@ class GetReportOnSpecificChatUseCase:
 
         return (end_date.date() - start_date.date()).days <= 1
 
-    def is_single_day_report(self, report_dto: ChatReportDTO) -> bool:
+    def is_single_day_report(
+        self,
+        report_dto: ChatReportDTO,
+    ) -> bool:
         return self._is_single_day_report(
             selected_period=report_dto.selected_period,
             start_date=report_dto.start_date,
@@ -561,7 +585,9 @@ class GetReportOnSpecificChatUseCase:
         )
 
     def _calculate_activity_per_hour(
-        self, activity_count: int, work_hours: float
+        self,
+        activity_count: int,
+        work_hours: float,
     ) -> float:
         """Рассчитывает количество активности в час рабочего времени."""
         if activity_count < 1 or work_hours <= 0:
