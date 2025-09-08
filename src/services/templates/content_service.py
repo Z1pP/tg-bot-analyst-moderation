@@ -117,7 +117,9 @@ class TemplateContentService:
                 logger.error(f"Ошибка сохранения медиа {file_id}: {e}", exc_info=True)
 
     async def update_template_content(
-        self, template_id: int, content: Dict[str, Any]
+        self,
+        template_id: int,
+        content: Dict[str, Any],
     ) -> bool:
         """Обновляет содержимое шаблона"""
         try:
