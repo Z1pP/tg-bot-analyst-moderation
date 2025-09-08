@@ -80,7 +80,8 @@ async def edit_content_callback(query: CallbackQuery, state: FSMContext) -> None
 
         await query.message.edit_text(
             text="<b>Редактирование содержимого</b>\n\n"
-            "Отправьте новое содержимое для шаблона (текст, фото или медиагруппу):"
+            "Отправьте новое содержимое для шаблона или перешлите сообщение из чата "
+            "(текст, фото или медиагруппу):"
         )
 
     except Exception as e:
