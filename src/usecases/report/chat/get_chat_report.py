@@ -77,18 +77,20 @@ class GetReportOnSpecificChatUseCase:
             tracked_user_ids,
         )
 
-        replies = await self._get_processed_items(
+        replies = await self._get_processed_items_with_users(
             self._msg_reply_repository.get_replies_by_chat_id_and_period,
             chat.id,
             dto.start_date,
             dto.end_date,
+            tracked_user_ids,
         )
 
-        reactions = await self._get_processed_items(
+        reactions = await self._get_processed_items_with_users(
             self._reaction_repository.get_reactions_by_chat_and_period,
             chat.id,
             dto.start_date,
             dto.end_date,
+            tracked_user_ids,
         )
 
         logger.info(
@@ -98,7 +100,11 @@ class GetReportOnSpecificChatUseCase:
         return {"messages": messages, "replies": replies, "reactions": reactions}
 
     async def _get_processed_items(
-        self, repository_method, chat_id: int, start_date: datetime, end_date: datetime
+        self,
+        repository_method,
+        chat_id: int,
+        start_date: datetime,
+        end_date: datetime,
     ):
         """Получает и обрабатывает элементы из репозитория."""
         items = await repository_method(
@@ -210,35 +216,22 @@ class GetReportOnSpecificChatUseCase:
 
         return "\n".join(stats_parts)
 
-    def _generate_response_stats(self, replies: List[MessageReply]) -> str:
-        """Генерирует статистику времени ответа."""
-        if not replies:
-            return "• <b>Нет ответов</b> за указанный период\n"
-
-        response_times = [reply.response_time_seconds for reply in replies]
-        stats = {
-            "avg": mean(response_times),
-            "median": median(response_times),
-            "min": min(response_times),
-            "max": max(response_times),
-        }
-
-        return "\n".join(
-            [
-                f"• <b>{format_seconds(stats['min'])}</b> и <b>{format_seconds(stats['max'])}</b> - мин. и макс. время ответов",
-                f"• <b>{format_seconds(stats['avg'])}</b> и <b>{format_seconds(stats['median'])}</b> - сред. и медиан. время ответа\n",
-            ]
-        )
-
     def _generate_breaks_section(
-        self, messages: List[ChatMessage], reactions: List[MessageReaction]
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        is_single_day: bool = False,
     ) -> str:
         """Генерирует секцию с перерывами."""
         if not messages and not reactions:
             return "<b>⏸️ Перерывы:</b> отсутствуют"
 
         sorted_messages = sorted(messages, key=lambda m: m.created_at)
-        breaks = BreakAnalysisService.calculate_breaks(sorted_messages, reactions)
+        breaks = BreakAnalysisService.calculate_breaks(
+            sorted_messages,
+            reactions,
+            is_single_day=is_single_day,
+        )
 
         if breaks:
             return "<b>⏸️ Перерывы:</b>\n" + "\n".join(breaks)
@@ -352,12 +345,16 @@ class GetReportOnSpecificChatUseCase:
         return result
 
     def _generate_single_user_report(
-        self, data: dict, start_date: datetime, end_date: datetime, is_single_day: bool
+        self,
+        data: dict,
+        start_date: datetime,
+        end_date: datetime,
+        is_single_day: bool,
     ) -> str:
-        username = data["username"]
-        messages = data["messages"]
-        replies = data["replies"]
-        reactions = data["reactions"]
+        username = data.get("username")
+        messages = data.get("messages")
+        replies = data.get("replies")
+        reactions = data.get("reactions")
 
         report_parts = [f"@{username}:"]
 
@@ -379,9 +376,16 @@ class GetReportOnSpecificChatUseCase:
 
         # Перерывы
         if is_single_day:
-            breaks_stats = self._generate_breaks_section(messages, reactions)
+            breaks_stats = self._generate_breaks_section(
+                messages,
+                reactions,
+                is_single_day,
+            )
         else:
-            breaks_stats = self._generate_breaks_multiday_section(messages, reactions)
+            breaks_stats = self._generate_breaks_multiday_section(
+                messages,
+                reactions,
+            )
 
         report_parts.append(breaks_stats)
 
@@ -473,7 +477,10 @@ class GetReportOnSpecificChatUseCase:
     def _generate_breaks_multiday_section(self, messages, reactions) -> str:
         avg_breaks_time = BreakAnalysisService.avg_breaks_time(messages, reactions)
         if avg_breaks_time:
-            return f"Перерывы:\n• <b>{avg_breaks_time}</b> — средн. время перерыва между сообщ. и реакциями"
+            return (
+                f"Перерывы:\n• <b>{avg_breaks_time}</b> — средн."
+                "время перерыва между сообщ. и реакциями"
+            )
         return "Перерывы: отсутствуют"
 
     def _get_avg_first_message_time(self, messages) -> str:
