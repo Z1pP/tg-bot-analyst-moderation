@@ -307,6 +307,22 @@ class MessageTemplateRepository:
 
         async with async_session() as session:
             try:
+                # Предварительно удаляем медиа с таким же unique_id из ДРУГИХ шаблонов
+                if "media_items" in content_data and content_data["media_items"]:
+                    unique_ids_to_update = {
+                        item["file_unique_id"] for item in content_data["media_items"]
+                    }
+
+                    stmt = select(TemplateMedia).where(
+                        TemplateMedia.file_unique_id.in_(unique_ids_to_update),
+                        TemplateMedia.template_id != template_id,
+                    )
+                    result = await session.execute(stmt)
+                    conflicting_media = result.scalars().all()
+
+                    for media in conflicting_media:
+                        await session.delete(media)
+
                 query = (
                     select(MessageTemplate)
                     .options(selectinload(MessageTemplate.media_items))
