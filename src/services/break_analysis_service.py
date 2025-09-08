@@ -17,6 +17,7 @@ class BreakAnalysisService:
         messages: List[ChatMessage],
         reactions: List[MessageReaction],
         min_break_minutes: int = BREAK_TIME,
+        is_single_day: bool = False,
     ) -> List[str]:
         """
         Считает перерывы между активностью (сообщения + реакции) в пределах одного дня.
@@ -72,7 +73,8 @@ class BreakAnalysisService:
                 date_str = date.strftime("%d.%m.%Y")
                 total_formatted = cls._format_break_time(total_break_time)
 
-                result.append(f"<code>{date_str}</code>")
+                if not is_single_day:
+                    result.append(f"<code>{date_str}</code>")
                 result.append(
                     f"<b>{total_formatted}</b> - общее время перерыва за день"
                 )
