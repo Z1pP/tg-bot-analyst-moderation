@@ -180,6 +180,7 @@ class MessageReactionRepository:
                     )
                     .where(
                         MessageReaction.chat_id == chat_id,
+                        MessageReaction.action == "added",
                         MessageReaction.created_at.between(start_date, end_date),
                     )
                     .group_by(MessageReaction.emoji)
