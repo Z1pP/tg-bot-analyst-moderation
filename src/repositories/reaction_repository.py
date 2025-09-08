@@ -45,19 +45,25 @@ class MessageReactionRepository:
         chat_id: int,
         start_date: datetime,
         end_date: datetime,
+        tracked_user_ids: list[int] = None,
     ) -> List[MessageReaction]:
         async with async_session() as session:
-            try:
-                logger.debug(f"Получение реакций для чата с ID={chat_id}")
+            logger.debug(f"Получение реакций для чата с ID={chat_id}")
 
-                query = (
-                    select(MessageReaction)
-                    .options(joinedload(MessageReaction.user))
-                    .where(
-                        MessageReaction.chat_id == chat_id,
-                        MessageReaction.created_at.between(start_date, end_date),
-                    )
+            query = (
+                select(MessageReaction)
+                .options(joinedload(MessageReaction.user))
+                .where(
+                    MessageReaction.chat_id == chat_id,
+                    MessageReaction.created_at.between(start_date, end_date),
                 )
+            )
+
+            # Фильтруем только по отслеживаемым пользователям
+            if tracked_user_ids:
+                query = query.where(MessageReaction.user_id.in_(tracked_user_ids))
+            try:
+
                 result = await session.execute(query)
                 reactions = result.scalars().all()
 

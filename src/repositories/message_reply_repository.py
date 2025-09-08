@@ -81,6 +81,7 @@ class MessageReplyRepository:
         chat_id: int,
         start_date: datetime,
         end_date: datetime,
+        tracked_user_ids: list[int] = None,
     ) -> list[MessageReply]:
         async with async_session() as session:
             query = (
@@ -91,6 +92,9 @@ class MessageReplyRepository:
                     MessageReply.created_at.between(start_date, end_date),
                 )
             )
+            # Фильтруем только по отслеживаемым пользователям
+            if tracked_user_ids:
+                query = query.where(MessageReply.reply_user_id.in_(tracked_user_ids))
             try:
                 result = await session.execute(query)
                 replies = result.scalars().all()
