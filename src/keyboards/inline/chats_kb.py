@@ -4,7 +4,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants.pagination import CHATS_PAGE_SIZE
-from models import AdminChatAccess, ChatSession
+from models import ChatSession
 
 
 def remove_inline_kb(
@@ -135,34 +135,6 @@ def template_scope_selector_kb(chats: List[ChatSession]) -> InlineKeyboardMarkup
     # Формируем сетку 1 кнопка в ряд
     kb.adjust(1)
     return kb.as_markup()
-
-
-def chat_info_inline_kb(access: AdminChatAccess):
-    builder = InlineKeyboardBuilder()
-
-    if access.is_target:
-        builder.row(
-            InlineKeyboardButton(
-                text="Не хочу получать отчеты сюда",
-                callback_data=f"toggle_target__{access.chat_id}",
-            )
-        )
-    else:
-        builder.row(
-            InlineKeyboardButton(
-                text="Хочу получать отчеты сюда",
-                callback_data=f"toggle_target__{access.chat_id}",
-            )
-        ),
-
-    builder.row(
-        InlineKeyboardButton(
-            text="⬅️ Назад",
-            callback_data="chat_info_back",
-        ),
-    )
-
-    return builder.as_markup()
 
 
 def conf_remove_chat_kb() -> InlineKeyboardMarkup:
