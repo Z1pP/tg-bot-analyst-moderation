@@ -9,6 +9,7 @@ from .daily_activity import (
 )
 from .message import CreateMessageDTO, ResultMessageDTO
 from .message_reply import CreateMessageReplyDTO, ResultMessageReplyDTO
+from .moderation import ModerationActionDTO
 from .reaction import MessageReactionDTO
 from .report import (
     AllUsersReportDTO,
@@ -42,6 +43,8 @@ __all__ = [
     # Message Reply
     "CreateMessageReplyDTO",
     "ResultMessageReplyDTO",
+    # Moderation
+    "ModerationActionDTO",
     # Reaction
     "MessageReactionDTO",
     # Report
