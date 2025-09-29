@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .message_reply import MessageReply
     from .message_templates import MessageTemplate
     from .reaction import MessageReaction
+    from .user_chat_status import UserChatStatus
 
 
 class ChatSession(BaseModel):
@@ -54,6 +55,12 @@ class ChatSession(BaseModel):
     )
     reactions: Mapped[list["MessageReaction"]] = relationship(
         "MessageReaction",
+        back_populates="chat",
+        cascade="all, delete-orphan",
+    )
+
+    user_statuses: Mapped[list["UserChatStatus"]] = relationship(
+        "UserChatStatus",
         back_populates="chat",
         cascade="all, delete-orphan",
     )
