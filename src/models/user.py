@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from .message import ChatMessage
     from .message_templates import MessageTemplate
     from .moderator_activity import ModeratorActivity
+    from .punishment import Punishment
     from .reaction import MessageReaction
 
 
@@ -81,6 +82,13 @@ class User(BaseModel):
     activities: Mapped[list["ModeratorActivity"]] = relationship(
         "ModeratorActivity",
         foreign_keys="ModeratorActivity.user_id",
+        cascade="all, delete-orphan",
+        back_populates="user",
+    )
+
+    punishments: Mapped[list["Punishment"]] = relationship(
+        "Punishment",
+        foreign_keys="Punishment.user_id",
         cascade="all, delete-orphan",
         back_populates="user",
     )
