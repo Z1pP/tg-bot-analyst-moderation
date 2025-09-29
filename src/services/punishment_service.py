@@ -48,6 +48,39 @@ class PunishmentService:
             chat_id=chat_id,
         )
 
+    async def get_max_punishment(self, chat_id: str) -> Optional[PunishmentLadder]:
+        """Возвращает максимальное наказание для чата или глобальное."""
+        ladder = await self.punishment_ladder_repository.get_ladder_by_chat_id(
+            chat_id=chat_id,
+        )
+        if ladder:
+            return ladder[-1]
+
+        global_ladder = await self.punishment_ladder_repository.get_global_ladder()
+        if global_ladder:
+            return global_ladder[-1]
+
+        return None
+
+    def generate_ban_report(
+        self,
+        dto: ModerationActionDTO,
+        date: datetime,
+    ) -> str:
+        date_str = date.strftime("%d.%m.%Y")
+        time_str = date.strftime("%H:%M")
+        reason = dto.reason or "Не указана"
+
+        return (
+            f"❌️ Сообщение удалено {date_str} в {time_str}\n\n"
+            f"• Юзер: @{dto.user_reply_username}\n"
+            f"• ID: {dto.user_reply_tgid}\n"
+            f"• Причина: {reason}\n"
+            "• Время бана: бессрочно\n"
+            f"• Выдал бан: @{dto.admin_username}\n"
+            f"• Чат: {dto.chat_title}"
+        )
+
     def generate_report(
         self,
         dto: ModerationActionDTO,
@@ -81,7 +114,7 @@ class PunishmentService:
         user: User,
         punishment: PunishmentLadder,
         admin_id: int,
-        chat_id: str,
+        chat_id: int,
     ) -> Punishment:
         new_punishment = Punishment(
             user_id=user.id,
