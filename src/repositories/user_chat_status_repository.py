@@ -1,0 +1,180 @@
+import logging
+from typing import List, Optional
+
+from sqlalchemy import and_, select
+
+from database.session import async_session
+from models.user_chat_status import UserChatStatus
+
+logger = logging.getLogger(__name__)
+
+
+class UserChatStatusRepository:
+    async def get_or_create(
+        self,
+        user_id: int,
+        chat_id: int,
+        defaults: dict = None,
+    ) -> tuple[UserChatStatus, bool]:
+        """Получает или создает запись о статусе пользователя в чате."""
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(UserChatStatus).where(
+                        and_(
+                            UserChatStatus.user_id == user_id,
+                            UserChatStatus.chat_id == chat_id,
+                        )
+                    )
+                )
+                instance = result.scalars().first()
+
+                if instance:
+                    return instance, False
+
+                if defaults is None:
+                    defaults = {}
+
+                create_params = {
+                    "user_id": user_id,
+                    "chat_id": chat_id,
+                    **defaults,
+                }
+                instance = UserChatStatus(**create_params)
+                session.add(instance)
+                await session.commit()
+                await session.refresh(instance)
+                logger.info(
+                    "Создана новая запись UserChatStatus для user_id=%s, chat_id=%s",
+                    user_id,
+                    chat_id,
+                )
+                return instance, True
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении или создании UserChatStatus для user_id=%s, chat_id=%s: %s",
+                    user_id,
+                    chat_id,
+                    e,
+                )
+                await session.rollback()
+                raise
+
+    async def get_by_user_and_chat(
+        self,
+        user_id: int,
+        chat_id: int,
+    ) -> Optional[UserChatStatus]:
+        """Получает статус пользователя по ID пользователя и ID чата."""
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(UserChatStatus).where(
+                        and_(
+                            UserChatStatus.user_id == user_id,
+                            UserChatStatus.chat_id == chat_id,
+                        )
+                    )
+                )
+                status = result.scalars().first()
+                if status:
+                    logger.info(
+                        "Получен статус для user_id=%s, chat_id=%s", user_id, chat_id
+                    )
+                else:
+                    logger.info(
+                        "Статус для user_id=%s, chat_id=%s не найден", user_id, chat_id
+                    )
+                return status
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении статуса для user_id=%s, chat_id=%s: %s",
+                    user_id,
+                    chat_id,
+                    e,
+                )
+                raise
+
+    async def update_status(
+        self,
+        user_id: int,
+        chat_id: int,
+        **kwargs,
+    ) -> Optional[UserChatStatus]:
+        """Обновляет статус пользователя в чате."""
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(UserChatStatus).where(
+                        and_(
+                            UserChatStatus.user_id == user_id,
+                            UserChatStatus.chat_id == chat_id,
+                        )
+                    )
+                )
+                status = result.scalars().first()
+
+                if not status:
+                    logger.warning(
+                        "Статус для user_id=%s, chat_id=%s не найден для обновления",
+                        user_id,
+                        chat_id,
+                    )
+                    return None
+
+                for key, value in kwargs.items():
+                    setattr(status, key, value)
+
+                await session.commit()
+                await session.refresh(status)
+                logger.info(
+                    "Статус для user_id=%s, chat_id=%s обновлен", user_id, chat_id
+                )
+                return status
+            except Exception as e:
+                logger.error(
+                    "Ошибка при обновлении статуса для user_id=%s, chat_id=%s: %s",
+                    user_id,
+                    chat_id,
+                    e,
+                )
+                await session.rollback()
+                raise
+
+    async def get_all_by_user(self, user_id: int) -> List[UserChatStatus]:
+        """Получает все статусы для указанного пользователя."""
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(UserChatStatus).where(UserChatStatus.user_id == user_id)
+                )
+                statuses = result.scalars().all()
+                logger.info(
+                    "Найдено %s статусов для user_id=%s", len(statuses), user_id
+                )
+                return statuses
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении всех статусов для user_id=%s: %s",
+                    user_id,
+                    e,
+                )
+                raise
+
+    async def get_all_by_chat(self, chat_id: int) -> List[UserChatStatus]:
+        """Получает все статусы в указанном чате."""
+        async with async_session() as session:
+            try:
+                result = await session.execute(
+                    select(UserChatStatus).where(UserChatStatus.chat_id == chat_id)
+                )
+                statuses = result.scalars().all()
+                logger.info("Найдено %s статусов в chat_id=%s", len(statuses), chat_id)
+                return statuses
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении всех статусов для chat_id=%s: %s",
+                    chat_id,
+                    e,
+                )
+                raise
