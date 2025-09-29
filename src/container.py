@@ -8,7 +8,6 @@ from punq import Container
 from config import settings
 from di import container
 from repositories import (
-    ActivityRepository,
     ChatRepository,
     ChatTrackingRepository,
     MessageReactionRepository,
@@ -56,7 +55,6 @@ from usecases.message import (
     SaveModeratorReplyMessageUseCase,
 )
 from usecases.moderation import GiveUserWarnUseCase
-from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
@@ -116,7 +114,6 @@ class ContainerSetup:
             UserRepository,
             ChatRepository,
             MessageRepository,
-            ActivityRepository,
             MessageReplyRepository,
             ChatTrackingRepository,
             TemplateCategoryRepository,
@@ -149,7 +146,6 @@ class ContainerSetup:
         ContainerSetup._register_user_usecases(container)
         ContainerSetup._register_chat_usecases(container)
         ContainerSetup._register_message_usecases(container)
-        ContainerSetup._register_activity_usecases(container)
         ContainerSetup._register_report_usecases(container)
         ContainerSetup._register_tracking_usecases(container)
         ContainerSetup._register_template_usecases(container)
@@ -204,11 +200,6 @@ class ContainerSetup:
 
         for usecase in message_usecases:
             container.register(usecase)
-
-    @staticmethod
-    def _register_activity_usecases(container: Container) -> None:
-        """Регистрация use cases для активности."""
-        container.register(TrackModeratorActivityUseCase)
 
     @staticmethod
     def _register_moderation_usecases(container: Container) -> None:
