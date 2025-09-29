@@ -5,11 +5,11 @@ from .chat_session import ChatSession
 from .message import ChatMessage
 from .message_reply import MessageReply
 from .message_templates import MessageTemplate, TemplateCategory, TemplateMedia
-from .moderator_activity import ModeratorActivity
 from .punishment import Punishment
 from .punishment_ladder import PunishmentLadder
 from .reaction import MessageReaction
 from .user import User
+from .user_chat_status import UserChatStatus
 
 __all__ = [
     "Base",
@@ -23,7 +23,7 @@ __all__ = [
     "TemplateMedia",
     "MessageReaction",
     "admin_user_tracking",
-    "ModeratorActivity",
     "Punishment",
     "PunishmentLadder",
+    "UserChatStatus",
 ]
