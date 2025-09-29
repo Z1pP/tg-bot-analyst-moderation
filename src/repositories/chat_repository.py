@@ -91,3 +91,26 @@ class ChatRepository:
                     f"Error getting tracked chats for admin {admin_tg_id}: {e}"
                 )
                 return []
+
+    async def get_archive_chats(
+        self,
+        source_chat_title: str,
+    ) -> Optional[List[ChatSession]]:
+        """Получает архивный чат по названию источника"""
+        async with async_session() as session:
+            try:
+                subq = (
+                    select(ChatSession.chat_id)
+                    .where(ChatSession.title == source_chat_title)
+                    .scalar_subquery()
+                )
+                query = select(ChatSession).where(ChatSession.archive_chat_id == subq)
+
+                result = await session.execute(query)
+                chats = result.scalars().all()
+
+                logger.info("Получено %d архивных чатов", len(chats))
+                return chats
+            except Exception as e:
+                logger.error("Произошла ошибка при получении архивных чатов: %s", e)
+                raise e
