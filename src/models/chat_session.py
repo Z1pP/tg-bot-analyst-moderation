@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -24,6 +24,12 @@ class ChatSession(BaseModel):
     title: Mapped[str] = mapped_column(
         String(),
         nullable=True,
+    )
+
+    archive_chat_id: Mapped[Optional[str]] = mapped_column(
+        String(length=32),
+        nullable=True,
+        doc="ID of the chat to which moderation reports are sent.",
     )
 
     # Relationships
