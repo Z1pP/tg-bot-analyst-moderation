@@ -28,7 +28,7 @@ class UserChatStatus(BaseModel):
         default=False,
     )
     banned_until: Mapped[Optional[datetime]] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=True,
     )
     is_muted: Mapped[bool] = mapped_column(
@@ -37,7 +37,7 @@ class UserChatStatus(BaseModel):
         default=False,
     )
     muted_until: Mapped[Optional[datetime]] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=True,
     )
 
