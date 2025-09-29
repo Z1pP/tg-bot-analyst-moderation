@@ -6,6 +6,8 @@ from .message import ChatMessage
 from .message_reply import MessageReply
 from .message_templates import MessageTemplate, TemplateCategory, TemplateMedia
 from .moderator_activity import ModeratorActivity
+from .punishment import Punishment
+from .punishment_ladder import PunishmentLadder
 from .reaction import MessageReaction
 from .user import User
 
@@ -22,4 +24,6 @@ __all__ = [
     "MessageReaction",
     "admin_user_tracking",
     "ModeratorActivity",
+    "Punishment",
+    "PunishmentLadder",
 ]
