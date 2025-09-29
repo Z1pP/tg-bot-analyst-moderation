@@ -51,3 +51,8 @@ class UserService:
                 raise
 
         return user
+
+    async def get_admins_for_chat(self, chat_tg_id: str) -> list[User]:
+        return await self._user_repository.get_admins_for_chat(
+            chat_tg_id=chat_tg_id,
+        )
