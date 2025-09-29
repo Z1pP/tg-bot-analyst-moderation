@@ -2,7 +2,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Enum as SQLAlchemyEnum
-from sqlalchemy import ForeignKey, Index, Integer, String
+from sqlalchemy import ForeignKey, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from constants.punishment import PunishmentType
@@ -10,6 +10,7 @@ from constants.punishment import PunishmentType
 from .base import BaseModel
 
 if TYPE_CHECKING:
+    from .chat_session import ChatSession
     from .user import User
 
 
@@ -38,8 +39,9 @@ class Punishment(BaseModel):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    chat_id: Mapped[str] = mapped_column(
-        String(length=32),
+    chat_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -51,6 +53,10 @@ class Punishment(BaseModel):
     punished_by: Mapped[Optional["User"]] = relationship(
         "User",
         foreign_keys=[punished_by_id],
+    )
+    chat: Mapped["ChatSession"] = relationship(
+        "ChatSession",
+        foreign_keys=[chat_id],
     )
 
     __table_args__ = (
