@@ -5,7 +5,7 @@ from sqlalchemy import delete, select
 
 from constants.enums import UserRole
 from database.session import async_session
-from models import User, admin_user_tracking
+from models import AdminChatAccess, ChatSession, User, admin_user_tracking
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +171,32 @@ class UserRepository:
                 logger.error(
                     "Ошибка при получении отслеживаемого пользователя "
                     f"с TG_ID:{user_tg_id} для администратора TG_ID:{admin_tg_id}: {e}"
+                )
+                raise
+
+    async def get_admins_for_chat(self, chat_tg_id: str) -> Optional[List[User]]:
+        async with async_session() as session:
+            try:
+                query = (
+                    select(User)
+                    .join(AdminChatAccess, User.id == AdminChatAccess.admin_id)
+                    .join(ChatSession, AdminChatAccess.chat_id == ChatSession.id)
+                    .where(ChatSession.chat_id == chat_tg_id)
+                )
+                result = await session.execute(query)
+                admins = result.scalars().all()
+
+                logger.info(
+                    "Получено %d администраторов для чата TG_ID:%s",
+                    len(admins),
+                    chat_tg_id,
+                )
+                return admins
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении администраторов для чата TG_ID:%s: %s",
+                    chat_tg_id,
+                    e,
                 )
                 raise
 
