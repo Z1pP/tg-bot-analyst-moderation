@@ -1,4 +1,3 @@
-from .activity import CreateActivityDTO, ResultActivityDTO
 from .category_dto import CategoryDTO, CreateCategoryDTO, UpdateCategoryDTO
 from .chat_dto import ChatDTO, UserChatsDTO
 from .daily_activity import (
@@ -22,9 +21,6 @@ from .template_dto import TemplateDTO, TemplateSearchResultDTO, UpdateTemplateTi
 from .user import CreateUserDTO, UpdateUserDTO, UserDTO
 
 __all__ = [
-    # Activity
-    "CreateActivityDTO",
-    "ResultActivityDTO",
     # Category
     "CategoryDTO",
     "CreateCategoryDTO",
