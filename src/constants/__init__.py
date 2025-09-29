@@ -40,6 +40,9 @@ class KbCommands:
     SELECT_TEMPLATE = "🔖 Шаблоны"
     SELECT_CATEGORY = "🗃️ Категории"
 
+    # Banhammer
+    LOCK_MENU = "🚫 Блокировки"
+
     # Navigation
     SETTINGS = "⚙️ Настройки"
     FAQ = "❓ FAQ"
