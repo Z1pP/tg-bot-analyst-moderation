@@ -2,7 +2,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Enum as SQLAlchemyEnum
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from constants.punishment import PunishmentType
@@ -51,4 +51,11 @@ class Punishment(BaseModel):
     punished_by: Mapped[Optional["User"]] = relationship(
         "User",
         foreign_keys=[punished_by_id],
+    )
+
+    __table_args__ = (
+        Index("idx_punishment_user_id", "user_id"),
+        Index("idx_punishment_chat_id", "chat_id"),
+        Index("idx_punishment_punished_by_id", "punished_by_id"),
+        Index("idx_punishment_type", "punishment_type"),
     )
