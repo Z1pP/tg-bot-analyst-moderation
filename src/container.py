@@ -18,6 +18,7 @@ from repositories import (
     PunishmentRepository,
     TemplateCategoryRepository,
     TemplateMediaRepository,
+    UserChatStatusRepository,
     UserRepository,
     UserTrackingRepository,
 )
@@ -54,7 +55,7 @@ from usecases.message import (
     SaveMessageUseCase,
     SaveModeratorReplyMessageUseCase,
 )
-from usecases.moderation import GiveUserWarnUseCase
+from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
@@ -123,6 +124,7 @@ class ContainerSetup:
             UserTrackingRepository,
             PunishmentRepository,
             PunishmentLadderRepository,
+            UserChatStatusRepository,
         ]
 
         for repo in repositories:
@@ -205,6 +207,7 @@ class ContainerSetup:
     def _register_moderation_usecases(container: Container) -> None:
         """Регистрация use cases для модерации."""
         container.register(GiveUserWarnUseCase)
+        container.register(GiveUserBanUseCase)
 
     @staticmethod
     def _register_report_usecases(container: Container) -> None:
