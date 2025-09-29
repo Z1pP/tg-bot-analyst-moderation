@@ -1,3 +1,5 @@
+from typing import List, Optional
+
 from models import ChatSession
 from repositories import ChatRepository
 from services.caching import ICache
@@ -34,3 +36,11 @@ class ChatService:
             return chat
 
         return await self.create_chat(chat_id, title)
+
+    async def get_archive_chats(
+        self,
+        source_chat_title: str,
+    ) -> Optional[List[ChatSession]]:
+        return await self._chat_repository.get_archive_chats(
+            source_chat_title=source_chat_title,
+        )
