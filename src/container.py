@@ -1,6 +1,12 @@
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from aiogram.fsm.storage.base import BaseStorage
+from aiogram.fsm.storage.memory import MemoryStorage
 from punq import Container
 
 from config import settings
+from di import container
 from repositories import (
     ActivityRepository,
     ChatRepository,
@@ -9,19 +15,25 @@ from repositories import (
     MessageReplyRepository,
     MessageRepository,
     MessageTemplateRepository,
+    PunishmentLadderRepository,
+    PunishmentRepository,
     TemplateCategoryRepository,
     TemplateMediaRepository,
     UserRepository,
     UserTrackingRepository,
 )
+from services import (
+    BotMessageService,
+    ChatService,
+    PunishmentService,
+    UserService,
+)
 from services.caching import ICache, RedisCache
 from services.categories import CategoryService
-from services.chat import ChatService
 from services.templates import (
     TemplateContentService,
     TemplateService,
 )
-from services.user import UserService
 from usecases.categories import (
     CreateCategoryUseCase,
     DeleteCategoryUseCase,
@@ -43,6 +55,7 @@ from usecases.message import (
     SaveMessageUseCase,
     SaveModeratorReplyMessageUseCase,
 )
+from usecases.moderation import GiveUserWarnUseCase
 from usecases.moderator_activity import TrackModeratorActivityUseCase
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
@@ -77,14 +90,24 @@ from usecases.user_tracking import (
 
 class ContainerSetup:
     @staticmethod
-    def setup() -> Container:
-        container = Container()
-
+    def setup() -> None:
+        ContainerSetup._register_bot_components(container)
         ContainerSetup._register_repositories(container)
         ContainerSetup._register_services(container)
         ContainerSetup._register_usecases(container)
 
-        return container
+    @staticmethod
+    def _register_bot_components(container: Container) -> None:
+        container.register(
+            Bot,
+            instance=Bot(
+                token=settings.BOT_TOKEN,
+                default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+            ),
+        )
+        storage = MemoryStorage()
+        container.register(BaseStorage, instance=storage)
+        container.register(Dispatcher, instance=Dispatcher(storage=storage))
 
     @staticmethod
     def _register_repositories(container: Container) -> None:
@@ -101,6 +124,8 @@ class ContainerSetup:
             MessageTemplateRepository,
             MessageReactionRepository,
             UserTrackingRepository,
+            PunishmentRepository,
+            PunishmentLadderRepository,
         ]
 
         for repo in repositories:
@@ -115,6 +140,8 @@ class ContainerSetup:
         container.register(TemplateService)
         container.register(TemplateContentService)
         container.register(CategoryService)
+        container.register(BotMessageService)
+        container.register(PunishmentService)
 
     @staticmethod
     def _register_usecases(container: Container) -> None:
@@ -127,6 +154,7 @@ class ContainerSetup:
         ContainerSetup._register_tracking_usecases(container)
         ContainerSetup._register_template_usecases(container)
         ContainerSetup._register_reaction_usecases(container)
+        ContainerSetup._register_moderation_usecases(container)
 
     @staticmethod
     def _register_reaction_usecases(container: Container) -> None:
@@ -183,6 +211,11 @@ class ContainerSetup:
         container.register(TrackModeratorActivityUseCase)
 
     @staticmethod
+    def _register_moderation_usecases(container: Container) -> None:
+        """Регистрация use cases для модерации."""
+        container.register(GiveUserWarnUseCase)
+
+    @staticmethod
     def _register_report_usecases(container: Container) -> None:
         """Регистрация use cases для отчетов."""
         report_usecases = [
@@ -230,7 +263,3 @@ class ContainerSetup:
 
         for usecase in template_usecases:
             container.register(usecase)
-
-
-# Создаем и экспортируем контейнер
-container = ContainerSetup.setup()
