@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 from constants.punishment import PunishmentActions as Actions
@@ -18,5 +19,9 @@ class ModerationActionDTO:
     chat_title: str
     # ID сообщения с нарушением
     reply_message_id: int
+    original_message_id: int
+    # Даты создания сообщений
+    reply_message_date: datetime
+    original_message_date: datetime
     # Причина наказания
     reason: Optional[str] = None
