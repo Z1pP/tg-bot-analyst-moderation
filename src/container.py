@@ -24,6 +24,7 @@ from repositories import (
 )
 from services import (
     BotMessageService,
+    BotPermissionService,
     ChatService,
     PunishmentService,
     UserService,
@@ -85,6 +86,7 @@ from usecases.user_tracking import (
     GetListTrackedUsersUseCase,
     RemoveUserFromTrackingUseCase,
 )
+from utils.exception_handler import AsyncErrorHandler
 
 
 class ContainerSetup:
@@ -94,6 +96,7 @@ class ContainerSetup:
         ContainerSetup._register_repositories(container)
         ContainerSetup._register_services(container)
         ContainerSetup._register_usecases(container)
+        ContainerSetup._register_async_error_handler(container)
 
     @staticmethod
     def _register_bot_components(container: Container) -> None:
@@ -107,6 +110,10 @@ class ContainerSetup:
         storage = MemoryStorage()
         container.register(BaseStorage, instance=storage)
         container.register(Dispatcher, instance=Dispatcher(storage=storage))
+
+    @staticmethod
+    def _register_async_error_handler(container: Container) -> None:
+        container.register(AsyncErrorHandler)
 
     @staticmethod
     def _register_repositories(container: Container) -> None:
@@ -141,6 +148,7 @@ class ContainerSetup:
         container.register(CategoryService)
         container.register(BotMessageService)
         container.register(PunishmentService)
+        container.register(BotPermissionService)
 
     @staticmethod
     def _register_usecases(container: Container) -> None:
