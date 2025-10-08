@@ -112,7 +112,7 @@ async def _get_sender_and_chat(
 
     sender = await user_service.get_or_create(username=username, tg_id=tg_id)
 
-    chat = await chat_service.get_or_create_chat(
+    chat = await chat_service.get_or_create(
         chat_id=chat_id, title=event.chat.title or "Без названия"
     )
     if not chat:

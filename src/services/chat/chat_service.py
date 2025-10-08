@@ -41,12 +41,15 @@ class ChatService:
             await self._cache.set(chat_id, chat)
         return chat
 
-    async def get_or_create_chat(self, chat_id: str, title: str) -> ChatSession:
+    async def get_or_create(self, chat_id: str, title: str) -> ChatSession:
         chat = await self.get_chat(chat_id=chat_id, title=title)
         if chat:
             return chat
 
-        return await self.create_chat(chat_id, title)
+        new_chat = await self.create_chat(chat_id, title)
+
+        await self._cache.set(chat_id, new_chat)
+        return new_chat
 
     async def get_archive_chats(
         self,

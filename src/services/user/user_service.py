@@ -48,7 +48,11 @@ class UserService:
 
         if not user:
             try:
-                return await self.create_user(username=username, tg_id=tg_id)
+                new_user = await self.create_user(username=username, tg_id=tg_id)
+
+                await self._cache.set(tg_id, new_user)
+
+                return new_user
             except IntegrityError as e:
                 # Race condition: пользователь создан параллельно
                 if "tg_id" in str(e) and "duplicate key" in str(e):
