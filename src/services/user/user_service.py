@@ -14,13 +14,24 @@ class UserService:
         self._user_repository = user_repository
         self._cache = cache
 
-    async def get_user(self, tg_id: str) -> User:
+    async def get_user(self, tg_id: str, username: str = None) -> User:
         user = await self._cache.get(tg_id)
         if user:
+            if username and user.username != username:
+                user = await self._user_repository.update_user(
+                    user_id=user.id,
+                    username=username,
+                )
+                await self._cache.set(tg_id, user)
             return user
 
         user = await self._user_repository.get_user_by_tg_id(tg_id)
         if user:
+            if username and user.username != username:
+                user = await self._user_repository.update_user(
+                    user_id=user.id,
+                    username=username,
+                )
             await self._cache.set(tg_id, user)
 
         return user
