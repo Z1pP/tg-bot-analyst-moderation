@@ -36,13 +36,40 @@ class UserRepository:
                 )
                 return None
 
+    async def update_user(self, user_id: int, username: str) -> Optional[User]:
+        """Обновляет username пользователя."""
+        async with async_session() as session:
+            try:
+                user = await session.get(User, user_id)
+                if not user:
+                    logger.warning("Пользователь %s не найден", user_id)
+                    return None
+
+                user.username = username
+                await session.commit()
+                await session.refresh(user)
+                logger.info(
+                    "Username обновлен для пользователя %s: %s",
+                    user_id,
+                    username,
+                )
+                return user
+            except Exception as e:
+                logger.error(
+                    "Ошибка при обновлении username пользователя %s: %s",
+                    user_id,
+                    e,
+                )
+                await session.rollback()
+                raise
+
     async def update_username(self, user_id: int, new_username: str) -> Optional[User]:
         """Обновляет username пользователя только при изменении."""
         async with async_session() as session:
             try:
                 user = await session.get(User, user_id)
                 if not user:
-                    logger.warning(f"Пользователь {user_id} не найден")
+                    logger.warning("Пользователь %s не найден", user_id)
                     return None
 
                 # Проверяем нужно ли обновление
@@ -52,12 +79,16 @@ class UserRepository:
                 user.username = new_username
                 await session.commit()
                 logger.info(
-                    f"Username обновлен для пользователя {user_id}: {new_username}"
+                    "Username обновлен для пользователя %s: %s",
+                    user_id,
+                    new_username,
                 )
                 return user
             except Exception as e:
                 logger.error(
-                    f"Ошибка при обновлении username пользователя {user_id}: {e}"
+                    "Ошибка при обновлении username пользователя %s: %s",
+                    user_id,
+                    e,
                 )
                 await session.rollback()
                 raise
@@ -122,7 +153,7 @@ class UserRepository:
                 admin = admin_result.scalar_one_or_none()
 
                 if not admin:
-                    logger.warning(f"Администратор с TG_ID:{admin_tg_id} не найден")
+                    logger.warning("Администратор с TG_ID:%s не найден", admin_tg_id)
                     return []
 
                 # Получаем отслеживаемых пользователей
@@ -139,14 +170,16 @@ class UserRepository:
 
                 tracked_users = result.scalars().all()
                 logger.info(
-                    f"Получено {len(tracked_users)} отслеживаемых "
-                    f"пользователей для администратора TG_ID:{admin_tg_id}"
+                    "Получено %d отслеживаемых пользователей для администратора TG_ID:%s",
+                    len(tracked_users),
+                    admin_tg_id,
                 )
                 return tracked_users
             except Exception as e:
                 logger.error(
-                    "Ошибка при получении отслеживаемых пользователей "
-                    f"для администратора с TG_ID:{admin_tg_id}: {e}"
+                    "Ошибка при получении отслеживаемых пользователей для администратора с TG_ID:%s: %s",
+                    admin_tg_id,
+                    e,
                 )
                 raise
 
@@ -163,14 +196,17 @@ class UserRepository:
 
                 tracked_user = result.scalars().first()
                 logger.info(
-                    f"Получен отслеживаемый пользователь с TG_ID:{user_tg_id} "
-                    f"для администратора TG_ID:{admin_tg_id}"
+                    "Получен отслеживаемый пользователь с TG_ID:%s для администратора TG_ID:%s",
+                    user_tg_id,
+                    admin_tg_id,
                 )
                 return tracked_user
             except Exception as e:
                 logger.error(
-                    "Ошибка при получении отслеживаемого пользователя "
-                    f"с TG_ID:{user_tg_id} для администратора TG_ID:{admin_tg_id}: {e}"
+                    "Ошибка при получении отслеживаемого пользователя с TG_ID:%s для администратора TG_ID:%s: %s",
+                    user_tg_id,
+                    admin_tg_id,
+                    e,
                 )
                 raise
 
@@ -309,15 +345,16 @@ class UserRepository:
 
                 deleted_count = result.rowcount
                 if deleted_count > 0:
-                    logger.info(f"Удален пользователь с ID={user_id}")
+                    logger.info("Удален пользователь с ID=%s", user_id)
                     return True
                 else:
                     logger.warning(
-                        f"Пользователь с ID={user_id} не найден для удаления"
+                        "Пользователь с ID=%s не найден для удаления",
+                        user_id,
                     )
                     return False
             except Exception as e:
-                logger.error(f"Ошибка при удалении пользователя с ID={user_id}:{e}")
+                logger.error("Ошибка при удалении пользователя с ID=%s:%s", user_id, e)
                 await session.rollback()
                 raise e
 
@@ -334,11 +371,13 @@ class UserRepository:
                 )
                 users = result.scalars().all()
                 logger.info(
-                    f"Получено {len(users)} пользователей (страница {offset//limit + 1})"
+                    "Получено %d пользователей (страница %d)",
+                    len(users),
+                    offset // limit + 1,
                 )
                 return users
             except Exception as e:
-                logger.error(f"Ошибка при получении пользователей с пагинацией: {e}")
+                logger.error("Ошибка при получении пользователей с пагинацией: %s", e)
                 return []
 
     async def get_users_count(self) -> int:
@@ -351,8 +390,8 @@ class UserRepository:
                     select(func.count(User.id)).where(User.role == UserRole.MODERATOR)
                 )
                 count = result.scalar()
-                logger.info(f"Общее количество пользователей: {count}")
+                logger.info("Общее количество пользователей: %s", count)
                 return count or 0
             except Exception as e:
-                logger.error(f"Ошибка при подсчете пользователей: {e}")
+                logger.error("Ошибка при подсчете пользователей: %s", e)
                 return 0
