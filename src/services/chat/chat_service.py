@@ -10,14 +10,25 @@ class ChatService:
         self._chat_repository = chat_repository
         self._cache = cache
 
-    async def get_chat(self, title: str) -> ChatSession:
-        chat = await self._cache.get(title)
+    async def get_chat(self, chat_id: str, title: str = None) -> ChatSession:
+        chat = await self._cache.get(chat_id)
         if chat:
+            if title and chat.title != title:
+                chat = await self._chat_repository.update_chat(
+                    chat_id=chat.id,
+                    title=title,
+                )
+                await self._cache.set(chat_id, chat)
             return chat
 
-        chat = await self._chat_repository.get_chat_by_title(title)
+        chat = await self._chat_repository.get_chat_by_chat_id(chat_id)
         if chat:
-            await self._cache.set(title, chat)
+            if title and chat.title != title:
+                chat = await self._chat_repository.update_chat(
+                    chat_id=chat.id,
+                    title=title,
+                )
+            await self._cache.set(chat_id, chat)
 
         return chat
 
@@ -27,11 +38,11 @@ class ChatService:
         )
 
         if chat:
-            await self._cache.set(title, chat)
+            await self._cache.set(chat_id, chat)
         return chat
 
     async def get_or_create_chat(self, chat_id: str, title: str) -> ChatSession:
-        chat = await self.get_chat(title)
+        chat = await self.get_chat(chat_id=chat_id, title=title)
         if chat:
             return chat
 
