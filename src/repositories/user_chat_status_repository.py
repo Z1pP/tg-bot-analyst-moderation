@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional
 
 from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.session import async_session
 from models.user_chat_status import UserChatStatus
@@ -10,6 +11,24 @@ logger = logging.getLogger(__name__)
 
 
 class UserChatStatusRepository:
+
+    async def _get_status(
+        self,
+        session: AsyncSession,
+        user_id: int,
+        chat_id: int,
+    ) -> Optional[UserChatStatus]:
+        """Выполняет запрос на получение статуса пользователя в чате."""
+        result = await session.execute(
+            select(UserChatStatus).where(
+                and_(
+                    UserChatStatus.user_id == user_id,
+                    UserChatStatus.chat_id == chat_id,
+                )
+            )
+        )
+        return result.scalars().first()
+
     async def get_or_create(
         self,
         user_id: int,
@@ -19,18 +38,10 @@ class UserChatStatusRepository:
         """Получает или создает запись о статусе пользователя в чате."""
         async with async_session() as session:
             try:
-                result = await session.execute(
-                    select(UserChatStatus).where(
-                        and_(
-                            UserChatStatus.user_id == user_id,
-                            UserChatStatus.chat_id == chat_id,
-                        )
-                    )
-                )
-                instance = result.scalars().first()
+                status = await self._get_status(session, user_id, chat_id)
 
-                if instance:
-                    return instance, False
+                if status:
+                    return status, False
 
                 if defaults is None:
                     defaults = {}
@@ -40,16 +51,16 @@ class UserChatStatusRepository:
                     "chat_id": chat_id,
                     **defaults,
                 }
-                instance = UserChatStatus(**create_params)
-                session.add(instance)
+                status = UserChatStatus(**create_params)
+                session.add(status)
                 await session.commit()
-                await session.refresh(instance)
+                await session.refresh(status)
                 logger.info(
                     "Создана новая запись UserChatStatus для user_id=%s, chat_id=%s",
                     user_id,
                     chat_id,
                 )
-                return instance, True
+                return status, True
             except Exception as e:
                 logger.error(
                     "Ошибка при получении или создании UserChatStatus для user_id=%s, chat_id=%s: %s",
@@ -68,15 +79,8 @@ class UserChatStatusRepository:
         """Получает статус пользователя по ID пользователя и ID чата."""
         async with async_session() as session:
             try:
-                result = await session.execute(
-                    select(UserChatStatus).where(
-                        and_(
-                            UserChatStatus.user_id == user_id,
-                            UserChatStatus.chat_id == chat_id,
-                        )
-                    )
-                )
-                status = result.scalars().first()
+                status = await self._get_status(session, user_id, chat_id)
+
                 if status:
                     logger.info(
                         "Получен статус для user_id=%s, chat_id=%s", user_id, chat_id
@@ -104,15 +108,7 @@ class UserChatStatusRepository:
         """Обновляет статус пользователя в чате."""
         async with async_session() as session:
             try:
-                result = await session.execute(
-                    select(UserChatStatus).where(
-                        and_(
-                            UserChatStatus.user_id == user_id,
-                            UserChatStatus.chat_id == chat_id,
-                        )
-                    )
-                )
-                status = result.scalars().first()
+                status = await self._get_status(session, user_id, chat_id)
 
                 if not status:
                     logger.warning(
