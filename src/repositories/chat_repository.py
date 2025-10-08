@@ -26,6 +26,24 @@ class ChatRepository:
                 logger.error("Произошла ошибка при получении чата: %s, %s", chat_id, e)
                 raise e
 
+    async def get_chat_by_chat_id(self, chat_id: str) -> Optional[ChatSession]:
+        """Получает чат по Telegram chat_id."""
+        async with async_session() as session:
+            try:
+                chat = await session.scalar(
+                    select(ChatSession).where(ChatSession.chat_id == chat_id)
+                )
+                if chat:
+                    logger.info(
+                        "Получен чат: chat_id=%s, title=%s", chat.chat_id, chat.title
+                    )
+                else:
+                    logger.info("Чат не найден: chat_id=%s", chat_id)
+                return chat
+            except Exception as e:
+                logger.error("Произошла ошибка при получении чата: %s, %s", chat_id, e)
+                raise e
+
     async def get_chat_by_title(self, title: str) -> Optional[ChatSession]:
         """Получает чат по названию."""
         async with async_session() as session:
@@ -71,6 +89,27 @@ class ChatRepository:
                 return chat
             except Exception as e:
                 logger.error("Произошла ошибка при создании чата: %s, %s", chat_id, e)
+                await session.rollback()
+                raise e
+
+    async def update_chat(self, chat_id: int, title: str) -> ChatSession:
+        """Обновляет название чата."""
+        async with async_session() as session:
+            try:
+                chat = await session.get(ChatSession, chat_id)
+                if chat:
+                    chat.title = title
+                    await session.commit()
+                    await session.refresh(chat)
+                    logger.info(
+                        "Обновлен чат: chat_id=%s, new_title=%s", chat_id, title
+                    )
+                    return chat
+                else:
+                    logger.error("Чат не найден для обновления: chat_id=%s", chat_id)
+                    raise ValueError(f"Чат с id {chat_id} не найден")
+            except Exception as e:
+                logger.error("Произошла ошибка при обновлении чата: %s, %s", chat_id, e)
                 await session.rollback()
                 raise e
 
