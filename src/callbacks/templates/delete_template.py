@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery
 
 from container import container
 from keyboards.inline.templates import conf_remove_template_kb
-from repositories import MessageTemplateRepository
+from usecases.templates import DeleteTemplateUseCase
 from states import TemplateStateManager
 
 router = Router(name=__name__)
@@ -79,13 +79,9 @@ async def confirmation_removing_template(
             )
             return
 
-        # Удаляем шаблон
-        resp_repo: MessageTemplateRepository = container.resolve(
-            MessageTemplateRepository
-        )
-        await resp_repo.delete_template(template_id=template_id)
-
-        logger.info(f"Шаблон с ID={template_id} успешно удален")
+        # Удаляем шаблон через Use Case
+        usecase: DeleteTemplateUseCase = container.resolve(DeleteTemplateUseCase)
+        await usecase.execute(template_id=template_id)
 
         # Обновляем сообщение
         await query.message.edit_text(

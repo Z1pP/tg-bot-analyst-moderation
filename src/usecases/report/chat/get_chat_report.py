@@ -1,7 +1,9 @@
 import logging
+from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 from statistics import mean, median
-from typing import List, Optional
+from typing import Awaitable, Callable, List, Optional, TypeVar
 
 from constants import MAX_MSG_LENGTH
 from dto.report import ChatReportDTO
@@ -19,6 +21,15 @@ from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+
+@dataclass
+class ChatData:
+    messages: List[ChatMessage]
+    reactions: List[MessageReaction]
+    replies: List[MessageReply]
 
 
 class GetReportOnSpecificChatUseCase:
@@ -40,10 +51,16 @@ class GetReportOnSpecificChatUseCase:
 
     async def execute(self, dto: ChatReportDTO) -> List[str]:
         """Генерирует отчет по конкретному чату за указанный период."""
-        chat = await self._get_chat(dto.chat_id)
-        tracked_users = await self._user_repository.get_tracked_users_for_admin(dto.admin_tg_id)
+        chat = await self._get_chat(chat_id=dto.chat_id)
+        tracked_users = await self._user_repository.get_tracked_users_for_admin(
+            admin_tg_id=dto.admin_tg_id,
+        )
         tracked_user_ids = [user.id for user in tracked_users]
-        chat_data = await self._get_chat_data(chat, dto, tracked_user_ids)
+        chat_data = await self._get_chat_data(
+            chat=chat,
+            dto=dto,
+            tracked_user_ids=tracked_user_ids,
+        )
 
         report = self._generate_report(
             data=chat_data,
@@ -51,65 +68,65 @@ class GetReportOnSpecificChatUseCase:
             start_date=dto.start_date,
             end_date=dto.end_date,
             selected_period=dto.selected_period,
+            tracked_user_ids=tracked_user_ids,
         )
 
-        return self._split_report(report)
+        return self._split_report(report=report)
 
     async def _get_chat(self, chat_id: int) -> ChatSession:
         """Получает чат по названию."""
-        chat = await self._chat_repository.get_chat(chat_id)
+        chat = await self._chat_repository.get_chat(chat_id=chat_id)
         if not chat:
             raise ValueError("Чат не найден")
         return chat
 
-    async def _get_chat_data(self, chat: ChatSession, dto: ChatReportDTO, tracked_user_ids: list[int]) -> dict:
-        """Получает все данные чата за период для отслеживаемых пользователей."""
-        messages = await self._get_processed_items_with_users(
-            self._message_repository.get_messages_by_chat_id_and_period,
-            chat.id,
-            dto.start_date,
-            dto.end_date,
-            tracked_user_ids,
-        )
+    async def _get_chat_data(
+        self,
+        chat: ChatSession,
+        dto: ChatReportDTO,
+        tracked_user_ids: list[int],
+    ) -> ChatData:
+        """
+        Получает все данные чата (сообщения. ответы, реакции) за период для
+        отслеживаемых пользователей.
+        """
 
-        replies = await self._get_processed_items(
-            self._msg_reply_repository.get_replies_by_chat_id_and_period,
-            chat.id,
-            dto.start_date,
-            dto.end_date,
-        )
+        methods = {
+            "messages": self._message_repository.get_messages_by_chat_id_and_period,
+            "replies": self._msg_reply_repository.get_replies_by_chat_id_and_period,
+            "reactions": self._reaction_repository.get_reactions_by_chat_and_period,
+        }
 
-        reactions = await self._get_processed_items(
-            self._reaction_repository.get_reactions_by_chat_and_period,
-            chat.id,
-            dto.start_date,
-            dto.end_date,
-        )
+        results = {}
+        for key, method in methods.items():
+            results[key] = await self._get_processed_items_with_users(
+                repository_method=method,
+                chat_id=chat.id,
+                start_date=dto.start_date,
+                end_date=dto.end_date,
+                tracked_user_ids=tracked_user_ids,
+            )
+
+        data = ChatData(**results)
 
         logger.info(
-            f"Чат {chat.title}: {len(messages)} сообщений, {len(replies)} ответов, {len(reactions)} реакций"
+            "Чат %s: %d сообщений, %d ответов, %d реакций",
+            chat.title,
+            len(data.messages),
+            len(data.replies),
+            len(data.reactions),
         )
 
-        return {"messages": messages, "replies": replies, "reactions": reactions}
-
-    async def _get_processed_items(
-        self, repository_method, chat_id: int, start_date: datetime, end_date: datetime
-    ):
-        """Получает и обрабатывает элементы из репозитория."""
-        items = await repository_method(
-            chat_id=chat_id,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-        for item in items:
-            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
-
-        return items
+        return data
 
     async def _get_processed_items_with_users(
-        self, repository_method, chat_id: int, start_date: datetime, end_date: datetime, tracked_user_ids: list[int]
-    ):
+        self,
+        repository_method: Callable[..., Awaitable[List[T]]],
+        chat_id: int,
+        start_date: datetime,
+        end_date: datetime,
+        tracked_user_ids: list[int],
+    ) -> List[T]:
         """Получает и обрабатывает элементы из репозитория с фильтрацией по пользователям."""
         items = await repository_method(
             chat_id=chat_id,
@@ -119,24 +136,29 @@ class GetReportOnSpecificChatUseCase:
         )
 
         for item in items:
-            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
+            item.created_at = TimeZoneService.convert_to_local_time(dt=item.created_at)
 
         return items
 
     def _generate_report(
         self,
-        data: dict,
+        data: ChatData,
         chat: ChatSession,
         start_date: datetime,
         end_date: datetime,
         selected_period: Optional[str] = None,
+        tracked_user_ids: list[int] = None,
     ) -> str:
         """Формирует текстовый отчет."""
         messages, replies, reactions = (
-            data["messages"],
-            data["replies"],
-            data["reactions"],
+            data.messages,
+            data.replies,
+            data.reactions,
         )
+
+        # Проверяем наличие отслеживаемых пользователей
+        if not tracked_user_ids:
+            return "⚠️ Нет пользователей в отслеживании."
 
         if not messages and not reactions:
             return "⚠️ Нет данных за указанный период."
@@ -148,13 +170,18 @@ class GetReportOnSpecificChatUseCase:
             end_date=end_date,
         )
 
-        period = format_selected_period(start_date, end_date)
+        period = format_selected_period(start_date=start_date, end_date=end_date)
         period_text = "период " if not is_single_day else ""
 
         report_parts = [
             f"<b>📈 Отчёт: «{chat.title}» за {period_text}{period}</b>\n",
             self._generate_users_stats_by_chat(
-                messages, replies, reactions, start_date, end_date, is_single_day
+                messages=messages,
+                replies=replies,
+                reactions=reactions,
+                start_date=start_date,
+                end_date=end_date,
+                is_single_day=is_single_day,
             ),
         ]
 
@@ -173,14 +200,16 @@ class GetReportOnSpecificChatUseCase:
 
         # Первые сообщения по дням
         if messages:
-            first_messages_info = self._get_first_messages_by_day(messages)
+            first_messages_info = self._get_first_messages_by_day(messages=messages)
             stats_parts.append(first_messages_info)
 
         # Статистика активности
-        working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
+        working_hours = WorkTimeService.calculate_work_hours(
+            start_date=start_date, end_date=end_date
+        )
         total_activity = len(messages) + len(reactions)
         activity_per_hour = self._calculate_activity_per_hour(
-            total_activity, working_hours
+            activity_count=total_activity, work_hours=working_hours
         )
 
         stats_parts.extend(
@@ -195,35 +224,22 @@ class GetReportOnSpecificChatUseCase:
 
         return "\n".join(stats_parts)
 
-    def _generate_response_stats(self, replies: List[MessageReply]) -> str:
-        """Генерирует статистику времени ответа."""
-        if not replies:
-            return "• <b>Нет ответов</b> за указанный период\n"
-
-        response_times = [reply.response_time_seconds for reply in replies]
-        stats = {
-            "avg": mean(response_times),
-            "median": median(response_times),
-            "min": min(response_times),
-            "max": max(response_times),
-        }
-
-        return "\n".join(
-            [
-                f"• <b>{format_seconds(stats['min'])}</b> и <b>{format_seconds(stats['max'])}</b> - мин. и макс. время ответов",
-                f"• <b>{format_seconds(stats['avg'])}</b> и <b>{format_seconds(stats['median'])}</b> - сред. и медиан. время ответа\n",
-            ]
-        )
-
     def _generate_breaks_section(
-        self, messages: List[ChatMessage], reactions: List[MessageReaction]
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        is_single_day: bool = False,
     ) -> str:
         """Генерирует секцию с перерывами."""
         if not messages and not reactions:
             return "<b>⏸️ Перерывы:</b> отсутствуют"
 
         sorted_messages = sorted(messages, key=lambda m: m.created_at)
-        breaks = BreakAnalysisService.calculate_breaks(sorted_messages, reactions)
+        breaks = BreakAnalysisService.calculate_breaks(
+            messages=sorted_messages,
+            reactions=reactions,
+            is_single_day=is_single_day,
+        )
 
         if breaks:
             return "<b>⏸️ Перерывы:</b>\n" + "\n".join(breaks)
@@ -321,7 +337,10 @@ class GetReportOnSpecificChatUseCase:
                 continue
 
             user_report = self._generate_single_user_report(
-                data, start_date, end_date, is_single_day
+                data=data,
+                start_date=start_date,
+                end_date=end_date,
+                is_single_day=is_single_day,
             )
             user_reports.append(user_report)
 
@@ -337,43 +356,64 @@ class GetReportOnSpecificChatUseCase:
         return result
 
     def _generate_single_user_report(
-        self, data: dict, start_date: datetime, end_date: datetime, is_single_day: bool
+        self,
+        data: dict,
+        start_date: datetime,
+        end_date: datetime,
+        is_single_day: bool,
     ) -> str:
-        username = data["username"]
-        messages = data["messages"]
-        replies = data["replies"]
-        reactions = data["reactions"]
+        username = data.get("username")
+        messages = data.get("messages")
+        replies = data.get("replies")
+        reactions = data.get("reactions")
 
         report_parts = [f"@{username}:"]
 
         # Статистика сообщений и реакций
         if is_single_day:
             stats = self._generate_single_day_stats(
-                messages, reactions, start_date, end_date
+                messages=messages,
+                reactions=reactions,
+                start_date=start_date,
+                end_date=end_date,
             )
         else:
             stats = self._generate_multi_day_stats(
-                messages, reactions, start_date, end_date
+                messages=messages,
+                reactions=reactions,
+                start_date=start_date,
+                end_date=end_date,
             )
 
         report_parts.append(stats)
 
         # Статистика ответов
-        replies_stats = self._generate_replies_stats(replies)
+        replies_stats = self._generate_replies_stats(replies=replies)
         report_parts.append(replies_stats)
 
         # Перерывы
         if is_single_day:
-            breaks_stats = self._generate_breaks_section(messages, reactions)
+            breaks_stats = self._generate_breaks_section(
+                messages=messages,
+                reactions=reactions,
+                is_single_day=is_single_day,
+            )
         else:
-            breaks_stats = self._generate_breaks_multiday_section(messages, reactions)
+            breaks_stats = self._generate_breaks_multiday_section(
+                messages=messages,
+                reactions=reactions,
+            )
 
         report_parts.append(breaks_stats)
 
         return "\n".join(filter(None, report_parts))
 
     def _generate_single_day_stats(
-        self, messages, reactions, start_date, end_date
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        start_date: datetime,
+        end_date: datetime,
     ) -> str:
         stats = []
         if messages:
@@ -391,7 +431,9 @@ class GetReportOnSpecificChatUseCase:
         stats.append("")
 
         msg_count = len(messages)
-        working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
+        working_hours = WorkTimeService.calculate_work_hours(
+            start_date=start_date, end_date=end_date
+        )
         avg_per_hour = round(msg_count / working_hours, 2) if working_hours > 0 else 0
 
         stats.extend(
@@ -404,19 +446,25 @@ class GetReportOnSpecificChatUseCase:
         return "\n".join(stats)
 
     def _generate_multi_day_stats(
-        self, messages, reactions, start_date, end_date
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        start_date: datetime,
+        end_date: datetime,
     ) -> str:
         stats = []
 
         # Среднее время первых сообщений
         if messages:
-            avg_first_msg_time = self._get_avg_first_message_time(messages)
+            avg_first_msg_time = self._get_avg_first_message_time(messages=messages)
             stats.append(
                 f"• <b>{avg_first_msg_time}</b> — среднее время отправки 1-х сообщений"
             )
 
         if reactions:
-            avg_first_reaction_time = self._get_avg_first_reaction_time(reactions)
+            avg_first_reaction_time = self._get_avg_first_reaction_time(
+                reactions=reactions
+            )
             stats.append(
                 f"• <b>{avg_first_reaction_time}</b> — среднее время 1-й реакции на сообщение"
             )
@@ -424,7 +472,9 @@ class GetReportOnSpecificChatUseCase:
         stats.append("")
 
         msg_count = len(messages)
-        working_hours = WorkTimeService.calculate_work_hours(start_date, end_date)
+        working_hours = WorkTimeService.calculate_work_hours(
+            start_date=start_date, end_date=end_date
+        )
         days = (end_date.date() - start_date.date()).days + 1
 
         avg_per_hour = round(msg_count / working_hours, 2) if working_hours > 0 else 0
@@ -440,7 +490,10 @@ class GetReportOnSpecificChatUseCase:
 
         return "\n".join(stats)
 
-    def _generate_replies_stats(self, replies) -> str:
+    def _generate_replies_stats(
+        self,
+        replies: List[MessageReply],
+    ) -> str:
         if not replies:
             return "Из них всего <b>0</b> ответов"
 
@@ -448,20 +501,32 @@ class GetReportOnSpecificChatUseCase:
         return "\n".join(
             [
                 f"Из них всего <b>{len(replies)}</b> ответов:",
-                f"• <b>{format_seconds(min(times))}</b> — мин. время ответа",
-                f"• <b>{format_seconds(max(times))}</b> — макс. время ответа",
-                f"• <b>{format_seconds(int(mean(times)))}</b> — сред. время ответа",
-                f"• <b>{format_seconds(int(median(times)))}</b> — медиан. время ответа",
+                f"• <b>{format_seconds(seconds=min(times))}</b> — мин. время ответа",
+                f"• <b>{format_seconds(seconds=max(times))}</b> — макс. время ответа",
+                f"• <b>{format_seconds(seconds=int(mean(times)))}</b> — сред. время ответа",
+                f"• <b>{format_seconds(seconds=int(median(times)))}</b> — медиан. время ответа",
             ]
         )
 
-    def _generate_breaks_multiday_section(self, messages, reactions) -> str:
-        avg_breaks_time = BreakAnalysisService.avg_breaks_time(messages, reactions)
+    def _generate_breaks_multiday_section(
+        self,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+    ) -> str:
+        avg_breaks_time = BreakAnalysisService.avg_breaks_time(
+            messages=messages, reactions=reactions
+        )
         if avg_breaks_time:
-            return f"Перерывы:\n• <b>{avg_breaks_time}</b> — средн. время перерыва между сообщ. и реакциями"
+            return (
+                f"Перерывы:\n• <b>{avg_breaks_time}</b> — средн."
+                "время перерыва между сообщ. и реакциями"
+            )
         return "Перерывы: отсутствуют"
 
-    def _get_avg_first_message_time(self, messages) -> str:
+    def _get_avg_first_message_time(
+        self,
+        messages: List[ChatMessage],
+    ) -> str:
         from collections import defaultdict
 
         daily_first_messages = defaultdict(list)
@@ -488,8 +553,10 @@ class GetReportOnSpecificChatUseCase:
 
         return f"{hours:02d}:{minutes:02d}"
 
-    def _get_avg_first_reaction_time(self, reactions) -> str:
-        from collections import defaultdict
+    def _get_avg_first_reaction_time(
+        self,
+        reactions: List[MessageReaction],
+    ) -> str:
 
         daily_first_reactions = defaultdict(list)
         for reaction in reactions:
@@ -531,7 +598,10 @@ class GetReportOnSpecificChatUseCase:
 
         return (end_date.date() - start_date.date()).days <= 1
 
-    def is_single_day_report(self, report_dto: ChatReportDTO) -> bool:
+    def is_single_day_report(
+        self,
+        report_dto: ChatReportDTO,
+    ) -> bool:
         return self._is_single_day_report(
             selected_period=report_dto.selected_period,
             start_date=report_dto.start_date,
@@ -539,7 +609,9 @@ class GetReportOnSpecificChatUseCase:
         )
 
     def _calculate_activity_per_hour(
-        self, activity_count: int, work_hours: float
+        self,
+        activity_count: int,
+        work_hours: float,
     ) -> float:
         """Рассчитывает количество активности в час рабочего времени."""
         if activity_count < 1 or work_hours <= 0:

@@ -2,8 +2,9 @@ import asyncio
 import logging
 import sys
 
-from bot import init_bot
-from scheduler import schedule_daily_report, scheduler
+from bot import configure_dispatcher
+from container import ContainerSetup
+from scheduler import scheduler
 from utils.logger_config import setup_logger
 
 setup_logger(log_level=logging.INFO)
@@ -15,8 +16,11 @@ async def main():
     bot = None
     scheduler_instance = None
     try:
-        logger.info("Инициализация бота...")
-        bot, dp = await init_bot()
+        logger.info("Инициализация контейнера...")
+        ContainerSetup.setup()
+
+        logger.info("Настройка и запуск бота...")
+        bot, dp = await configure_dispatcher()
 
         # logger.info("Запускаем планировщик")
         # scheduler_instance = scheduler
@@ -27,8 +31,6 @@ async def main():
         logger.info("Бот запущен успешно. Начинаем polling...")
         await dp.start_polling(bot)
 
-        logger.info("Бот запущен успешно.")
-        await dp.start_polling(bot)
     except Exception as e:
         logger.error("Критическая ошибка: %s", str(e), exc_info=True)
         sys.exit(1)

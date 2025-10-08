@@ -1,31 +1,27 @@
 from dataclasses import dataclass
+from typing import List
 
 from models import ChatSession
 
 
-@dataclass
+@dataclass(frozen=True)
 class ChatDTO:
+    id: int
     chat_id: str
     title: str
 
-
-@dataclass
-class ChatReadDTO(ChatDTO):
-    id: int
-
     @classmethod
-    def from_entity(cls, chat: ChatSession) -> "ChatReadDTO":
-        """
-        Создает DTO из модели ChatSession
-
-        Args:
-            chat: Модель сессии чата
-
-        Returns:
-            CharReadDTO: DTO сессии чата
-        """
+    def from_model(cls, chat: ChatSession) -> "ChatDTO":
+        """Создает DTO из доменной модели"""
         return cls(
             id=chat.id,
             chat_id=chat.chat_id,
             title=chat.title,
         )
+
+
+@dataclass(frozen=True)
+class UserChatsDTO:
+    chats: List[ChatDTO]
+    user_id: int
+    total_count: int

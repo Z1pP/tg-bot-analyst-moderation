@@ -35,12 +35,13 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
 
         reports = []
         for user in users:
-            user_data = await self._get_user_data_for_chat(user, dto)
+            user_data = await self._get_user_data_for_chat(user=user, dto=dto)
+
             # Пропускаем пользователей без активности в чате
             if not user_data["messages"] and not user_data["reactions"]:
                 continue
 
-            user_report = self._generate_user_breaks_detail(user_data, user)
+            user_report = self._generate_user_breaks_detail(data=user_data, user=user)
             if user_report:
                 reports.append(user_report)
 
@@ -64,11 +65,12 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
         )
 
         # Получаем реакции пользователя в чате
-        reactions = await self._get_processed_items_by_chat(
+        reactions = await self._get_processed_items_by_chat_with_users(
             self._reaction_repository.get_reactions_by_chat_and_period,
             dto.chat_id,
             dto.start_date,
             dto.end_date,
+            [user.id],
         )
 
         # Фильтруем реакции только для данного пользователя

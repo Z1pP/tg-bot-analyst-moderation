@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer
+from sqlalchemy import ForeignKey, Index, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -34,3 +34,7 @@ class AdminChatAccess(BaseModel):
     # Relationships
     admin = relationship("User", back_populates="chat_access")
     chat = relationship("ChatSession", back_populates="admin_access")
+
+    __table_args__ = (
+        Index("idx_admin_chat_access_admin_chat", "admin_id", "chat_id", unique=True),
+    )

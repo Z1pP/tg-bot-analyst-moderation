@@ -31,6 +31,7 @@ class KbCommands:
     GET_REPORT = "⏱️ Получить отчет"
     FULL_REPORT = "📋 Общий отчет"
     GET_STATISTICS = "📊 Статистика"
+    DAILY_RATING = "🏆 Рейтинг за сутки"
 
     # Templates
     TEMPLATES_MENU = "🚀 Шаблоны ответов"
@@ -38,6 +39,9 @@ class KbCommands:
     ADD_CATEGORY = "➕ Добавить категорию"
     SELECT_TEMPLATE = "🔖 Шаблоны"
     SELECT_CATEGORY = "🗃️ Категории"
+
+    # Banhammer
+    LOCK_MENU = "🚫 Блокировки"
 
     # Navigation
     SETTINGS = "⚙️ Настройки"

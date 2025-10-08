@@ -22,6 +22,7 @@ class AVGReportDTO:
 @dataclass
 class SingleUserReportDTO:
     user_id: int
+    admin_tg_id: str
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None

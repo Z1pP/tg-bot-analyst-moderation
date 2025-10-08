@@ -18,7 +18,7 @@ class UserDTO:
     username: Optional[str] = None
 
     @classmethod
-    def from_entity(cls, user: "User") -> "UserDTO":
+    def from_model(cls, user: "User") -> "UserDTO":
         """
         Создает DTO из модели User
 

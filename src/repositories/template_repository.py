@@ -5,7 +5,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import selectinload
 
 from database.session import async_session
-from models import ChatSession, MessageTemplate
+from models import ChatSession, MessageTemplate, TemplateMedia
 
 logger = logging.getLogger(__name__)
 
@@ -299,13 +299,30 @@ class MessageTemplateRepository:
                 raise
 
     async def update_template_content(
-        self, template_id: int, content_data: dict
+        self,
+        template_id: int,
+        content_data: dict,
     ) -> bool:
         """Обновляет содержимое шаблона"""
-        from models import TemplateMedia
 
         async with async_session() as session:
             try:
+                # Предварительно удаляем медиа с таким же unique_id из ДРУГИХ шаблонов
+                if "media_items" in content_data and content_data["media_items"]:
+                    unique_ids_to_update = {
+                        item["file_unique_id"] for item in content_data["media_items"]
+                    }
+
+                    stmt = select(TemplateMedia).where(
+                        TemplateMedia.file_unique_id.in_(unique_ids_to_update),
+                        TemplateMedia.template_id != template_id,
+                    )
+                    result = await session.execute(stmt)
+                    conflicting_media = result.scalars().all()
+
+                    for media in conflicting_media:
+                        await session.delete(media)
+
                 query = (
                     select(MessageTemplate)
                     .options(selectinload(MessageTemplate.media_items))
@@ -319,23 +336,19 @@ class MessageTemplateRepository:
                     if "text" in content_data:
                         template.content = content_data["text"]
 
-                    # Удаляем старые медиа-файлы
-                    for media_item in template.media_items:
-                        await session.delete(media_item)
-
-                    # Добавляем новые медиа-файлы
+                    # Обновляем медиа-файлы, используя cascade="all, delete-orphan"
+                    template.media_items.clear()  # Очищаем старые медиа
                     if "media_items" in content_data:
                         for position, media_data in enumerate(
                             content_data["media_items"]
                         ):
                             media_item = TemplateMedia(
-                                template_id=template_id,
                                 media_type=media_data["media_type"],
                                 file_id=media_data["file_id"],
                                 file_unique_id=media_data["file_unique_id"],
                                 position=position,
                             )
-                            session.add(media_item)
+                            template.media_items.append(media_item)
 
                     await session.commit()
                     logger.info(f"Содержимое шаблона {template_id} обновлено")
@@ -346,7 +359,9 @@ class MessageTemplateRepository:
                 await session.rollback()
                 raise
 
-    async def get_global_templates_paginated(self, offset: int = 0, limit: int = 5) -> List[MessageTemplate]:
+    async def get_global_templates_paginated(
+        self, offset: int = 0, limit: int = 5
+    ) -> List[MessageTemplate]:
         """Получает глобальные шаблоны (без привязки к чату)"""
         async with async_session() as session:
             query = (
@@ -366,11 +381,15 @@ class MessageTemplateRepository:
     async def get_global_templates_count(self) -> int:
         """Получает количество глобальных шаблонов"""
         async with async_session() as session:
-            query = select(func.count(MessageTemplate.id)).where(MessageTemplate.chat_id.is_(None))
+            query = select(func.count(MessageTemplate.id)).where(
+                MessageTemplate.chat_id.is_(None)
+            )
             result = await session.execute(query)
             return result.scalar_one()
 
-    async def get_chat_templates_paginated(self, chat_id: int, offset: int = 0, limit: int = 5) -> List[MessageTemplate]:
+    async def get_chat_templates_paginated(
+        self, chat_id: int, offset: int = 0, limit: int = 5
+    ) -> List[MessageTemplate]:
         """Получает шаблоны для конкретного чата"""
         async with async_session() as session:
             query = (
@@ -390,6 +409,8 @@ class MessageTemplateRepository:
     async def get_chat_templates_count(self, chat_id: int) -> int:
         """Получает количество шаблонов для конкретного чата"""
         async with async_session() as session:
-            query = select(func.count(MessageTemplate.id)).where(MessageTemplate.chat_id == chat_id)
+            query = select(func.count(MessageTemplate.id)).where(
+                MessageTemplate.chat_id == chat_id
+            )
             result = await session.execute(query)
             return result.scalar_one()

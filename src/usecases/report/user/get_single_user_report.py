@@ -49,25 +49,37 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
 
     async def _get_user_data(self, user: User, dto: SingleUserReportDTO) -> dict:
         """Получает все данные пользователя за период."""
-        replies = await self._get_processed_items(
-            repository_method=self._msg_reply_repository.get_replies_by_period_date,
+        # Проверяем наличие отслеживаемых чатов
+        tracked_chats = await self._chat_repository.get_tracked_chats_for_admin(
+            dto.admin_tg_id
+        )
+        if not tracked_chats:
+            return {"no_chats": True}
+
+        tracked_chat_ids = [chat.id for chat in tracked_chats]
+
+        replies = await self._get_processed_items_by_user_in_chats(
+            repository_method=self._msg_reply_repository.get_replies_by_period_date_and_chats,
             user_id=user.id,
             start_date=dto.start_date,
             end_date=dto.end_date,
+            chat_ids=tracked_chat_ids,
         )
 
-        messages = await self._get_processed_items(
-            repository_method=self._message_repository.get_messages_by_period_date,
+        messages = await self._get_processed_items_by_user_in_chats(
+            repository_method=self._message_repository.get_messages_by_period_date_and_chats,
             user_id=user.id,
             start_date=dto.start_date,
             end_date=dto.end_date,
+            chat_ids=tracked_chat_ids,
         )
 
-        reactions = await self._get_processed_items(
-            repository_method=self._reaction_repository.get_reactions_by_user_and_period,
+        reactions = await self._get_processed_items_by_user_in_chats(
+            repository_method=self._reaction_repository.get_reactions_by_user_and_period_and_chats,
             user_id=user.id,
             start_date=dto.start_date,
             end_date=dto.end_date,
+            chat_ids=tracked_chat_ids,
         )
 
         logger.info(
@@ -86,6 +98,14 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         selected_period: str = None,
     ) -> str:
         """Формирует текстовый отчет."""
+
+        # Проверяем наличие отслеживаемых чатов
+        if data.get("no_chats"):
+            period = self._format_selected_period(start_date, end_date)
+            return (
+                f"<b>📈 Отчёт: @{user.username} за {period}</b>\n\n"
+                "⚠️ Необходимо добавить чат в отслеживание."
+            )
 
         replies = data.get("replies", [])
         messages = data.get("messages", [])
@@ -187,7 +207,7 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
             [
                 stats_method(messages, reactions, start_date, end_date),
                 self._generate_replies_stats(replies),
-                breaks_method(messages, reactions),
+                breaks_method(messages, reactions, is_single_day),
             ]
         )
 
@@ -253,6 +273,7 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         self,
         messages: List[ChatMessage],
         reactions: List[MessageReaction],
+        is_single_day: bool = False,
     ) -> str:
         avg_breaks_time = BreakAnalysisService.avg_breaks_time(messages, reactions)
         if avg_breaks_time:
@@ -272,9 +293,14 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         self,
         messages: List[ChatMessage],
         reactions: List[MessageReaction],
+        is_single_day: bool = False,
     ) -> str:
         """Генерирует секцию с перерывами."""
-        breaks = BreakAnalysisService.calculate_breaks(messages, reactions)
+        breaks = BreakAnalysisService.calculate_breaks(
+            messages,
+            reactions,
+            is_single_day=is_single_day,
+        )
         return (
             "<b>⏸️ Перерывы:</b>\n" + "\n".join(breaks)
             if breaks

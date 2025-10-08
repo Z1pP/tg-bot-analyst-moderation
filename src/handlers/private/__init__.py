@@ -1,5 +1,6 @@
 from aiogram import Router
 
+from .banhammer import router as banhammer_router
 from .categories import router as categories_router
 from .chats import router as chats_router
 from .common import router as common_router
@@ -10,6 +11,7 @@ from .users import router as users_router
 
 router = Router(name="private_router")
 router.include_router(common_router)
+router.include_router(banhammer_router)
 router.include_router(users_router)
 router.include_router(chats_router)
 router.include_router(reports_router)

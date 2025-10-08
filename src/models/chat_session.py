@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .message_reply import MessageReply
     from .message_templates import MessageTemplate
     from .reaction import MessageReaction
+    from .user_chat_status import UserChatStatus
 
 
 class ChatSession(BaseModel):
@@ -24,6 +25,12 @@ class ChatSession(BaseModel):
     title: Mapped[str] = mapped_column(
         String(),
         nullable=True,
+    )
+
+    archive_chat_id: Mapped[Optional[str]] = mapped_column(
+        String(length=32),
+        nullable=True,
+        doc="ID of the chat to which moderation reports are sent.",
     )
 
     # Relationships
@@ -48,6 +55,12 @@ class ChatSession(BaseModel):
     )
     reactions: Mapped[list["MessageReaction"]] = relationship(
         "MessageReaction",
+        back_populates="chat",
+        cascade="all, delete-orphan",
+    )
+
+    user_statuses: Mapped[list["UserChatStatus"]] = relationship(
+        "UserChatStatus",
         back_populates="chat",
         cascade="all, delete-orphan",
     )

@@ -17,10 +17,13 @@ class BaseUserFilter(Filter):
     """Базовый фильтр для работы с пользователями"""
 
     def __init__(self):
-        self._cache: ICache = container.resolve(ICache)
+        self._cache: Optional[ICache] = None
 
     async def get_user(self, tg_id: str, current_username: str) -> Optional[User]:
         """Получает пользователя из кеша или БД с проверкой username"""
+        if self._cache is None:
+            self._cache = container.resolve(ICache)
+
         user = await self._cache.get(key=tg_id)
 
         if not user:
@@ -83,7 +86,7 @@ class StaffOnlyFilter(BaseUserFilter):
         current_username = message.from_user.username
 
         user = await self.get_user(tg_id=tg_id, current_username=current_username)
-        return user is not None
+        return user.role in (UserRole.ADMIN, UserRole.MODERATOR)
 
 
 class StaffOnlyInlineFilter(BaseUserFilter):

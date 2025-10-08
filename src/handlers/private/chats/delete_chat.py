@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -9,10 +8,11 @@ from constants import KbCommands
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
 from keyboards.inline.chats_kb import conf_remove_chat_kb, remove_inline_kb
-from models import ChatSession
-from repositories import ChatTrackingRepository
-from services.user import UserService
 from states import MenuStates
+from usecases.chat_tracking import (
+    GetUserTrackedChatsUseCase,
+    RemoveChatFromTrackingUseCase,
+)
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
@@ -33,16 +33,16 @@ async def delete_chat_handler(
     logger.info(f"Получена команда удаления чата от {username}")
 
     try:
-        user_service: UserService = container.resolve(UserService)
-        tg_id = str(message.from_user.id)
-        user = await user_service.get_user(tg_id=tg_id)
-
-        await state.update_data(user_id=user.id)
-
         # Получаем отслеживаемые чаты пользователя
-        tracked_chats = await get_user_tracked_chats(user_id=user.id)
+        usecase: GetUserTrackedChatsUseCase = container.resolve(
+            GetUserTrackedChatsUseCase
+        )
+        tg_id = str(message.from_user.id)
+        user_chats_dto = await usecase.execute(tg_id=tg_id)
 
-        if not tracked_chats:
+        await state.update_data(user_id=user_chats_dto.user_id)
+
+        if not user_chats_dto.chats:
             message_text = (
                 "❌ У вас нет отслеживаемых чатов\n\n"
                 "Сначала добавьте чаты в отслеживание."
@@ -63,7 +63,7 @@ async def delete_chat_handler(
         )
 
         # Показываем первую страницу
-        first_page_chats = tracked_chats[:CHATS_PAGE_SIZE]
+        first_page_chats = user_chats_dto.chats[:CHATS_PAGE_SIZE]
 
         await send_html_message_with_kb(
             message=message,
@@ -71,12 +71,12 @@ async def delete_chat_handler(
             reply_markup=remove_inline_kb(
                 chats=first_page_chats,
                 page=1,
-                total_count=len(tracked_chats),
+                total_count=user_chats_dto.total_count,
             ),
         )
 
         logger.info(
-            f"Показан список из {len(tracked_chats)} отслеживаемых чатов "
+            f"Показан список из {user_chats_dto.total_count} отслеживаемых чатов "
             "для {message.from_user.username}"
         )
 
@@ -128,25 +128,22 @@ async def confirmation_removing_chat(
         answer = callback.data.split("__")[1]
 
         if answer == "yes":
-            tracking_repository: ChatTrackingRepository = container.resolve(
-                ChatTrackingRepository
+            usecase: RemoveChatFromTrackingUseCase = container.resolve(
+                RemoveChatFromTrackingUseCase
             )
 
-            success = await tracking_repository.remove_chat_from_tracking(
-                admin_id=int(user_id),
-                chat_id=chat_id,
+            success, error_msg = await usecase.execute(
+                user_id=int(user_id), chat_id=chat_id
             )
 
             if success:
-                logger.info("Чат успешно удален из отслеживания")
                 text = (
                     "✅ Готово! Чат удалён из отлеживания!\n\n"
                     "❗️Вы всегда можете вернуть чат в отслеживаемые "
                     "и продолжить собирать статистику"
                 )
             else:
-                logger.warning(f"Не удалось удалить чат {chat_id} из отслеживания")
-                text = "❌ Чат не найден или уже удален."
+                text = f"❌ Ошибка: {error_msg or 'Чат не найден или уже удален'}"
 
             await callback.message.edit_text(text=text)
         else:
@@ -163,26 +160,3 @@ async def confirmation_removing_chat(
             state=state,
             new_state=MenuStates.chats_menu,
         )
-
-
-async def get_user_tracked_chats(user_id: int) -> List[ChatSession]:
-    """Получает список отслеживаемых чатов пользователя"""
-    try:
-        # Получаем сервисы
-        tracking_repository: ChatTrackingRepository = container.resolve(
-            ChatTrackingRepository
-        )
-
-        tracked_chats = await tracking_repository.get_all_tracked_chats(
-            admin_id=user_id
-        )
-
-        logger.debug(
-            f"Найдено {len(tracked_chats)} отслеживаемых чатов для user_id={user_id}"
-        )
-
-        return tracked_chats
-
-    except Exception as e:
-        logger.error(f"Ошибка при получении отслеживаемых чатов: {e}")
-        raise

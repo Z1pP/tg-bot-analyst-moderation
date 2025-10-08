@@ -14,8 +14,9 @@ if TYPE_CHECKING:
     from .admin_chat_access import AdminChatAccess
     from .message import ChatMessage
     from .message_templates import MessageTemplate
-    from .moderator_activity import ModeratorActivity
+    from .punishment import Punishment
     from .reaction import MessageReaction
+    from .user_chat_status import UserChatStatus
 
 
 class User(BaseModel):
@@ -78,11 +79,17 @@ class User(BaseModel):
         back_populates="tracked_users",
     )
 
-    activities: Mapped[list["ModeratorActivity"]] = relationship(
-        "ModeratorActivity",
-        foreign_keys="ModeratorActivity.user_id",
+    punishments: Mapped[list["Punishment"]] = relationship(
+        "Punishment",
+        foreign_keys="Punishment.user_id",
         cascade="all, delete-orphan",
         back_populates="user",
+    )
+
+    chat_statuses: Mapped[list["UserChatStatus"]] = relationship(
+        "UserChatStatus",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (

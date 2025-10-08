@@ -59,6 +59,23 @@ class BaseReportUseCase(ABC):
         )
         return self._process_items(items)
 
+    async def _get_processed_items_by_user_in_chats(
+        self,
+        repository_method,
+        user_id: int,
+        start_date: datetime,
+        end_date: datetime,
+        chat_ids: List[int],
+    ) -> List[T]:
+        """Получает и обрабатывает элементы по пользователю в определенных чатах"""
+        items = await repository_method(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+            chat_ids=chat_ids,
+        )
+        return self._process_items(items)
+
     async def _get_processed_items_by_chat(
         self,
         repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],

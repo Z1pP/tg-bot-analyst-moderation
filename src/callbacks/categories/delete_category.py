@@ -6,8 +6,8 @@ from aiogram.types import CallbackQuery
 
 from container import container
 from keyboards.inline.categories import conf_remove_category_kb
-from repositories import TemplateCategoryRepository
 from states import TemplateStateManager
+from usecases.categories import DeleteCategoryUseCase
 
 router = Router(name=__name__)
 
@@ -76,13 +76,9 @@ async def confirmation_removing_category(
             )
             return
 
-        # Удаляем шаблон
-        category_repo: TemplateCategoryRepository = container.resolve(
-            TemplateCategoryRepository
-        )
-        await category_repo.delete_category(category_id=category_id)
-
-        logger.info(f"Категория с ID={category_id} успешно удален")
+        # Удаляем категорию через Use Case
+        usecase: DeleteCategoryUseCase = container.resolve(DeleteCategoryUseCase)
+        await usecase.execute(category_id=category_id)
 
         # Обновляем сообщение
         await query.message.edit_text(

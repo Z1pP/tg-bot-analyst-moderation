@@ -81,6 +81,7 @@ class MessageReplyRepository:
         chat_id: int,
         start_date: datetime,
         end_date: datetime,
+        tracked_user_ids: list[int] = None,
     ) -> list[MessageReply]:
         async with async_session() as session:
             query = (
@@ -91,6 +92,9 @@ class MessageReplyRepository:
                     MessageReply.created_at.between(start_date, end_date),
                 )
             )
+            # Фильтруем только по отслеживаемым пользователям
+            if tracked_user_ids:
+                query = query.where(MessageReply.reply_user_id.in_(tracked_user_ids))
             try:
                 result = await session.execute(query)
                 replies = result.scalars().all()
@@ -110,4 +114,29 @@ class MessageReplyRepository:
                     end_date,
                     e,
                 )
+                return []
+
+    async def get_replies_by_period_date_and_chats(
+        self,
+        user_id: int,
+        start_date: datetime,
+        end_date: datetime,
+        chat_ids: list[int],
+    ) -> list[MessageReply]:
+        """Получает ответы пользователя в определенных чатах за период"""
+        async with async_session() as session:
+            query = (
+                select(MessageReply)
+                .options(joinedload(MessageReply.chat_session))
+                .where(
+                    MessageReply.reply_user_id == user_id,
+                    MessageReply.chat_id.in_(chat_ids),
+                    MessageReply.created_at.between(start_date, end_date),
+                )
+            )
+            try:
+                result = await session.execute(query)
+                return result.scalars().all()
+            except Exception as e:
+                logger.error(f"Error getting replies by chats: {e}")
                 return []

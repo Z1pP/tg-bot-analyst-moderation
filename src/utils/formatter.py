@@ -17,8 +17,12 @@ def format_selected_period(start_date: datetime, end_date: datetime) -> str:
         "дек.",
     )
     start_month = months[start_date.month - 1]
+    
+    # Если это один день, показываем только одну дату
+    if start_date.date() == end_date.date():
+        return f"{start_date.day} {start_month}"
+    
     end_month = months[end_date.month - 1]
-
     return f"{start_date.day} {start_month} - {end_date.day} {end_month}"
 
 

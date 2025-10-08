@@ -52,7 +52,7 @@ async def list_of_tracking_chats_handler(message: Message, state: FSMContext) ->
         )
         # Показываем первую страницу
         first_page_chats = chats[:CHATS_PAGE_SIZE]
-        
+
         # Отправляем сообщение с кнопками для выбора действия
         await send_html_message_with_kb(
             message=message,

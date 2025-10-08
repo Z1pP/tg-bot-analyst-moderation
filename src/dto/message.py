@@ -33,7 +33,7 @@ class ResultMessageDTO:
     text: Optional[str] = None
 
     @classmethod
-    def from_entity(cls, message: "ChatMessage") -> "ResultMessageDTO":
+    def from_model(cls, message: "ChatMessage") -> "ResultMessageDTO":
         """
         Создает DTO из модели ChatMessage
 

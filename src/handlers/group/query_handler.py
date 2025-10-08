@@ -15,9 +15,13 @@ from aiogram.types import (
 )
 
 from container import container
+from dto import TemplateDTO
 from filters import StaffOnlyInlineFilter
 from models import MessageTemplate
-from repositories import MessageTemplateRepository
+from usecases.templates import (
+    GetTemplateAndIncreaseUsageUseCase,
+    GetTemplatesByQueryUseCase,
+)
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -105,11 +109,11 @@ async def send_template(
     reply_message_id: Optional[int],
 ) -> None:
     """Отправляет ответ по шаблону"""
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
+    usecase: GetTemplateAndIncreaseUsageUseCase = container.resolve(
+        GetTemplateAndIncreaseUsageUseCase
     )
 
-    template = await template_repo.get_template_and_increase_usage_count(
+    template = await usecase.execute(
         template_id=template_id,
         chat_id=chat_id,
     )
@@ -191,17 +195,11 @@ async def send_media_group(
         )
 
 
-async def get_variants(query: str) -> List[MessageTemplate]:
+async def get_variants(query: str) -> List[TemplateDTO]:
     """Получает варианты шаблонов по запросу"""
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
-    )
-    templates = await template_repo.get_templates_by_query(query=query)
-
-    # Сортируем шаблоны по количеству исользований от большего к меньшему
-    sorted_templates = list(sorted(templates, key=lambda x: -x.usage_count))
-
-    return sorted_templates
+    usecase: GetTemplatesByQueryUseCase = container.resolve(GetTemplatesByQueryUseCase)
+    result = await usecase.execute(query=query)
+    return result.templates
 
 
 async def save_moderator_message(message: Message) -> None:

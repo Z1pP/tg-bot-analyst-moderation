@@ -10,7 +10,6 @@ from .base import BaseModel
 if TYPE_CHECKING:
     from .chat_session import ChatSession
     from .message_reply import MessageReply
-    from .moderator_activity import ModeratorActivity
     from .user import User
 
 
@@ -73,20 +72,6 @@ class ChatMessage(BaseModel):
         foreign_keys="MessageReply.reply_message_id",
         cascade="all, delete-orphan",
         back_populates="reply_message",
-    )
-
-    last_activities: Mapped[list["ModeratorActivity"]] = relationship(
-        "ModeratorActivity",
-        foreign_keys="ModeratorActivity.last_message_id",
-        cascade="all, delete-orphan",
-        back_populates="last_message",
-    )
-
-    next_activities: Mapped[list["ModeratorActivity"]] = relationship(
-        "ModeratorActivity",
-        foreign_keys="ModeratorActivity.next_message_id",
-        cascade="all, delete-orphan",
-        back_populates="next_message",
     )
 
     __table_args__ = (
