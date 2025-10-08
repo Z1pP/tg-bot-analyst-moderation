@@ -25,7 +25,7 @@ class BotInsufficientPermissionsError(PrivateModerationError):
 
     def get_user_message(self):
         return (
-            f"Бот не имеет необходимых прав для модерации в чате <b>{self.chat_title}</b>. "
+            f"❌ Бот не имеет необходимых прав для модерации в чате <b>{self.chat_title}</b>. "
             "Требуются права: удаление сообщений, блокировка пользователей."
         )
 
@@ -45,21 +45,21 @@ class CannotPunishChatAdminError(PrivateModerationError):
     """Попытка наказать другого администратора."""
 
     def get_user_message(self) -> str:
-        return "Нельзя применить наказание к администратору группы."
+        return "❌ Данный пользователь является администратором чата – наказание невозможно."
 
 
 class CannotPunishBotAdminError(PrivateModerationError):
     """Попытка наказать бота администратора."""
 
     def get_user_message(self) -> str:
-        return "Нельзя применить наказание к администратору бота."
+        return "❌ Данный пользователь является администратором бота – наказание невозможно."
 
 
 class CannotPunishYouSelf(PrivateModerationError):
     """Попытка наказать самого себя."""
 
     def get_user_message(self) -> str:
-        return "Нельзя применить наказание к себе."
+        return "❌ Нельзя применить наказание к себе - наказание невозможно"
 
 
 class MessageTooOldError(PrivateModerationError):
@@ -67,6 +67,6 @@ class MessageTooOldError(PrivateModerationError):
 
     def get_user_message(self) -> str:
         return (
-            "Не удалось удалить исходное сообщение, так как оно было отправлено "
+            "❌ Не удалось удалить исходное сообщение, так как оно было отправлено "
             "более 48 часов назад."
         )
