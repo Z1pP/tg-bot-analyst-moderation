@@ -1,5 +1,5 @@
 from .category_dto import CategoryDTO, CreateCategoryDTO, UpdateCategoryDTO
-from .chat_dto import ChatDTO, UserChatsDTO
+from .chat_dto import ChatDTO, DbChatDTO, UserChatsDTO
 from .daily_activity import (
     ChatDailyStatsDTO,
     PopularReactionDTO,
@@ -18,7 +18,7 @@ from .report import (
     SingleUserReportDTO,
 )
 from .template_dto import TemplateDTO, TemplateSearchResultDTO, UpdateTemplateTitleDTO
-from .user import CreateUserDTO, UpdateUserDTO, UserDTO
+from .user import CreateUserDTO, DbUserDTO, UpdateUserDTO, UserDTO
 
 __all__ = [
     # Category
@@ -28,6 +28,7 @@ __all__ = [
     # Chat
     "ChatDTO",
     "UserChatsDTO",
+    "DbChatDTO",
     # Daily Activity
     "ChatDailyStatsDTO",
     "PopularReactionDTO",
@@ -57,4 +58,5 @@ __all__ = [
     "CreateUserDTO",
     "UpdateUserDTO",
     "UserDTO",
+    "DbUserDTO",
 ]

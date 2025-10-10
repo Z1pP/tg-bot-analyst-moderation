@@ -17,7 +17,6 @@ class KbCommands:
     SELECT_USER = "🔄 Выбрать другого пользователя"
     ADD_USER = "➕ Добавить"
     REMOVE_USER = "❌ Удалить"
-    # SELECTED_USER = "Выбран: {username}"
 
     # Chats
     CHATS_MENU = "📝 Чаты"
@@ -25,7 +24,6 @@ class KbCommands:
     ADD_CHAT = "➕ Добавить"
     REMOVE_CHAT = "❌ Удалить"
     TRACKED_CHATS = "📊 Отслеживаемые чаты"
-    # SELECTED_CHAT = "Выбран: {chat_title}"
 
     # Reports
     GET_REPORT = "⏱️ Получить отчет"
@@ -42,6 +40,7 @@ class KbCommands:
 
     # Banhammer
     LOCK_MENU = "🚫 Блокировки"
+    AMNESTY = "🕊️ Амнистия"
 
     # Navigation
     SETTINGS = "⚙️ Настройки"

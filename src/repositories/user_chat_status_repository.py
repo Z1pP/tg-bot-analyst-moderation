@@ -29,6 +29,33 @@ class UserChatStatusRepository:
         )
         return result.scalars().first()
 
+    async def get_status(
+        self,
+        user_id: int,
+        chat_id: int,
+    ) -> Optional[UserChatStatus]:
+        async with async_session() as session:
+            try:
+                status = await self._get_status(session, user_id, chat_id)
+
+                if status:
+                    logger.info(
+                        "Получен статус для user_id=%s, chat_id=%s", user_id, chat_id
+                    )
+                else:
+                    logger.info(
+                        "Статус для user_id=%s, chat_id=%s не найден", user_id, chat_id
+                    )
+                return status
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении статуса для user_id=%s, chat_id=%s: %s",
+                    user_id,
+                    chat_id,
+                    e,
+                )
+                raise
+
     async def get_or_create(
         self,
         user_id: int,

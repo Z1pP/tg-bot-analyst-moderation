@@ -1,5 +1,5 @@
+from .banhammer_states import AmnestyStates, BanHammerStates
 from .chat_states import ChatStateManager
-from .lock_states import LockStates
 from .menu_states import MenuStates
 from .template_state import TemplateStateManager
 from .user_states import (
@@ -17,5 +17,6 @@ __all__ = [
     "SingleUserReportStates",
     "TemplateStateManager",
     "MenuStates",
-    "LockStates",
+    "BanHammerStates",
+    "AmnestyStates",
 ]

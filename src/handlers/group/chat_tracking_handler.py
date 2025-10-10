@@ -333,7 +333,7 @@ async def _get_admin_and_chat(message: Message) -> tuple[User, ChatSession]:
         logger.warning("Пользователь не найден в базе данных: %s", user_tg_id)
         return None, None
 
-    chat = await chat_service.get_or_create_chat(
+    chat = await chat_service.get_or_create(
         chat_id=chat_id, title=message.chat.title or "Без названия"
     )
     if not chat:

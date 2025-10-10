@@ -4,7 +4,8 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import KbCommands
-from states import LockStates
+from keyboards.reply import block_actions_kb
+from states import BanHammerStates
 from utils.state_logger import log_and_set_state
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,10 @@ async def lock_menu_handler(message: types.Message, state: FSMContext) -> None:
     await log_and_set_state(
         message=message,
         state=state,
-        new_state=LockStates.lock_menu,
+        new_state=BanHammerStates.block_menu,
     )
 
-    await message.answer(f"Вкладка {KbCommands.LOCK_MENU} еще в разработке!")
+    await message.reply(
+        "Выберите необходимое действие:",
+        reply_markup=block_actions_kb(),
+    )

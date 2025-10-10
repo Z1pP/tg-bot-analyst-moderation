@@ -51,7 +51,7 @@ class ModerationUseCase:
     ) -> bool:
         return reply_user_tg_id != owner_tg_id
 
-    async def is_administrator(
+    async def is_chat_administrator(
         self,
         tg_id: ChatIdUnion,
         chat_tg_id: ChatIdUnion,
@@ -60,6 +60,12 @@ class ModerationUseCase:
             tg_id=tg_id,
             chat_tg_id=chat_tg_id,
         )
+
+    def is_bot_administrator(
+        self,
+        user: User,
+    ) -> bool:
+        return user.role == UserRole.ADMIN
 
     async def _prepare_moderation_context(
         self, dto: ModerationActionDTO
@@ -78,7 +84,7 @@ class ModerationUseCase:
         if not bot_can_moderate:
             raise BotInsufficientPermissionsError(chat_title=dto.chat_title)
 
-        if await self.is_administrator(
+        if await self.is_chat_administrator(
             tg_id=dto.user_reply_tgid,
             chat_tg_id=dto.chat_tgid,
         ):
@@ -86,7 +92,7 @@ class ModerationUseCase:
                 chat_id=dto.chat_tgid,
                 message_id=dto.original_message_id,
             )
-            raise CannotPunishBotAdminError()
+            raise CannotPunishChatAdminError()
 
         archive_chats = await self.chat_service.get_archive_chats(
             source_chat_title=dto.chat_title,
@@ -112,12 +118,12 @@ class ModerationUseCase:
             title=dto.chat_title,
         )
 
-        if violator.role == UserRole.ADMIN:
+        if self.is_bot_administrator(user=violator):
             await self.bot_message_service.delete_message_from_chat(
                 chat_id=dto.chat_tgid,
                 message_id=dto.original_message_id,
             )
-            raise CannotPunishChatAdminError()
+            raise CannotPunishBotAdminError()
 
         await self.user_chat_status_repository.get_or_create(
             user_id=violator.id,

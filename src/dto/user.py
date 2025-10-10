@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 from models.user import User, UserRole
@@ -109,3 +110,28 @@ class UpdateUserDTO:
             }.items()
             if v is not None
         }
+
+
+@dataclass
+class DbUserDTO:
+    """DTO для юзера из базы данных"""
+
+    id: int
+    tg_id: str
+    username: str
+    role: UserRole
+    is_active: bool
+    created_at: datetime
+
+    @classmethod
+    def from_model(cls, user: User) -> "DbUserDTO":
+        """
+        Создает DTO из модели User"""
+        return cls(
+            id=user.id,
+            tg_id=user.tg_id,
+            username=user.username,
+            role=user.role,
+            is_active=user.is_active,
+            created_at=user.created_at,
+        )
