@@ -4,6 +4,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants.pagination import CHATS_PAGE_SIZE
+from dto import ChatDTO
 from models import ChatSession
 
 
@@ -83,6 +84,63 @@ def tracked_chats_inline_kb(
             InlineKeyboardButton(
                 text=f"{start_index + index + 1}. {chat.title[:30]}",
                 callback_data=f"chat__{chat.id}",
+            )
+        )
+
+    # Пагинация
+    if total_count > page_size:
+        max_pages = (total_count + page_size - 1) // page_size
+        pagination_buttons = []
+
+        if page > 1:
+            pagination_buttons.append(
+                InlineKeyboardButton(text="◀️", callback_data=f"prev_chats_page__{page}")
+            )
+
+        start_item = (page - 1) * page_size + 1
+        end_item = min(page * page_size, total_count)
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=f"{start_item}-{end_item} из {total_count}",
+                callback_data="chats_page_info",
+            )
+        )
+
+        if page < max_pages:
+            pagination_buttons.append(
+                InlineKeyboardButton(text="▶️", callback_data=f"next_chats_page__{page}")
+            )
+
+        if pagination_buttons:
+            builder.row(*pagination_buttons)
+
+    return builder.as_markup()
+
+
+def tracked_chats_with_all_kb(
+    dtos: List[ChatDTO],
+    page: int = 1,
+    total_count: int = 0,
+    page_size: int = CHATS_PAGE_SIZE,
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    if total_count > 1:
+        # Кнопка "Все чаты" первой
+        builder.row(
+            InlineKeyboardButton(
+                text="🌐 Все чаты",
+                callback_data="chat__all",
+            )
+        )
+
+    # Кнопки чатов
+    start_index = (page - 1) * page_size
+    for index, dto in enumerate(dtos):
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{start_index + index + 1}. {dto.title[:30]}",
+                callback_data=f"chat__{dto.id}",
             )
         )
 
