@@ -115,10 +115,10 @@ async def run_polling():
 async def main():
     """Точка входа: выбирает режим запуска (webhook/polling)."""
     try:
-        if args.webhook_url:
-            await run_webhook()
-        else:
-            await run_polling()
+        # if args.webhook_url:
+        #     await run_webhook()
+        # else:
+        await run_polling()
     except Exception as e:
         logger.error("Критическая ошибка: %s", str(e), exc_info=True)
         sys.exit(1)
