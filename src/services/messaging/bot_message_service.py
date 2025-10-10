@@ -256,3 +256,32 @@ class BotMessageService:
                 e,
             )
             return False
+
+    async def unban_chat_member(
+        self,
+        chat_tg_id: ChatIdUnion,
+        user_tg_id: int,
+    ) -> bool:
+        """
+        Разбанивает пользователя в чате.
+
+        Args:
+            chat_tg_id: Telegram ID чата
+            user_tg_id: Telegram ID пользователя
+
+        Returns:
+            True если разбан применен успешно
+        """
+        try:
+            return await self.bot.unban_chat_member(
+                chat_id=chat_tg_id,
+                user_id=user_tg_id,
+            )
+        except Exception as e:
+            logger.error(
+                "Не удалось разбанить пользователя %s в чате %s: %s",
+                user_tg_id,
+                chat_tg_id,
+                e,
+            )
+            return False
