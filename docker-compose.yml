@@ -3,12 +3,28 @@ version: '3.8'
 services:
   bot:
     build: .
-    restart: unless-stopped 
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy 
       redis:
         condition: service_started
+      tunnel:
+        condition: service_started
+    command: >
+      bash -c "
+        echo '⏳ Ждём URL от cloudflared...';
+        until curl -s http://tunnel:4040/metrics | grep -q 'cloudflared_tunnel_user_hostnames_counts'; do 
+          echo '⏳ Ожидание туннеля...';
+          sleep 2;
+        done;
+        sleep 3;
+        export PUBLIC_URL=$$(curl -s http://tunnel:4040/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
+        echo '🌐 Найден публичный URL:' $$PUBLIC_URL;
+        python src/main.py --webhook-url $$PUBLIC_URL
+      "
     env_file:
     - .env
     environment:
@@ -20,7 +36,9 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - REDIS_URL=redis://redis:6379/0 
     volumes:
-      - ./logs:/app/logs 
+      - ./logs:/app/logs
+    networks:
+      - botnet
 
   db:
     image: postgres:14
@@ -51,6 +69,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    networks:
+      - botnet
 
   redis:
     image: redis:7-alpine
@@ -64,6 +84,20 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - botnet
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_tunnel
+    restart: unless-stopped
+    command: tunnel --url http://bot:8000 --metrics 0.0.0.0:4040
+    networks:
+      - botnet
+
+networks:
+  botnet:
+    driver: bridge
 
 volumes:
   postgres_data:
