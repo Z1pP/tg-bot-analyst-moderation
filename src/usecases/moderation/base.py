@@ -61,7 +61,7 @@ class ModerationUseCase:
             chat_tg_id=chat_tg_id,
         )
 
-    async def is_bot_administrator(
+    def is_bot_administrator(
         self,
         user: User,
     ) -> bool:
