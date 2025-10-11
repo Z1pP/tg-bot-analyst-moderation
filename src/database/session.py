@@ -22,4 +22,7 @@ class DatabaseContextManager:
     @asynccontextmanager
     async def session(self):
         async with self._session_factory() as session:
-            yield session
+            try:
+                yield session
+            finally:
+                await session.close()
