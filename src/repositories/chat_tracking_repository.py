@@ -4,16 +4,19 @@ from typing import Optional
 from sqlalchemy import delete, select
 from sqlalchemy.orm import joinedload
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from models import AdminChatAccess, ChatSession
 
 logger = logging.getLogger(__name__)
 
 
 class ChatTrackingRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def get_admin_source_chats(self, admin_id: int) -> list[ChatSession]:
         """Получает список чатов-источников для администратора."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = (
                     select(ChatSession)
@@ -38,7 +41,7 @@ class ChatTrackingRepository:
 
     async def get_admin_target_chats(self, admin_id: int) -> list[ChatSession]:
         """Получает список чатов-получателей для администратора."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = (
                     select(ChatSession)
@@ -70,7 +73,7 @@ class ChatTrackingRepository:
         is_target: bool = False,
     ) -> Optional[AdminChatAccess]:
         """Добавляет доступ к чату для администратора."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 chat_access = AdminChatAccess(
                     admin_id=admin_id,
@@ -98,7 +101,7 @@ class ChatTrackingRepository:
         chat_id: int,
     ) -> bool:
         """Удаляет доступ к чату для администратора."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = delete(AdminChatAccess).where(
                     AdminChatAccess.admin_id == admin_id,
@@ -133,7 +136,7 @@ class ChatTrackingRepository:
         chat_id: int,
     ) -> Optional[AdminChatAccess]:
         """Проверяет наличие доступа администратора к чату."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = select(AdminChatAccess).where(
                     AdminChatAccess.admin_id == admin_id,
@@ -162,7 +165,7 @@ class ChatTrackingRepository:
 
     async def get_all_tracked_chats(self, admin_id: int) -> list[ChatSession]:
         """Получает все чаты администратора (и источники, и получатели)."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = (
                     select(ChatSession)
@@ -192,7 +195,7 @@ class ChatTrackingRepository:
         is_source: bool = True,
     ) -> Optional[AdminChatAccess]:
         """Устанавливает чат как источник данных."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 # Проверяем, существует ли уже доступ
                 query = select(AdminChatAccess).where(
@@ -247,7 +250,7 @@ class ChatTrackingRepository:
         is_target: bool = True,
     ) -> Optional[AdminChatAccess]:
         """Устанавливает чат как получатель отчетов."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 # Проверяем, существует ли уже доступ
                 query = select(AdminChatAccess).where(

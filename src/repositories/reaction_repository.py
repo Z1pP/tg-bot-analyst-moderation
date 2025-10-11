@@ -5,7 +5,7 @@ from typing import List
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from dto.daily_activity import PopularReactionDTO, UserReactionActivityDTO
 from dto.reaction import MessageReactionDTO
 from models import MessageReaction, User
@@ -14,8 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class MessageReactionRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def add_reaction(self, dto: MessageReactionDTO) -> MessageReaction:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 logger.info(
                     f"Создание реакции: пользователь {dto.user_id}, сообщение {dto.message_id}, эмодзи {dto.emoji}"
@@ -47,7 +50,7 @@ class MessageReactionRepository:
         end_date: datetime,
         tracked_user_ids: list[int] = None,
     ) -> List[MessageReaction]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             logger.debug(f"Получение реакций для чата с ID={chat_id}")
 
             query = (
@@ -81,7 +84,7 @@ class MessageReactionRepository:
         start_date: datetime,
         end_date: datetime,
     ) -> List[MessageReaction]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 logger.debug(f"Получение реакций для пользователя с ID={user_id}")
 
@@ -112,7 +115,7 @@ class MessageReactionRepository:
         """
         Получает топ пользователей по количеству реакций за день.
         """
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
                 end_date = date.replace(
@@ -166,7 +169,7 @@ class MessageReactionRepository:
         """
         Получает самые популярные реакции за день.
         """
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
                 end_date = date.replace(
@@ -216,7 +219,7 @@ class MessageReactionRepository:
         chat_ids: List[int],
     ) -> List[MessageReaction]:
         """Получает реакции пользователя в определенных чатах за период"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = (
                     select(MessageReaction)

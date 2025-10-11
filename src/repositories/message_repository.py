@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from dto.daily_activity import UserDailyActivityDTO
 from dto.message import CreateMessageDTO
 from models import ChatMessage, User
@@ -14,10 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 class MessageRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def get_last_user_message(
         self, user_id: int, chat_id: int
     ) -> Optional[ChatMessage]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 return await session.scalar(
                     select(ChatMessage)
@@ -34,7 +37,7 @@ class MessageRepository:
                 return None
 
     async def create_new_message(self, dto: CreateMessageDTO) -> ChatMessage:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 new_message = ChatMessage(
                     user_id=dto.user_id,
@@ -65,7 +68,7 @@ class MessageRepository:
         start_date: datetime,
         end_date: datetime,
     ) -> list[ChatMessage]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(ChatMessage)
                 .options(joinedload(ChatMessage.chat_session))
@@ -105,7 +108,7 @@ class MessageRepository:
         """
         Получает сообщения из чата за период времени для отслеживаемых пользователей.
         """
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(ChatMessage)
                 .options(
@@ -147,7 +150,7 @@ class MessageRepository:
         """
         Получает топ активных пользователей за день в чате.
         """
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
                 end_date = date.replace(
@@ -209,7 +212,7 @@ class MessageRepository:
         chat_ids: List[int],
     ) -> List[ChatMessage]:
         """Получает сообщения пользователя в определенных чатах за период"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(ChatMessage)
                 .options(joinedload(ChatMessage.chat_session))

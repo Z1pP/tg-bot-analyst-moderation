@@ -4,13 +4,16 @@ from typing import List, Optional
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import selectinload
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from models import ChatSession, MessageTemplate, TemplateMedia
 
 logger = logging.getLogger(__name__)
 
 
 class MessageTemplateRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def create_template(
         self,
         title: str,
@@ -19,7 +22,7 @@ class MessageTemplateRepository:
         author_id: int,
         chat_id: Optional[int] = None,
     ) -> MessageTemplate:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 new_template = MessageTemplate(
                     title=title,
@@ -42,7 +45,7 @@ class MessageTemplateRepository:
                 raise
 
     async def get_templates_by_query(self, query: str) -> List[MessageTemplate]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 # Подзапрос для получения минимальных ID уникальных заголовков
                 subquery = (
@@ -80,7 +83,7 @@ class MessageTemplateRepository:
                 raise
 
     async def get_templates_count_by_category(self, category_id: int) -> int:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = select(func.count(MessageTemplate.id)).where(
                     MessageTemplate.category_id == category_id
@@ -95,7 +98,7 @@ class MessageTemplateRepository:
         self,
         limit: Optional[int] = None,
     ) -> List[MessageTemplate]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = select(MessageTemplate).options(
                     selectinload(MessageTemplate.media_items),
@@ -112,7 +115,7 @@ class MessageTemplateRepository:
                 raise
 
     async def get_templates_count(self) -> int:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = select(func.count(MessageTemplate.id))
                 result = await session.execute(query)
@@ -127,7 +130,7 @@ class MessageTemplateRepository:
         limit: int = 5,
         category_id: int = None,
     ) -> List[MessageTemplate]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(MessageTemplate)
                 .options(
@@ -147,7 +150,7 @@ class MessageTemplateRepository:
         offset: int = 0,
         limit: int = 5,
     ) -> List[MessageTemplate]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(MessageTemplate)
                 .options(
@@ -163,7 +166,7 @@ class MessageTemplateRepository:
 
     async def get_template_by_id(self, template_id: int) -> Optional[MessageTemplate]:
         """Получаем быстрый ответ вместе с его медиа"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = (
                     select(MessageTemplate)
@@ -182,7 +185,7 @@ class MessageTemplateRepository:
     async def get_templates_by_category(
         self, category_id: int
     ) -> List[MessageTemplate]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = select(MessageTemplate).where(
                     MessageTemplate.category_id == category_id
@@ -203,7 +206,7 @@ class MessageTemplateRepository:
         Функция велосипед для автоподстановки шаблона в зависимости от того в какой
         чат было отправлено сообщение
         """
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 # Получаем базовый шаблон по ID
                 base_query = (
@@ -261,7 +264,7 @@ class MessageTemplateRepository:
                 raise
 
     async def delete_template(self, template_id: int) -> bool:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = select(MessageTemplate).where(MessageTemplate.id == template_id)
                 result = await session.execute(query)
@@ -279,7 +282,7 @@ class MessageTemplateRepository:
 
     async def update_template_title(self, template_id: int, new_title: str) -> bool:
         """Обновляет название шаблона"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = select(MessageTemplate).where(MessageTemplate.id == template_id)
                 result = await session.execute(query)
@@ -305,7 +308,7 @@ class MessageTemplateRepository:
     ) -> bool:
         """Обновляет содержимое шаблона"""
 
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 # Предварительно удаляем медиа с таким же unique_id из ДРУГИХ шаблонов
                 if "media_items" in content_data and content_data["media_items"]:
@@ -363,7 +366,7 @@ class MessageTemplateRepository:
         self, offset: int = 0, limit: int = 5
     ) -> List[MessageTemplate]:
         """Получает глобальные шаблоны (без привязки к чату)"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(MessageTemplate)
                 .options(
@@ -380,7 +383,7 @@ class MessageTemplateRepository:
 
     async def get_global_templates_count(self) -> int:
         """Получает количество глобальных шаблонов"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = select(func.count(MessageTemplate.id)).where(
                 MessageTemplate.chat_id.is_(None)
             )
@@ -391,7 +394,7 @@ class MessageTemplateRepository:
         self, chat_id: int, offset: int = 0, limit: int = 5
     ) -> List[MessageTemplate]:
         """Получает шаблоны для конкретного чата"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(MessageTemplate)
                 .options(
@@ -408,7 +411,7 @@ class MessageTemplateRepository:
 
     async def get_chat_templates_count(self, chat_id: int) -> int:
         """Получает количество шаблонов для конкретного чата"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = select(func.count(MessageTemplate.id)).where(
                 MessageTemplate.chat_id == chat_id
             )

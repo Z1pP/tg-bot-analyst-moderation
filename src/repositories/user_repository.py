@@ -4,17 +4,19 @@ from typing import List, Optional
 from sqlalchemy import delete, select
 
 from constants.enums import UserRole
-from database.session import async_session
+from database.session import DatabaseContextManager
 from models import AdminChatAccess, ChatSession, User, admin_user_tracking
 
 logger = logging.getLogger(__name__)
 
 
 class UserRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
 
     async def update_tg_id(self, user_id: int, new_tg_id: str) -> User:
         """Обновляет tg_id пользователя."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 user = await session.get(User, user_id)
                 if user:
@@ -38,7 +40,7 @@ class UserRepository:
 
     async def update_user(self, user_id: int, username: str) -> Optional[User]:
         """Обновляет username пользователя."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 user = await session.get(User, user_id)
                 if not user:
@@ -65,7 +67,7 @@ class UserRepository:
 
     async def update_username(self, user_id: int, new_username: str) -> Optional[User]:
         """Обновляет username пользователя только при изменении."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 user = await session.get(User, user_id)
                 if not user:
@@ -95,7 +97,7 @@ class UserRepository:
 
     async def get_user_by_tg_id(self, tg_id: str) -> Optional[User]:
         """Получает пользователя по Telegram ID."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(User).where(User.tg_id == tg_id),
@@ -121,7 +123,7 @@ class UserRepository:
 
     async def get_user_by_id(self, user_id: int) -> Optional[User]:
         """Получает пользователя по ID."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(select(User).where(User.id == user_id))
                 user = result.scalars().first()
@@ -144,8 +146,7 @@ class UserRepository:
                 return None
 
     async def get_tracked_users_for_admin(self, admin_tg_id: str) -> List[User]:
-
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 # Получаем админа
                 admin_query = select(User).where(User.tg_id == admin_tg_id)
@@ -184,7 +185,7 @@ class UserRepository:
                 raise
 
     async def get_tracked_user(self, admin_tg_id: str, user_tg_id) -> Optional[User]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = (
                     select(User)
@@ -211,7 +212,7 @@ class UserRepository:
                 raise
 
     async def get_admins_for_chat(self, chat_tg_id: str) -> Optional[List[User]]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = (
                     select(User)
@@ -238,7 +239,7 @@ class UserRepository:
 
     async def get_all_moderators(self) -> List[User]:
         """Получает список всех модераторов."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(User)
@@ -257,7 +258,7 @@ class UserRepository:
 
     async def get_all_admins(self) -> List[User]:
         """Получаем всех администраторов из БД"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(User)
@@ -276,7 +277,7 @@ class UserRepository:
 
     async def get_user_by_username(self, username: str) -> Optional[User]:
         """Получает пользователя по имени пользователя."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(User).where(User.username == username)
@@ -310,7 +311,7 @@ class UserRepository:
         if tg_id is None and username is None:
             raise ValueError("tg_id или username должны быть указаны")
 
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 user = User(
                     tg_id=tg_id,
@@ -337,7 +338,7 @@ class UserRepository:
 
     async def delete_user(self, user_id: int) -> bool:
         """Удаляет пользователя по его ID"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = delete(User).where(User.id == user_id)
                 result = await session.execute(query)
@@ -360,7 +361,7 @@ class UserRepository:
 
     async def get_users_paginated(self, limit: int = 5, offset: int = 0) -> List[User]:
         """Получает пользователей с пагинацией."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(User)
@@ -382,7 +383,7 @@ class UserRepository:
 
     async def get_users_count(self) -> int:
         """Получает общее количество пользователей."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 from sqlalchemy import func
 

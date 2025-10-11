@@ -1,13 +1,16 @@
 import logging
 from typing import Optional
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from models import TemplateMedia
 
 logger = logging.getLogger(__name__)
 
 
 class TemplateMediaRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def create_media(
         self,
         template_id: int,
@@ -16,7 +19,7 @@ class TemplateMediaRepository:
         file_unique_id: str,
         position: int,
     ) -> Optional[TemplateMedia]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 new_media = TemplateMedia(
                     template_id=template_id,

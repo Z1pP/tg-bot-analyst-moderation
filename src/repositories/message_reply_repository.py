@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from dto.message_reply import CreateMessageReplyDTO
 from models import MessageReply
 
@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 class MessageReplyRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def get_replies_by_period_date(
         self,
         user_id: int,
@@ -21,7 +24,7 @@ class MessageReplyRepository:
         """
         Получает все ответы пользователя за указанный период.
         """
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(MessageReply)
                 .options(joinedload(MessageReply.chat_session))
@@ -52,7 +55,7 @@ class MessageReplyRepository:
                 return []
 
     async def create_reply_message(self, dto: CreateMessageReplyDTO) -> MessageReply:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 new_reply = MessageReply(
                     chat_id=dto.chat_id,
@@ -83,7 +86,7 @@ class MessageReplyRepository:
         end_date: datetime,
         tracked_user_ids: list[int] = None,
     ) -> list[MessageReply]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(MessageReply)
                 .options(joinedload(MessageReply.chat_session))
@@ -124,7 +127,7 @@ class MessageReplyRepository:
         chat_ids: list[int],
     ) -> list[MessageReply]:
         """Получает ответы пользователя в определенных чатах за период"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             query = (
                 select(MessageReply)
                 .options(joinedload(MessageReply.chat_session))

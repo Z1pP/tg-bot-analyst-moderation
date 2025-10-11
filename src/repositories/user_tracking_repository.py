@@ -4,20 +4,23 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import selectinload
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from models import User
 
 logger = logging.getLogger(__name__)
 
 
 class UserTrackingRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def add_user_to_tracking(
         self,
         admin_username: str,
         user_username: str,
     ) -> bool:
         """Добавляет пользователя в список отслеживания админа."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 # Используем first() вместо scalar_one_or_none() для обработки дубликатов
                 admin_result = await session.execute(
@@ -68,7 +71,7 @@ class UserTrackingRepository:
         user_username: str,
     ) -> bool:
         """Удаляет пользователя из списка отслеживания админа."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 admin_result = await session.execute(
                     select(User)
@@ -114,7 +117,7 @@ class UserTrackingRepository:
 
     async def get_tracked_users_by_admin(self, admin_username: str) -> list[User]:
         """Получает список отслеживаемых пользователей для админа."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(User)

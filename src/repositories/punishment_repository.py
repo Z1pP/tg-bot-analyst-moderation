@@ -3,15 +3,18 @@ from typing import Optional
 
 from sqlalchemy import func, select
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from models import Punishment, User
 
 logger = logging.getLogger(__name__)
 
 
 class PunishmentRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def get_punishment_count(self, user_id: int) -> int:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 logger.info(f"Подсчет количества наказаний для пользователя {user_id}")
                 query = (
@@ -30,7 +33,7 @@ class PunishmentRepository:
                 raise
 
     async def get_current_punishment(self, user_tgid: str) -> Optional[Punishment]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 logger.info(
                     f"Получение текущего наказания для пользователя {user_tgid}"
@@ -60,7 +63,7 @@ class PunishmentRepository:
                 return None
 
     async def update_punishment(self, punishment: Punishment) -> None:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 logger.info(f"Обновление наказания {punishment.id}")
                 session.add(punishment)
@@ -73,7 +76,7 @@ class PunishmentRepository:
                 raise e
 
     async def create_punishment(self, punishment: Punishment) -> Punishment:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 logger.info("Создание нового наказания")
                 session.add(punishment)

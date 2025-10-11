@@ -4,13 +4,16 @@ from typing import List, Optional
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from models.user_chat_status import UserChatStatus
 
 logger = logging.getLogger(__name__)
 
 
 class UserChatStatusRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
 
     async def _get_status(
         self,
@@ -34,7 +37,7 @@ class UserChatStatusRepository:
         user_id: int,
         chat_id: int,
     ) -> Optional[UserChatStatus]:
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 status = await self._get_status(session, user_id, chat_id)
 
@@ -63,7 +66,7 @@ class UserChatStatusRepository:
         defaults: dict = None,
     ) -> tuple[UserChatStatus, bool]:
         """Получает или создает запись о статусе пользователя в чате."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 status = await self._get_status(session, user_id, chat_id)
 
@@ -104,7 +107,7 @@ class UserChatStatusRepository:
         chat_id: int,
     ) -> Optional[UserChatStatus]:
         """Получает статус пользователя по ID пользователя и ID чата."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 status = await self._get_status(session, user_id, chat_id)
 
@@ -133,7 +136,7 @@ class UserChatStatusRepository:
         **kwargs,
     ) -> Optional[UserChatStatus]:
         """Обновляет статус пользователя в чате."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 status = await self._get_status(session, user_id, chat_id)
 
@@ -166,7 +169,7 @@ class UserChatStatusRepository:
 
     async def get_all_by_user(self, user_id: int) -> List[UserChatStatus]:
         """Получает все статусы для указанного пользователя."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(UserChatStatus).where(UserChatStatus.user_id == user_id)
@@ -186,7 +189,7 @@ class UserChatStatusRepository:
 
     async def get_all_by_chat(self, chat_id: int) -> List[UserChatStatus]:
         """Получает все статусы в указанном чате."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(UserChatStatus).where(UserChatStatus.chat_id == chat_id)

@@ -3,16 +3,19 @@ from typing import Optional, Sequence
 
 from sqlalchemy import select
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from models import TemplateCategory
 
 logger = logging.getLogger(__name__)
 
 
 class TemplateCategoryRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def get_all_categories(self) -> Sequence[TemplateCategory]:
         """Получает список всех категорий шаблонов быстрых сообщений"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(TemplateCategory).order_by(TemplateCategory.sort_order)
@@ -28,7 +31,7 @@ class TemplateCategoryRepository:
 
     async def get_last_category(self) -> Optional[TemplateCategory]:
         """Получаем последнюю созданную категорию"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(TemplateCategory).order_by(
@@ -46,7 +49,7 @@ class TemplateCategoryRepository:
 
     async def get_category_by_id(self, id: int) -> Optional[TemplateCategory]:
         """Получаем категорию по имени"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(TemplateCategory).where(TemplateCategory.id == id)
@@ -62,7 +65,7 @@ class TemplateCategoryRepository:
 
     async def create_category(self, name: str) -> Optional[TemplateCategory]:
         """Создаем новую категорию"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 last_category = await self.get_last_category()
                 sort_order = last_category.sort_order + 1 if last_category else 1
@@ -86,7 +89,7 @@ class TemplateCategoryRepository:
 
     async def delete_category(self, category_id: int) -> None:
         """Удаляем категорию"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 category = await self.get_category_by_id(category_id)
                 if category:
@@ -105,7 +108,7 @@ class TemplateCategoryRepository:
         self, limit: int = 5, offset: int = 0
     ) -> Sequence[TemplateCategory]:
         """Получает категории с пагинацией."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(TemplateCategory)
@@ -124,7 +127,7 @@ class TemplateCategoryRepository:
 
     async def get_categories_count(self) -> int:
         """Получает общее количество категорий."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 from sqlalchemy import func
 
@@ -138,7 +141,7 @@ class TemplateCategoryRepository:
 
     async def update_category_name(self, category_id: int, new_name: str) -> bool:
         """Обновляет название категории"""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 query = select(TemplateCategory).where(
                     TemplateCategory.id == category_id
