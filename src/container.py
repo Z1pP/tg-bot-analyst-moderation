@@ -6,6 +6,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from punq import Container
 
 from config import settings
+from database.session import DatabaseContextManager, async_session
 from di import container
 from repositories import (
     ChatRepository,
@@ -94,6 +95,7 @@ class ContainerSetup:
     @staticmethod
     def setup() -> None:
         ContainerSetup._register_bot_components(container)
+        ContainerSetup._register_database(container)
         ContainerSetup._register_repositories(container)
         ContainerSetup._register_services(container)
         ContainerSetup._register_usecases(container)
@@ -111,6 +113,13 @@ class ContainerSetup:
         storage = MemoryStorage()
         container.register(BaseStorage, instance=storage)
         container.register(Dispatcher, instance=Dispatcher(storage=storage))
+
+    @staticmethod
+    def _register_database(container: Container) -> None:
+        container.register(
+            DatabaseContextManager,
+            instance=DatabaseContextManager(async_session),
+        )
 
     @staticmethod
     def _register_async_error_handler(container: Container) -> None:
