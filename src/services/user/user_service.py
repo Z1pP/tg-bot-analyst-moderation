@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from sqlalchemy.exc import IntegrityError
 
@@ -14,7 +15,10 @@ class UserService:
         self._user_repository = user_repository
         self._cache = cache
 
-    async def get_user(self, tg_id: str, username: str = None) -> User:
+    async def get_by_username(self, username: str) -> Optional[User]:
+        return await self._user_repository.get_user_by_username(username=username)
+
+    async def get_user(self, tg_id: str, username: str = None) -> Optional[User]:
         user = await self._cache.get(tg_id)
         if user:
             if username and user.username != username:
@@ -44,7 +48,7 @@ class UserService:
         return user
 
     async def get_or_create(self, username: str, tg_id: str) -> User:
-        user = await self.get_user(tg_id=tg_id)
+        user = await self.get_user(tg_id=tg_id, username=username)
 
         if not user:
             try:
