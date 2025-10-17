@@ -3,7 +3,7 @@ from repositories.message_reply_repository import MessageReplyRepository
 from services.work_time_service import WorkTimeService
 
 
-class SaveModeratorReplyMessageUseCase:
+class SaveReplyMessageUseCase:
     def __init__(self, msg_reply_repository: MessageReplyRepository):
         self._msg_reply_repository = msg_reply_repository
 
