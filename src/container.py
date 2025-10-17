@@ -55,7 +55,7 @@ from usecases.chat_tracking import (
 )
 from usecases.message import (
     SaveMessageUseCase,
-    SaveModeratorReplyMessageUseCase,
+    SaveReplyMessageUseCase,
 )
 from usecases.amnesty import GetChatsWithBannedUserUseCase, UnbanUserUseCase
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
@@ -215,7 +215,7 @@ class ContainerSetup:
         """Регистрация use cases для сообщений."""
         message_usecases = [
             SaveMessageUseCase,
-            SaveModeratorReplyMessageUseCase,
+            SaveReplyMessageUseCase,
         ]
 
         for usecase in message_usecases:
