@@ -14,7 +14,7 @@ from services.time_service import TimeZoneService
 from services.user import UserService
 from usecases.message import (
     SaveMessageUseCase,
-    SaveModeratorReplyMessageUseCase,
+    SaveReplyMessageUseCase,
 )
 
 router = Router(name=__name__)
@@ -31,68 +31,21 @@ def _get_message_type(message: Message) -> MessageType:
 @router.message()
 async def group_message_handler(message: Message):
     """
-    Обрабатывет сообщения которые приходят от всех пользователей
+    Сохраняет все сообщения и ответы от всех пользователей для построения метрик.
     """
-    # Сообщения от ботов не сохраняются
     if message.from_user.is_bot:
         return
 
-    sender, chat = await _get_sender_and_chat(message=message)
-
-    # Получаем тип сообщения из message
-    msg_type = _get_message_type(message=message)
-
-    if sender.role == UserRole.USER:
-        await process_user_message(
-            message=message,
-            sender=sender,
-            chat=chat,
-        )
+    sender, chat = await _get_sender_and_chat(message)
+    if not sender or not chat:
         return
 
+    msg_type = _get_message_type(message)
+
     if msg_type == MessageType.REPLY:
-        await process_reply_message(
-            message=message,
-            sender=sender,
-            chat=chat,
-        )
+        await process_reply_message(message, sender, chat)
     else:
-        await process_reqular_message(
-            message=message,
-            sender=sender,
-            chat=chat,
-        )
-
-
-async def process_user_message(
-    message: Message,
-    sender: User,
-    chat: ChatSession,
-) -> None:
-    """
-    Обрабатывает обычное сообщение от пользователей
-    """
-    message_date = TimeZoneService.convert_to_local_time(
-        dt=message.date,
-    )
-
-    msg_dto = CreateMessageDTO(
-        chat_id=chat.id,
-        user_id=sender.id,
-        message_id=str(message.message_id),
-        message_type=MessageType.MESSAGE.value,
-        content_type=message.content_type.value,
-        text=message.text,
-        created_at=message_date,
-    )
-
-    try:
-        message_usecase: SaveMessageUseCase = container.resolve(SaveMessageUseCase)
-        saved_message = await message_usecase.execute(message_dto=msg_dto)
-
-        logger.info(f"Сообщение сохранено: {saved_message}")
-    except Exception as e:
-        logger.error(f"Ошибка при сохранении пользотваельного сообщения: {e}")
+        await process_message(message, sender, chat)
 
 
 async def process_reply_message(
@@ -101,7 +54,7 @@ async def process_reply_message(
     chat: ChatSession,
 ) -> None:
     """
-    Обрабатывает reply-сообщения от модераторов и админов
+    Сохраняет reply-сообщения и связь с оригинальным сообщением.
     """
     # Преобразуем время сообщения в локальное время
     message_date = TimeZoneService.convert_to_local_time(
@@ -144,21 +97,21 @@ async def process_reply_message(
         )
 
         # Сохраняем связь в MessageReply
-        reply_usecase: SaveModeratorReplyMessageUseCase = container.resolve(
-            SaveModeratorReplyMessageUseCase
+        reply_usecase: SaveReplyMessageUseCase = container.resolve(
+            SaveReplyMessageUseCase
         )
         await reply_usecase.execute(reply_message_dto=reply_dto)
     except Exception as e:
-        logger.error("Error saving reply message: %s", str(e))
+        logger.error("Ошибка сохранения reply сообщения: %s", str(e))
 
 
-async def process_reqular_message(
+async def process_message(
     message: Message,
     sender: User,
     chat: ChatSession,
 ) -> None:
     """
-    Обрабатывает обычные сообщения от модераторов и админов
+    Сохраняет обычные сообщения от всех пользователей.
     """
     # Преобразуем время сообщения в локальное время
     message_date = TimeZoneService.convert_to_local_time(
@@ -179,7 +132,7 @@ async def process_reqular_message(
         usecase: SaveMessageUseCase = container.resolve(SaveMessageUseCase)
         await usecase.execute(message_dto=msg_dto)
     except Exception as e:
-        logger.error("Error saving message: %s", str(e))
+        logger.error("Ошибка сохранения сообщения: %s", str(e))
 
 
 async def _get_sender_and_chat(message: Message) -> tuple[User, ChatSession]:
