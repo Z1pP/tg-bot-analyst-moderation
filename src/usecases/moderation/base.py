@@ -95,7 +95,7 @@ class ModerationUseCase:
             raise CannotPunishChatAdminError()
 
         archive_chats = await self.chat_service.get_archive_chats(
-            source_chat_title=dto.chat_title,
+            source_chat_tgid=dto.chat_tgid,
         )
 
         if not archive_chats:
@@ -103,7 +103,7 @@ class ModerationUseCase:
                 chat_id=dto.chat_tgid,
                 message_id=dto.original_message_id,
             )
-            raise ArchiveChatError()
+            raise ArchiveChatError(chat_title=dto.chat_title)
 
         violator = await self.user_service.get_user(
             tg_id=dto.user_reply_tgid,
