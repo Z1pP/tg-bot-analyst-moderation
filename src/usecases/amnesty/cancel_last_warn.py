@@ -70,14 +70,27 @@ class CancelLastWarnUseCase:
             )
 
             if current_count == 0:
+                # Получаем статус до сброса, чтобы понять, нужно ли снимать ограничения
+                current_status = await self.user_chat_status_repository.get_status(
+                    user_id=dto.violator_id, chat_id=chat.id
+                )
+
                 await self.user_chat_status_repository.reset_status(
                     user_id=dto.violator_id, chat_id=chat.id
                 )
-                # Снимаем все ограничения в Telegram
-                await self.bot_message_service.unban_chat_member(
-                    chat_tg_id=chat.tg_id,
-                    user_tg_id=int(dto.violator_tgid),
-                )
+
+                # Снимаем ограничения только если пользователь был забанен или замучен
+                if current_status:
+                    if current_status.is_banned:
+                        await self.bot_message_service.unban_chat_member(
+                            chat_tg_id=chat.tg_id,
+                            user_tg_id=int(dto.violator_tgid),
+                        )
+                    elif current_status.is_muted:
+                        await self.bot_message_service.unmute_chat_member(
+                            chat_tg_id=chat.tg_id,
+                            user_tg_id=int(dto.violator_tgid),
+                        )
             else:
                 current_ladder = (
                     await self.punishment_ladder_repository.get_punishment_by_step(
@@ -149,12 +162,9 @@ class CancelLastWarnUseCase:
                                 user_tg_id=int(dto.violator_tgid),
                             )
                 else:
+                    # Если нет ladder для текущего шага, сбрасываем статус без действий в Telegram
                     await self.user_chat_status_repository.reset_status(
                         user_id=dto.violator_id, chat_id=chat.id
-                    )
-                    await self.bot_message_service.unban_chat_member(
-                        chat_tg_id=chat.tg_id,
-                        user_tg_id=int(dto.violator_tgid),
                     )
 
             if next_ladder and next_ladder.punishment_type == PunishmentType.BAN:
