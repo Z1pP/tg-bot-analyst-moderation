@@ -136,10 +136,3 @@ class UserTrackingRepository:
             except SQLAlchemyError as e:
                 logger.error(f"Ошибка получения отслеживаемых пользователей: {e}")
                 return []
-
-    async def is_user_tracked_by_admin(
-        self, admin_username: str, user_username: str
-    ) -> bool:
-        """Проверяет, отслеживается ли пользователь админом."""
-        tracked_users = await self.get_tracked_users_by_admin(admin_username)
-        return any(user.username == user_username for user in tracked_users)
