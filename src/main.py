@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 
 from bot import configure_dispatcher
 from container import ContainerSetup
+from commands.start_commands import set_bot_commands
 from utils.logger_config import setup_logger
 
 setup_logger(log_level=logging.INFO)
@@ -108,6 +109,10 @@ async def run_polling():
     await init_bot()
     logger.info("Удаляем webhook...")
     await bot.delete_webhook(drop_pending_updates=True)
+
+    logger.info("Настраиваем команды...")
+    await set_bot_commands(bot)
+
     logger.info("Запуск polling...")
     await dp.start_polling(bot)
 
