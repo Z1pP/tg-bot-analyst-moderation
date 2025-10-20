@@ -8,7 +8,7 @@ from models import ChatSession
 @dataclass(frozen=True)
 class ChatDTO:
     id: int
-    chat_id: str
+    tg_id: str
     title: str
 
     @classmethod
