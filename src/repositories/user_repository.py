@@ -184,33 +184,6 @@ class UserRepository:
                 )
                 raise
 
-    async def get_tracked_user(self, admin_tg_id: str, user_tg_id) -> Optional[User]:
-        async with self._db.session() as session:
-            try:
-                query = (
-                    select(User)
-                    .join(User.tracked_users)
-                    .where(User.tg_id == admin_tg_id)
-                    .where(User.tracked_users.any(tg_id=user_tg_id))
-                )
-                result = await session.execute(query)
-
-                tracked_user = result.scalars().first()
-                logger.info(
-                    "Получен отслеживаемый пользователь с TG_ID:%s для администратора TG_ID:%s",
-                    user_tg_id,
-                    admin_tg_id,
-                )
-                return tracked_user
-            except Exception as e:
-                logger.error(
-                    "Ошибка при получении отслеживаемого пользователя с TG_ID:%s для администратора TG_ID:%s: %s",
-                    user_tg_id,
-                    admin_tg_id,
-                    e,
-                )
-                raise
-
     async def get_admins_for_chat(self, chat_tg_id: str) -> Optional[List[User]]:
         async with self._db.session() as session:
             try:
@@ -254,25 +227,6 @@ class UserRepository:
                 return users
             except Exception as e:
                 logger.error("Ошибка при получении списка модераторов: %s", e)
-                return []
-
-    async def get_all_admins(self) -> List[User]:
-        """Получаем всех администраторов из БД"""
-        async with self._db.session() as session:
-            try:
-                result = await session.execute(
-                    select(User)
-                    .where(
-                        User.role == UserRole.ADMIN,
-                    )
-                    .order_by(User.username),
-                )
-
-                users = result.scalars().all()
-                logger.info("Получено %d администраторов", len(users))
-                return users
-            except Exception as e:
-                logger.error("Ошибка при получении списка администраторов: %s", e)
                 return []
 
     async def get_user_by_username(self, username: str) -> Optional[User]:
@@ -358,41 +312,3 @@ class UserRepository:
                 logger.error("Ошибка при удалении пользователя с ID=%s:%s", user_id, e)
                 await session.rollback()
                 raise e
-
-    async def get_users_paginated(self, limit: int = 5, offset: int = 0) -> List[User]:
-        """Получает пользователей с пагинацией."""
-        async with self._db.session() as session:
-            try:
-                result = await session.execute(
-                    select(User)
-                    .where(User.role == UserRole.MODERATOR)
-                    .order_by(User.username)
-                    .limit(limit)
-                    .offset(offset)
-                )
-                users = result.scalars().all()
-                logger.info(
-                    "Получено %d пользователей (страница %d)",
-                    len(users),
-                    offset // limit + 1,
-                )
-                return users
-            except Exception as e:
-                logger.error("Ошибка при получении пользователей с пагинацией: %s", e)
-                return []
-
-    async def get_users_count(self) -> int:
-        """Получает общее количество пользователей."""
-        async with self._db.session() as session:
-            try:
-                from sqlalchemy import func
-
-                result = await session.execute(
-                    select(func.count(User.id)).where(User.role == UserRole.MODERATOR)
-                )
-                count = result.scalar()
-                logger.info("Общее количество пользователей: %s", count)
-                return count or 0
-            except Exception as e:
-                logger.error("Ошибка при подсчете пользователей: %s", e)
-                return 0
