@@ -1,17 +1,21 @@
 from aiogram import Bot
 from aiogram.types import (
     BotCommand,
+    BotCommandScopeAllGroupChats,
     BotCommandScopeAllPrivateChats,
+    BotCommandScopeDefault,
 )
-
-from constants import CommandList
 
 
 async def set_bot_commands(bot: Bot) -> None:
-    general_commands = [
-        BotCommand(command=comm.name.lower(), description=comm.value)
-        for comm in CommandList
-    ]
-    await bot.set_my_commands(
-        commands=general_commands, scope=BotCommandScopeAllPrivateChats()
-    )
+    """Устанавливает команды бота."""
+    # Удаляем все старые команды
+    await bot.delete_my_commands(scope=BotCommandScopeDefault())
+    await bot.delete_my_commands(scope=BotCommandScopeAllPrivateChats())
+    await bot.delete_my_commands(scope=BotCommandScopeAllGroupChats())
+
+    # Устанавливаем /start только для приватных чатов
+    commands = [BotCommand(command="start", description="Запустить бота")]
+    await bot.set_my_commands(commands=commands, scope=BotCommandScopeAllPrivateChats())
+
+    await bot.set_my_commands(commands=[], scope=BotCommandScopeAllGroupChats())
