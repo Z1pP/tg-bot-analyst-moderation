@@ -43,9 +43,9 @@ class KbCommands:
     AMNESTY = "🕊️ Амнистия"
 
     # Amnesty actions
-    UNBAN = "🕊️ Разблокировать"
-    CANCEL_WARN = "⏪ Отменить посл. /WARN"
-    UNMUTE = "🔊 Размутить"
+    UNBAN = "🕊️ Полный разблок"
+    CANCEL_WARN = "⏪ Отмена посл. преда"
+    UNMUTE = "🔊 Размут"
 
     # Navigation
     SETTINGS = "⚙️ Настройки"
