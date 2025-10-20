@@ -2,19 +2,22 @@ import logging
 
 from constants.punishment import PunishmentType
 from dto import AmnestyUserDTO, CancelWarnResultDTO
-from exceptions.moderation import ArchiveChatError, BotInsufficientPermissionsError
 from repositories import (
-    PunishmentRepository,
     PunishmentLadderRepository,
+    PunishmentRepository,
     UserChatStatusRepository,
 )
 from services import BotMessageService, BotPermissionService, ChatService
 from utils.formatter import format_duration
 
+from .base_amnesty import BaseAmnestyUseCase
+
 logger = logging.getLogger(__name__)
 
 
-class CancelLastWarnUseCase:
+class CancelLastWarnUseCase(BaseAmnestyUseCase):
+    """Отменяет последнее предупреждение и пересчитывает статус пользователя."""
+
     def __init__(
         self,
         bot_message_service: BotMessageService,
@@ -24,31 +27,17 @@ class CancelLastWarnUseCase:
         user_chat_status_repository: UserChatStatusRepository,
         chat_service: ChatService,
     ):
-        self.bot_message_service = bot_message_service
-        self.bot_permission_service = bot_permission_service
+        super().__init__(bot_message_service, bot_permission_service, chat_service)
         self.punishment_repository = punishment_repository
         self.punishment_ladder_repository = punishment_ladder_repository
         self.user_chat_status_repository = user_chat_status_repository
-        self.chat_service = chat_service
 
     async def execute(self, dto: AmnestyUserDTO) -> CancelWarnResultDTO:
         current_count = 0
         next_ladder = None
 
         for chat in dto.chat_dtos:
-            can_moderate = await self.bot_permission_service.can_moderate(
-                chat_tgid=chat.tg_id
-            )
-
-            if not can_moderate:
-                raise BotInsufficientPermissionsError(chat_title=chat.title)
-
-            archive_chats = await self.chat_service.get_archive_chats(
-                source_chat_tgid=chat.tg_id,
-            )
-
-            if not archive_chats:
-                raise ArchiveChatError(chat_title=chat.title)
+            archive_chats = await self._validate_and_get_archive_chats(chat)
 
             deleted = await self.punishment_repository.delete_last_punishment(
                 user_id=dto.violator_id, chat_id=chat.id
@@ -181,11 +170,7 @@ class CancelLastWarnUseCase:
                 f"• След. шаг: <b>{next_step}</b>"
             )
 
-            for archive_chat in archive_chats:
-                await self.bot_message_service.send_chat_message(
-                    chat_tgid=archive_chat.chat_id,
-                    text=report_text,
-                )
+            await self._send_report_to_archives(archive_chats, report_text)
 
             logger.info(
                 "Отменено последнее предупреждение для пользователя %s в чате %s",
