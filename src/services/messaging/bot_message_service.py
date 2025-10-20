@@ -285,3 +285,43 @@ class BotMessageService:
                 e,
             )
             return False
+
+    async def unmute_chat_member(
+        self,
+        chat_tg_id: ChatIdUnion,
+        user_tg_id: int,
+    ) -> bool:
+        """
+        Размьютит пользователя в чате.
+
+        Args:
+            chat_tg_id: Telegram ID чата
+            user_tg_id: Telegram ID пользователя
+
+        Returns:
+            True если размьют применен успешно
+        """
+        permissions = ChatPermissions(
+            can_send_messages=True,
+            can_send_media_messages=True,
+            can_send_polls=True,
+            can_send_other_messages=True,
+            can_add_web_page_previews=True,
+            can_change_info=True,
+            can_invite_users=True,
+            can_pin_messages=True,
+        )
+        try:
+            return await self.bot.restrict_chat_member(
+                chat_id=chat_tg_id,
+                user_id=user_tg_id,
+                permissions=permissions,
+            )
+        except Exception as e:
+            logger.error(
+                "Не удалось размьютить пользователя %s в чате %s: %s",
+                user_tg_id,
+                chat_tg_id,
+                e,
+            )
+            return False
