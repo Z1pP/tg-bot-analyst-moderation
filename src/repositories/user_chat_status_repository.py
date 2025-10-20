@@ -100,34 +100,6 @@ class UserChatStatusRepository:
                 await session.rollback()
                 raise
 
-    async def get_by_user_and_chat(
-        self,
-        user_id: int,
-        chat_id: int,
-    ) -> Optional[UserChatStatus]:
-        """Получает статус пользователя по ID пользователя и ID чата."""
-        async with self._db.session() as session:
-            try:
-                status = await self._get_status(session, user_id, chat_id)
-
-                if status:
-                    logger.info(
-                        "Получен статус для user_id=%s, chat_id=%s", user_id, chat_id
-                    )
-                else:
-                    logger.info(
-                        "Статус для user_id=%s, chat_id=%s не найден", user_id, chat_id
-                    )
-                return status
-            except Exception as e:
-                logger.error(
-                    "Ошибка при получении статуса для user_id=%s, chat_id=%s: %s",
-                    user_id,
-                    chat_id,
-                    e,
-                )
-                raise
-
     async def update_status(
         self,
         user_id: int,
@@ -164,44 +136,6 @@ class UserChatStatusRepository:
                     e,
                 )
                 await session.rollback()
-                raise
-
-    async def get_all_by_user(self, user_id: int) -> List[UserChatStatus]:
-        """Получает все статусы для указанного пользователя."""
-        async with self._db.session() as session:
-            try:
-                result = await session.execute(
-                    select(UserChatStatus).where(UserChatStatus.user_id == user_id)
-                )
-                statuses = result.scalars().all()
-                logger.info(
-                    "Найдено %s статусов для user_id=%s", len(statuses), user_id
-                )
-                return statuses
-            except Exception as e:
-                logger.error(
-                    "Ошибка при получении всех статусов для user_id=%s: %s",
-                    user_id,
-                    e,
-                )
-                raise
-
-    async def get_all_by_chat(self, chat_id: int) -> List[UserChatStatus]:
-        """Получает все статусы в указанном чате."""
-        async with self._db.session() as session:
-            try:
-                result = await session.execute(
-                    select(UserChatStatus).where(UserChatStatus.chat_id == chat_id)
-                )
-                statuses = result.scalars().all()
-                logger.info("Найдено %s статусов в chat_id=%s", len(statuses), chat_id)
-                return statuses
-            except Exception as e:
-                logger.error(
-                    "Ошибка при получении всех статусов для chat_id=%s: %s",
-                    chat_id,
-                    e,
-                )
                 raise
 
     async def reset_status(
