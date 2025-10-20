@@ -57,7 +57,14 @@ from usecases.message import (
     SaveMessageUseCase,
     SaveReplyMessageUseCase,
 )
-from usecases.amnesty import GetChatsWithBannedUserUseCase, UnbanUserUseCase
+from usecases.amnesty import (
+    CancelLastWarnUseCase,
+    GetChatsWithBannedUserUseCase,
+    GetChatsWithMutedUserUseCase,
+    GetChatsWithPunishedUserUseCase,
+    UnbanUserUseCase,
+    UnmuteUserUseCase,
+)
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
@@ -226,8 +233,12 @@ class ContainerSetup:
         """Регистрация use cases для модерации."""
         container.register(GiveUserWarnUseCase)
         container.register(GiveUserBanUseCase)
+        container.register(CancelLastWarnUseCase)
         container.register(GetChatsWithBannedUserUseCase)
+        container.register(GetChatsWithMutedUserUseCase)
+        container.register(GetChatsWithPunishedUserUseCase)
         container.register(UnbanUserUseCase)
+        container.register(UnmuteUserUseCase)
 
     @staticmethod
     def _register_report_usecases(container: Container) -> None:
