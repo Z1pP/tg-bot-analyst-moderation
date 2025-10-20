@@ -94,26 +94,6 @@ class MessageTemplateRepository:
                 logger.error("Ошибка при получении количества шаблонов: %s", e)
                 raise
 
-    async def get_all_templates(
-        self,
-        limit: Optional[int] = None,
-    ) -> List[MessageTemplate]:
-        async with self._db.session() as session:
-            try:
-                query = select(MessageTemplate).options(
-                    selectinload(MessageTemplate.media_items),
-                    selectinload(MessageTemplate.category),
-                )
-
-                if limit is not None:
-                    query = query.limit(limit)
-
-                result = await session.execute(query)
-                return result.scalars().all()
-            except Exception as e:
-                logger.error(f"Ошибка при получении шаблонов: {e}")
-                raise
-
     async def get_templates_count(self) -> int:
         async with self._db.session() as session:
             try:
@@ -145,25 +125,6 @@ class MessageTemplateRepository:
             result = await session.execute(query)
             return result.scalars().all()
 
-    async def get_templates_paginated(
-        self,
-        offset: int = 0,
-        limit: int = 5,
-    ) -> List[MessageTemplate]:
-        async with self._db.session() as session:
-            query = (
-                select(MessageTemplate)
-                .options(
-                    selectinload(MessageTemplate.media_items),
-                    selectinload(MessageTemplate.category),
-                )
-                .order_by(MessageTemplate.title)
-                .limit(limit)
-                .offset(offset)
-            )
-            result = await session.execute(query)
-            return result.scalars().all()
-
     async def get_template_by_id(self, template_id: int) -> Optional[MessageTemplate]:
         """Получаем быстрый ответ вместе с его медиа"""
         async with self._db.session() as session:
@@ -180,21 +141,6 @@ class MessageTemplateRepository:
                 return result.scalar_one_or_none()
             except Exception as e:
                 logger.error("Ошибка при получении шаблона по id: %s", e)
-                raise
-
-    async def get_templates_by_category(
-        self, category_id: int
-    ) -> List[MessageTemplate]:
-        async with self._db.session() as session:
-            try:
-                query = select(MessageTemplate).where(
-                    MessageTemplate.category_id == category_id
-                )
-
-                result = await session.execute(query)
-                return result.scalars().all()
-            except Exception as e:
-                logger.error("Ошибка при получении шаблонов по категории: %s", e)
                 raise
 
     async def get_template_and_increase_usage_count(
