@@ -33,11 +33,14 @@ class BotInsufficientPermissionsError(PrivateModerationError):
 class ArchiveChatError(PrivateModerationError):
     """Проблема с архивным чатом."""
 
+    def __init__(self, chat_title: str):
+        self.chat_title = chat_title
+
     def get_user_message(self) -> str:
         return (
-            "Пожалуйста, создайте рабочий чат с историей удалённых сообщений и"
-            " добавьте его в Аналиста. В будущем это облегчит работу при поиске "
-            "заблокированных пользователей."
+            "Пожалуйста, создайте рабочий чат с историей удалённых сообщений, "
+            f"добавьте в него  Аналиста и привяжите его к чату <b>{self.chat_title}</b>.\n"
+            "В будущем это облегчит работу при поиске заблокированных пользователей."
         )
 
 
