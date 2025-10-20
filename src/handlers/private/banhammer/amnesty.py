@@ -1,28 +1,34 @@
-import logging
 from dataclasses import dataclass
+import logging
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import KbCommands
+from constants.punishment import PunishmentType
 from container import container
-from exceptions.moderation import ModerationError
+from dto import AmnestyUserDTO
+from exceptions import AmnestyError
 from keyboards.inline.chats_kb import tracked_chats_with_all_kb
-from services import BotMessageService
+from keyboards.reply import admin_menu_kb
+from keyboards.inline.amnesty import confirm_action_ikb
+from keyboards.reply import amnesty_actions_kb
+from services import UserService
 from states import AmnestyStates, BanHammerStates
-from usecases.amnesty import GetChatsWithBannedUserUseCase, UnbanUserUseCase
+from usecases.amnesty import (
+    CancelLastWarnUseCase,
+    GetChatsWithBannedUserUseCase,
+    GetChatsWithMutedUserUseCase,
+    GetChatsWithPunishedUserUseCase,
+    UnbanUserUseCase,
+    UnmuteUserUseCase,
+)
 from utils.state_logger import log_and_set_state
+from utils.user_data_parser import parse_data_from_text
 
-from ..users.add_user_to_tracking import parse_data_from_text
 
 router = Router()
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class UserData:
-    tg_username: str
-    tg_id: str
 
 
 @router.message(
@@ -31,10 +37,12 @@ class UserData:
 )
 async def amnesty_handler(message: types.Message, state: FSMContext) -> None:
     """
-    Обработчик отвечающий за разблокировку пользователей в чате.
+    Обработчик отвечающий за действия по амнистии пользователя в чате.
     """
     text = (
-        "Чтобы разблокировать юзера, пожалуйста, пришлите:\n • @тег_юзера\n • ID юзера"
+        "🕊️ <b>Амнистия пользователя</b>\n\n"
+        "Для разблокировки или снятия наказания пришлите @username или Telegram ID пользователя\n\n"
+        "<i>Пример: @john_pidor или <code>123456789</code></i>"
     )
     await message.reply(text=text)
     await log_and_set_state(
@@ -51,87 +59,406 @@ async def waiting_user_data_input(message: types.Message, state: FSMContext) -> 
     """
     Обработчик для обработки введенной информации о пользователе
     """
-    parse_data = parse_data_from_text(text=message.text)
+    user_data = parse_data_from_text(text=message.text)
 
-    await state.update_data(
-        tg_username=parse_data.username,
-        tg_id=parse_data.user_tgid,
-    )
-
-    usecase: GetChatsWithBannedUserUseCase = container.resolve(
-        GetChatsWithBannedUserUseCase
-    )
-    chat_dtos = await usecase.execute(
-        admin_tgid=str(message.from_user.id),
-        violator_tgid=parse_data.user_tgid,
-    )
-
-    if not chat_dtos:
-        text = "❗Нет чатов, где этот пользователь забанен."
+    if user_data is None:
+        text = "❗Неверный формат ввода. Попробуйте еще раз."
         await message.reply(text=text)
         return
 
-    text = f"Выберите чат, в котором провести амнистию юзера @{parse_data.username}"
+    user_service: UserService = container.resolve(UserService)
+
+    user = None
+
+    if user_data.tg_id:
+        user = await user_service.get_user(tg_id=user_data.tg_id)
+    elif user_data.username:
+        user = await user_service.get_by_username(username=user_data.username)
+
+    if user is None:
+        text = "❗Пользователь не найден. Попробуйте еще раз."
+        await message.reply(text=text)
+        return
+
+    await state.update_data(
+        username=user.username,
+        id=user.id,
+        tg_id=user.tg_id,
+    )
+
+    text = f"Что делаем с <b>{user.username}</b>?"
 
     await message.reply(
         text=text,
-        reply_markup=tracked_chats_with_all_kb(
-            dtos=chat_dtos,
-            total_count=len(chat_dtos),
-        ),
+        reply_markup=amnesty_actions_kb(),
     )
+
     await log_and_set_state(
         message=message,
+        state=state,
+        new_state=AmnestyStates.waiting_action_select,
+    )
+
+
+@router.message(
+    F.text == KbCommands.UNBAN,
+    AmnestyStates.waiting_action_select,
+)
+async def unban_handler(message: types.Message, state: FSMContext) -> None:
+    """Обработчик для разблокирования пользователя в чате"""
+
+    violator = await extract_violator_data_from_state(state=state)
+
+    text = (
+        f"Полная разблокировка даст возможность @{violator.username} вернуться в чат — "
+        "все предыдущие предупреждения будут сброшены.\n\n<b>Вы уверены, что хотите "
+        f"полностью разблокировать @{violator.username}?</b>"
+    )
+
+    await state.update_data(action=KbCommands.UNBAN)
+
+    await message.reply(text=text, reply_markup=confirm_action_ikb())
+
+    await log_and_set_state(
+        message=message,
+        state=state,
+        new_state=AmnestyStates.waiting_confirmation_action,
+    )
+
+
+@router.message(
+    F.text == KbCommands.UNMUTE,
+    AmnestyStates.waiting_action_select,
+)
+async def cancel_warn_handler(message: types.Message, state: FSMContext) -> None:
+    """Обработчик для отмены мута в чате с сохранением текущего предупреждения"""
+
+    violator = await extract_violator_data_from_state(state=state)
+
+    text = (
+        f"Размут даст возможность @{violator.username} писать в чате, однако "
+        "предпреждения не будут сброшены.\n\nВы уверены, что хотите размутить "
+        f"данного @{violator.username}?"
+    )
+
+    await state.update_data(action=KbCommands.UNMUTE)
+
+    await message.reply(
+        text=text,
+        reply_markup=confirm_action_ikb(),
+    )
+
+    await log_and_set_state(
+        message=message,
+        state=state,
+        new_state=AmnestyStates.waiting_confirmation_action,
+    )
+
+
+@router.message(
+    F.text == KbCommands.CANCEL_WARN,
+    AmnestyStates.waiting_action_select,
+)
+async def cancel_warn_handler(message: types.Message, state: FSMContext) -> None:
+    """Обработчик для отмены (удаления) прошлого предупреждения"""
+
+    violator = await extract_violator_data_from_state(state=state)
+
+    text = (
+        f"Отмена последнего предупреждения даст возможность @{violator.username} "
+        "писать в чате.\n\n<b>Вы уверены, что хотите отменить последнее предупреждение "
+        f"для @{violator.username}</b>"
+    )
+
+    await state.update_data(action=KbCommands.CANCEL_WARN)
+
+    await message.reply(text=text, reply_markup=confirm_action_ikb())
+
+    await log_and_set_state(
+        message=message,
+        state=state,
+        new_state=AmnestyStates.waiting_confirmation_action,
+    )
+
+
+@router.callback_query(
+    F.data == "confirm_action",
+    AmnestyStates.waiting_confirmation_action,
+)
+async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> None:
+    """
+    Обработчик для подтверждения действия по амнистии пользователя
+    """
+    await callback.answer()
+
+    data = await state.get_data()
+    action = data.get("action")
+
+    # Извлекаем только нужные поля для ViolatorData
+    violator = await extract_violator_data_from_state(state=state)
+
+    amnesy_dto = AmnestyUserDTO(
+        violator_tgid=violator.tg_id,
+        violator_username=violator.username,
+        violator_id=violator.id,
+        admin_tgid=str(callback.from_user.id),
+        admin_username=callback.from_user.username,
+    )
+
+    if action == KbCommands.UNBAN:
+        usecase: GetChatsWithBannedUserUseCase = container.resolve(
+            GetChatsWithBannedUserUseCase
+        )
+        try:
+            chat_dtos = await usecase.execute(dto=amnesy_dto)
+        except Exception as e:
+            logger.error("Ошибка получения чатов: %s", e, exc_info=True)
+            text = "❗️Произошла ошибка при получении списка чатов. Попробуйте еще раз."
+            await callback.message.answer(text=text, reply_markup=admin_menu_kb())
+            await state.clear()
+            return
+
+        if not chat_dtos:
+            text = (
+                f"❗️Мы не нашли чатов, где @{violator.username} получил ограничение. "
+                "Перепроверьте введённые данные, либо попробуйте снять ограничение вручную."
+            )
+            await callback.message.delete()
+            await callback.message.answer(text=text, reply_markup=admin_menu_kb())
+            await state.clear()
+            return
+
+        text = f"Выберите чат, где нужно произвести амнистию @{amnesy_dto.violator_username}"
+
+        await state.update_data(chat_dtos=chat_dtos)
+
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
+        )
+    elif action == KbCommands.UNMUTE:
+        usecase: GetChatsWithMutedUserUseCase = container.resolve(
+            GetChatsWithMutedUserUseCase
+        )
+        try:
+            chat_dtos = await usecase.execute(dto=amnesy_dto)
+        except Exception as e:
+            logger.error("Ошибка получения чатов: %s", e, exc_info=True)
+            text = "❗️Произошла ошибка при получении списка чатов. Попробуйте еще раз."
+            await callback.message.answer(text=text, reply_markup=admin_menu_kb())
+            await state.clear()
+            return
+
+        if not chat_dtos:
+            text = (
+                f"❗️Мы не нашли чатов, где @{violator.username} получил ограничение. "
+                "Перепроверьте введённые данные, либо попробуйте снять ограничение вручную."
+            )
+            await callback.message.delete()
+            await callback.message.answer(text=text, reply_markup=admin_menu_kb())
+            await state.clear()
+            return
+
+        text = (
+            f"Выберите чат, где нужно произвести размут @{amnesy_dto.violator_username}"
+        )
+
+        await state.update_data(chat_dtos=chat_dtos)
+
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
+        )
+    elif action == KbCommands.CANCEL_WARN:
+        usecase: GetChatsWithPunishedUserUseCase = container.resolve(
+            GetChatsWithPunishedUserUseCase
+        )
+        try:
+            chat_dtos = await usecase.execute(dto=amnesy_dto)
+        except Exception as e:
+            logger.error("Ошибка получения чатов: %s", e, exc_info=True)
+            text = "❗️Произошла ошибка при получении списка чатов. Попробуйте еще раз."
+            await callback.message.answer(text=text, reply_markup=admin_menu_kb())
+            await state.clear()
+            return
+
+        if not chat_dtos:
+            text = (
+                f"❗️Мы не нашли чатов, где @{violator.username} получил ограничение. "
+                "Перепроверьте введённые данные, либо попробуйте снять ограничение вручную."
+            )
+            await callback.message.delete()
+            await callback.message.answer(text=text, reply_markup=admin_menu_kb())
+            await state.clear()
+            return
+
+        text = (
+            "Выберите чат, где нужно отменить последнее предупреждение "
+            f"для @{amnesy_dto.violator_username}"
+        )
+
+        await state.update_data(chat_dtos=chat_dtos)
+
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
+        )
+    else:
+        text = "❗️Неизвестное действие. Попробуйте еще раз."
+
+        await callback.message.delete()
+        await callback.message.answer(text=text, reply_markup=admin_menu_kb())
+        await state.clear()
+        return
+
+    await log_and_set_state(
+        message=callback.message,
         state=state,
         new_state=AmnestyStates.waiting_chat_select,
     )
 
 
 @router.callback_query(
-    AmnestyStates.waiting_chat_select,
-    F.data.startswith("chat__"),
+    F.data == "cancel_action",
+    AmnestyStates.waiting_confirmation_action,
 )
-async def waiting_chat_select(callback: types.CallbackQuery, state: FSMContext) -> None:
+async def cancel_action(callback: types.CallbackQuery, state: FSMContext) -> None:
     """
-    Обработчик для обработки выбора чата
+    Обработчик для отмены действия по амнистии пользователя и возвращения в меню
     """
     await callback.answer()
 
-    try:
-        data = await state.get_data()
-        violator_tgid = data.get("tg_id")
-        violator_username = data.get("tg_username")
+    text = "❌️ Действие отменено!"
 
-        chat_id_str = callback.data.split("__")[1]
+    await callback.message.delete()
+    await callback.message.answer(text=text, reply_markup=admin_menu_kb())
+    await state.clear()
 
-        usecase: UnbanUserUseCase = container.resolve(UnbanUserUseCase)
 
-        if chat_id_str == "all":
-            unbanned_chats = await usecase.execute(
-                admin_tgid=str(callback.from_user.id),
-                violator_tgid=violator_tgid,
+@router.callback_query(
+    AmnestyStates.waiting_chat_select,
+    F.data.startswith("chat__"),
+)
+async def execute_amnesty_action(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
+    """Выполняет выбранное действие амнистии в указанном чате"""
+    await callback.answer()
+
+    data = await state.get_data()
+
+    action = data.get("action")
+    chat_id = callback.data.split("__")[1]
+    chat_dtos = data.get("chat_dtos")
+
+    violator = ViolatorData(
+        id=data.get("id"),
+        username=data.get("username"),
+        tg_id=data.get("tg_id"),
+    )
+
+    if chat_id != "all" and chat_id.isdigit():
+        chat_dtos = [chat for chat in chat_dtos if chat.id != chat_id]
+
+    amnesty_dto = AmnestyUserDTO(
+        admin_tgid=str(callback.from_user.id),
+        admin_username=callback.from_user.username,
+        violator_tgid=violator.tg_id,
+        violator_username=violator.username,
+        violator_id=violator.id,
+        chat_dtos=chat_dtos,
+    )
+
+    if action == KbCommands.UNBAN:
+        unban_usecase: UnbanUserUseCase = container.resolve(UnbanUserUseCase)
+        try:
+            await unban_usecase.execute(dto=amnesty_dto)
+        except AmnestyError as e:
+            logger.error("Ошибка амнистии: %s", e, exc_info=True)
+            await callback.message.answer(
+                text=e.get_user_message(),
+                reply_markup=admin_menu_kb(),
             )
-            chats_list = ", ".join(unbanned_chats)
-            text = f"✅ Пользователь @{violator_username} разблокирован в чатах <b>{chats_list}</b>!"
-        else:
-            chat_id = int(chat_id_str)
-            unbanned_chats = await usecase.execute(
-                admin_tgid=str(callback.from_user.id),
-                violator_tgid=violator_tgid,
-                chat_ids=[chat_id],
-            )
-            if unbanned_chats:
-                text = f"✅ Пользователь @{violator_username} разблокирован в чате <b>{unbanned_chats[0]}</b>!"
-            else:
-                text = "❌ Не удалось разблокировать пользователя."
+            return
 
-        await callback.message.edit_text(text=text)
-        await state.clear()
-
-    except ModerationError as e:
-        bot_message_service: BotMessageService = container.resolve(BotMessageService)
-        await bot_message_service.send_private_message(
-            user_tgid=callback.from_user.id,
-            text=e.get_user_message(),
+        text = (
+            f"✅ @{amnesty_dto.violator_username} амнистирован — "
+            "все предупреждения были сброшены!"
         )
-        await state.clear()
+    elif action == KbCommands.UNMUTE:
+        unmute_usecase: UnmuteUserUseCase = container.resolve(UnmuteUserUseCase)
+        try:
+            await unmute_usecase.execute(dto=amnesty_dto)
+        except AmnestyError as e:
+            logger.error("Ошибка амнистии: %s", e, exc_info=True)
+            await callback.message.answer(
+                text=e.get_user_message(),
+                reply_markup=admin_menu_kb(),
+            )
+            return
+
+        text = (
+            f"✅ @{amnesty_dto.violator_username} размучен!\n\n"
+            "❗Все предыдущие предупреждения для пользователя сохранены."
+        )
+    elif action == KbCommands.CANCEL_WARN:
+        cancel_warn_usecase: CancelLastWarnUseCase = container.resolve(
+            CancelLastWarnUseCase
+        )
+        try:
+            result = await cancel_warn_usecase.execute(dto=amnesty_dto)
+        except AmnestyError as e:
+            logger.error("Ошибка отмены предупреждения: %s", e, exc_info=True)
+            await callback.message.answer(
+                text=e.get_user_message(),
+                reply_markup=admin_menu_kb(),
+            )
+            return
+
+        if len(amnesty_dto.chat_dtos) == 1:
+            if result.next_punishment_type == PunishmentType.BAN:
+                next_step = "бессрочной блокировке."
+            elif result.next_punishment_type == PunishmentType.MUTE:
+                next_step = f"муту на {result.next_punishment_duration} сек."
+            else:
+                next_step = "предупреждению."
+
+            text = (
+                f"✅ <b>Последнее предупреждение отменено!</b>\n\n"
+                f"Текущее количество предупреждений: <b>{result.current_warns_count}</b>\n"
+                f"Следующий /warn для @{amnesty_dto.violator_username} приведёт к: <b>{next_step}</b>"
+            )
+        else:
+            text = (
+                f"✅ <b>Последнее предупреждение отменено во всех чатах!</b>\n\n"
+                f"Обработано чатов: <b>{len(amnesty_dto.chat_dtos)}</b>\n"
+                f"Пользователь: @{amnesty_dto.violator_username}"
+            )
+    else:
+        text = "❗️Неизвестное действие. Попробуйте еще раз."
+
+    await callback.message.delete()
+    await callback.message.answer(
+        text=text,
+        reply_markup=admin_menu_kb(),
+    )
+
+    await state.clear()
+
+
+@dataclass(frozen=True, slots=True)
+class ViolatorData:
+    id: int
+    username: str
+    tg_id: int
+
+
+async def extract_violator_data_from_state(state: FSMContext) -> ViolatorData:
+    data = await state.get_data()
+
+    return ViolatorData(
+        id=data.get("id"),
+        username=data.get("username"),
+        tg_id=data.get("tg_id"),
+    )
