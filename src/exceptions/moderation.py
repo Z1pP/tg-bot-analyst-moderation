@@ -8,13 +8,9 @@ class ModerationError(BotBaseException):
 class PublicModerationError(ModerationError):
     """Исключение, текст которого будет отправляться в чат"""
 
-    delivery = "public"
-
 
 class PrivateModerationError(ModerationError):
     """Исключение, текст которого будет отправляться в ЛС админу"""
-
-    delivery = "private"
 
 
 class BotInsufficientPermissionsError(PrivateModerationError):
