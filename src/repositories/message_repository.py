@@ -17,25 +17,6 @@ class MessageRepository:
     def __init__(self, db_manager: DatabaseContextManager) -> None:
         self._db = db_manager
 
-    async def get_last_user_message(
-        self, user_id: int, chat_id: int
-    ) -> Optional[ChatMessage]:
-        async with self._db.session() as session:
-            try:
-                return await session.scalar(
-                    select(ChatMessage)
-                    .where(
-                        ChatMessage.user_id == user_id,
-                        ChatMessage.chat_id == chat_id,
-                    )
-                    .order_by(ChatMessage.id.desc())
-                    .limit(1)
-                    .offset(1)
-                )
-            except Exception as e:
-                logger.error("Ошибка при получении последнего сообщения: %s", e)
-                return None
-
     async def create_new_message(self, dto: CreateMessageDTO) -> ChatMessage:
         async with self._db.session() as session:
             try:
