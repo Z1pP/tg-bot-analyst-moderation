@@ -25,6 +25,7 @@ from usecases.amnesty import (
 )
 from utils.state_logger import log_and_set_state
 from utils.user_data_parser import parse_data_from_text
+from utils.formatter import format_duration
 
 
 router = Router()
@@ -41,7 +42,7 @@ async def amnesty_handler(message: types.Message, state: FSMContext) -> None:
     """
     text = (
         "🕊️ <b>Амнистия пользователя</b>\n\n"
-        "Для разблокировки или снятия наказания пришлите @username или Telegram ID пользователя\n\n"
+        "Для разблокировки или снятия ограничения пришлите @username или Telegram ID пользователя\n\n"
         "<i>Пример: @john_pidor или <code>123456789</code></i>"
     )
     await message.reply(text=text)
@@ -86,7 +87,7 @@ async def waiting_user_data_input(message: types.Message, state: FSMContext) -> 
         tg_id=user.tg_id,
     )
 
-    text = f"Что делаем с <b>{user.username}</b>?"
+    text = f"Что делаем с <b>@{user.username}</b>?"
 
     await message.reply(
         text=text,
@@ -167,7 +168,7 @@ async def cancel_warn_handler(message: types.Message, state: FSMContext) -> None
     text = (
         f"Отмена последнего предупреждения даст возможность @{violator.username} "
         "писать в чате.\n\n<b>Вы уверены, что хотите отменить последнее предупреждение "
-        f"для @{violator.username}</b>"
+        f"для @{violator.username}?</b>"
     )
 
     await state.update_data(action=KbCommands.CANCEL_WARN)
@@ -420,7 +421,9 @@ async def execute_amnesty_action(
             if result.next_punishment_type == PunishmentType.BAN:
                 next_step = "бессрочной блокировке."
             elif result.next_punishment_type == PunishmentType.MUTE:
-                next_step = f"муту на {result.next_punishment_duration} сек."
+                next_step = (
+                    f"муту на {format_duration(result.next_punishment_duration)}"
+                )
             else:
                 next_step = "предупреждению."
 
