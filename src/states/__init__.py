@@ -6,12 +6,10 @@ from .user_states import (
     AllUsersReportStates,
     SingleUserReportStates,
     UsernameStates,
-    UserStateManager,
 )
 
 __all__ = [
     "ChatStateManager",
-    "UserStateManager",
     "UsernameStates",
     "AllUsersReportStates",
     "SingleUserReportStates",
