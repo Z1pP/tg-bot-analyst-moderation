@@ -1,4 +1,24 @@
+from .amnesty import (
+    AmnestyError,
+    BotCannotUnbanError,
+    NoChatsWithBannedUserError,
+    UnbanFailedError,
+    UserNotBannedError,
+    UserNotFoundError as AmnestyUserNotFoundError,
+)
 from .base import BotBaseException
+from .moderation import (
+    ArchiveChatError,
+    BotInsufficientPermissionsError,
+    CannotPunishBotAdminError,
+    CannotPunishChatAdminError,
+    CannotPunishYouSelf,
+    MessageTooOldError,
+    ModerationError,
+    PrivateModerationError,
+    PublicModerationError,
+)
+from .user import UserError, UserNotFoundException
 
 
 # Database exceptions
