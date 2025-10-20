@@ -19,6 +19,7 @@ from .report import (
 )
 from .template_dto import TemplateDTO, TemplateSearchResultDTO, UpdateTemplateTitleDTO
 from .user import CreateUserDTO, DbUserDTO, UpdateUserDTO, UserDTO
+from .amnesty import AmnestyUserDTO, CancelWarnResultDTO
 
 __all__ = [
     # Category
@@ -59,4 +60,7 @@ __all__ = [
     "UpdateUserDTO",
     "UserDTO",
     "DbUserDTO",
+    # Amnesty
+    "AmnestyUserDTO",
+    "CancelWarnResultDTO",
 ]
