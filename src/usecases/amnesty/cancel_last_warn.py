@@ -176,8 +176,9 @@ class CancelLastWarnUseCase:
 
             report_text = (
                 f"⏪ <b>Отмена последнего предупреждения для @{dto.violator_username}</b>\n\n"
-                f"• Отменил: @{dto.admin_username} в чате <b>{chat.title}</b>\n"
-                f"• След. шаг: {next_step}"
+                f"• Чат: <b>{chat.title}</b>\n"
+                f"• Отменил: @{dto.admin_username}</b>\n"
+                f"• След. шаг: <b>{next_step}</b>"
             )
 
             for archive_chat in archive_chats:
