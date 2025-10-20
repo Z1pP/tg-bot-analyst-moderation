@@ -196,30 +196,3 @@ class ModerationUseCase:
             pass
 
         context.message_deleted = violator_msg_deleted
-
-    async def _send_messages_to_admins(
-        self,
-        dto: ModerationActionDTO,
-        text: str,
-    ) -> None:
-        admins = await self.user_service.get_admins_for_chat(chat_tg_id=dto.chat_tgid)
-
-        if not admins:
-            return
-
-        extended_text = (
-            f"Администратор @{dto.admin_username} попытался выдать "
-            f"предупреждение пользователю @{dto.user_reply_username} в чате {dto.chat_title},"
-            "однако отсутсвует чат с историей удалённых сообщений.\n\n" + text
-        )
-
-        admins = [admin for admin in admins if admin.tg_id != dto.admin_tgid]
-
-        for admin in admins:
-            try:
-                await self.bot_message_service.send_private_message(
-                    user_tgid=admin.tg_id,
-                    text=extended_text,
-                )
-            except TelegramForbiddenError:
-                pass
