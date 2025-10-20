@@ -138,17 +138,14 @@ class ChatRepository:
 
     async def get_archive_chats(
         self,
-        source_chat_title: str,
+        source_chat_tgid: str,
     ) -> Optional[List[ChatSession]]:
         """Получает архивный чат по названию источника"""
         async with self._db.session() as session:
             try:
-                subq = (
-                    select(ChatSession.chat_id)
-                    .where(ChatSession.title == source_chat_title)
-                    .scalar_subquery()
+                query = select(ChatSession).where(
+                    ChatSession.archive_chat_id == source_chat_tgid
                 )
-                query = select(ChatSession).where(ChatSession.archive_chat_id == subq)
 
                 result = await session.execute(query)
                 chats = result.scalars().all()
