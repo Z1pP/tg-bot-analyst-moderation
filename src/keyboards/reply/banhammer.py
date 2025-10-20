@@ -11,3 +11,15 @@ def block_actions_kb() -> ReplyKeyboardMarkup:
     ]
 
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
+
+def amnesty_actions_kb() -> ReplyKeyboardMarkup:
+    buttons = [
+        [
+            KeyboardButton(text=KbCommands.CANCEL_WARN),
+            KeyboardButton(text=KbCommands.UNMUTE),
+            KeyboardButton(text=KbCommands.UNBAN),
+        ],
+    ]
+
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
