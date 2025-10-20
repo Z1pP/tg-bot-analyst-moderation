@@ -33,54 +33,6 @@ class PunishmentRepository:
                 )
                 raise
 
-    async def get_current_punishment(
-        self, user_id: int, chat_id: int
-    ) -> Optional[Punishment]:
-        async with self._db.session() as session:
-            try:
-                query = (
-                    select(Punishment)
-                    .options(joinedload(Punishment.user))
-                    .where(Punishment.user_id == user_id, Punishment.chat_id == chat_id)
-                    .order_by(Punishment.created_at.desc())
-                    .limit(1)
-                )
-
-                result = await session.execute(query)
-                punishment = result.scalar_one_or_none()
-
-                if punishment:
-                    logger.info(
-                        "Найдено текущее наказание для пользователя %s",
-                        punishment.user.username,
-                    )
-                else:
-                    logger.info(
-                        "Текущее наказание для пользователя %s не найдено",
-                        punishment.user.username,
-                    )
-                return punishment
-            except Exception as e:
-                logger.error(
-                    "Ошибка при получении текущего наказания для %s: %s",
-                    user_id,
-                    e,
-                )
-                return None
-
-    async def update_punishment(self, punishment: Punishment) -> None:
-        async with self._db.session() as session:
-            try:
-                logger.info(f"Обновление наказания {punishment.id}")
-                session.add(punishment)
-                await session.commit()
-                await session.refresh(punishment)
-                logger.info(f"Наказание {punishment.id} обновлено")
-            except Exception as e:
-                logger.error(f"Ошибка при обновлении наказания {punishment.id}: {e}")
-                await session.rollback()
-                raise e
-
     async def create_punishment(self, punishment: Punishment) -> Punishment:
         async with self._db.session() as session:
             try:
