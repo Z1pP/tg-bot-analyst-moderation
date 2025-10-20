@@ -166,7 +166,7 @@ class CancelLastWarnUseCase(BaseAmnestyUseCase):
             report_text = (
                 f"⏪ <b>Отмена последнего предупреждения для @{dto.violator_username}</b>\n\n"
                 f"• Чат: <b>{chat.title}</b>\n"
-                f"• Отменил: @{dto.admin_username}</b>\n"
+                f"• Отменил: <b>@{dto.admin_username}</b>\n"
                 f"• След. шаг: <b>{next_step}</b>"
             )
 
