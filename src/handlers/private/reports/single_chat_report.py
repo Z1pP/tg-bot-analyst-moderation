@@ -4,18 +4,18 @@ from typing import List, Optional
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
-from keyboards.inline import order_details_kb
+from keyboards.inline import CalendarKeyboard, order_details_kb
 from keyboards.reply import admin_menu_kb, chat_actions_kb, get_time_period_kb
+from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from states import ChatStateManager
 from usecases.report import GetReportOnSpecificChatUseCase
-from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
@@ -82,10 +82,18 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
                 new_state=ChatStateManager.selecting_custom_period,
             )
 
-            await send_html_message_with_kb(
-                message=message,
-                text="Введите период в формате DD.MM-DD.MM\n"
-                "Например: 16.04-20.04 или 16.04- (с 16.04 до сегодня)",
+            # Показываем календарь
+            now = TimeZoneService.now()
+            await state.update_data(cal_start_date=None, cal_end_date=None)
+
+            calendar_kb = CalendarKeyboard.create_calendar(
+                year=now.year,
+                month=now.month,
+            )
+
+            await message.answer(
+                text="📅 Выберите начальную дату диапазона:",
+                reply_markup=calendar_kb,
             )
             return
 
@@ -107,46 +115,141 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
         await handle_exception(message, e, "process_report_input")
 
 
-@router.message(ChatStateManager.selecting_custom_period)
-async def process_custom_period_input(message: Message, state: FSMContext) -> None:
-    """Обрабатывает ввод пользовательского периода для отчета."""
+@router.callback_query(
+    F.data.startswith("cal_"), ChatStateManager.selecting_custom_period
+)
+async def calendar_callback_handler(callback: CallbackQuery, state: FSMContext) -> None:
+    """Обработчик callback-кнопок календаря."""
     try:
-        data = await state.get_data()
-        chat_id = data.get("chat_id")
+        await callback.answer()
 
-        logger.info(
-            f"Получен пользовательский период для чата chat_id={chat_id}: {message.text}"
-        )
+        data = callback.data.split("_")
+        action = data[1]
+
+        user_data = await state.get_data()
+        cal_start = user_data.get("cal_start_date")
+        cal_end = user_data.get("cal_end_date")
+        chat_id = user_data.get("chat_id")
 
         if not chat_id:
-            logger.warning("Отсутствует chat_id при вводе периода")
-            await select_chat_again(message=message, state=state)
+            await select_chat_again(callback.message, state)
             return
 
-        try:
-            start_date, end_date = parse_date(message.text)
-            logger.info(f"Парсинг периода успешен: {start_date} - {end_date}")
-        except ValueError as e:
-            logger.warning(f"Некорректный формат даты: {message.text}, ошибка: {e}")
-            await send_html_message_with_kb(
-                message=message,
-                text=f"❌ Некорректный формат даты: {str(e)}\n"
-                "Пожалуйста, введите период в формате DD.MM-DD.MM",
+        if action == "ignore":
+            return
+
+        elif action == "prev" or action == "next":
+            year, month = int(data[2]), int(data[3])
+
+            if action == "prev":
+                month -= 1
+                if month < 1:
+                    month = 12
+                    year -= 1
+            else:
+                month += 1
+                if month > 12:
+                    month = 1
+                    year += 1
+
+            calendar_kb = CalendarKeyboard.create_calendar(
+                year=year,
+                month=month,
+                start_date=cal_start,
+                end_date=cal_end,
+            )
+
+            text = "📅 Выберите начальную дату диапазона:"
+            if cal_start:
+                text = "📅 Выберите конечную дату диапазона:"
+
+            await callback.message.edit_text(
+                text=text,
+                reply_markup=calendar_kb,
+            )
+
+        elif action == "day":
+            year, month, day = int(data[2]), int(data[3]), int(data[4])
+            selected_date = datetime(year, month, day)
+
+            if not cal_start or (cal_start and cal_end):
+                await state.update_data(cal_start_date=selected_date, cal_end_date=None)
+
+                calendar_kb = CalendarKeyboard.create_calendar(
+                    year=year,
+                    month=month,
+                    start_date=selected_date,
+                )
+
+                await callback.message.edit_text(
+                    text="📅 Выберите конечную дату диапазона:",
+                    reply_markup=calendar_kb,
+                )
+            else:
+                if selected_date < cal_start:
+                    cal_start, selected_date = selected_date, cal_start
+
+                await state.update_data(
+                    cal_start_date=cal_start, cal_end_date=selected_date
+                )
+
+                calendar_kb = CalendarKeyboard.create_calendar(
+                    year=year,
+                    month=month,
+                    start_date=cal_start,
+                    end_date=selected_date,
+                )
+
+                await callback.message.edit_text(
+                    text=f"✅ Выбран диапазон: {cal_start.strftime('%d.%m.%Y')} - {selected_date.strftime('%d.%m.%Y')}",
+                    reply_markup=calendar_kb,
+                )
+
+        elif action == "confirm":
+            if cal_start and cal_end:
+                await callback.message.delete()
+
+                temp_message = await callback.bot.send_message(
+                    chat_id=callback.message.chat.id,
+                    text="⏳ Генерирую отчёт...",
+                )
+
+                await generate_and_send_report(
+                    message=temp_message,
+                    state=state,
+                    start_date=cal_start,
+                    end_date=cal_end,
+                    chat_id=chat_id,
+                    admin_tg_id=callback.from_user.id,
+                )
+
+                await temp_message.delete()
+                await state.set_state(ChatStateManager.selecting_period)
+
+        elif action == "reset":
+            now = TimeZoneService.now()
+            await state.update_data(cal_start_date=None, cal_end_date=None)
+
+            calendar_kb = CalendarKeyboard.create_calendar(
+                year=now.year,
+                month=now.month,
+            )
+
+            await callback.message.edit_text(
+                text="📅 Выберите начальную дату диапазона:",
+                reply_markup=calendar_kb,
+            )
+
+        elif action == "cancel":
+            await callback.message.delete()
+            await callback.bot.send_message(
+                chat_id=callback.message.chat.id,
+                text="Выбор периода отменён",
                 reply_markup=get_time_period_kb(),
             )
-            await state.set_state(ChatStateManager.selecting_period)
-            return
 
-        await generate_and_send_report(
-            message=message,
-            state=state,
-            start_date=start_date,
-            end_date=end_date,
-            chat_id=chat_id,
-            selected_period=message.text,
-        )
     except Exception as e:
-        await handle_exception(message, e, "process_custom_period_input")
+        await handle_exception(callback.message, e, "calendar_callback_handler")
 
 
 @router.message(
@@ -201,6 +304,7 @@ async def generate_and_send_report(
     end_date: datetime,
     chat_id: int,
     selected_period: Optional[str] = None,
+    admin_tg_id: Optional[int] = None,
 ) -> None:
     """Генерирует и отправляет отчет по чату."""
     try:
@@ -214,7 +318,7 @@ async def generate_and_send_report(
 
         report_dto = ChatReportDTO(
             chat_id=chat_id,
-            admin_tg_id=str(message.from_user.id),
+            admin_tg_id=str(admin_tg_id or message.from_user.id),
             start_date=adjusted_start,
             end_date=adjusted_end,
             selected_period=selected_period,
@@ -225,7 +329,7 @@ async def generate_and_send_report(
         )
         is_single_day = usecase.is_single_day_report(report_dto)
         report_parts = await usecase.execute(dto=report_dto)
-        
+
         logger.info(
             f"Отчет по чату {chat_id} сгенерирован, частей: {len(report_parts)}"
         )
@@ -250,6 +354,3 @@ async def generate_and_send_report(
     except Exception as e:
         logger.error(f"Ошибка при генерации/отправке отчета по чату {chat_id}: {e}")
         await handle_exception(message, e, "generate_and_send_report")
-
-
-
