@@ -1,46 +1,31 @@
 from typing import List, Optional
-from dto import ChatDTO, AmnestyUserDTO
+
+from dto import AmnestyUserDTO, ChatDTO
 from repositories import ChatTrackingRepository, UserChatStatusRepository
 from services import UserService
 
+from .base_get_chats import BaseGetChatsUseCase
 
-class GetChatsWithMutedUserUseCase:
+
+class GetChatsWithMutedUserUseCase(BaseGetChatsUseCase):
+    """Возвращает чаты где пользователь замучен."""
+
     def __init__(
         self,
         user_service: UserService,
         chat_tracking_repository: ChatTrackingRepository,
         user_chat_status_repository: UserChatStatusRepository,
     ):
-        self.user_service = user_service
-        self.chat_tracking_repository = chat_tracking_repository
+        super().__init__(user_service, chat_tracking_repository)
         self.user_chat_status_repository = user_chat_status_repository
 
     async def execute(self, dto: AmnestyUserDTO) -> Optional[List[ChatDTO]]:
-        admin = await self.user_service.get_user(tg_id=dto.admin_tgid)
-
-        # Получаем все отслеживаемые чаты администратора
-        tracked_chats = await self.chat_tracking_repository.get_all_tracked_chats(
-            admin_id=admin.id
-        )
-
-        # Среди отслеживаемых чатов администратора ищем где пользователь замучен
-        chat_dtos = []
-        for chat in tracked_chats:
+        async def is_muted(chat):
+            # Среди отслеживаемых чатов администратора ищем где пользователь замучен
             status = await self.user_chat_status_repository.get_status(
                 user_id=dto.violator_id,
                 chat_id=chat.id,
             )
+            return status and status.is_muted
 
-            if status and status.is_muted:
-                chat_dtos.append(
-                    ChatDTO(
-                        id=chat.id,
-                        tg_id=chat.chat_id,
-                        title=chat.title,
-                    )
-                )
-
-        if not chat_dtos:
-            return None
-
-        return chat_dtos
+        return await super().execute(dto, is_muted)
