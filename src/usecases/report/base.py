@@ -37,7 +37,6 @@ class BaseReportUseCase(ABC):
         self._message_repository = message_repository
         self._reaction_repository = reaction_repository
         self._chat_repository = chat_repository
-        self._time_service = TimeZoneService
 
     @abstractmethod
     async def execute(self, dto) -> List[str]:
@@ -73,21 +72,6 @@ class BaseReportUseCase(ABC):
             start_date=start_date,
             end_date=end_date,
             chat_ids=chat_ids,
-        )
-        return self._process_items(items)
-
-    async def _get_processed_items_by_chat(
-        self,
-        repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],
-        chat_id: int,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> List[T]:
-        """Получает и обрабатывает элементы из репозитория по чату"""
-        items = await repository_method(
-            chat_id=chat_id,
-            start_date=start_date,
-            end_date=end_date,
         )
         return self._process_items(items)
 
