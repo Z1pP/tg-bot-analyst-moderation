@@ -4,6 +4,8 @@ from aiogram.types import (
     ChatMemberAdministrator,
     ChatMemberOwner,
     ResultChatMemberUnion,
+    ChatMemberBanned,
+    ChatMemberRestricted,
 )
 
 
@@ -66,3 +68,35 @@ class BotPermissionService:
         """
         member = await self.bot.get_chat_member(chat_id=chat_tg_id, user_id=tg_id)
         return isinstance(member, (ChatMemberOwner, ChatMemberAdministrator))
+
+    async def is_member_banned(
+        self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
+    ) -> bool:
+        """
+        Проверяет, заблокирован ли пользователь в чате.
+
+        Args:
+            tg_id: Telegram ID пользователя
+            chat_tg_id: Telegram ID чата
+
+        Returns:
+            True если пользователь заблокирован
+        """
+        member = await self.bot.get_chat_member(chat_id=chat_tg_id, user_id=int(tg_id))
+        return isinstance(member, ChatMemberBanned)
+
+    async def is_member_muted(
+        self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
+    ) -> bool:
+        """
+        Проверяет, замучен ли пользователь в чате.
+
+        Args:
+            tg_id: Telegram ID пользователя
+            chat_tg_id: Telegram ID чата
+
+        Returns:
+            True если пользователь ограничен в правах (мут)
+        """
+        member = await self.bot.get_chat_member(chat_id=chat_tg_id, user_id=int(tg_id))
+        return isinstance(member, ChatMemberRestricted) and not member.can_send_messages
