@@ -10,9 +10,8 @@ from container import container
 from dto import AmnestyUserDTO
 from exceptions import AmnestyError
 from keyboards.inline.chats_kb import tracked_chats_with_all_kb
-from keyboards.reply import admin_menu_kb
+from keyboards.reply import admin_menu_kb, amnesty_actions_kb
 from keyboards.inline.amnesty import confirm_action_ikb
-from keyboards.reply import amnesty_actions_kb
 from services import UserService
 from states import AmnestyStates, BanHammerStates
 from usecases.amnesty import (
@@ -89,10 +88,7 @@ async def waiting_user_data_input(message: types.Message, state: FSMContext) -> 
 
     text = f"Что делаем с <b>@{user.username}</b>?"
 
-    await message.reply(
-        text=text,
-        reply_markup=amnesty_actions_kb(),
-    )
+    await message.reply(text=text, reply_markup=amnesty_actions_kb())
 
     await log_and_set_state(
         message=message,
@@ -131,7 +127,7 @@ async def unban_handler(message: types.Message, state: FSMContext) -> None:
     F.text == KbCommands.UNMUTE,
     AmnestyStates.waiting_action_select,
 )
-async def cancel_warn_handler(message: types.Message, state: FSMContext) -> None:
+async def unmute_warn_handler(message: types.Message, state: FSMContext) -> None:
     """Обработчик для отмены мута в чате с сохранением текущего предупреждения"""
 
     violator = await extract_violator_data_from_state(state=state)
@@ -144,10 +140,7 @@ async def cancel_warn_handler(message: types.Message, state: FSMContext) -> None
 
     await state.update_data(action=KbCommands.UNMUTE)
 
-    await message.reply(
-        text=text,
-        reply_markup=confirm_action_ikb(),
-    )
+    await message.reply(text=text, reply_markup=confirm_action_ikb())
 
     await log_and_set_state(
         message=message,
