@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from dto import AmnestyUserDTO, ChatDTO
 from repositories import ChatTrackingRepository, UserChatStatusRepository
-from services import UserService
+from services import UserService, BotPermissionService
 
 from .base_get_chats import BaseGetChatsUseCase
 
@@ -15,9 +15,11 @@ class GetChatsWithBannedUserUseCase(BaseGetChatsUseCase):
         user_service: UserService,
         chat_tracking_repository: ChatTrackingRepository,
         user_chat_status_repository: UserChatStatusRepository,
+        bot_permission_service: BotPermissionService,
     ):
         super().__init__(user_service, chat_tracking_repository)
         self.user_chat_status_repository = user_chat_status_repository
+        self.bot_permission_service = bot_permission_service
 
     async def execute(self, dto: AmnestyUserDTO) -> Optional[List[ChatDTO]]:
         async def is_banned(chat):
@@ -26,6 +28,14 @@ class GetChatsWithBannedUserUseCase(BaseGetChatsUseCase):
                 user_id=dto.violator_id,
                 chat_id=chat.id,
             )
-            return status and status.is_banned
+            try:
+                is_member_banned = await self.bot_permission_service.is_member_banned(
+                    tg_id=dto.violator_tgid,
+                    chat_tg_id=chat.chat_id,
+                )
+            except Exception:
+                is_member_banned = False
+
+            return (status and status.is_banned) or is_member_banned
 
         return await super().execute(dto, is_banned)
