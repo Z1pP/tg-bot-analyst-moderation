@@ -53,6 +53,44 @@ class BotPermissionService:
             return member.can_restrict_members
         return False
 
+    async def can_delete_messages(self, chat_tgid: ChatIdUnion) -> bool:
+        """
+        Проверяет, может ли бот удалять сообщения в чате.
+
+        Args:
+            chat_tgid: Telegram ID чата
+
+        Returns:
+            True если бот может удалять сообщения
+        """
+        member = await self.get_bot_member(chat_tgid=chat_tgid)
+
+        if isinstance(member, (ChatMemberOwner, ChatMemberAdministrator)):
+            return member.can_delete_messages
+        return False
+
+    async def can_post_messages(self, chat_tgid: ChatIdUnion) -> bool:
+        """
+        Проверяет, может ли бот отправлять сообщения в чате.
+
+        Args:
+            chat_tgid: Telegram ID чата
+
+        Returns:
+            True если бот может отправлять сообщения
+        """
+        member = await self.get_bot_member(chat_tgid=chat_tgid)
+
+        if isinstance(member, ChatMemberOwner):
+            return True
+        if isinstance(member, ChatMemberAdministrator):
+            return (
+                member.can_post_messages
+                if hasattr(member, "can_post_messages")
+                else True
+            )
+        return False
+
     async def is_administrator(
         self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
     ) -> bool:
