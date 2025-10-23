@@ -109,7 +109,7 @@ class BotMessageService:
         from_chat_tgid: ChatIdUnion,
         message_id: int,
         reply_to_message_id: int,
-    ) -> bool:
+    ) -> Optional[int]:
         """
         Копирует сообщение как ответ на другое сообщение.
 
@@ -120,23 +120,23 @@ class BotMessageService:
             reply_to_message_id: ID сообщения, на которое отвечаем
 
         Returns:
-            True если копирование успешно
+            ID отправленного сообщения или None при ошибке
         """
         try:
-            await self.bot.copy_message(
+            result = await self.bot.copy_message(
                 chat_id=chat_tgid,
                 from_chat_id=from_chat_tgid,
                 message_id=message_id,
                 reply_to_message_id=reply_to_message_id,
             )
-            return True
+            return result.message_id
         except Exception as e:
             logger.error(
                 "Не удалось скопировать сообщение в чат %s: %s",
                 chat_tgid,
                 e,
             )
-            return False
+            return None
 
     async def forward_message(
         self,

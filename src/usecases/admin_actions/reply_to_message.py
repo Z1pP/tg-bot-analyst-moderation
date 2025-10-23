@@ -34,13 +34,13 @@ class ReplyToMessageUseCase:
             raise MessageSendError("Отсутствует сообщение для копирования")
 
         try:
-            is_sent = await self.bot_message_service.copy_message_as_reply(
+            sent_message_id = await self.bot_message_service.copy_message_as_reply(
                 chat_tgid=dto.chat_tgid,
                 from_chat_tgid=dto.admin_tgid,
                 message_id=dto.admin_message_id,
                 reply_to_message_id=dto.message_id,
             )
-            if not is_sent:
+            if not sent_message_id:
                 raise MessageSendError("Не удалось скопировать сообщение")
             logger.info("Ответ на сообщение %s отправлен", dto.message_id)
         except (TelegramBadRequest, TelegramForbiddenError) as e:
@@ -58,11 +58,15 @@ class ReplyToMessageUseCase:
             )
             if archive_chats:
                 chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
+
+                chat_id_str = str(dto.chat_tgid).replace("-100", "")
+                message_link = f"https://t.me/c/{chat_id_str}/{sent_message_id}"
+
                 report_text = (
                     f"💬 <b>Ответ от бота</b>\n\n"
-                    f"• ID сообщения: {dto.message_id}\n"
-                    f"• Чат: {chat.title}\n"
-                    f"• Отправил: @{dto.admin_username}"
+                    f"Чат: {chat.title}\n"
+                    f"Отправил: @{dto.admin_username}\n"
+                    f"<a href='{message_link}'>Ссылка на сообщение</a>"
                 )
 
                 for archive_chat in archive_chats:

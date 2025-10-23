@@ -49,3 +49,30 @@ class DeleteMessageUseCase:
                 exc_info=True,
             )
             raise MessageSendError(str(e))
+
+        try:
+            archive_chats = await self.chat_service.get_archive_chats(
+                source_chat_tgid=dto.chat_tgid,
+            )
+            if archive_chats:
+                chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
+                report_text = (
+                    f"🗑 <b>Удалено сообщение ботом</b>\n\n"
+                    f"Чат: {chat.title}\n"
+                    f"Кто удалил: @{dto.admin_username}"
+                )
+
+                for archive_chat in archive_chats:
+                    try:
+                        await self.bot_message_service.send_chat_message(
+                            chat_tgid=archive_chat.chat_id,
+                            text=report_text,
+                        )
+                    except (TelegramBadRequest, TelegramForbiddenError) as e:
+                        logger.warning(
+                            "Не удалось отправить отчет в архивный чат %s: %s",
+                            archive_chat.chat_id,
+                            e,
+                        )
+        except Exception as e:
+            logger.debug("Архивные чаты не найдены или ошибка: %s", e)
