@@ -1,5 +1,5 @@
 import calendar
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
