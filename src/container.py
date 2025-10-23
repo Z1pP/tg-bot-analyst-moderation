@@ -45,6 +45,7 @@ from usecases.categories import (
 )
 from usecases.chat import (
     GetAllChatsUseCase,
+    GetChatsForUserActionUseCase,
     GetOrCreateChatUseCase,
     GetTrackedChatsUseCase,
 )
@@ -65,7 +66,11 @@ from usecases.amnesty import (
     UnbanUserUseCase,
     UnmuteUserUseCase,
 )
-from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
+from usecases.moderation import (
+    BanUserFromAdminPanelUseCase,
+    GiveUserBanUseCase,
+    GiveUserWarnUseCase,
+)
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
@@ -212,6 +217,7 @@ class ContainerSetup:
             GetOrCreateChatUseCase,
             GetAllChatsUseCase,
             GetTrackedChatsUseCase,
+            GetChatsForUserActionUseCase,
         ]
 
         for usecase in chat_usecases:
@@ -233,6 +239,7 @@ class ContainerSetup:
         """Регистрация use cases для модерации."""
         container.register(GiveUserWarnUseCase)
         container.register(GiveUserBanUseCase)
+        container.register(BanUserFromAdminPanelUseCase)
         container.register(CancelLastWarnUseCase)
         container.register(GetChatsWithBannedUserUseCase)
         container.register(GetChatsWithMutedUserUseCase)
