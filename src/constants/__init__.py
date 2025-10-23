@@ -1,6 +1,4 @@
-from enum import Enum
-
-from .dialogs import UserTrackingDialogs
+from .dialogs import UserTrackingDialogs, BanUserDialogs
 
 MAX_MSG_LENGTH = 4000  # Указывает максимальную длину сообщения для вывода
 BREAK_TIME = 15  # Время перерыва между сообщенями
@@ -36,6 +34,7 @@ class KbCommands:
     # Banhammer
     LOCK_MENU = "🚫 Блокировки"
     AMNESTY = "🕊️ Амнистия"
+    BLOCK_USER = "🚫 Блок юзера"
 
     # Amnesty actions
     UNBAN = "🕊️ Полный разблок"
@@ -52,6 +51,8 @@ class KbCommands:
 class Dialog:
     # User Tracking
     UserTracking = UserTrackingDialogs
+    # Ban User
+    BanUser = BanUserDialogs
 
     MENU_TEXT = """
     <b>Привет, {username}!</b> ✨
@@ -73,17 +74,6 @@ class Dialog:
         "<i>Пример: @john_pidor или <code>123456789</code></i>\n\n"
         "✅Если всё сделано правильно, вы получите уведомление "
         "об успешном добавлении пользователя"
-    )
-
-    USER_ALREADY_TRACKED = (
-        "❌ Пользователь <b>{user_username}</b> уже находится в списке отслеживания."
-    )
-
-    SUCCESS_ADD_USER_TO_TRACKING = (
-        "✅ Отлично! Теперь Вы сможете собирать статистику по этому пользователю:\n\n"
-        "😀 Юзер: @{user_username}\n"
-        "🆔 ID: {user_tgid}\n"
-        "👤 Добавил: @{admin_username}"
     )
 
     class Error:
