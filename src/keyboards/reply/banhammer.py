@@ -7,6 +7,10 @@ def block_actions_kb() -> ReplyKeyboardMarkup:
     buttons = [
         [
             KeyboardButton(text=KbCommands.AMNESTY),
+            KeyboardButton(text=KbCommands.BLOCK_USER),
+        ],
+        [
+            KeyboardButton(text=KbCommands.MENU),
         ],
     ]
 
