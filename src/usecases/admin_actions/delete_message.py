@@ -29,6 +29,30 @@ class DeleteMessageUseCase:
             dto.admin_tgid,
         )
 
+        archive_chats = await self.chat_service.get_archive_chats(
+            source_chat_tgid=dto.chat_tgid,
+        )
+
+        if archive_chats:
+            for archive_chat in archive_chats:
+                try:
+                    await self.bot_message_service.forward_message(
+                        chat_tgid=archive_chat.chat_id,
+                        from_chat_tgid=dto.chat_tgid,
+                        message_tgid=dto.message_id,
+                    )
+                    logger.debug(
+                        "Сообщение %s переслано в архивный чат %s",
+                        dto.message_id,
+                        archive_chat.chat_id,
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Не удалось переслать сообщение в архивный чат %s: %s",
+                        archive_chat.chat_id,
+                        e,
+                    )
+
         try:
             is_deleted = await self.bot_message_service.delete_message_from_chat(
                 chat_id=dto.chat_tgid,
@@ -50,11 +74,8 @@ class DeleteMessageUseCase:
             )
             raise MessageSendError(str(e))
 
-        try:
-            archive_chats = await self.chat_service.get_archive_chats(
-                source_chat_tgid=dto.chat_tgid,
-            )
-            if archive_chats:
+        if archive_chats:
+            try:
                 chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
                 report_text = (
                     f"🗑 <b>Удалено сообщение ботом</b>\n\n"
@@ -74,5 +95,5 @@ class DeleteMessageUseCase:
                             archive_chat.chat_id,
                             e,
                         )
-        except Exception as e:
-            logger.debug("Архивные чаты не найдены или ошибка: %s", e)
+            except Exception as e:
+                logger.debug("Ошибка отправки отчета: %s", e)
