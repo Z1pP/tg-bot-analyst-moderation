@@ -1,5 +1,19 @@
 from .base import BotBaseException
 
+__all__ = [
+    "ModerationError",
+    "PublicModerationError",
+    "PrivateModerationError",
+    "BotInsufficientPermissionsError",
+    "ArchiveChatError",
+    "CannotPunishChatAdminError",
+    "CannotPunishBotAdminError",
+    "CannotPunishYouSelf",
+    "MessageTooOldError",
+    "MessageDeleteError",
+    "MessageSendError",
+]
+
 
 class ModerationError(BotBaseException):
     """Базовое исключение для ошибок модерации."""
@@ -69,3 +83,21 @@ class MessageTooOldError(PrivateModerationError):
             "❌ Не удалось удалить исходное сообщение, так как оно было отправлено "
             "более 48 часов назад."
         )
+
+
+class MessageDeleteError(BotBaseException):
+    """Ошибка при удалении сообщения."""
+
+    def get_user_message(self) -> str:
+        return "❌ Не удалось удалить сообщение. Возможно, оно старше 48 часов."
+
+
+class MessageSendError(BotBaseException):
+    """Ошибка при отправке сообщения."""
+
+    def __init__(self, error: str):
+        self.error = error
+        super().__init__()
+
+    def get_user_message(self) -> str:
+        return f"❌ Не удалось отправить сообщение: {self.error}"
