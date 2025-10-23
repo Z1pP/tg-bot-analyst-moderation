@@ -1,4 +1,6 @@
+from typing import List
 from repositories import ChatTrackingRepository, UserRepository
+from dto import ChatDTO
 
 
 class GetTrackedChatsUseCase:
@@ -10,7 +12,7 @@ class GetTrackedChatsUseCase:
         self._chat_tracking_repository = chat_tracking_repository
         self._user_repository = user_repository
 
-    async def execute(self, tg_id: str):
+    async def execute(self, tg_id: str) -> List[ChatDTO]:
         user = await self._user_repository.get_user_by_tg_id(tg_id=tg_id)
 
         if not user:
@@ -20,4 +22,6 @@ class GetTrackedChatsUseCase:
             admin_id=user.id
         )
 
-        return chats
+        return [
+            ChatDTO(id=chat.id, tg_id=chat.chat_id, title=chat.title) for chat in chats
+        ]
