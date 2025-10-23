@@ -1,13 +1,13 @@
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import Dialog, KbCommands
 from container import container
+from dto import UserTrackingDTO
 from keyboards.reply import get_back_kb, user_menu_kb
 from states import MenuStates
 from states.user_states import UsernameStates
@@ -15,7 +15,7 @@ from usecases.user_tracking import AddUserToTrackingUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
-from utils.username_validator import parse_and_validate_username
+from utils.user_data_parser import parse_data_from_text
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
             return
 
         try:
-            parse_data = parse_data_from_text(text=message.text)
+            user_data = parse_data_from_text(text=message.text)
         except ValueError:
             await send_html_message_with_kb(
                 message=message,
@@ -78,40 +78,28 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
             )
             return
 
-        chat_user_data = await find_user_in_chats(
-            bot=message.bot,
-            user_id=parse_data.user_tgid,
-        )
+        if user_data is None:
+            text = "❗Неверный формат ввода. Попробуйте еще раз."
+            await message.reply(text=text)
+            return
 
-        actual_username = (
-            chat_user_data.username if chat_user_data else parse_data.username
-        )
-        actual_tg_id = (
-            chat_user_data.user_tgid if chat_user_data else parse_data.user_tgid
-        )
-
-        # Получаем/обновляем/создаем пользователя в БД
-        user_data = await get_or_update_user(
-            username=actual_username,
-            tg_id=actual_tg_id,
+        tracking_dto = UserTrackingDTO(
+            admin_username=admin_username,
+            admin_tgid=str(message.from_user.id),
+            user_username=user_data.username,
+            user_tgid=user_data.tg_id,
         )
 
         usecase: AddUserToTrackingUseCase = container.resolve(AddUserToTrackingUseCase)
-        is_success = await usecase.execute(
-            admin_username=admin_username,
-            user_username=user_data.username,
-        )
+        result = await usecase.execute(dto=tracking_dto)
 
-        if not is_success:
+        if not result.success:
             logger.info(
                 f"Ошибка добавления пользователя {user_data.username} в отслеживание"
             )
             await send_html_message_with_kb(
                 message=message,
-                text=Dialog.Error.ADD_USER_ERROR.format(
-                    problem="Ошибка добавления пользователя в отслеживание",
-                    solution="Попробуйте еще раз",
-                ),
+                text=result.message,
                 reply_markup=user_menu_kb(),
             )
             return
@@ -121,11 +109,7 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
         )
         await send_html_message_with_kb(
             message=message,
-            text=Dialog.SUCCESS_ADD_MODERATOR.format(
-                forward_username=user_data.username,
-                forward_user_id=user_data.user_tgid,
-                admin_username=admin_username,
-            ),
+            text=result.message,
             reply_markup=user_menu_kb(),
         )
 
@@ -136,84 +120,6 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
         )
     except Exception as e:
         await handle_exception(message, e, "process_adding_user")
-
-
-async def get_or_update_user(username: str, tg_id: str):
-    from repositories import UserRepository
-
-    user_repo: UserRepository = container.resolve(UserRepository)
-
-    # Ищем по tg_id
-    user = await user_repo.get_user_by_tg_id(tg_id=tg_id)
-    if user:
-        # Если username отличаются - обновляем username
-        if user.username != username:
-            user = await user_repo.update_username(
-                user_id=user.id,
-                new_username=username,
-            )
-        return ParsedData(
-            username=user.username,
-            user_tgid=str(user.tg_id),
-        )
-
-    # Ищем по username
-    user = await user_repo.get_user_by_username(username=username)
-    if user:
-        # Если нет tg_id - добавляем
-        if not user.tg_id:
-            user = await user_repo.update_tg_id(
-                user_id=user.id,
-                new_tg_id=tg_id,
-            )
-        return ParsedData(
-            username=user.username,
-            user_tgid=str(user.tg_id),
-        )
-
-    user = await user_repo.create_user(
-        username=username,
-        tg_id=tg_id,
-    )
-    return ParsedData(username=user.username, user_tgid=str(user.tg_id))
-
-
-async def find_user_in_chats(bot: Bot, user_id: str) -> Optional[ParsedData]:
-    from repositories import ChatRepository
-
-    chat_repo: ChatRepository = container.resolve(ChatRepository)
-    chats = await chat_repo.get_all()
-
-    for chat in chats:
-        try:
-            member = await bot.get_chat_member(
-                chat_id=chat.chat_id,
-                user_id=int(user_id),
-            )
-            if member.user:
-                return ParsedData(
-                    username=member.user.username,
-                    user_tgid=str(member.user.id),
-                )
-        except Exception:
-            continue
-    return None
-
-
-def parse_data_from_text(text: str) -> ParsedData:
-    """Парсит username и user_tgid из текста, разделенного \n"""
-    lines = text.strip().split("\n")
-
-    if len(lines) != 2:
-        raise ValueError("Ожидается 2 строки: username и user_id")
-
-    username = parse_and_validate_username(lines[0])
-    user_tgid = lines[1].strip()
-
-    if not username:
-        raise ValueError("Неверный формат username")
-
-    return ParsedData(username=username, user_tgid=user_tgid)
 
 
 async def back_to_user_menu_handler(message: Message, state: FSMContext) -> None:
