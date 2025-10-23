@@ -70,7 +70,7 @@ def remove_inline_kb(
 
 
 def tracked_chats_inline_kb(
-    chats: List[ChatSession],
+    chats: List[ChatDTO],
     page: int = 1,
     total_count: int = 0,
     page_size: int = CHATS_PAGE_SIZE,
