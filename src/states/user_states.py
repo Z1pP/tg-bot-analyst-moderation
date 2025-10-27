@@ -10,10 +10,10 @@ class UsernameStates(StatesGroup):
 class SingleUserReportStates(StatesGroup):
     selected_single_user = State()
     selecting_period = State()
-    waiting_cutom_period = State()
+    selecting_custom_period = State()
 
 
 class AllUsersReportStates(StatesGroup):
     selected_all_users = State()
     selecting_period = State()
-    waiting_custom_period = State()
+    selecting_custom_period = State()
