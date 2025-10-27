@@ -1,10 +1,8 @@
 import logging
 from datetime import datetime
-from typing import Optional
-
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import Message
 
 from constants import KbCommands
 from constants.period import TimePeriod
@@ -13,7 +11,6 @@ from dto.report import AllUsersReportDTO
 from keyboards.inline import CalendarKeyboard
 from keyboards.inline.report import order_details_kb
 from keyboards.reply import get_time_period_for_full_report
-from keyboards.reply.user_actions import user_actions_kb
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from states import AllUsersReportStates
@@ -34,7 +31,8 @@ async def all_users_report_handler(message: Message, state: FSMContext) -> None:
     """Обработчик для получения отчета по всем пользователям за период."""
     try:
         logger.info(
-            f"Пользователь {message.from_user.id} запросил отчет по всем пользователям"
+            "Пользователь %s запросил отчет по всем пользователям",
+            message.from_user.id,
         )
 
         await log_and_set_state(
@@ -59,14 +57,14 @@ async def all_users_report_handler(message: Message, state: FSMContext) -> None:
 async def process_period_selection(message: Message, state: FSMContext) -> None:
     """Обрабатывает выбор периода для отчета."""
     try:
-        logger.info(f"Выбран период: {message.text}")
+        logger.info("Выбран период: %s", message.text)
 
         if message.text == TimePeriod.CUSTOM.value:
             logger.info("Запрос пользовательского периода")
             await log_and_set_state(
                 message=message,
                 state=state,
-                new_state=AllUsersReportStates.waiting_custom_period,
+                new_state=AllUsersReportStates.selecting_custom_period,
             )
 
             # Показываем календарь
@@ -98,177 +96,28 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
         await handle_exception(message, e, "process_period_selection")
 
 
-@router.callback_query(
-    F.data.startswith("cal_"), AllUsersReportStates.waiting_custom_period
-)
-async def calendar_callback_handler(callback: CallbackQuery, state: FSMContext) -> None:
-    """Обработчик callback-кнопок календаря."""
-    try:
-        await callback.answer()
-
-        data = callback.data.split("_")
-        action = data[1]
-
-        user_data = await state.get_data()
-        cal_start = user_data.get("cal_start_date")
-        cal_end = user_data.get("cal_end_date")
-
-        if action == "ignore":
-            return
-
-        elif action == "prev" or action == "next":
-            year, month = int(data[2]), int(data[3])
-
-            if action == "prev":
-                month -= 1
-                if month < 1:
-                    month = 12
-                    year -= 1
-            else:
-                month += 1
-                if month > 12:
-                    month = 1
-                    year += 1
-
-            calendar_kb = CalendarKeyboard.create_calendar(
-                year=year,
-                month=month,
-                start_date=cal_start,
-                end_date=cal_end,
-            )
-
-            text = "📅 Выберите начальную дату диапазона:"
-            if cal_start:
-                text = "📅 Выберите конечную дату диапазона:"
-
-            await callback.message.edit_text(
-                text=text,
-                reply_markup=calendar_kb,
-            )
-
-        elif action == "day":
-            year, month, day = int(data[2]), int(data[3]), int(data[4])
-            selected_date = datetime(year, month, day)
-
-            if not cal_start or (cal_start and cal_end):
-                await state.update_data(cal_start_date=selected_date, cal_end_date=None)
-
-                calendar_kb = CalendarKeyboard.create_calendar(
-                    year=year,
-                    month=month,
-                    start_date=selected_date,
-                )
-
-                await callback.message.edit_text(
-                    text="📅 Выберите конечную дату диапазона:",
-                    reply_markup=calendar_kb,
-                )
-            else:
-                if selected_date < cal_start:
-                    cal_start, selected_date = selected_date, cal_start
-
-                await state.update_data(
-                    cal_start_date=cal_start, cal_end_date=selected_date
-                )
-
-                calendar_kb = CalendarKeyboard.create_calendar(
-                    year=year,
-                    month=month,
-                    start_date=cal_start,
-                    end_date=selected_date,
-                )
-
-                await callback.message.edit_text(
-                    text=f"✅ Выбран диапазон: {cal_start.strftime('%d.%m.%Y')} - {selected_date.strftime('%d.%m.%Y')}",
-                    reply_markup=calendar_kb,
-                )
-
-        elif action == "confirm":
-            if cal_start and cal_end:
-                await callback.message.delete()
-
-                temp_message = await callback.bot.send_message(
-                    chat_id=callback.message.chat.id,
-                    text="⏳ Генерирую отчёт...",
-                )
-
-                await generate_and_send_report(
-                    message=temp_message,
-                    state=state,
-                    start_date=cal_start,
-                    end_date=cal_end,
-                    user_tg_id=callback.from_user.id,
-                )
-
-                await temp_message.delete()
-                await state.set_state(AllUsersReportStates.selecting_period)
-
-        elif action == "reset":
-            now = TimeZoneService.now()
-            await state.update_data(cal_start_date=None, cal_end_date=None)
-
-            calendar_kb = CalendarKeyboard.create_calendar(
-                year=now.year,
-                month=now.month,
-            )
-
-            await callback.message.edit_text(
-                text="📅 Выберите начальную дату диапазона:",
-                reply_markup=calendar_kb,
-            )
-
-        elif action == "cancel":
-            await callback.message.delete()
-            await callback.bot.send_message(
-                chat_id=callback.message.chat.id,
-                text="Выбор периода отменён",
-                reply_markup=get_time_period_for_full_report(),
-            )
-
-    except Exception as e:
-        await handle_exception(callback.message, e, "calendar_callback_handler")
-
-
-@router.message(
-    AllUsersReportStates.selecting_period,
-    F.text == KbCommands.BACK,
-)
-async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
-    """Обработчик для возврата в меню пользователя."""
-    try:
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=AllUsersReportStates.selected_all_users,
-        )
-
-        await send_html_message_with_kb(
-            message=message,
-            text="Возвращаемся в меню",
-            reply_markup=user_actions_kb(),
-        )
-    except Exception as e:
-        await handle_exception(message, e, "back_to_menu_handler")
-
-
 async def generate_and_send_report(
     message: Message,
     state: FSMContext,
     start_date: datetime,
     end_date: datetime,
-    selected_period: Optional[str] = None,
-    user_tg_id: Optional[int] = None,
+    selected_period: str | None = None,
+    admin_tg_id: int | None = None,
 ) -> None:
     """Генерирует и отправляет отчет."""
     try:
-        logger.info(f"Начало генерации отчета за период {start_date} - {end_date}")
+        logger.info(
+            "Начало генерации отчета за период %s - %s",
+            start_date,
+            end_date,
+        )
 
         adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
             start_date, end_date
         )
 
         report_dto = AllUsersReportDTO(
-            user_tg_id=str(user_tg_id or message.from_user.id),
+            user_tg_id=str(admin_tg_id or message.from_user.id),
             start_date=adjusted_start,
             end_date=adjusted_end,
             selected_period=selected_period,
@@ -294,5 +143,9 @@ async def generate_and_send_report(
 
         logger.info("Отчет успешно отправлен пользователю")
     except Exception as e:
-        logger.error(f"Ошибка при генерации/отправке отчета: {e}")
+        logger.error(
+            "Ошибка при генерации/отправке отчета: %s",
+            e,
+            exc_info=True,
+        )
         raise

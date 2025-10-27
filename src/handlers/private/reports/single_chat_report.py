@@ -1,10 +1,8 @@
 import logging
 from datetime import datetime
-from typing import Optional
-
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import Message
 
 from constants import KbCommands
 from constants.period import TimePeriod
@@ -141,172 +139,6 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
         await handle_exception(message, e, "process_report_input")
 
 
-@router.callback_query(
-    F.data.startswith("cal_"), ChatStateManager.selecting_custom_period
-)
-async def calendar_callback_handler(callback: CallbackQuery, state: FSMContext) -> None:
-    """Обработчик callback-кнопок календаря."""
-    try:
-        await callback.answer()
-
-        data = callback.data.split("_")
-        action = data[1]
-
-        user_data = await state.get_data()
-        cal_start = user_data.get("cal_start_date")
-        cal_end = user_data.get("cal_end_date")
-        chat_id = user_data.get("chat_id")
-
-        if not chat_id:
-            await select_chat_again(callback.message, state)
-            return
-
-        if action == "ignore":
-            return
-
-        elif action == "prev" or action == "next":
-            year, month = int(data[2]), int(data[3])
-
-            if action == "prev":
-                month -= 1
-                if month < 1:
-                    month = 12
-                    year -= 1
-            else:
-                month += 1
-                if month > 12:
-                    month = 1
-                    year += 1
-
-            calendar_kb = CalendarKeyboard.create_calendar(
-                year=year,
-                month=month,
-                start_date=cal_start,
-                end_date=cal_end,
-            )
-
-            text = "📅 Выберите начальную дату диапазона:"
-            if cal_start:
-                text = "📅 Выберите конечную дату диапазона:"
-
-            await callback.message.edit_text(
-                text=text,
-                reply_markup=calendar_kb,
-            )
-
-        elif action == "day":
-            year, month, day = int(data[2]), int(data[3]), int(data[4])
-            selected_date = datetime(year, month, day)
-
-            if not cal_start or (cal_start and cal_end):
-                await state.update_data(cal_start_date=selected_date, cal_end_date=None)
-
-                calendar_kb = CalendarKeyboard.create_calendar(
-                    year=year,
-                    month=month,
-                    start_date=selected_date,
-                )
-
-                await callback.message.edit_text(
-                    text="📅 Выберите конечную дату диапазона:",
-                    reply_markup=calendar_kb,
-                )
-            else:
-                if selected_date < cal_start:
-                    cal_start, selected_date = selected_date, cal_start
-
-                await state.update_data(
-                    cal_start_date=cal_start, cal_end_date=selected_date
-                )
-
-                calendar_kb = CalendarKeyboard.create_calendar(
-                    year=year,
-                    month=month,
-                    start_date=cal_start,
-                    end_date=selected_date,
-                )
-
-                await callback.message.edit_text(
-                    text=f"✅ Выбран диапазон: {cal_start.strftime('%d.%m.%Y')} - {selected_date.strftime('%d.%m.%Y')}",
-                    reply_markup=calendar_kb,
-                )
-
-        elif action == "confirm":
-            if cal_start and cal_end:
-                await callback.message.delete()
-
-                temp_message = await callback.bot.send_message(
-                    chat_id=callback.message.chat.id,
-                    text="⏳ Генерирую отчёт...",
-                )
-
-                await generate_and_send_report(
-                    message=temp_message,
-                    state=state,
-                    start_date=cal_start,
-                    end_date=cal_end,
-                    chat_id=chat_id,
-                    admin_tg_id=callback.from_user.id,
-                )
-
-                await temp_message.delete()
-                await state.set_state(ChatStateManager.selecting_period)
-
-        elif action == "reset":
-            now = TimeZoneService.now()
-            await state.update_data(cal_start_date=None, cal_end_date=None)
-
-            calendar_kb = CalendarKeyboard.create_calendar(
-                year=now.year,
-                month=now.month,
-            )
-
-            await callback.message.edit_text(
-                text="📅 Выберите начальную дату диапазона:",
-                reply_markup=calendar_kb,
-            )
-
-        elif action == "cancel":
-            await callback.message.delete()
-            await callback.bot.send_message(
-                chat_id=callback.message.chat.id,
-                text="Выбор периода отменён",
-                reply_markup=get_time_period_kb(),
-            )
-
-    except Exception as e:
-        await handle_exception(callback.message, e, "calendar_callback_handler")
-
-
-@router.message(
-    ChatStateManager.selecting_period,
-    F.text == KbCommands.BACK,
-)
-async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
-    """Обработчик для возврата в меню чата."""
-    try:
-        data = await state.get_data()
-        chat_id = data.get("chat_id")
-
-        if not chat_id:
-            await select_chat_again(message=message, state=state)
-            return
-
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=ChatStateManager.selecting_chat,
-        )
-
-        await send_html_message_with_kb(
-            message=message,
-            text="Возврат к меню чата.",
-            reply_markup=chat_actions_kb(),
-        )
-    except Exception as e:
-        await handle_exception(message, e, "back_to_menu_handler")
-
-
 async def select_chat_again(message: Message, state: FSMContext) -> None:
     """Повторно запрашивает выбор чата."""
 
@@ -329,8 +161,8 @@ async def generate_and_send_report(
     start_date: datetime,
     end_date: datetime,
     chat_id: int,
-    selected_period: Optional[str] = None,
-    admin_tg_id: Optional[int] = None,
+    selected_period: str | None = None,
+    admin_tg_id: int | None = None,
 ) -> None:
     """Генерирует и отправляет отчет по чату."""
     try:
