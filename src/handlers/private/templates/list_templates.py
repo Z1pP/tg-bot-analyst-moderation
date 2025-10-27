@@ -4,8 +4,8 @@ from aiogram.types import Message
 
 from constants import KbCommands
 from container import container
-from keyboards.inline.templates import templates_inline_kb
-from services.templates import TemplateService
+from keyboards.inline.template_scope import template_scope_selection_kb
+from usecases.chat import GetTrackedChatsUseCase
 from states import TemplateStateManager
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -18,9 +18,6 @@ async def templates_list_handler(message: Message, state: FSMContext) -> None:
     """
     Обработчик команды для выбора области шаблонов.
     """
-    from keyboards.inline.template_scope import template_scope_selection_kb
-    from usecases.chat import GetTrackedChatsUseCase
-
     try:
         await state.clear()
         await state.set_state(TemplateStateManager.selecting_template_scope)
