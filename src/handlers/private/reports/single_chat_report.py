@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -16,6 +16,7 @@ from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from states import ChatStateManager
 from usecases.report import GetReportOnSpecificChatUseCase
+from usecases.user_tracking import GetListTrackedUsersUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
@@ -35,13 +36,32 @@ async def single_chat_report_handler(message: Message, state: FSMContext) -> Non
         chat_id = data.get("chat_id")
 
         if not chat_id:
-            logger.warning("Отсутствует название чата в состоянии")
             await select_chat_again(message=message, state=state)
             return
         logger.info(
-            f"Пользователь {message.from_user.username} запросил отчет "
-            f"по чату с chat_id={chat_id}"
+            "Пользователь %s запросил отчет по чату %s",
+            message.from_user.username,
+            chat_id,
         )
+
+        tracked_users_usecase: GetListTrackedUsersUseCase = container.resolve(
+            GetListTrackedUsersUseCase
+        )
+        tracked_users = await tracked_users_usecase.execute(
+            admin_tgid=str(message.from_user.id)
+        )
+
+        if not tracked_users:
+            await message.answer(
+                "❌ У вас нет отслеживаемых пользователей.\n"
+                "Добавьте пользователей в отслеживание для составления отчета.",
+                reply_markup=chat_actions_kb(),
+            )
+            logger.warning(
+                "Админ %s пытается получить отчет без отслеживаемых пользователей",
+                message.from_user.username,
+            )
+            return
 
         await log_and_set_state(
             message=message,
@@ -68,7 +88,11 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
         data = await state.get_data()
         chat_id = data.get("chat_id")
 
-        logger.info(f"Выбран период для чата chat_id={chat_id}: {message.text}")
+        logger.info(
+            "Выбран период для чата %s: %s",
+            chat_id,
+            message.text,
+        )
 
         if not chat_id:
             logger.warning("Отсутствует название чата при выборе периода")
@@ -99,8 +123,10 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
 
         start_date, end_date = TimePeriod.to_datetime(message.text)
         logger.info(
-            f"Генерация отчета по чату chat_id={chat_id} "
-            f"за период: {start_date} - {end_date}"
+            "Генерация отчета по чату %s за период: %s - %s",
+            chat_id,
+            start_date,
+            end_date,
         )
 
         await generate_and_send_report(
@@ -309,7 +335,10 @@ async def generate_and_send_report(
     """Генерирует и отправляет отчет по чату."""
     try:
         logger.info(
-            f"Начало генерации отчета по чату {chat_id} за период {start_date} - {end_date}"
+            "Начало генерации отчета по чату %s за период %s - %s",
+            chat_id,
+            start_date,
+            end_date,
         )
 
         adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
@@ -331,7 +360,9 @@ async def generate_and_send_report(
         report_parts = await usecase.execute(dto=report_dto)
 
         logger.info(
-            f"Отчет по чату {chat_id} сгенерирован, частей: {len(report_parts)}"
+            "Отчет по чату %s сгенерирован, частей: %s",
+            chat_id,
+            len(report_parts),
         )
 
         # Сохраняем report_dto для детализации (только для многодневных отчетов)
@@ -350,7 +381,12 @@ async def generate_and_send_report(
                 reply_markup=order_details_kb(show_details=not is_single_day),
             )
 
-        logger.info(f"Отчет по чату {chat_id} успешно отправлен")
+        logger.info("Отчет по чату %s успешно отправлен", chat_id)
     except Exception as e:
-        logger.error(f"Ошибка при генерации/отправке отчета по чату {chat_id}: {e}")
+        logger.error(
+            "Ошибка при генерации/отправке отчета по чату %s: %s",
+            chat_id,
+            e,
+            exc_info=True,
+        )
         await handle_exception(message, e, "generate_and_send_report")
