@@ -13,6 +13,7 @@ from keyboards.reply import get_time_period_kb
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from states import SingleUserReportStates
+from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.report import GetSingleUserReportUseCase
 
 from utils.exception_handler import handle_exception
@@ -46,6 +47,25 @@ async def single_user_report_handler(message: Message, state: FSMContext) -> Non
             message.from_user.username,
             user_id,
         )
+
+        # Проверяем наличие отслеживаемых чатов
+        tracked_chats_usecase: GetUserTrackedChatsUseCase = container.resolve(
+            GetUserTrackedChatsUseCase
+        )
+        user_chats_dto = await tracked_chats_usecase.execute(
+            tg_id=str(message.from_user.id)
+        )
+
+        if not user_chats_dto.chats:
+            await message.answer(
+                "❌ У вас нет отслеживаемых чатов.\n"
+                "Добавьте чаты в отслеживание для составления отчета."
+            )
+            logger.warning(
+                "Админ %s пытается получить отчет без отслеживаемых чатов",
+                message.from_user.username,
+            )
+            return
 
         await log_and_set_state(
             message=message,

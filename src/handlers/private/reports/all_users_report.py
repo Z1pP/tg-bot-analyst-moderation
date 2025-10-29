@@ -14,6 +14,7 @@ from keyboards.reply import get_time_period_for_full_report
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from states import AllUsersReportStates
+from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.report import GetAllUsersReportUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
@@ -34,6 +35,25 @@ async def all_users_report_handler(message: Message, state: FSMContext) -> None:
             "Пользователь %s запросил отчет по всем пользователям",
             message.from_user.id,
         )
+
+        # Проверяем наличие отслеживаемых чатов
+        tracked_chats_usecase: GetUserTrackedChatsUseCase = container.resolve(
+            GetUserTrackedChatsUseCase
+        )
+        user_chats_dto = await tracked_chats_usecase.execute(
+            tg_id=str(message.from_user.id)
+        )
+
+        if not user_chats_dto.chats:
+            await message.answer(
+                "❌ У вас нет отслеживаемых чатов.\n"
+                "Добавьте чаты в отслеживание для составления отчета."
+            )
+            logger.warning(
+                "Админ %s пытается получить отчет без отслеживаемых чатов",
+                message.from_user.username,
+            )
+            return
 
         await log_and_set_state(
             message=message,
