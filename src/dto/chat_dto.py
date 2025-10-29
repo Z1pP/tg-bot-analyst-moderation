@@ -16,7 +16,7 @@ class ChatDTO:
         """Создает DTO из доменной модели"""
         return cls(
             id=chat.id,
-            chat_id=chat.chat_id,
+            tg_id=chat.chat_id,
             title=chat.title,
         )
 
