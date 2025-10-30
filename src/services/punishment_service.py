@@ -52,20 +52,17 @@ class PunishmentService:
 
         if punishment_type == PunishmentType.BAN:
             text = (
-                "✅ Пользователь забанен!\n Данные отобразятся в "
-                f"<b>{chats_title}</b>"
+                f"✅ Пользователь забанен!\n Данные отобразятся в <b>{chats_title}</b>"
             )
             return text
         elif punishment_type == PunishmentType.MUTE:
             text = (
-                "✅ Пользователь замучен!\n Данные отобразятся в "
-                f"<b>{chats_title}</b>"
+                f"✅ Пользователь замучен!\n Данные отобразятся в <b>{chats_title}</b>"
             )
             return text
 
         text = (
-            "✅ Пользователь предупрежден!\n Данные отобразятся в "
-            f"<b>{chats_title}</b>"
+            f"✅ Пользователь предупрежден!\n Данные отобразятся в <b>{chats_title}</b>"
         )
 
         return text
@@ -183,8 +180,8 @@ class PunishmentService:
 
         return (
             f"❌️ Сообщение {status} {date_str} в {time_str}\n\n"
-            f"• Юзер: @{dto.user_reply_username}\n"
-            f"• ID: {dto.user_reply_tgid}\n"
+            f"• Юзер: @{dto.violator_username}\n"
+            f"• ID: {dto.violator_tgid}\n"
             f"• Причина: {reason}\n"
             "• Время бана: бессрочно\n"
             f"• Выдал бан: @{dto.admin_username}\n"
@@ -225,8 +222,8 @@ class PunishmentService:
 
         return (
             f"❌️ Сообщение {status} {date_str} в {time_str}\n\n"
-            f"• Юзер: @{dto.user_reply_username}\n"
-            f"• ID: {dto.user_reply_tgid}\n"
+            f"• Юзер: @{dto.violator_username}\n"
+            f"• ID: <code>{dto.violator_tgid}</code>\n"
             f"• Причина: {reason}\n"
             f"{mute_line}"
             f"• Выдал пред: @{dto.admin_username}\n"
