@@ -105,7 +105,7 @@ class GiveUserBanUseCase(ModerationUseCase):
         )
 
         reason_text = PunishmentText.BAN.value.format(
-            username=context.dto.user_reply_username
+            username=context.dto.violator_username
         )
 
         admin_answer_text = self.punishment_service.generate_admin_answer(
