@@ -7,6 +7,7 @@ def block_actions_kb() -> ReplyKeyboardMarkup:
     buttons = [
         [
             KeyboardButton(text=KbCommands.AMNESTY),
+            KeyboardButton(text=KbCommands.WARN_USER),
             KeyboardButton(text=KbCommands.BLOCK_USER),
         ],
         [
@@ -23,6 +24,9 @@ def amnesty_actions_kb() -> ReplyKeyboardMarkup:
             KeyboardButton(text=KbCommands.CANCEL_WARN),
             KeyboardButton(text=KbCommands.UNMUTE),
             KeyboardButton(text=KbCommands.UNBAN),
+        ],
+        [
+            KeyboardButton(text=KbCommands.BACK),
         ],
     ]
 
