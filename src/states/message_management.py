@@ -1,5 +1,10 @@
-from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.state import State, StatesGroup
 
 
-class MessageManager(StatesGroup):
-    input_message_link = State()
+class MessageManagerState(StatesGroup):
+    """Состояния для работы с сообщениями через управлениями сообщенями."""
+
+    waiting_message_link = State()
+    waiting_action_select = State()
+    waiting_delete_confirm = State()
+    waiting_reply_message = State()
