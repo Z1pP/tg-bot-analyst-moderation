@@ -40,3 +40,15 @@ def confirm_delete_ikb() -> types.InlineKeyboardMarkup:
         ),
     )
     return builder.as_markup()
+
+
+def send_message_ikb() -> types.InlineKeyboardMarkup:
+    """Клавиатура с кнопкой отправки сообщения."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        types.InlineKeyboardButton(
+            text=InlineButtons.MessageActions.SEND_MESSAGE,
+            callback_data="send_message_to_chat",
+        ),
+    )
+    return builder.as_markup()
