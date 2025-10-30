@@ -13,6 +13,7 @@ class InlineButtons:
         REPLY = "💬 Ответить"
         CANCEL = "❌ Отмена"
         CONFIRM_DELETE = "✅ Да, удалить"
+        SEND_MESSAGE = "💬 ОТПРАВИТЬ СООБЩЕНИЕ"
 
 
 class KbCommands:
