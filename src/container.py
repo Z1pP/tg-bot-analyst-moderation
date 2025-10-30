@@ -72,7 +72,6 @@ from usecases.admin_actions import (
     SendMessageToChatUseCase,
 )
 from usecases.moderation import (
-    BanUserFromAdminPanelUseCase,
     GiveUserBanUseCase,
     GiveUserWarnUseCase,
 )
@@ -244,7 +243,6 @@ class ContainerSetup:
         """Регистрация use cases для модерации."""
         container.register(GiveUserWarnUseCase)
         container.register(GiveUserBanUseCase)
-        container.register(BanUserFromAdminPanelUseCase)
         container.register(CancelLastWarnUseCase)
         container.register(GetChatsWithBannedUserUseCase)
         container.register(GetChatsWithMutedUserUseCase)
