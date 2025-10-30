@@ -11,3 +11,13 @@ class MessageActionDTO:
     admin_tgid: str
     admin_username: str
     admin_message_id: Optional[int] = None
+
+
+@dataclass(frozen=True, slots=True)
+class SendMessageDTO:
+    """DTO для отправки сообщения в чат."""
+
+    chat_tgid: str
+    admin_tgid: str
+    admin_username: str
+    admin_message_id: int
