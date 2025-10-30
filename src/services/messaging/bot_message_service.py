@@ -103,6 +103,38 @@ class BotMessageService:
             )
             return None
 
+    async def copy_message(
+        self,
+        chat_tgid: ChatIdUnion,
+        from_chat_tgid: ChatIdUnion,
+        message_id: int,
+    ) -> Optional[int]:
+        """
+        Копирует сообщение в чат.
+
+        Args:
+            chat_tgid: Telegram ID чата-получателя
+            from_chat_tgid: Telegram ID чата-источника
+            message_id: ID сообщения для копирования
+
+        Returns:
+            ID отправленного сообщения или None при ошибке
+        """
+        try:
+            result = await self.bot.copy_message(
+                chat_id=chat_tgid,
+                from_chat_id=from_chat_tgid,
+                message_id=message_id,
+            )
+            return result.message_id
+        except Exception as e:
+            logger.error(
+                "Не удалось скопировать сообщение в чат %s: %s",
+                chat_tgid,
+                e,
+            )
+            return None
+
     async def copy_message_as_reply(
         self,
         chat_tgid: ChatIdUnion,
