@@ -11,6 +11,7 @@ def admin_menu_kb():
         ],
         [
             KeyboardButton(text=KbCommands.TEMPLATES_MENU),
+            KeyboardButton(text=KbCommands.MESSAGE_MANAGEMENT),
             KeyboardButton(text=KbCommands.LOCK_MENU),
         ],
         [
