@@ -1,7 +1,18 @@
-from .dialogs import UserTrackingDialogs, BanUserDialogs
+from .dialogs import UserTrackingDialogs, BanUserDialogs, MessageManagerDialogs
 
 MAX_MSG_LENGTH = 4000  # Указывает максимальную длину сообщения для вывода
 BREAK_TIME = 15  # Время перерыва между сообщенями
+
+
+class InlineButtons:
+    """Тексты для inline кнопок"""
+
+    class MessageActions:
+        """Кнопки для действий с сообщениями"""
+        DELETE = "🗑 Удалить"
+        REPLY = "💬 Ответить"
+        CANCEL = "❌ Отмена"
+        CONFIRM_DELETE = "✅ Да, удалить"
 
 
 class KbCommands:
@@ -36,6 +47,9 @@ class KbCommands:
     AMNESTY = "🕊️ Амнистия"
     BLOCK_USER = "🚫 Блок юзера"
 
+    # Message management
+    MESSAGE_MANAGEMENT = "💬 Упр. сообщенями"
+
     # Amnesty actions
     UNBAN = "🕊️ Полный разблок"
     CANCEL_WARN = "⏪ Отмена посл. преда"
@@ -53,6 +67,8 @@ class Dialog:
     UserTracking = UserTrackingDialogs
     # Ban User
     BanUser = BanUserDialogs
+    # Message Management
+    MessageManager = MessageManagerDialogs
 
     MENU_TEXT = """
     <b>Привет, {username}!</b> ✨
