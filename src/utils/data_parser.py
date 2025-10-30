@@ -11,7 +11,7 @@ def parse_and_validate_tg_id(tg_id: str) -> Optional[str]:
     return None
 
 
-MESSAGE_LINK_PATTERN = r"https://t\.me/(?:c/)?([^/]+)/(\d+)"
+MESSAGE_LINK_PATTERN = r"https://t\.me/(?:c/)?([^/]+)/(?:\d+/)?(\d+)"
 
 
 def parse_message_link(text: str) -> tuple[str, int] | None:
