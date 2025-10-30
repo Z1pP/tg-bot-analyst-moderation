@@ -69,6 +69,7 @@ from usecases.amnesty import (
 from usecases.admin_actions import (
     DeleteMessageUseCase,
     ReplyToMessageUseCase,
+    SendMessageToChatUseCase,
 )
 from usecases.moderation import (
     BanUserFromAdminPanelUseCase,
@@ -252,6 +253,7 @@ class ContainerSetup:
         container.register(UnmuteUserUseCase)
         container.register(DeleteMessageUseCase)
         container.register(ReplyToMessageUseCase)
+        container.register(SendMessageToChatUseCase)
 
     @staticmethod
     def _register_report_usecases(container: Container) -> None:
