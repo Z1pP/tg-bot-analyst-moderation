@@ -210,3 +210,18 @@ def conf_remove_chat_kb() -> InlineKeyboardMarkup:
         width=2,
     )
     return builder.as_markup()
+
+
+def select_chat_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
+    """Клавиатура для выбора чата для отправки сообщения."""
+    builder = InlineKeyboardBuilder()
+
+    for chat in chats:
+        builder.row(
+            InlineKeyboardButton(
+                text=chat.title[:40],
+                callback_data=f"select_chat_{chat.id}",
+            )
+        )
+
+    return builder.as_markup()
