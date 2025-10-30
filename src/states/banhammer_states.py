@@ -19,5 +19,7 @@ class BanUserStates(StatesGroup):
     waiting_confirmation_action = State()
 
 
-class WarnUserStates(BanUserStates):
-    pass
+class WarnUserStates(StatesGroup):
+    waiting_user_input = State()
+    waiting_reason_input = State()
+    waiting_chat_select = State()
