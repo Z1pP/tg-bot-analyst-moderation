@@ -3,6 +3,7 @@ import logging
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
+from constants import Dialog
 from keyboards.inline.message_actions import confirm_delete_ikb
 from states.message_management import MessageManagerState
 from utils.state_logger import log_and_set_state
@@ -23,8 +24,7 @@ async def message_action_select_handler(
 
     if callback.data == "delete_message":
         await callback.message.edit_text(
-            "⚠️ <b>Подтверждение удаления</b>\n\n"
-            "Вы уверены, что хотите удалить это сообщение?",
+            Dialog.MessageManagerDialogs.DELETE_CONFIRM,
             reply_markup=confirm_delete_ikb(),
         )
         await log_and_set_state(
@@ -33,17 +33,13 @@ async def message_action_select_handler(
         logger.info("Админ %s запросил удаление сообщения", callback.from_user.id)
 
     elif callback.data == "reply_message":
-        await callback.message.edit_text(
-            "💬 <b>Ответ на сообщение</b>\n\n"
-            "Отправьте любой контент (текст, фото, видео, документ), "
-            "который будет отправлен от имени бота:"
-        )
+        await callback.message.edit_text(Dialog.MessageManagerDialogs.REPLY_INPUT)
         await log_and_set_state(
             callback.message, state, MessageManagerState.waiting_reply_message
         )
         logger.info("Админ %s запросил ответ на сообщение", callback.from_user.id)
 
     elif callback.data == "cancel":
-        await callback.message.edit_text("❌ Действие отменено")
+        await callback.message.edit_text(Dialog.MessageManagerDialogs.ACTION_CANCELLED)
         await state.clear()
         logger.info("Админ %s отменил действие", callback.from_user.id)

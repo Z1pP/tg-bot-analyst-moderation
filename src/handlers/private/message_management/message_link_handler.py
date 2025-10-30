@@ -3,6 +3,7 @@ import logging
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
+from constants import Dialog
 from keyboards.inline.message_actions import message_action_ikb
 from states.message_management import MessageManagerState
 from utils.data_parser import MESSAGE_LINK_PATTERN, parse_message_link
@@ -21,7 +22,7 @@ async def message_link_handler(message: types.Message, state: FSMContext) -> Non
     result = parse_message_link(message.text)
 
     if not result:
-        await message.reply("❌ Некорректная ссылка на сообщение")
+        await message.reply(Dialog.MessageManagerDialogs.INVALID_LINK)
         return
 
     chat_tgid, message_id = result
@@ -39,10 +40,10 @@ async def message_link_handler(message: types.Message, state: FSMContext) -> Non
     )
 
     await message.reply(
-        "🔧 <b>Действия с сообщением</b>\n\n"
-        f"• ID сообщения: <code>{message_id}</code>\n"
-        f"• Чат: <code>{chat_tgid}</code>\n\n"
-        "Выберите действие:",
+        Dialog.MessageManagerDialogs.MESSAGE_ACTIONS.format(
+            message_id=message_id,
+            chat_tgid=chat_tgid,
+        ),
         reply_markup=message_action_ikb(),
     )
     await log_and_set_state(message, state, MessageManagerState.waiting_action_select)

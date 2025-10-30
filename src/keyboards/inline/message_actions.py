@@ -1,23 +1,25 @@
 from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants import InlineButtons
+
 
 def message_action_ikb() -> types.InlineKeyboardMarkup:
     """Клавиатура с действиями над сообщением."""
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text="🗑 Удалить",
+            text=InlineButtons.MessageActions.DELETE,
             callback_data="delete_message",
         ),
         types.InlineKeyboardButton(
-            text="💬 Ответить",
+            text=InlineButtons.MessageActions.REPLY,
             callback_data="reply_message",
         ),
     )
     builder.row(
         types.InlineKeyboardButton(
-            text="❌ Отмена",
+            text=InlineButtons.MessageActions.CANCEL,
             callback_data="cancel",
         ),
     )
@@ -29,11 +31,11 @@ def confirm_delete_ikb() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text="✅ Да, удалить",
+            text=InlineButtons.MessageActions.CONFIRM_DELETE,
             callback_data="delete_message_confirm",
         ),
         types.InlineKeyboardButton(
-            text="❌ Отмена",
+            text=InlineButtons.MessageActions.CANCEL,
             callback_data="delete_message_cancel",
         ),
     )
