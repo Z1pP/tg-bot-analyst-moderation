@@ -1,4 +1,9 @@
-from .dialogs import UserTrackingDialogs, BanUserDialogs, MessageManagerDialogs
+from .dialogs import (
+    UserTrackingDialogs,
+    BanUserDialogs,
+    MessageManagerDialogs,
+    WarnUserDialogs,
+)
 
 MAX_MSG_LENGTH = 4000  # Указывает максимальную длину сообщения для вывода
 BREAK_TIME = 15  # Время перерыва между сообщенями
@@ -70,6 +75,7 @@ class Dialog:
     UserTracking = UserTrackingDialogs
     # Ban User
     BanUser = BanUserDialogs
+    WarnUser = WarnUserDialogs
     # Message Management
     MessageManager = MessageManagerDialogs
 
