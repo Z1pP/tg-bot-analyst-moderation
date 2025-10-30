@@ -7,7 +7,7 @@ from .user_states import (
     SingleUserReportStates,
     UsernameStates,
 )
-from .message_management import MessageManager
+from .message_management import MessageManagerState
 
 __all__ = [
     "ChatStateManager",
@@ -19,5 +19,5 @@ __all__ = [
     "BanHammerStates",
     "AmnestyStates",
     "BanUserStates",
-    "MessageManager",
+    "MessageManagerState",
 ]
