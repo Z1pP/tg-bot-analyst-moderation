@@ -8,3 +8,5 @@ class MessageManagerState(StatesGroup):
     waiting_action_select = State()
     waiting_delete_confirm = State()
     waiting_reply_message = State()
+    waiting_chat_select = State()
+    waiting_send_content = State()
