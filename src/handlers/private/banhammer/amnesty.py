@@ -86,7 +86,12 @@ async def waiting_user_data_input(message: types.Message, state: FSMContext) -> 
         tg_id=user.tg_id,
     )
 
-    text = f"Что делаем с <b>@{user.username}</b>?"
+    text = (
+        f"👤 <b>Найден пользователь:</b>\n"
+        f"• Юзер: @{user.username}\n"
+        f"• ID: <code>{user.tg_id}</code>\n\n"
+        "Пожалуйста, выберите необходимое действие."
+    )
 
     await message.reply(text=text, reply_markup=amnesty_actions_kb())
 
@@ -146,6 +151,25 @@ async def unmute_warn_handler(message: types.Message, state: FSMContext) -> None
         message=message,
         state=state,
         new_state=AmnestyStates.waiting_confirmation_action,
+    )
+
+
+@router.message(
+    F.text == KbCommands.BACK,
+    AmnestyStates.waiting_action_select,
+)
+async def back_to_block_menu_handler(message: types.Message, state: FSMContext) -> None:
+    """Обработчик для возврата в меню блокировок"""
+    from keyboards.reply.banhammer import block_actions_kb
+
+    await message.answer(
+        text="🔙 Возврат в меню блокировок",
+        reply_markup=block_actions_kb(),
+    )
+    await log_and_set_state(
+        message=message,
+        state=state,
+        new_state=BanHammerStates.block_menu,
     )
 
 
