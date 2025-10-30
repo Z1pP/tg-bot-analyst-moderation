@@ -9,11 +9,12 @@ class InlineButtons:
 
     class MessageActions:
         """Кнопки для действий с сообщениями"""
+
         DELETE = "🗑 Удалить"
         REPLY = "💬 Ответить"
         CANCEL = "❌ Отмена"
         CONFIRM_DELETE = "✅ Да, удалить"
-        SEND_MESSAGE = "💬 ОТПРАВИТЬ СООБЩЕНИЕ"
+        SEND_MESSAGE = "💬 Отправить сообщение"
 
 
 class KbCommands:
@@ -47,6 +48,7 @@ class KbCommands:
     LOCK_MENU = "🚫 Блокировки"
     AMNESTY = "🕊️ Амнистия"
     BLOCK_USER = "🚫 Блок юзера"
+    WARN_USER = "❗Предупреждение"
 
     # Message management
     MESSAGE_MANAGEMENT = "💬 Упр. сообщенями"
