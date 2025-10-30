@@ -25,7 +25,7 @@ async def message_delete_confirm_handler(
     await callback.answer()
 
     if callback.data == "delete_message_cancel":
-        await callback.message.edit_text(Dialog.MessageManagerDialogs.DELETE_CANCELLED)
+        await callback.message.edit_text(Dialog.MessageManager.DELETE_CANCELLED)
         await state.clear()
         logger.info("Админ %s отменил удаление", callback.from_user.id)
         return
@@ -37,7 +37,7 @@ async def message_delete_confirm_handler(
     if not chat_tgid or not message_id:
         logger.error("Некорректные данные в state: %s", data)
         await callback.message.edit_text(
-            Dialog.MessageManagerDialogs.INVALID_STATE_DATA
+            Dialog.MessageManager.INVALID_STATE_DATA
         )
         await state.clear()
         return
@@ -53,7 +53,7 @@ async def message_delete_confirm_handler(
 
     try:
         await usecase.execute(dto)
-        await callback.message.edit_text(Dialog.MessageManagerDialogs.DELETE_SUCCESS)
+        await callback.message.edit_text(Dialog.MessageManager.DELETE_SUCCESS)
         logger.info(
             "Админ %s удалил сообщение %s из чата %s",
             callback.from_user.id,
@@ -69,6 +69,6 @@ async def message_delete_confirm_handler(
             e,
             exc_info=True,
         )
-        await callback.message.edit_text(Dialog.MessageManagerDialogs.DELETE_ERROR)
+        await callback.message.edit_text(Dialog.MessageManager.DELETE_ERROR)
 
     await state.clear()

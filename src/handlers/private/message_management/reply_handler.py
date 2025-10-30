@@ -23,7 +23,7 @@ async def message_reply_handler(message: types.Message, state: FSMContext) -> No
 
     if not chat_tgid or not message_id:
         logger.error("Некорректные данные в state: %s", data)
-        await message.reply(Dialog.MessageManagerDialogs.INVALID_STATE_DATA)
+        await message.reply(Dialog.MessageManager.INVALID_STATE_DATA)
         await state.clear()
         return
 
@@ -39,7 +39,7 @@ async def message_reply_handler(message: types.Message, state: FSMContext) -> No
 
     try:
         await usecase.execute(dto)
-        await message.reply(Dialog.MessageManagerDialogs.REPLY_SUCCESS)
+        await message.reply(Dialog.MessageManager.REPLY_SUCCESS)
         logger.info(
             "Админ %s ответил на сообщение %s в чате %s",
             message.from_user.id,
@@ -55,6 +55,6 @@ async def message_reply_handler(message: types.Message, state: FSMContext) -> No
             e,
             exc_info=True,
         )
-        await message.reply(Dialog.MessageManagerDialogs.REPLY_ERROR)
+        await message.reply(Dialog.MessageManager.REPLY_ERROR)
 
     await state.clear()

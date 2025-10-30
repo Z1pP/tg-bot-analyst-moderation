@@ -24,7 +24,7 @@ async def message_action_select_handler(
 
     if callback.data == "delete_message":
         await callback.message.edit_text(
-            Dialog.MessageManagerDialogs.DELETE_CONFIRM,
+            Dialog.MessageManager.DELETE_CONFIRM,
             reply_markup=confirm_delete_ikb(),
         )
         await log_and_set_state(
@@ -33,13 +33,13 @@ async def message_action_select_handler(
         logger.info("Админ %s запросил удаление сообщения", callback.from_user.id)
 
     elif callback.data == "reply_message":
-        await callback.message.edit_text(Dialog.MessageManagerDialogs.REPLY_INPUT)
+        await callback.message.edit_text(Dialog.MessageManager.REPLY_INPUT)
         await log_and_set_state(
             callback.message, state, MessageManagerState.waiting_reply_message
         )
         logger.info("Админ %s запросил ответ на сообщение", callback.from_user.id)
 
     elif callback.data == "cancel":
-        await callback.message.edit_text(Dialog.MessageManagerDialogs.ACTION_CANCELLED)
+        await callback.message.edit_text(Dialog.MessageManager.ACTION_CANCELLED)
         await state.clear()
         logger.info("Админ %s отменил действие", callback.from_user.id)

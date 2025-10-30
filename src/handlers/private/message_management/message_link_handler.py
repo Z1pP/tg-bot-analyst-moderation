@@ -22,7 +22,7 @@ async def message_link_handler(message: types.Message, state: FSMContext) -> Non
     result = parse_message_link(message.text)
 
     if not result:
-        await message.reply(Dialog.MessageManagerDialogs.INVALID_LINK)
+        await message.reply(Dialog.MessageManager.INVALID_LINK)
         return
 
     chat_tgid, message_id = result
@@ -40,7 +40,7 @@ async def message_link_handler(message: types.Message, state: FSMContext) -> Non
     )
 
     await message.reply(
-        Dialog.MessageManagerDialogs.MESSAGE_ACTIONS.format(
+        Dialog.MessageManager.MESSAGE_ACTIONS.format(
             message_id=message_id,
             chat_tgid=chat_tgid,
         ),
