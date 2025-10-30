@@ -1,4 +1,4 @@
-from .admin_panel_ban import AdminPanelBanDTO
+
 from .category_dto import CategoryDTO, CreateCategoryDTO, UpdateCategoryDTO
 from .chat_dto import ChatDTO, DbChatDTO, UserChatsDTO
 from .daily_activity import (
@@ -24,8 +24,7 @@ from .amnesty import AmnestyUserDTO, CancelWarnResultDTO
 from .user_tracking import RemoveUserTrackingDTO, UserTrackingDTO
 
 __all__ = [
-    # Admin Panel
-    "AdminPanelBanDTO",
+
     # Category
     "CategoryDTO",
     "CreateCategoryDTO",
