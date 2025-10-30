@@ -9,6 +9,7 @@ from .settings import router as user_settings_router
 from .templates import router as templates_router
 from .users import router as users_router
 from .admin_message_actions import router as admin_message_actions_router
+from .message_management import router as message_management_router
 
 router = Router(name="private_router")
 router.include_router(common_router)
@@ -20,3 +21,4 @@ router.include_router(templates_router)
 router.include_router(categories_router)
 router.include_router(user_settings_router)
 router.include_router(admin_message_actions_router)
+router.include_router(message_management_router)
