@@ -21,6 +21,19 @@ class InlineButtons:
         CONFIRM_DELETE = "✅ Да, удалить"
         SEND_MESSAGE = "💬 Отправить сообщение"
 
+    class BlockButtons:
+        AMNESTY = "🕊️ Амнистия"
+        BLOCK_USER = "🚫 Блок юзера"
+        WARN_USER = "❗Предупреждение"
+        BACK_TO_BLOCK_MENU = "📋 Вернуться в меню"
+        # Amnesty actions
+        UNBAN = "🕊️ Полный разблок"
+        CANCEL_WARN = "⏪ Отмена посл. преда"
+        UNMUTE = "🔊 Размут"
+        CONFIRM_ACTION = "Да"
+        CANCEL_ACTION = "Нет"
+        NO_REASON = "❌ Без причины"
+
 
 class KbCommands:
     # Users
