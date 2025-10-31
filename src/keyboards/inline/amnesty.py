@@ -1,12 +1,24 @@
-from aiogram import types
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
-def confirm_action_ikb() -> types.InlineKeyboardMarkup:
-    buttons = [
-        [
-            types.InlineKeyboardButton(text="Да", callback_data="confirm_action"),
-            types.InlineKeyboardButton(text="Нет", callback_data="cancel_action"),
-        ],
-    ]
+from constants import InlineButtons
 
-    return types.InlineKeyboardMarkup(inline_keyboard=buttons)
+block_actions = InlineButtons.BlockButtons()
+
+
+def confirm_action_ikb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=block_actions.CONFIRM_ACTION,
+            callback_data=block_actions.CONFIRM_ACTION,
+        ),
+        InlineKeyboardButton(
+            text=block_actions.CANCEL_ACTION,
+            callback_data=block_actions.CANCEL_ACTION,
+        ),
+    )
+
+    return builder.as_markup()
