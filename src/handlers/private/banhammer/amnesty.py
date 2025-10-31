@@ -1,17 +1,18 @@
 from dataclasses import dataclass
 import logging
 
-from aiogram import F, Router, types
+from aiogram import F, Bot, Router, types
 from aiogram.fsm.context import FSMContext
+from aiogram.exceptions import TelegramBadRequest
 
-from constants import KbCommands
+from constants import KbCommands, InlineButtons, Dialog
 from constants.punishment import PunishmentType
 from container import container
 from dto import AmnestyUserDTO
 from exceptions import AmnestyError
 from keyboards.inline.chats_kb import tracked_chats_with_all_kb
-from keyboards.reply import admin_menu_kb, amnesty_actions_kb
 from keyboards.inline.amnesty import confirm_action_ikb
+from keyboards.inline.banhammer import amnesty_actions_ikb, block_actions_ikb
 from services import UserService
 from states import AmnestyStates, BanHammerStates
 from usecases.amnesty import (
@@ -29,24 +30,28 @@ from utils.formatter import format_duration
 
 router = Router()
 logger = logging.getLogger(__name__)
+block_buttons = InlineButtons.BlockButtons()
 
 
-@router.message(
-    F.text == KbCommands.AMNESTY,
+@router.callback_query(
+    F.data == block_buttons.AMNESTY,
     BanHammerStates.block_menu,
 )
-async def amnesty_handler(message: types.Message, state: FSMContext) -> None:
+async def amnesty_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """
     Обработчик отвечающий за действия по амнистии пользователя в чате.
     """
+    await callback.answer()
+    await state.update_data(message_to_edit_id=callback.message.message_id)
+
     text = (
         "🕊️ <b>Амнистия пользователя</b>\n\n"
         "Для разблокировки или снятия ограничения пришлите @username или Telegram ID пользователя\n\n"
         "<i>Пример: @john_pidor или <code>123456789</code></i>"
     )
-    await message.reply(text=text)
+    await callback.message.edit_text(text=text)
     await log_and_set_state(
-        message=message,
+        message=callback.message,
         state=state,
         new_state=AmnestyStates.waiting_user_input,
     )
@@ -55,15 +60,27 @@ async def amnesty_handler(message: types.Message, state: FSMContext) -> None:
 @router.message(
     AmnestyStates.waiting_user_input,
 )
-async def waiting_user_data_input(message: types.Message, state: FSMContext) -> None:
+async def waiting_user_data_input(
+    message: types.Message,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
     """
     Обработчик для обработки введенной информации о пользователе
     """
     user_data = parse_data_from_text(text=message.text)
 
+    await message.delete()
+
+    data = await state.get_data()
+    message_to_edit_id = data.get("message_to_edit_id")
+
     if user_data is None:
-        text = "❗Неверный формат ввода. Попробуйте еще раз."
-        await message.reply(text=text)
+        await bot.edit_message_text(
+            text=Dialog.Error.INVALID_USERNAME_FORMAT,
+            chat_id=message.chat.id,
+            message_id=message_to_edit_id,
+        )
         return
 
     user_service: UserService = container.resolve(UserService)
@@ -76,8 +93,18 @@ async def waiting_user_data_input(message: types.Message, state: FSMContext) -> 
         user = await user_service.get_by_username(username=user_data.username)
 
     if user is None:
-        text = "❗Пользователь не найден. Попробуйте еще раз."
-        await message.reply(text=text)
+        identificator = (
+            f"<code>{user_data.tg_id}</code>"
+            if user_data.tg_id
+            else f"<b>@{user_data.username}</b>"
+        )
+        await bot.edit_message_text(
+            text=Dialog.BanUser.USER_NOT_FOUND.format(
+                identificator=identificator,
+            ),
+            chat_id=message.chat.id,
+            message_id=message_to_edit_id,
+        )
         return
 
     await state.update_data(
@@ -93,7 +120,16 @@ async def waiting_user_data_input(message: types.Message, state: FSMContext) -> 
         "Пожалуйста, выберите необходимое действие."
     )
 
-    await message.reply(text=text, reply_markup=amnesty_actions_kb())
+    if message_to_edit_id:
+        try:
+            await bot.edit_message_text(
+                text=text,
+                chat_id=message.chat.id,
+                message_id=message_to_edit_id,
+                reply_markup=amnesty_actions_ikb(),
+            )
+        except TelegramBadRequest as e:
+            logger.error("Ошибка редактирования сообщения: %s", e, exc_info=True)
 
     await log_and_set_state(
         message=message,
@@ -102,12 +138,13 @@ async def waiting_user_data_input(message: types.Message, state: FSMContext) -> 
     )
 
 
-@router.message(
-    F.text == KbCommands.UNBAN,
+@router.callback_query(
+    F.data == block_buttons.UNBAN,
     AmnestyStates.waiting_action_select,
 )
-async def unban_handler(message: types.Message, state: FSMContext) -> None:
+async def unban_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Обработчик для разблокирования пользователя в чате"""
+    await callback.answer()
 
     violator = await extract_violator_data_from_state(state=state)
 
@@ -117,23 +154,27 @@ async def unban_handler(message: types.Message, state: FSMContext) -> None:
         f"полностью разблокировать @{violator.username}?</b>"
     )
 
-    await state.update_data(action=KbCommands.UNBAN)
+    await state.update_data(action=block_buttons.UNBAN)
 
-    await message.reply(text=text, reply_markup=confirm_action_ikb())
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=confirm_action_ikb(),
+    )
 
     await log_and_set_state(
-        message=message,
+        message=callback.message,
         state=state,
         new_state=AmnestyStates.waiting_confirmation_action,
     )
 
 
-@router.message(
-    F.text == KbCommands.UNMUTE,
+@router.callback_query(
+    F.data == block_buttons.UNMUTE,
     AmnestyStates.waiting_action_select,
 )
-async def unmute_warn_handler(message: types.Message, state: FSMContext) -> None:
+async def unmute_warn_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Обработчик для отмены мута в чате с сохранением текущего предупреждения"""
+    await callback.answer()
 
     violator = await extract_violator_data_from_state(state=state)
 
@@ -143,42 +184,27 @@ async def unmute_warn_handler(message: types.Message, state: FSMContext) -> None
         f"данного @{violator.username}?"
     )
 
-    await state.update_data(action=KbCommands.UNMUTE)
+    await state.update_data(action=block_buttons.UNMUTE)
 
-    await message.reply(text=text, reply_markup=confirm_action_ikb())
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=confirm_action_ikb(),
+    )
 
     await log_and_set_state(
-        message=message,
+        message=callback.message,
         state=state,
         new_state=AmnestyStates.waiting_confirmation_action,
     )
 
 
-@router.message(
-    F.text == KbCommands.BACK,
+@router.callback_query(
+    F.data == block_buttons.CANCEL_WARN,
     AmnestyStates.waiting_action_select,
 )
-async def back_to_block_menu_handler(message: types.Message, state: FSMContext) -> None:
-    """Обработчик для возврата в меню блокировок"""
-    from keyboards.reply.banhammer import block_actions_kb
-
-    await message.answer(
-        text="🔙 Возврат в меню блокировок",
-        reply_markup=block_actions_kb(),
-    )
-    await log_and_set_state(
-        message=message,
-        state=state,
-        new_state=BanHammerStates.block_menu,
-    )
-
-
-@router.message(
-    F.text == KbCommands.CANCEL_WARN,
-    AmnestyStates.waiting_action_select,
-)
-async def cancel_warn_handler(message: types.Message, state: FSMContext) -> None:
+async def cancel_warn_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Обработчик для отмены (удаления) прошлого предупреждения"""
+    await callback.answer()
 
     violator = await extract_violator_data_from_state(state=state)
 
@@ -188,19 +214,44 @@ async def cancel_warn_handler(message: types.Message, state: FSMContext) -> None
         f"для @{violator.username}?</b>"
     )
 
-    await state.update_data(action=KbCommands.CANCEL_WARN)
+    await state.update_data(action=block_buttons.CANCEL_WARN)
 
-    await message.reply(text=text, reply_markup=confirm_action_ikb())
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=confirm_action_ikb(),
+    )
 
     await log_and_set_state(
-        message=message,
+        message=callback.message,
         state=state,
         new_state=AmnestyStates.waiting_confirmation_action,
     )
 
 
 @router.callback_query(
-    F.data == "confirm_action",
+    F.data == block_buttons.BACK_TO_BLOCK_MENU,
+    AmnestyStates.waiting_action_select,
+)
+async def back_to_block_menu_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
+    """Обработчик для возврата в меню блокировок"""
+    await callback.answer()
+
+    await callback.message.edit_text(
+        text="🔙 Возврат в меню блокировок",
+        reply_markup=block_actions_ikb(),
+    )
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=BanHammerStates.block_menu,
+    )
+
+
+@router.callback_query(
+    F.data == block_buttons.CONFIRM_ACTION,
     AmnestyStates.waiting_confirmation_action,
 )
 async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> None:
@@ -225,9 +276,10 @@ async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> No
     config = ACTION_CONFIG.get(action)
     if not config:
         text = "❗️Неизвестное действие. Попробуйте еще раз."
-        await callback.message.delete()
-        await callback.message.answer(text=text, reply_markup=admin_menu_kb())
-        await state.clear()
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=block_actions_ikb(),
+        )
         return
 
     usecase = container.resolve(config["usecase"])
@@ -257,7 +309,7 @@ async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> No
 
 
 @router.callback_query(
-    F.data == "cancel_action",
+    F.data == block_buttons.CANCEL_ACTION,
     AmnestyStates.waiting_confirmation_action,
 )
 async def cancel_action(callback: types.CallbackQuery, state: FSMContext) -> None:
@@ -267,10 +319,15 @@ async def cancel_action(callback: types.CallbackQuery, state: FSMContext) -> Non
     await callback.answer()
 
     text = "❌️ Действие отменено!"
-
-    await callback.message.delete()
-    await callback.message.answer(text=text, reply_markup=admin_menu_kb())
-    await state.clear()
+    await callback.message.edit_text(
+        text=text,
+        reply_markup=amnesty_actions_ikb(),
+    )
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=AmnestyStates.waiting_action_select,
+    )
 
 
 @router.callback_query(
@@ -314,12 +371,10 @@ async def execute_amnesty_action(
             await unban_usecase.execute(dto=amnesty_dto)
         except AmnestyError as e:
             logger.error("Ошибка амнистии: %s", e, exc_info=True)
-            await callback.message.delete()
-            await callback.message.answer(
+            await callback.message.edit_text(
                 text=e.get_user_message(),
-                reply_markup=admin_menu_kb(),
+                reply_markup=block_actions_ikb(),
             )
-            await state.clear()
             return
 
         text = (
@@ -332,12 +387,10 @@ async def execute_amnesty_action(
             await unmute_usecase.execute(dto=amnesty_dto)
         except AmnestyError as e:
             logger.error("Ошибка амнистии: %s", e, exc_info=True)
-            await callback.message.delete()
-            await callback.message.answer(
+            await callback.message.edit_text(
                 text=e.get_user_message(),
-                reply_markup=admin_menu_kb(),
+                reply_markup=block_actions_ikb(),
             )
-            await state.clear()
             return
 
         text = (
@@ -352,12 +405,10 @@ async def execute_amnesty_action(
             result = await cancel_warn_usecase.execute(dto=amnesty_dto)
         except AmnestyError as e:
             logger.error("Ошибка отмены предупреждения: %s", e, exc_info=True)
-            await callback.message.delete()
-            await callback.message.answer(
+            await callback.message.edit_text(
                 text=e.get_user_message(),
-                reply_markup=admin_menu_kb(),
+                reply_markup=block_actions_ikb(),
             )
-            await state.clear()
             return
 
         if len(amnesty_dto.chat_dtos) == 1:
@@ -383,15 +434,12 @@ async def execute_amnesty_action(
             )
     else:
         text = "❗️Неизвестное действие. Попробуйте еще раз."
-        await callback.message.delete()
-        await callback.message.answer(text=text, reply_markup=admin_menu_kb())
-        await state.clear()
+        await callback.message.edit_text(text=text, reply_markup=block_actions_ikb())
         return
 
-    await callback.message.delete()
-    await callback.message.answer(
+    await callback.message.edit_text(
         text=text,
-        reply_markup=amnesty_actions_kb(),
+        reply_markup=amnesty_actions_ikb(),
     )
 
     await log_and_set_state(
@@ -433,9 +481,12 @@ async def handle_chats_error(
             "Перепроверьте введённые данные, либо попробуйте снять ограничение вручную."
         )
 
-    await callback.message.delete()
-    await callback.message.answer(text=text, reply_markup=admin_menu_kb())
-    await state.clear()
+    await callback.message.edit_text(text=text, reply_markup=block_actions_ikb())
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=BanHammerStates.block_menu,
+    )
 
 
 ACTION_CONFIG = {

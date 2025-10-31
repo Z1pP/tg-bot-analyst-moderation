@@ -1,13 +1,13 @@
 import logging
-from aiogram import types, Router, F
+from aiogram import Bot, types, Router, F
 from aiogram.fsm.context import FSMContext
+from aiogram.exceptions import TelegramBadRequest
 
-from constants import KbCommands, Dialog
+from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
-from keyboards.inline.banhammer import no_reason_ikb
+from keyboards.inline.banhammer import no_reason_ikb, block_actions_ikb
 from keyboards.inline.chats_kb import tracked_chats_with_all_kb
-from keyboards.reply import admin_menu_kb
 from services import UserService
 from states import BanUserStates, BanHammerStates
 from usecases.chat import GetChatsForUserActionUseCase
@@ -19,29 +19,46 @@ from container import container
 
 router = Router()
 logger = logging.getLogger(__name__)
+block_buttons = InlineButtons.BlockButtons()
 
 
-@router.message(
-    F.text == KbCommands.BLOCK_USER,
+@router.callback_query(
+    F.data == block_buttons.BLOCK_USER,
     BanHammerStates.block_menu,
 )
-async def block_user_handler(message: types.Message, state: FSMContext) -> None:
+async def block_user_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """
     Обработчик для блокировки пользователя.
     """
-    await message.reply(text=Dialog.BanUser.INPUT_USER_DATA)
-    await log_and_set_state(message, state, BanUserStates.waiting_user_input)
+    await callback.answer()
+    await state.update_data(message_to_edit_id=callback.message.message_id)
+
+    await callback.message.edit_text(text=Dialog.BanUser.INPUT_USER_DATA)
+    await log_and_set_state(callback.message, state, BanUserStates.waiting_user_input)
 
 
 @router.message(BanUserStates.waiting_user_input)
-async def process_user_data_input(message: types.Message, state: FSMContext) -> None:
+async def process_user_data_input(
+    message: types.Message,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
     """
     Обработчик для получения данных о пользователе.
     """
     user_data = parse_data_from_text(text=message.text)
 
+    await message.delete()
+
+    data = await state.get_data()
+    message_to_edit_id = data.get("message_to_edit_id")
+
     if user_data is None:
-        await message.reply(text=Dialog.Error.INVALID_USERNAME_FORMAT)
+        await bot.edit_message_text(
+            text=Dialog.Error.INVALID_USERNAME_FORMAT,
+            chat_id=message.chat.id,
+            message_id=message_to_edit_id,
+        )
         return
 
     user_service: UserService = container.resolve(UserService)
@@ -59,10 +76,12 @@ async def process_user_data_input(message: types.Message, state: FSMContext) -> 
             if user_data.tg_id
             else f"<b>@{user_data.username}</b>"
         )
-        await message.reply(
+        await bot.edit_message_text(
             text=Dialog.BanUser.USER_NOT_FOUND.format(
                 identificator=identificator,
-            )
+            ),
+            chat_id=message.chat.id,
+            message_id=message_to_edit_id,
         )
         return
 
@@ -72,50 +91,85 @@ async def process_user_data_input(message: types.Message, state: FSMContext) -> 
         tg_id=user.tg_id,
     )
 
-    user_info = (
-        f"👤 <b>Найден пользователь:</b>\n"
-        f"• Юзер: @{user.username}\n"
-        f"• ID: <code>{user.tg_id}</code>\n\n"
-        f"{Dialog.BanUser.INPUT_REASON}"
-    )
-    await message.reply(text=user_info, reply_markup=no_reason_ikb())
+    if message_to_edit_id:
+        try:
+            await bot.edit_message_text(
+                text=Dialog.BanUser.USER_INFO.format(
+                    username=user.username,
+                    tg_id=user.tg_id,
+                ),
+                chat_id=message.chat.id,
+                message_id=message_to_edit_id,
+                reply_markup=no_reason_ikb(),
+            )
+        except TelegramBadRequest as e:
+            logger.error("Ошибка редактирования сообщения: %s", e, exc_info=True)
+
     await log_and_set_state(message, state, BanUserStates.waiting_reason_input)
+
+
+@router.message(BanUserStates.waiting_reason_input)
+async def process_reason_input(
+    message: types.Message,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
+    """
+    Обработчик для получения причины блокировки.
+    Удаляет сообщение пользователя с причиной и обновляет исходное сообщение.
+    """
+    reason = message.text.strip()
+    # Сразу удаляем сообщение пользователя, чтобы не засорять чат
+    await message.delete()
+
+    data = await state.get_data()
+    user_tgid = data.get("tg_id")
+    username = data.get("username")
+    message_to_edit_id = data.get("message_to_edit_id")
+    # ID чата берем из сообщения пользователя, т.к. это приватный чат с ботом
+    chat_id = message.chat.id
+
+    usecase: GetChatsForUserActionUseCase = container.resolve(
+        GetChatsForUserActionUseCase
+    )
+    chat_dtos = await usecase.execute(
+        admin_tgid=str(message.from_user.id), user_tgid=user_tgid
+    )
+
+    # Если общих чатов для блокировки не найдено
+    if not chat_dtos:
+        await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_to_edit_id,
+            text=Dialog.BanUser.NO_CHATS.format(username=username),
+            reply_markup=block_actions_ikb(),
+        )
+        await log_and_set_state(message, state, new_state=BanHammerStates.block_menu)
+        return
+
+    # Сохраняем причину и найденные чаты в состоянии
+    await state.update_data(reason=reason, chat_dtos=chat_dtos)
+
+    # Редактируем исходное сообщение, предлагая выбрать чат
+    await bot.edit_message_text(
+        chat_id=chat_id,
+        message_id=message_to_edit_id,
+        text=Dialog.BanUser.SELECT_CHAT.format(username=username),
+        reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
+    )
+    await log_and_set_state(message, state, new_state=BanUserStates.waiting_chat_select)
 
 
 @router.callback_query(
     BanUserStates.waiting_reason_input,
-    F.data == "no_reason",
+    F.data == block_buttons.NO_REASON,
 )
-async def process_no_reason(callback: types.CallbackQuery, state: FSMContext) -> None:
+async def process_no_reason(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
     """Обработчик для кнопки 'Без причины'."""
     await callback.answer()
-    await _process_reason_and_select_chat(
-        callback.message,
-        state,
-        None,
-        from_user=callback.from_user,
-    )
-
-
-@router.message(BanUserStates.waiting_reason_input)
-async def process_reason_input(message: types.Message, state: FSMContext) -> None:
-    """Обработчик для получения причины блокировки."""
-    reason = message.text.strip()
-    await _process_reason_and_select_chat(
-        message,
-        state,
-        reason,
-        from_user=message.from_user,
-    )
-
-
-async def _process_reason_and_select_chat(
-    message: types.Message,
-    state: FSMContext,
-    reason: str | None,
-    from_user: types.User | None = None,
-) -> None:
-    """Общая логика обработки причины и выбора чата."""
 
     data = await state.get_data()
     user_tgid = data.get("tg_id")
@@ -126,22 +180,25 @@ async def _process_reason_and_select_chat(
     )
 
     chat_dtos = await usecase.execute(
-        admin_tgid=str(from_user.id),
+        admin_tgid=str(callback.from_user.id),
         user_tgid=user_tgid,
     )
 
     if not chat_dtos:
-        await message.answer(text=Dialog.BanUser.NO_CHATS)
-        await log_and_set_state(message, state, BanHammerStates.block_menu)
+        await callback.message.edit_text(
+            text=Dialog.BanUser.NO_CHATS.format(username=username),
+            reply_markup=block_actions_ikb(),
+        )
+        await log_and_set_state(callback.message, state, BanHammerStates.block_menu)
         return
 
-    await state.update_data(reason=reason, chat_dtos=chat_dtos)
+    await state.update_data(reason=None, chat_dtos=chat_dtos)
 
-    await message.answer(
+    await callback.message.edit_text(
         text=Dialog.BanUser.SELECT_CHAT.format(username=username),
         reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
     )
-    await log_and_set_state(message, state, BanUserStates.waiting_chat_select)
+    await log_and_set_state(callback.message, state, BanUserStates.waiting_chat_select)
 
 
 @router.callback_query(
@@ -157,19 +214,19 @@ async def process_chat_selection(
     """
     await callback.answer()
 
-    data = await state.get_data()
     chat_id = callback.data.split("__")[1]
+
+    data = await state.get_data()
     chat_dtos = data.get("chat_dtos")
     username = data.get("username")
     user_tgid = data.get("tg_id")
 
     if not chat_dtos or not username or not user_tgid:
         logger.error("Некорректные данные в state: %s", data)
-        await callback.message.answer(
+        await callback.message.edit_text(
             text="❌ Ошибка: некорректные данные. Попробуйте снова.",
-            reply_markup=admin_menu_kb(),
+            reply_markup=block_actions_ikb(),
         )
-        await state.clear()
         return
 
     if chat_id != "all":
@@ -212,8 +269,6 @@ async def process_chat_selection(
                 exc_info=True,
             )
 
-    await callback.message.delete()
-
     if success_chats and not failed_chats:
         response_text = f"✅ Пользователь @{username} заблокирован!"
         if len(success_chats) > 1:
@@ -229,8 +284,8 @@ async def process_chat_selection(
     else:
         response_text = f"❌ Не удалось заблокировать @{username} ни в одном чате"
 
-    await callback.message.answer(
+    await callback.message.edit_text(
         text=response_text,
-        reply_markup=admin_menu_kb(),
+        reply_markup=block_actions_ikb(),
     )
-    await state.clear()
+    await log_and_set_state(callback.message, state, BanHammerStates.block_menu)
