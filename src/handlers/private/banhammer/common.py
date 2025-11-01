@@ -2,8 +2,10 @@ import logging
 from aiogram import types, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.state import State
 
-from typing import Union
+
+from typing import Optional, Union
 
 from constants import InlineButtons
 from container import container
@@ -119,10 +121,10 @@ async def process_user_input_common(
     state: FSMContext,
     bot: Bot,
     *,
-    dialog_texts,
-    success_keyboard,
-    next_state,
-    error_state=None,
+    dialog_texts: dict[str, str],
+    success_keyboard: types.InlineKeyboardMarkup,
+    next_state: State,
+    error_state: Optional[State] = None,
     show_block_actions_on_error: bool = False,
 ):
     """
