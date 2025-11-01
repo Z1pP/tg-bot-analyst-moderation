@@ -5,20 +5,16 @@ from aiogram.fsm.context import FSMContext
 
 from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
-from container import container
 from keyboards.inline.banhammer import (
     no_reason_ikb,
-    block_actions_ikb,
 )
-from keyboards.inline.chats_kb import tracked_chats_with_all_kb
 from states import BanHammerStates, WarnUserStates
-from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserWarnUseCase
-from utils.state_logger import log_and_set_state
 from .common import (
     process_moderation_action,
     process_user_input_common,
     process_user_handler_common,
+    process_reason_common,
 )
 
 router = Router()
@@ -67,56 +63,16 @@ async def process_reason_input(
     state: FSMContext,
     bot: Bot,
 ) -> None:
-    """
-    Обработчик для получения причины предупреждения.
-    Удаляет сообщение пользователя с причиной и обновляет исходное сообщение.
-    """
+    """Обработка причины предупреждения (введённой вручную)."""
     reason = message.text.strip()
 
-    await message.delete()
-
-    data = await state.get_data()
-    user_tgid = data.get("tg_id")
-    username = data.get("username")
-    message_to_edit_id = data.get("message_to_edit_id")
-    chat_id = message.chat.id
-
-    usecase: GetChatsForUserActionUseCase = container.resolve(
-        GetChatsForUserActionUseCase
-    )
-    chat_dtos = await usecase.execute(
-        admin_tgid=str(message.from_user.id), user_tgid=user_tgid
-    )
-
-    # Если общих чатов для блокировки не найдено
-    if not chat_dtos:
-        await bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_to_edit_id,
-            text=Dialog.WarnUser.NO_CHATS.format(username=username),
-            reply_markup=block_actions_ikb(),
-        )
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=BanHammerStates.block_menu,
-        )
-        return
-
-    # Сохраняем причину и найденные чаты в состоянии
-    await state.update_data(reason=reason, chat_dtos=chat_dtos)
-
-    # Редактируем исходное сообщение, предлагая выбрать чат
-    await bot.edit_message_text(
-        chat_id=chat_id,
-        message_id=message_to_edit_id,
-        text=Dialog.WarnUser.SELECT_CHAT.format(username=username),
-        reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
-    )
-    await log_and_set_state(
-        message=message,
+    await process_reason_common(
+        reason=reason,
+        sender=message,
         state=state,
-        new_state=WarnUserStates.waiting_chat_select,
+        bot=bot,
+        is_callback=False,
+        next_state=WarnUserStates.waiting_chat_select,
     )
 
 
@@ -124,45 +80,21 @@ async def process_reason_input(
     WarnUserStates.waiting_reason_input,
     F.data == block_buttons.NO_REASON,
 )
-async def process_no_reason(callback: types.CallbackQuery, state: FSMContext) -> None:
-    """Обработчик для кнопки 'Без причины'."""
+async def process_no_reason(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    bot: Bot,
+) -> None:
+    """Обработка нажатия кнопки 'Без причины'."""
     await callback.answer()
 
-    data = await state.get_data()
-    user_tgid = data.get("tg_id")
-    username = data.get("username")
-
-    usecase: GetChatsForUserActionUseCase = container.resolve(
-        GetChatsForUserActionUseCase
-    )
-
-    chat_dtos = await usecase.execute(
-        admin_tgid=str(callback.from_user.id),
-        user_tgid=user_tgid,
-    )
-
-    if not chat_dtos:
-        await callback.message.edit_text(
-            text=Dialog.WarnUser.NO_CHATS.format(username=username),
-            reply_markup=block_actions_ikb(),
-        )
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=BanHammerStates.block_menu,
-        )
-        return
-
-    await state.update_data(reason=None, chat_dtos=chat_dtos)
-
-    await callback.message.edit_text(
-        text=Dialog.WarnUser.SELECT_CHAT.format(username=username),
-        reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
-    )
-    await log_and_set_state(
-        message=callback.message,
+    await process_reason_common(
+        reason=None,
+        sender=callback,
         state=state,
-        new_state=WarnUserStates.waiting_chat_select,
+        bot=bot,
+        is_callback=True,
+        next_state=WarnUserStates.waiting_chat_select,
     )
 
 
