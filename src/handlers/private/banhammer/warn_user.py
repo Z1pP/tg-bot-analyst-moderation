@@ -34,7 +34,11 @@ async def warn_user_handler(callback: types.CallbackQuery, state: FSMContext) ->
     await callback.message.edit_text(text=Dialog.WarnUser.INPUT_USER_DATA)
 
     # TODO Заменить на middleware
-    await log_and_set_state(callback.message, state, WarnUserStates.waiting_user_input)
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=WarnUserStates.waiting_user_input,
+    )
 
 
 @router.message(WarnUserStates.waiting_user_input)
@@ -103,7 +107,11 @@ async def process_user_data_input(
         except TelegramBadRequest as e:
             logger.error("Ошибка редактирования сообщения: %s", e, exc_info=True)
 
-    await log_and_set_state(message, state, WarnUserStates.waiting_reason_input)
+    await log_and_set_state(
+        message=message,
+        state=state,
+        new_state=WarnUserStates.waiting_reason_input,
+    )
 
 
 @router.message(WarnUserStates.waiting_reason_input)
@@ -142,7 +150,11 @@ async def process_reason_input(
             text=Dialog.WarnUser.NO_CHATS.format(username=username),
             reply_markup=block_actions_ikb(),
         )
-        await log_and_set_state(message, state, new_state=BanHammerStates.block_menu)
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=BanHammerStates.block_menu,
+        )
         return
 
     # Сохраняем причину и найденные чаты в состоянии
@@ -156,7 +168,9 @@ async def process_reason_input(
         reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
     )
     await log_and_set_state(
-        message, state, new_state=WarnUserStates.waiting_chat_select
+        message=message,
+        state=state,
+        new_state=WarnUserStates.waiting_chat_select,
     )
 
 
@@ -186,7 +200,11 @@ async def process_no_reason(callback: types.CallbackQuery, state: FSMContext) ->
             text=Dialog.WarnUser.NO_CHATS.format(username=username),
             reply_markup=block_actions_ikb(),
         )
-        await log_and_set_state(callback.message, state, BanHammerStates.block_menu)
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=BanHammerStates.block_menu,
+        )
         return
 
     await state.update_data(reason=None, chat_dtos=chat_dtos)
@@ -195,7 +213,11 @@ async def process_no_reason(callback: types.CallbackQuery, state: FSMContext) ->
         text=Dialog.WarnUser.SELECT_CHAT.format(username=username),
         reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
     )
-    await log_and_set_state(callback.message, state, WarnUserStates.waiting_chat_select)
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=WarnUserStates.waiting_chat_select,
+    )
 
 
 @router.callback_query(
@@ -282,4 +304,8 @@ async def process_chat_selection(
         text=response_text,
         reply_markup=block_actions_ikb(),
     )
-    await log_and_set_state(callback.message, state, BanHammerStates.block_menu)
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=BanHammerStates.block_menu,
+    )

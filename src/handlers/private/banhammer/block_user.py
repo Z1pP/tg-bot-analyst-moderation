@@ -105,7 +105,11 @@ async def process_user_data_input(
         except TelegramBadRequest as e:
             logger.error("Ошибка редактирования сообщения: %s", e, exc_info=True)
 
-    await log_and_set_state(message, state, BanUserStates.waiting_reason_input)
+    await log_and_set_state(
+        message=message,
+        state=state,
+        new_state=BanUserStates.waiting_reason_input,
+    )
 
 
 @router.message(BanUserStates.waiting_reason_input)
@@ -119,7 +123,7 @@ async def process_reason_input(
     Удаляет сообщение пользователя с причиной и обновляет исходное сообщение.
     """
     reason = message.text.strip()
-    # Сразу удаляем сообщение пользователя, чтобы не засорять чат
+
     await message.delete()
 
     data = await state.get_data()
