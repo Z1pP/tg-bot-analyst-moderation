@@ -14,7 +14,6 @@ from keyboards.inline.amnesty import confirm_action_ikb
 from keyboards.inline.banhammer import (
     amnesty_actions_ikb,
     block_actions_ikb,
-    back_to_block_menu_ikb,
 )
 from states import AmnestyStates, BanHammerStates
 from usecases.amnesty import (
@@ -27,7 +26,7 @@ from usecases.amnesty import (
 )
 from utils.state_logger import log_and_set_state
 from utils.formatter import format_duration
-from .common import process_user_input_common
+from .common import process_user_input_common, process_user_handler_common
 
 
 router = Router()
@@ -43,17 +42,11 @@ async def amnesty_handler(callback: types.CallbackQuery, state: FSMContext) -> N
     """
     Обработчик отвечающий за действия по амнистии пользователя в чате.
     """
-    await callback.answer()
-    await state.update_data(message_to_edit_id=callback.message.message_id)
-
-    await callback.message.edit_text(
-        text=Dialog.AmnestyUser.INPUT_USER_DATA,
-        reply_markup=back_to_block_menu_ikb(),
-    )
-    await log_and_set_state(
-        message=callback.message,
+    await process_user_handler_common(
+        callback=callback,
         state=state,
-        new_state=AmnestyStates.waiting_user_input,
+        next_state=AmnestyStates.waiting_user_input,
+        dialog_text=Dialog.AmnestyUser.INPUT_USER_DATA,
     )
 
 
@@ -82,70 +75,29 @@ async def waiting_user_data_input(
     )
 
 
-@router.callback_query(
-    F.data == block_buttons.UNBAN,
-    AmnestyStates.waiting_action_select,
-)
-async def unban_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
-    """Обработчик для разблокирования пользователя в чате"""
-    await callback.answer()
-
-    violator = await extract_violator_data_from_state(state=state)
-
-    await state.update_data(action=block_buttons.UNBAN)
-
-    await callback.message.edit_text(
-        text=Dialog.AmnestyUser.UNBAN_CONFIRMATION.format(username=violator.username),
-        reply_markup=confirm_action_ikb(),
-    )
-
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=AmnestyStates.waiting_confirmation_action,
-    )
+ACTION_MAP = {
+    block_buttons.UNBAN: Dialog.AmnestyUser.UNBAN_CONFIRMATION,
+    block_buttons.UNMUTE: Dialog.AmnestyUser.UNMUTE_CONFIRMATION,
+    block_buttons.CANCEL_WARN: Dialog.AmnestyUser.CANCEL_WARN_CONFIRMATION,
+}
 
 
 @router.callback_query(
-    F.data == block_buttons.UNMUTE,
+    F.data.in_(ACTION_MAP.keys()),
     AmnestyStates.waiting_action_select,
 )
-async def unmute_warn_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
-    """Обработчик для отмены мута в чате с сохранением текущего предупреждения"""
+async def amnsesy_action_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
+    """Универсальный обработчик для действий по амнистии пользователя"""
     await callback.answer()
+    action = callback.data
 
     violator = await extract_violator_data_from_state(state=state)
-
-    await state.update_data(action=block_buttons.UNMUTE)
-
-    await callback.message.edit_text(
-        text=Dialog.AmnestyUser.UNMUTE_CONFIRMATION.format(username=violator.username),
-        reply_markup=confirm_action_ikb(),
-    )
-
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=AmnestyStates.waiting_confirmation_action,
-    )
-
-
-@router.callback_query(
-    F.data == block_buttons.CANCEL_WARN,
-    AmnestyStates.waiting_action_select,
-)
-async def cancel_warn_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
-    """Обработчик для отмены (удаления) прошлого предупреждения"""
-    await callback.answer()
-
-    violator = await extract_violator_data_from_state(state=state)
-
-    await state.update_data(action=block_buttons.CANCEL_WARN)
+    await state.update_data(action=action)
 
     await callback.message.edit_text(
-        text=Dialog.AmnestyUser.CANCEL_WARN_CONFIRMATION.format(
-            username=violator.username
-        ),
+        text=ACTION_MAP[action].format(username=violator.username),
         reply_markup=confirm_action_ikb(),
     )
 
