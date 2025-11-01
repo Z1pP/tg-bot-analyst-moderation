@@ -39,6 +39,18 @@ def block_actions_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def back_to_block_menu_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура для возврата в меню блокировок"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=block_actions.BACK_TO_BLOCK_MENU,
+            callback_data=block_actions.BACK_TO_BLOCK_MENU,
+        )
+    )
+    return builder.as_markup()
+
+
 def amnesty_actions_ikb() -> InlineKeyboardMarkup:
     """Клавиатура с действиями по амнистии"""
     builder = InlineKeyboardBuilder()
