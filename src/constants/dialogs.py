@@ -83,6 +83,13 @@ class BanUserDialogs:
         f"{INPUT_REASON}"
     )
 
+    SUCCESS_BAN = "✅ Пользователь @{username} заблокирован!"
+    PARTIAL_BAN = (
+        "⚠️ Пользователь @{username} частично заблокирован\n\n"
+        "✅ Успешно: {ok}\n❌ Ошибки: {fail}"
+    )
+    FAIL_BAN = "❌ Не удалось заблокировать @{username} ни в одном чате"
+
 
 class WarnUserDialogs:
     """Сообщения для функционала предупреждения пользователей"""
@@ -106,6 +113,13 @@ class WarnUserDialogs:
         "• ID: <code>{tg_id}</code>\n\n"
         f"{INPUT_REASON}"
     )
+
+    SUCCESS_WARN = "✅ Пользователь @{username} предупрежден!"
+    PARTIAL_WARN = (
+        "⚠️ Пользователь @{username} частично предупрежден\n\n"
+        "✅ Успешно: {ok}\n❌ Ошибки: {fail}"
+    )
+    FAIL_WARN = "❌ Не удалось предупредить @{username} ни в одном чате"
 
 
 class MessageManagerDialogs:
