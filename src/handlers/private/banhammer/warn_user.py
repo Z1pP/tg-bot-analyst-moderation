@@ -1,7 +1,6 @@
 import logging
 from aiogram import F, Bot, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.exceptions import TelegramBadRequest
 
 
 from constants import Dialog, InlineButtons
@@ -13,13 +12,11 @@ from keyboards.inline.banhammer import (
     back_to_block_menu_ikb,
 )
 from keyboards.inline.chats_kb import tracked_chats_with_all_kb
-from services import UserService
 from states import BanHammerStates, WarnUserStates
 from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserWarnUseCase
 from utils.state_logger import log_and_set_state
-from utils.user_data_parser import parse_data_from_text
-from .common import process_moderation_action
+from .common import process_moderation_action, process_user_input_common
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -55,69 +52,17 @@ async def process_user_data_input(
     bot: Bot,
 ) -> None:
     """Обработчик для получения данных о пользователе."""
-    user_data = parse_data_from_text(text=message.text)
-
-    await message.delete()
-
-    data = await state.get_data()
-    message_to_edit_id = data.get("message_to_edit_id")
-
-    if user_data is None:
-        await bot.edit_message_text(
-            text=Dialog.Error.INVALID_USERNAME_FORMAT,
-            chat_id=message.chat.id,
-            message_id=message_to_edit_id,
-        )
-        return
-
-    user_service: UserService = container.resolve(UserService)
-
-    user = None
-
-    if user_data.tg_id:
-        user = await user_service.get_user(tg_id=user_data.tg_id)
-    elif user_data.username:
-        user = await user_service.get_by_username(username=user_data.username)
-
-    if user is None:
-        identificator = (
-            f"<code>{user_data.tg_id}</code>"
-            if user_data.tg_id
-            else f"<b>@{user_data.username}</b>"
-        )
-        await bot.edit_message_text(
-            text=Dialog.WarnUser.USER_NOT_FOUND.format(
-                identificator=identificator,
-            ),
-            chat_id=message.chat.id,
-            message_id=message_to_edit_id,
-        )
-        return
-
-    await state.update_data(
-        username=user.username,
-        id=user.id,
-        tg_id=user.tg_id,
-    )
-
-    if message_to_edit_id:
-        try:
-            await bot.edit_message_text(
-                text=Dialog.WarnUser.USER_INFO.format(
-                    username=user.username,
-                    tg_id=user.tg_id,
-                ),
-                chat_id=message.chat.id,
-                message_id=message_to_edit_id,
-                reply_markup=no_reason_ikb(),
-            )
-        except TelegramBadRequest as e:
-            logger.error("Ошибка редактирования сообщения: %s", e, exc_info=True)
-
-    await log_and_set_state(
+    await process_user_input_common(
         message=message,
         state=state,
-        new_state=WarnUserStates.waiting_reason_input,
+        bot=bot,
+        dialog_texts={
+            "invalid_format": Dialog.Error.INVALID_USERNAME_FORMAT,
+            "user_not_found": Dialog.WarnUser.USER_NOT_FOUND,
+            "user_info": Dialog.WarnUser.USER_INFO,
+        },
+        success_keyboard=no_reason_ikb,
+        next_state=WarnUserStates.waiting_reason_input,
     )
 
 

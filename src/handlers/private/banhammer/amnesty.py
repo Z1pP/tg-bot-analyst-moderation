@@ -3,7 +3,6 @@ import logging
 
 from aiogram import F, Bot, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.exceptions import TelegramBadRequest
 
 from constants import KbCommands, InlineButtons, Dialog
 from constants.punishment import PunishmentType
@@ -12,8 +11,11 @@ from dto import AmnestyUserDTO
 from exceptions import AmnestyError
 from keyboards.inline.chats_kb import tracked_chats_with_all_kb
 from keyboards.inline.amnesty import confirm_action_ikb
-from keyboards.inline.banhammer import amnesty_actions_ikb, block_actions_ikb
-from services import UserService
+from keyboards.inline.banhammer import (
+    amnesty_actions_ikb,
+    block_actions_ikb,
+    back_to_block_menu_ikb,
+)
 from states import AmnestyStates, BanHammerStates
 from usecases.amnesty import (
     CancelLastWarnUseCase,
@@ -24,8 +26,8 @@ from usecases.amnesty import (
     UnmuteUserUseCase,
 )
 from utils.state_logger import log_and_set_state
-from utils.user_data_parser import parse_data_from_text
 from utils.formatter import format_duration
+from .common import process_user_input_common
 
 
 router = Router()
@@ -44,7 +46,10 @@ async def amnesty_handler(callback: types.CallbackQuery, state: FSMContext) -> N
     await callback.answer()
     await state.update_data(message_to_edit_id=callback.message.message_id)
 
-    await callback.message.edit_text(text=Dialog.AmnestyUser.INPUT_USER_DATA)
+    await callback.message.edit_text(
+        text=Dialog.AmnestyUser.INPUT_USER_DATA,
+        reply_markup=back_to_block_menu_ikb(),
+    )
     await log_and_set_state(
         message=callback.message,
         state=state,
@@ -52,7 +57,7 @@ async def amnesty_handler(callback: types.CallbackQuery, state: FSMContext) -> N
     )
 
 
-@router.message(AmnestyStates.waiting_user_input, F.text)
+@router.message(AmnestyStates.waiting_user_input)
 async def waiting_user_data_input(
     message: types.Message,
     state: FSMContext,
@@ -61,81 +66,19 @@ async def waiting_user_data_input(
     """
     Обработчик для обработки введенной информации о пользователе
     """
-    user_data = parse_data_from_text(text=message.text)
-
-    await message.delete()
-
-    data = await state.get_data()
-    message_to_edit_id = data.get("message_to_edit_id")
-
-    if user_data is None:
-        await bot.edit_message_text(
-            text=Dialog.Error.INVALID_USERNAME_FORMAT,
-            chat_id=message.chat.id,
-            message_id=message_to_edit_id,
-            reply_markup=block_actions_ikb(),
-        )
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=BanHammerStates.block_menu,
-        )
-        return
-
-    user_service: UserService = container.resolve(UserService)
-
-    user = None
-
-    if user_data.tg_id:
-        user = await user_service.get_user(tg_id=user_data.tg_id)
-    elif user_data.username:
-        user = await user_service.get_by_username(username=user_data.username)
-
-    if user is None:
-        identificator = (
-            f"<code>{user_data.tg_id}</code>"
-            if user_data.tg_id
-            else f"<b>@{user_data.username}</b>"
-        )
-        await bot.edit_message_text(
-            text=Dialog.BanUser.USER_NOT_FOUND.format(
-                identificator=identificator,
-            ),
-            chat_id=message.chat.id,
-            message_id=message_to_edit_id,
-            reply_markup=block_actions_ikb(),
-        )
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=BanHammerStates.block_menu,
-        )
-        return
-
-    await state.update_data(
-        username=user.username,
-        id=user.id,
-        tg_id=user.tg_id,
-    )
-
-    if message_to_edit_id:
-        try:
-            await bot.edit_message_text(
-                text=Dialog.AmnestyUser.SELECT_ACTION.format(
-                    username=user.username,
-                    tg_id=user.tg_id,
-                ),
-                chat_id=message.chat.id,
-                message_id=message_to_edit_id,
-                reply_markup=amnesty_actions_ikb(),
-            )
-        except TelegramBadRequest as e:
-            logger.error("Ошибка редактирования сообщения: %s", e, exc_info=True)
-
-    await log_and_set_state(
+    await process_user_input_common(
         message=message,
         state=state,
-        new_state=AmnestyStates.waiting_action_select,
+        bot=bot,
+        dialog_texts={
+            "invalid_format": Dialog.Error.INVALID_USERNAME_FORMAT,
+            "user_not_found": Dialog.BanUser.USER_NOT_FOUND,
+            "user_info": Dialog.AmnestyUser.SELECT_ACTION,
+        },
+        success_keyboard=amnesty_actions_ikb,
+        next_state=AmnestyStates.waiting_action_select,
+        error_state=BanHammerStates.block_menu,
+        show_block_actions_on_error=True,
     )
 
 
@@ -210,30 +153,6 @@ async def cancel_warn_handler(callback: types.CallbackQuery, state: FSMContext) 
         message=callback.message,
         state=state,
         new_state=AmnestyStates.waiting_confirmation_action,
-    )
-
-
-@router.callback_query(
-    F.data == block_buttons.BACK_TO_BLOCK_MENU,
-    AmnestyStates.waiting_action_select,
-)
-async def back_to_block_menu_handler(
-    callback: types.CallbackQuery,
-    state: FSMContext,
-) -> None:
-    """Обработчик для возврата в меню блокировок"""
-
-    await callback.answer()
-
-    await callback.message.edit_text(
-        text=Dialog.BlockMenu.SELECT_ACTION,
-        reply_markup=block_actions_ikb(),
-    )
-
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=BanHammerStates.block_menu,
     )
 
 
