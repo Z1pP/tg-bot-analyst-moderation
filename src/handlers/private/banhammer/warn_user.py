@@ -9,14 +9,17 @@ from container import container
 from keyboards.inline.banhammer import (
     no_reason_ikb,
     block_actions_ikb,
-    back_to_block_menu_ikb,
 )
 from keyboards.inline.chats_kb import tracked_chats_with_all_kb
 from states import BanHammerStates, WarnUserStates
 from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserWarnUseCase
 from utils.state_logger import log_and_set_state
-from .common import process_moderation_action, process_user_input_common
+from .common import (
+    process_moderation_action,
+    process_user_input_common,
+    process_user_handler_common,
+)
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -29,19 +32,11 @@ block_buttons = InlineButtons.BlockButtons()
 )
 async def warn_user_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Обработчик для предупреждения пользователя."""
-    await callback.answer()
-    await state.update_data(message_to_edit_id=callback.message.message_id)
-
-    await callback.message.edit_text(
-        text=Dialog.WarnUser.INPUT_USER_DATA,
-        reply_markup=back_to_block_menu_ikb(),
-    )
-
-    # TODO Заменить на middleware
-    await log_and_set_state(
-        message=callback.message,
+    await process_user_handler_common(
+        callback=callback,
         state=state,
-        new_state=WarnUserStates.waiting_user_input,
+        next_state=WarnUserStates.waiting_user_input,
+        dialog_text=Dialog.WarnUser.INPUT_USER_DATA,
     )
 
 
@@ -77,14 +72,13 @@ async def process_reason_input(
     Удаляет сообщение пользователя с причиной и обновляет исходное сообщение.
     """
     reason = message.text.strip()
-    # Сразу удаляем сообщение пользователя, чтобы не засорять чат
+
     await message.delete()
 
     data = await state.get_data()
     user_tgid = data.get("tg_id")
     username = data.get("username")
     message_to_edit_id = data.get("message_to_edit_id")
-    # ID чата берем из сообщения пользователя, т.к. это приватный чат с ботом
     chat_id = message.chat.id
 
     usecase: GetChatsForUserActionUseCase = container.resolve(

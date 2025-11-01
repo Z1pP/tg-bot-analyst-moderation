@@ -13,7 +13,7 @@ from services import UserService
 from utils.user_data_parser import parse_data_from_text
 from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
-from keyboards.inline.banhammer import block_actions_ikb
+from keyboards.inline.banhammer import back_to_block_menu_ikb, block_actions_ikb
 from states.banhammer_states import BanHammerStates
 from usecases.moderation import GiveUserWarnUseCase, GiveUserBanUseCase
 from utils.state_logger import log_and_set_state
@@ -22,6 +22,28 @@ ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
 
 logger = logging.getLogger(__name__)
 block_buttons = InlineButtons.BlockButtons()
+
+
+async def process_user_handler_common(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    *,
+    next_state: State,
+    dialog_text: str,
+) -> None:
+    """Общая логика для обработчиков пользователя (warn / block / amnesty)"""
+    await callback.answer()
+    await state.update_data(message_to_edit_id=callback.message.message_id)
+
+    await callback.message.edit_text(
+        text=dialog_text,
+        reply_markup=back_to_block_menu_ikb(),
+    )
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=next_state,
+    )
 
 
 async def process_moderation_action(

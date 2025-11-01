@@ -7,7 +7,6 @@ from constants.punishment import PunishmentActions as Actions
 from keyboards.inline.banhammer import (
     no_reason_ikb,
     block_actions_ikb,
-    back_to_block_menu_ikb,
 )
 from keyboards.inline.chats_kb import tracked_chats_with_all_kb
 from states import BanUserStates, BanHammerStates
@@ -15,7 +14,11 @@ from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserBanUseCase
 from utils.state_logger import log_and_set_state
 from container import container
-from .common import process_moderation_action, process_user_input_common
+from .common import (
+    process_moderation_action,
+    process_user_input_common,
+    process_user_handler_common,
+)
 
 
 router = Router()
@@ -31,14 +34,12 @@ async def block_user_handler(callback: types.CallbackQuery, state: FSMContext) -
     """
     Обработчик для блокировки пользователя.
     """
-    await callback.answer()
-    await state.update_data(message_to_edit_id=callback.message.message_id)
-
-    await callback.message.edit_text(
-        text=Dialog.BanUser.INPUT_USER_DATA,
-        reply_markup=back_to_block_menu_ikb(),
+    await process_user_handler_common(
+        callback=callback,
+        state=state,
+        next_state=BanUserStates.waiting_user_input,
+        dialog_text=Dialog.BanUser.INPUT_USER_DATA,
     )
-    await log_and_set_state(callback.message, state, BanUserStates.waiting_user_input)
 
 
 @router.message(BanUserStates.waiting_user_input)
@@ -83,7 +84,6 @@ async def process_reason_input(
     user_tgid = data.get("tg_id")
     username = data.get("username")
     message_to_edit_id = data.get("message_to_edit_id")
-    # ID чата берем из сообщения пользователя, т.к. это приватный чат с ботом
     chat_id = message.chat.id
 
     usecase: GetChatsForUserActionUseCase = container.resolve(
