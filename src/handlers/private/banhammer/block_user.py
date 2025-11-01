@@ -5,8 +5,11 @@ from aiogram.exceptions import TelegramBadRequest
 
 from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
-from dto import ModerationActionDTO
-from keyboards.inline.banhammer import no_reason_ikb, block_actions_ikb
+from keyboards.inline.banhammer import (
+    no_reason_ikb,
+    block_actions_ikb,
+    back_to_block_menu_ikb,
+)
 from keyboards.inline.chats_kb import tracked_chats_with_all_kb
 from services import UserService
 from states import BanUserStates, BanHammerStates
@@ -15,6 +18,7 @@ from usecases.moderation import GiveUserBanUseCase
 from utils.state_logger import log_and_set_state
 from utils.user_data_parser import parse_data_from_text
 from container import container
+from .common import process_moderation_action
 
 
 router = Router()
@@ -33,7 +37,10 @@ async def block_user_handler(callback: types.CallbackQuery, state: FSMContext) -
     await callback.answer()
     await state.update_data(message_to_edit_id=callback.message.message_id)
 
-    await callback.message.edit_text(text=Dialog.BanUser.INPUT_USER_DATA)
+    await callback.message.edit_text(
+        text=Dialog.BanUser.INPUT_USER_DATA,
+        reply_markup=back_to_block_menu_ikb(),
+    )
     await log_and_set_state(callback.message, state, BanUserStates.waiting_user_input)
 
 
@@ -216,80 +223,15 @@ async def process_chat_selection(
     """
     Обработчик для выбора чата для блокировки.
     """
-    await callback.answer()
-
-    chat_id = callback.data.split("__")[1]
-
-    data = await state.get_data()
-    chat_dtos = data.get("chat_dtos")
-    username = data.get("username")
-    user_tgid = data.get("tg_id")
-
-    if not chat_dtos or not username or not user_tgid:
-        logger.error("Некорректные данные в state: %s", data)
-        await callback.message.edit_text(
-            text="❌ Ошибка: некорректные данные. Попробуйте снова.",
-            reply_markup=block_actions_ikb(),
-        )
-        return
-
-    if chat_id != "all":
-        chat_dtos = [chat for chat in chat_dtos if chat.id == int(chat_id)]
-
-    logger.info(
-        "Начало блокировки пользователя %s в %d чатах",
-        username,
-        len(chat_dtos),
+    await process_moderation_action(
+        callback=callback,
+        state=state,
+        action=Actions.BAN,
+        usecase_cls=GiveUserBanUseCase,
+        success_text="✅ Пользователь @{username} заблокирован!",
+        partial_text=(
+            "⚠️ Пользователь @{username} частично заблокирован\n\n"
+            "✅ Успешно: {ok}\n❌ Ошибки: {fail}"
+        ),
+        fail_text="❌ Не удалось заблокировать @{username} ни в одном чате",
     )
-
-    usecase: GiveUserBanUseCase = container.resolve(GiveUserBanUseCase)
-
-    success_chats = []
-    failed_chats = []
-
-    for chat in chat_dtos:
-        dto = ModerationActionDTO(
-            action=Actions.BAN,
-            violator_tgid=user_tgid,
-            violator_username=username,
-            admin_tgid=str(callback.from_user.id),
-            admin_username=callback.from_user.username,
-            chat_tgid=chat.tg_id,
-            chat_title=chat.title,
-            reason=data.get("reason"),
-            from_admin_panel=True,
-        )
-
-        try:
-            await usecase.execute(dto=dto)
-            success_chats.append(chat.title)
-            logger.info("Блокировка в чате %s успешна", chat.title)
-        except Exception as e:
-            failed_chats.append(chat.title)
-            logger.error(
-                "Ошибка блокировки в чате %s: %s",
-                chat.title,
-                e,
-                exc_info=True,
-            )
-
-    if success_chats and not failed_chats:
-        response_text = f"✅ Пользователь @{username} заблокирован!"
-        if len(success_chats) > 1:
-            response_text += (
-                f"\n\nЧаты ({len(success_chats)}): {', '.join(success_chats)}"
-            )
-    elif success_chats and failed_chats:
-        response_text = (
-            f"⚠️ Пользователь @{username} частично заблокирован\n\n"
-            f"✅ Успешно ({len(success_chats)}): {', '.join(success_chats)}\n"
-            f"❌ Ошибки ({len(failed_chats)}): {', '.join(failed_chats)}"
-        )
-    else:
-        response_text = f"❌ Не удалось заблокировать @{username} ни в одном чате"
-
-    await callback.message.edit_text(
-        text=response_text,
-        reply_markup=block_actions_ikb(),
-    )
-    await log_and_set_state(callback.message, state, BanHammerStates.block_menu)
