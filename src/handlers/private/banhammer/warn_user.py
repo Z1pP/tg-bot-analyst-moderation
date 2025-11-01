@@ -112,10 +112,7 @@ async def process_chat_selection(
         state=state,
         action=Actions.WARNING,
         usecase_cls=GiveUserWarnUseCase,
-        success_text="✅ Пользователь @{username} предупрежден!",
-        partial_text=(
-            "⚠️ Пользователь @{username} частично предупрежден\n\n"
-            "✅ Успешно: {ok}\n❌ Ошибки: {fail}"
-        ),
-        fail_text="❌ Не удалось предупредить @{username} ни в одном чате",
+        success_text=Dialog.WarnUser.SUCCESS_WARN,
+        partial_text=Dialog.WarnUser.PARTIAL_WARN,
+        fail_text=Dialog.WarnUser.FAIL_WARN,
     )

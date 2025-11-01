@@ -119,10 +119,7 @@ async def process_chat_selection(
         state=state,
         action=Actions.BAN,
         usecase_cls=GiveUserBanUseCase,
-        success_text="✅ Пользователь @{username} заблокирован!",
-        partial_text=(
-            "⚠️ Пользователь @{username} частично заблокирован\n\n"
-            "✅ Успешно: {ok}\n❌ Ошибки: {fail}"
-        ),
-        fail_text="❌ Не удалось заблокировать @{username} ни в одном чате",
+        success_text=Dialog.BanUser.SUCCESS_BAN,
+        partial_text=Dialog.BanUser.PARTIAL_BAN,
+        fail_text=Dialog.BanUser.FAIL_BAN,
     )
