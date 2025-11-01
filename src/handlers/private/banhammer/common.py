@@ -7,9 +7,11 @@ from aiogram.fsm.state import State
 
 from typing import Optional, Union
 
-from constants import InlineButtons
+from constants import InlineButtons, Dialog
+from keyboards.inline.chats_kb import tracked_chats_with_all_kb
 from container import container
 from services import UserService
+from usecases.chat import GetChatsForUserActionUseCase
 from utils.user_data_parser import parse_data_from_text
 from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
@@ -224,6 +226,81 @@ async def process_user_input_common(
 
     await log_and_set_state(
         message=message,
+        state=state,
+        new_state=next_state,
+    )
+
+
+async def process_reason_common(
+    reason: Optional[str],
+    sender: types.Message | types.CallbackQuery,
+    state: FSMContext,
+    bot: Bot,
+    is_callback: bool,
+    next_state: State,
+) -> None:
+    """
+    Общая логика для получения причины предупреждения.
+    Работает и для сообщений, и для callback-запросов.
+    """
+    chat_id = sender.message.chat.id if is_callback else sender.chat.id
+    from_user_id = sender.from_user.id
+    message_to_edit_id = None
+
+    if not is_callback:
+        await sender.delete()
+
+    data = await state.get_data()
+    user_tgid = data.get("tg_id")
+    username = data.get("username")
+    message_to_edit_id = data.get("message_to_edit_id")
+
+    logger.info(
+        "admin_id=%s, user_tgid=%s, username=%s, reason=%s",
+        from_user_id,
+        user_tgid,
+        username,
+        "<none>" if reason is None else reason,
+    )
+
+    usecase: GetChatsForUserActionUseCase = container.resolve(
+        GetChatsForUserActionUseCase
+    )
+    chat_dtos = await usecase.execute(admin_tgid=str(from_user_id), user_tgid=user_tgid)
+
+    if not chat_dtos:
+        await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_to_edit_id,
+            text=Dialog.WarnUser.NO_CHATS.format(username=username),
+            reply_markup=block_actions_ikb(),
+        )
+        await log_and_set_state(
+            message=sender.message if is_callback else sender,
+            state=state,
+            new_state=BanHammerStates.block_menu,
+        )
+        logger.warning(
+            "Отслеживаемы чаты не найдены для пользователя %s (%s)",
+            username,
+            user_tgid,
+        )
+        return
+
+    await state.update_data(reason=reason, chat_dtos=chat_dtos)
+
+    try:
+        await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_to_edit_id,
+            text=Dialog.WarnUser.SELECT_CHAT.format(username=username),
+            reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
+        )
+    except TelegramBadRequest as e:
+        logger.error("Ошибка при редактировании сообщения: %s", e, exc_info=True)
+
+    await log_and_set_state(
+        message=sender.message if is_callback else sender,
         state=state,
         new_state=next_state,
     )
