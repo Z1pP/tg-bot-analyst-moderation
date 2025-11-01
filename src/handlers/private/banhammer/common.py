@@ -1,10 +1,14 @@
 import logging
-from aiogram import types
+from aiogram import types, Bot
 from aiogram.fsm.context import FSMContext
+from aiogram.exceptions import TelegramBadRequest
+
 from typing import Union
 
 from constants import InlineButtons
 from container import container
+from services import UserService
+from utils.user_data_parser import parse_data_from_text
 from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
 from keyboards.inline.banhammer import block_actions_ikb
@@ -108,3 +112,94 @@ async def process_moderation_action(
     )
 
     await log_and_set_state(callback.message, state, BanHammerStates.block_menu)
+
+
+async def process_user_input_common(
+    message: types.Message,
+    state: FSMContext,
+    bot: Bot,
+    *,
+    dialog_texts,
+    success_keyboard,
+    next_state,
+    error_state=None,
+    show_block_actions_on_error: bool = False,
+):
+    """
+    Общая логика для хендлеров получения данных пользователя (ban / warn / amnesty).
+    """
+    user_data = parse_data_from_text(text=message.text)
+    await message.delete()
+
+    data = await state.get_data()
+    message_to_edit_id = data.get("message_to_edit_id")
+
+    if user_data is None:
+        kwargs = dict(
+            text=dialog_texts["invalid_format"],
+            chat_id=message.chat.id,
+            message_id=message_to_edit_id,
+        )
+        if show_block_actions_on_error:
+            kwargs["reply_markup"] = block_actions_ikb()
+
+        await bot.edit_message_text(**kwargs)
+
+        if error_state:
+            await log_and_set_state(message=message, state=state, new_state=error_state)
+        return
+
+    user_service: UserService = container.resolve(UserService)
+
+    user = None
+    if user_data.tg_id:
+        user = await user_service.get_user(tg_id=user_data.tg_id)
+    elif user_data.username:
+        user = await user_service.get_by_username(username=user_data.username)
+
+    # --- Если пользователь не найден
+    if user is None:
+        identificator = (
+            f"<code>{user_data.tg_id}</code>"
+            if user_data.tg_id
+            else f"<b>@{user_data.username}</b>"
+        )
+        kwargs = dict(
+            text=dialog_texts["user_not_found"].format(identificator=identificator),
+            chat_id=message.chat.id,
+            message_id=message_to_edit_id,
+        )
+        if show_block_actions_on_error:
+            kwargs["reply_markup"] = block_actions_ikb()
+
+        await bot.edit_message_text(**kwargs)
+
+        if error_state:
+            await log_and_set_state(message=message, state=state, new_state=error_state)
+        return
+
+    await state.update_data(
+        username=user.username,
+        id=user.id,
+        tg_id=user.tg_id,
+    )
+
+    if message_to_edit_id:
+        try:
+            await bot.edit_message_text(
+                text=dialog_texts["user_info"].format(
+                    username=user.username,
+                    tg_id=user.tg_id,
+                ),
+                chat_id=message.chat.id,
+                message_id=message_to_edit_id,
+                reply_markup=success_keyboard(),
+            )
+        except TelegramBadRequest as e:
+            logger.error("Ошибка редактирования сообщения: %s", e, exc_info=True)
+
+    await log_and_set_state(
+        message=message,
+        state=state,
+        new_state=next_state,
+    )
