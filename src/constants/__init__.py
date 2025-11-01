@@ -1,8 +1,10 @@
 from .dialogs import (
     UserTrackingDialogs,
+    BlockMenuDialogs,
     BanUserDialogs,
     MessageManagerDialogs,
     WarnUserDialogs,
+    AmnestyUserDialogs,
 )
 
 MAX_MSG_LENGTH = 4000  # Указывает максимальную длину сообщения для вывода
@@ -33,6 +35,7 @@ class InlineButtons:
         CONFIRM_ACTION = "Да"
         CANCEL_ACTION = "Нет"
         NO_REASON = "❌ Без причины"
+        CANCEL = "❌ Отмена"
 
 
 class KbCommands:
@@ -86,9 +89,11 @@ class KbCommands:
 class Dialog:
     # User Tracking
     UserTracking = UserTrackingDialogs
-    # Ban User
+    # Moderation User
+    BlockMenu = BlockMenuDialogs
     BanUser = BanUserDialogs
     WarnUser = WarnUserDialogs
+    AmnestyUser = AmnestyUserDialogs
     # Message Management
     MessageManager = MessageManagerDialogs
 

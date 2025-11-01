@@ -44,12 +44,7 @@ async def amnesty_handler(callback: types.CallbackQuery, state: FSMContext) -> N
     await callback.answer()
     await state.update_data(message_to_edit_id=callback.message.message_id)
 
-    text = (
-        "🕊️ <b>Амнистия пользователя</b>\n\n"
-        "Для разблокировки или снятия ограничения пришлите @username или Telegram ID пользователя\n\n"
-        "<i>Пример: @john_pidor или <code>123456789</code></i>"
-    )
-    await callback.message.edit_text(text=text)
+    await callback.message.edit_text(text=Dialog.AmnestyUser.INPUT_USER_DATA)
     await log_and_set_state(
         message=callback.message,
         state=state,
@@ -57,9 +52,7 @@ async def amnesty_handler(callback: types.CallbackQuery, state: FSMContext) -> N
     )
 
 
-@router.message(
-    AmnestyStates.waiting_user_input,
-)
+@router.message(AmnestyStates.waiting_user_input, F.text)
 async def waiting_user_data_input(
     message: types.Message,
     state: FSMContext,
@@ -80,6 +73,12 @@ async def waiting_user_data_input(
             text=Dialog.Error.INVALID_USERNAME_FORMAT,
             chat_id=message.chat.id,
             message_id=message_to_edit_id,
+            reply_markup=block_actions_ikb(),
+        )
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=BanHammerStates.block_menu,
         )
         return
 
@@ -104,6 +103,12 @@ async def waiting_user_data_input(
             ),
             chat_id=message.chat.id,
             message_id=message_to_edit_id,
+            reply_markup=block_actions_ikb(),
+        )
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=BanHammerStates.block_menu,
         )
         return
 
@@ -113,17 +118,13 @@ async def waiting_user_data_input(
         tg_id=user.tg_id,
     )
 
-    text = (
-        f"👤 <b>Найден пользователь:</b>\n"
-        f"• Юзер: @{user.username}\n"
-        f"• ID: <code>{user.tg_id}</code>\n\n"
-        "Пожалуйста, выберите необходимое действие."
-    )
-
     if message_to_edit_id:
         try:
             await bot.edit_message_text(
-                text=text,
+                text=Dialog.AmnestyUser.SELECT_ACTION.format(
+                    username=user.username,
+                    tg_id=user.tg_id,
+                ),
                 chat_id=message.chat.id,
                 message_id=message_to_edit_id,
                 reply_markup=amnesty_actions_ikb(),
@@ -148,16 +149,10 @@ async def unban_handler(callback: types.CallbackQuery, state: FSMContext) -> Non
 
     violator = await extract_violator_data_from_state(state=state)
 
-    text = (
-        f"Полная разблокировка даст возможность @{violator.username} вернуться в чат — "
-        "все предыдущие предупреждения будут сброшены.\n\n<b>Вы уверены, что хотите "
-        f"полностью разблокировать @{violator.username}?</b>"
-    )
-
     await state.update_data(action=block_buttons.UNBAN)
 
     await callback.message.edit_text(
-        text=text,
+        text=Dialog.AmnestyUser.UNBAN_CONFIRMATION.format(username=violator.username),
         reply_markup=confirm_action_ikb(),
     )
 
@@ -178,16 +173,10 @@ async def unmute_warn_handler(callback: types.CallbackQuery, state: FSMContext) 
 
     violator = await extract_violator_data_from_state(state=state)
 
-    text = (
-        f"Размут даст возможность @{violator.username} писать в чате, однако "
-        "предпреждения не будут сброшены.\n\nВы уверены, что хотите размутить "
-        f"данного @{violator.username}?"
-    )
-
     await state.update_data(action=block_buttons.UNMUTE)
 
     await callback.message.edit_text(
-        text=text,
+        text=Dialog.AmnestyUser.UNMUTE_CONFIRMATION.format(username=violator.username),
         reply_markup=confirm_action_ikb(),
     )
 
@@ -208,16 +197,12 @@ async def cancel_warn_handler(callback: types.CallbackQuery, state: FSMContext) 
 
     violator = await extract_violator_data_from_state(state=state)
 
-    text = (
-        f"Отмена последнего предупреждения даст возможность @{violator.username} "
-        "писать в чате.\n\n<b>Вы уверены, что хотите отменить последнее предупреждение "
-        f"для @{violator.username}?</b>"
-    )
-
     await state.update_data(action=block_buttons.CANCEL_WARN)
 
     await callback.message.edit_text(
-        text=text,
+        text=Dialog.AmnestyUser.CANCEL_WARN_CONFIRMATION.format(
+            username=violator.username
+        ),
         reply_markup=confirm_action_ikb(),
     )
 
@@ -237,12 +222,14 @@ async def back_to_block_menu_handler(
     state: FSMContext,
 ) -> None:
     """Обработчик для возврата в меню блокировок"""
+
     await callback.answer()
 
     await callback.message.edit_text(
-        text="🔙 Возврат в меню блокировок",
+        text=Dialog.BlockMenu.SELECT_ACTION,
         reply_markup=block_actions_ikb(),
     )
+
     await log_and_set_state(
         message=callback.message,
         state=state,
