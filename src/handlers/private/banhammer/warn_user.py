@@ -7,7 +7,6 @@ from aiogram.exceptions import TelegramBadRequest
 from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
 from container import container
-from dto import ModerationActionDTO
 from keyboards.inline.banhammer import (
     no_reason_ikb,
     block_actions_ikb,
