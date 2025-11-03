@@ -1,24 +1,23 @@
 import logging
-from aiogram import types, Bot
-from aiogram.fsm.context import FSMContext
-from aiogram.exceptions import TelegramBadRequest
-from aiogram.fsm.state import State
-
-
 from typing import Optional, Union
 
-from constants import InlineButtons, Dialog
-from keyboards.inline.chats_kb import tracked_chats_with_all_kb
-from container import container
-from services import UserService
-from usecases.chat import GetChatsForUserActionUseCase
-from utils.user_data_parser import parse_data_from_text
+from aiogram import Bot, types
+from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State
+
+from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
+from container import container
 from dto import ModerationActionDTO
 from keyboards.inline.banhammer import back_to_block_menu_ikb, block_actions_ikb
+from keyboards.inline.chats_kb import tracked_chats_with_all_kb
+from services import UserService
 from states.banhammer_states import BanHammerStates
-from usecases.moderation import GiveUserWarnUseCase, GiveUserBanUseCase
+from usecases.chat import GetChatsForUserActionUseCase
+from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
 from utils.state_logger import log_and_set_state
+from utils.user_data_parser import parse_data_from_text
 
 ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
 

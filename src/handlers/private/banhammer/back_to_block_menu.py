@@ -6,7 +6,6 @@ from keyboards.inline.banhammer import block_actions_ikb
 from states.banhammer_states import BanHammerStates
 from utils.state_logger import log_and_set_state
 
-
 router = Router(name=__name__)
 block_buttons = InlineButtons.BlockButtons()
 

@@ -1,5 +1,6 @@
 import logging
-from aiogram import Bot, types, Router, F
+
+from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog, InlineButtons
@@ -7,15 +8,15 @@ from constants.punishment import PunishmentActions as Actions
 from keyboards.inline.banhammer import (
     no_reason_ikb,
 )
-from states import BanUserStates, BanHammerStates
+from states import BanHammerStates, BanUserStates
 from usecases.moderation import GiveUserBanUseCase
+
 from .common import (
     process_moderation_action,
-    process_user_input_common,
-    process_user_handler_common,
     process_reason_common,
+    process_user_handler_common,
+    process_user_input_common,
 )
-
 
 router = Router()
 logger = logging.getLogger(__name__)

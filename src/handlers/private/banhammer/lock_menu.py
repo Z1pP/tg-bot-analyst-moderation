@@ -3,7 +3,7 @@ import logging
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
-from constants import KbCommands, Dialog
+from constants import Dialog, KbCommands
 from keyboards.inline.banhammer import block_actions_ikb
 from states import BanHammerStates
 from utils.state_logger import log_and_set_state

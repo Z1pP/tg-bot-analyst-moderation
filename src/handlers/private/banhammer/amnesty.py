@@ -1,20 +1,20 @@
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 
-from aiogram import F, Bot, Router, types
+from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 
-from constants import KbCommands, InlineButtons, Dialog
+from constants import Dialog, InlineButtons, KbCommands
 from constants.punishment import PunishmentType
 from container import container
 from dto import AmnestyUserDTO
 from exceptions import AmnestyError
-from keyboards.inline.chats_kb import tracked_chats_with_all_kb
 from keyboards.inline.amnesty import confirm_action_ikb
 from keyboards.inline.banhammer import (
     amnesty_actions_ikb,
     block_actions_ikb,
 )
+from keyboards.inline.chats_kb import tracked_chats_with_all_kb
 from states import AmnestyStates, BanHammerStates
 from usecases.amnesty import (
     CancelLastWarnUseCase,
@@ -24,10 +24,10 @@ from usecases.amnesty import (
     UnbanUserUseCase,
     UnmuteUserUseCase,
 )
-from utils.state_logger import log_and_set_state
 from utils.formatter import format_duration
-from .common import process_user_input_common, process_user_handler_common
+from utils.state_logger import log_and_set_state
 
+from .common import process_user_handler_common, process_user_input_common
 
 router = Router()
 logger = logging.getLogger(__name__)
