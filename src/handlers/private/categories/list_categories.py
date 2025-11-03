@@ -6,8 +6,8 @@ from constants import KbCommands
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
 from keyboards.inline.categories import categories_inline_kb
-from usecases.categories import GetCategoriesPaginatedUseCase
 from states import TemplateStateManager
+from usecases.categories import GetCategoriesPaginatedUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 
@@ -20,7 +20,9 @@ async def list_categories_handler(message: Message, state: FSMContext):
 
     await state.set_state(TemplateStateManager.listing_categories)
 
-    usecase: GetCategoriesPaginatedUseCase = container.resolve(GetCategoriesPaginatedUseCase)
+    usecase: GetCategoriesPaginatedUseCase = container.resolve(
+        GetCategoriesPaginatedUseCase
+    )
 
     try:
         # Получаем первую страницу категорий

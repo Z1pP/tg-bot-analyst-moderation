@@ -5,8 +5,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from container import container
-from usecases.categories import UpdateCategoryNameUseCase
 from states import TemplateStateManager
+from usecases.categories import UpdateCategoryNameUseCase
 from utils.exception_handler import handle_exception
 
 router = Router(name=__name__)
@@ -28,7 +28,9 @@ async def process_edit_category_name(message: Message, state: FSMContext) -> Non
         new_name = message.text.strip()
 
         # Обновляем название через Use Case
-        usecase: UpdateCategoryNameUseCase = container.resolve(UpdateCategoryNameUseCase)
+        usecase: UpdateCategoryNameUseCase = container.resolve(
+            UpdateCategoryNameUseCase
+        )
         success = await usecase.execute(category_id, new_name)
 
         if success:
