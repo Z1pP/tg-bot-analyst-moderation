@@ -10,11 +10,10 @@ def admin_menu_kb():
             KeyboardButton(text=KbCommands.CHATS_MENU),
         ],
         [
-            KeyboardButton(text=KbCommands.TEMPLATES_MENU),
             KeyboardButton(text=KbCommands.MESSAGE_MANAGEMENT),
+            KeyboardButton(text=KbCommands.LOCK_MENU),
         ],
         [
-            KeyboardButton(text=KbCommands.LOCK_MENU),
             # KeyboardButton(text=KbCommands.SETTINGS),
             # KeyboardButton(text=KbCommands.FAQ),
         ],
