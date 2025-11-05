@@ -1,7 +1,7 @@
 import logging
-from typing import Callable, List
+from typing import List
 
-from dto import AmnestyUserDTO, ChatDTO
+from dto import ChatDTO
 from exceptions.moderation import ArchiveChatError, BotInsufficientPermissionsError
 from models.chat_session import ChatSession
 from services import BotMessageService, BotPermissionService, ChatService
