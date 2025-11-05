@@ -50,5 +50,9 @@ def send_message_ikb() -> types.InlineKeyboardMarkup:
             text=InlineButtons.MessageActions.SEND_MESSAGE,
             callback_data="send_message_to_chat",
         ),
+        types.InlineKeyboardButton(
+            text=InlineButtons.MessageActions.TEMPLATES_MENU,
+            callback_data="templates_menu",
+        ),
     )
     return builder.as_markup()
