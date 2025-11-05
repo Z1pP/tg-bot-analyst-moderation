@@ -1,10 +1,10 @@
 from .dialogs import (
-    UserTrackingDialogs,
-    BlockMenuDialogs,
-    BanUserDialogs,
-    MessageManagerDialogs,
-    WarnUserDialogs,
     AmnestyUserDialogs,
+    BanUserDialogs,
+    BlockMenuDialogs,
+    MessageManagerDialogs,
+    UserTrackingDialogs,
+    WarnUserDialogs,
 )
 
 MAX_MSG_LENGTH = 4000  # Указывает максимальную длину сообщения для вывода
