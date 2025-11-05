@@ -13,6 +13,8 @@ class TimeZoneService:
     def convert_to_local_time(
         cls, dt: datetime, source_tz: Optional[pytz.BaseTzInfo] = None
     ) -> datetime:
+        if dt is None:
+            return None
         if dt.tzinfo is None:
             source_tz = pytz.utc
             dt = source_tz.localize(dt)
