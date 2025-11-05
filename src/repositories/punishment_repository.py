@@ -1,11 +1,9 @@
 import logging
-from typing import Optional
 
 from sqlalchemy import delete, func, select
-from sqlalchemy.orm import joinedload
 
 from database.session import DatabaseContextManager
-from models import Punishment, User
+from models import Punishment
 
 logger = logging.getLogger(__name__)
 
