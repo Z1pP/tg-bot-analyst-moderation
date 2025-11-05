@@ -22,6 +22,8 @@ class InlineButtons:
         CANCEL = "❌ Отмена"
         CONFIRM_DELETE = "✅ Да, удалить"
         SEND_MESSAGE = "💬 Отправить сообщение"
+        # Templates
+        TEMPLATES_MENU = "🚀 Шаблоны ответов"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
@@ -59,7 +61,6 @@ class KbCommands:
     DAILY_RATING = "🏆 Рейтинг за сутки"
 
     # Templates
-    TEMPLATES_MENU = "🚀 Шаблоны ответов"
     ADD_TEMPLATE = "➕ Добавить шаблон"
     ADD_CATEGORY = "➕ Добавить категорию"
     SELECT_TEMPLATE = "🔖 Шаблоны"
