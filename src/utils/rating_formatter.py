@@ -49,17 +49,19 @@ class RatingFormatter:
                 f"@{user.username}" if user.username != "Без имени" else "👤 Без имени"
             )
             text += f"{emoji} {username} — {user.message_count} сообщений\n"
-        
+
         # Рейтинг по реакциям
         if stats.top_reactors:
             text += "\n😍 <b>По реакциям:</b>\n"
             for user in stats.top_reactors:
                 emoji = RatingFormatter.RANK_EMOJIS.get(user.rank, "💫")
                 username = (
-                    f"@{user.username}" if user.username != "Без имени" else "👤 Без имени"
+                    f"@{user.username}"
+                    if user.username != "Без имени"
+                    else "👤 Без имени"
                 )
                 text += f"{emoji} {username} — {user.reaction_count} реакций\n"
-        
+
         # Популярные реакции
         if stats.popular_reactions:
             text += "\n🔥 <b>Популярные реакции:</b>\n"

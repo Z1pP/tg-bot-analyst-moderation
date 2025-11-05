@@ -10,8 +10,8 @@ from aiogram.types import Update
 from fastapi import FastAPI, Request
 
 from bot import configure_dispatcher
-from container import ContainerSetup
 from commands.start_commands import set_bot_commands
+from container import ContainerSetup
 from utils.logger_config import setup_logger
 
 setup_logger(log_level=logging.INFO)
