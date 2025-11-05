@@ -1,4 +1,5 @@
 import logging
+from dataclasses import asdict
 
 from constants.punishment import PunishmentType
 from dto import AmnestyUserDTO, CancelWarnResultDTO
@@ -8,6 +9,7 @@ from repositories import (
     UserChatStatusRepository,
 )
 from services import BotMessageService, BotPermissionService, ChatService
+from services.time_service import TimeZoneService
 from utils.formatter import format_duration
 
 from .base_amnesty import BaseAmnestyUseCase
@@ -33,155 +35,96 @@ class CancelLastWarnUseCase(BaseAmnestyUseCase):
         self.user_chat_status_repository = user_chat_status_repository
 
     async def execute(self, dto: AmnestyUserDTO) -> CancelWarnResultDTO:
-        current_count = 0
-        next_ladder = None
-
-        for chat in dto.chat_dtos:
-            archive_chats = await self._validate_and_get_archive_chats(chat)
-
-            deleted = await self.punishment_repository.delete_last_punishment(
-                user_id=dto.violator_id, chat_id=chat.id
+        if len(dto.chat_dtos) > 1:
+            logger.warning(
+                "CancelLastWarnUseCase получил %d чатов, но обработает только первый.",
+                len(dto.chat_dtos),
             )
+        chat = dto.chat_dtos[0]
 
-            if not deleted:
-                logger.warning("Не найдено наказаний для отмены в чате %s", chat.id)
-                continue
+        archive_chats = await self._validate_and_get_archive_chats(chat)
 
-            current_count = await self.punishment_repository.count_punishments(
-                user_id=dto.violator_id, chat_id=chat.id
-            )
+        member_status = await self.bot_permission_service.get_chat_member_status(
+            chat_tgid=chat.tg_id,
+            user_tgid=int(dto.violator_tgid),
+        )
 
-            next_ladder = (
-                await self.punishment_ladder_repository.get_punishment_by_step(
-                    step=current_count + 1,
-                    chat_id=chat.tg_id,
-                )
-            )
+        is_deleted = await self.punishment_repository.delete_last_punishment(
+            user_id=dto.violator_id, chat_id=chat.id
+        )
+        if not is_deleted:
+            logger.warning("Не найдено наказаний для отмены в чате %s", chat.id)
+            return CancelWarnResultDTO(success=False)
 
-            if current_count == 0:
-                # Получаем статус до сброса, чтобы понять, нужно ли снимать ограничения
-                current_status = await self.user_chat_status_repository.get_status(
-                    user_id=dto.violator_id, chat_id=chat.id
-                )
+        logger.info(
+            "Удалено последнее предупреждение для пользователя %s в чате %s",
+            dto.violator_username,
+            chat.id,
+        )
 
-                await self.user_chat_status_repository.reset_status(
-                    user_id=dto.violator_id, chat_id=chat.id
-                )
+        current_warn_count = await self.punishment_repository.count_punishments(
+            user_id=dto.violator_id, chat_id=chat.id
+        )
 
-                # Снимаем ограничения только если пользователь был забанен или замучен
-                if current_status:
-                    if current_status.is_banned:
-                        await self.bot_message_service.unban_chat_member(
-                            chat_tg_id=chat.tg_id,
-                            user_tg_id=int(dto.violator_tgid),
-                        )
-                    elif current_status.is_muted:
-                        await self.bot_message_service.unmute_chat_member(
-                            chat_tg_id=chat.tg_id,
-                            user_tg_id=int(dto.violator_tgid),
-                        )
-            else:
-                current_ladder = (
-                    await self.punishment_ladder_repository.get_punishment_by_step(
-                        step=current_count,
-                        chat_id=chat.tg_id,
-                    )
-                )
-                if current_ladder:
-                    # Получаем текущий статус пользователя
-                    current_status = await self.user_chat_status_repository.get_status(
-                        user_id=dto.violator_id, chat_id=chat.id
-                    )
-
-                    was_banned = current_status.is_banned if current_status else False
-                    was_muted = current_status.is_muted if current_status else False
-
-                    # Обновляем статус в БД
-                    await self.user_chat_status_repository.update_status(
-                        user_id=dto.violator_id,
-                        chat_id=chat.id,
-                        is_banned=current_ladder.punishment_type == PunishmentType.BAN,
-                        is_muted=current_ladder.punishment_type == PunishmentType.MUTE,
-                    )
-
-                    # Применяем или снимаем ограничения в Telegram
-                    if current_ladder.punishment_type == PunishmentType.BAN:
-                        # Применяем бан
-                        await self.bot_message_service.ban_chat_member(
-                            chat_tg_id=chat.tg_id,
-                            user_tg_id=int(dto.violator_tgid),
-                        )
-                    elif current_ladder.punishment_type == PunishmentType.MUTE:
-                        # Проверяем статус пользователя в чате
-                        try:
-                            member = await self.bot_message_service.bot.get_chat_member(
-                                chat_id=chat.tg_id,
-                                user_id=int(dto.violator_tgid),
-                            )
-                            # Если пользователь забанен или покинул чат, сначала разбаниваем
-                            if member.status in ["kicked", "left"]:
-                                await self.bot_message_service.unban_chat_member(
-                                    chat_tg_id=chat.tg_id,
-                                    user_tg_id=int(dto.violator_tgid),
-                                )
-                        except Exception as e:
-                            logger.warning(
-                                "Не удалось проверить статус пользователя %s в чате %s: %s",
-                                dto.violator_tgid,
-                                chat.tg_id,
-                                e,
-                            )
-
-                        # Применяем мут с новой длительностью
-                        await self.bot_message_service.mute_chat_member(
-                            chat_tg_id=chat.tg_id,
-                            user_tg_id=int(dto.violator_tgid),
-                            duration_seconds=current_ladder.duration_seconds,
-                        )
-                    else:
-                        # Текущее наказание - WARNING, снимаем все ограничения
-                        if was_banned:
-                            await self.bot_message_service.unban_chat_member(
-                                chat_tg_id=chat.tg_id,
-                                user_tg_id=int(dto.violator_tgid),
-                            )
-                        elif was_muted:
-                            await self.bot_message_service.unmute_chat_member(
-                                chat_tg_id=chat.tg_id,
-                                user_tg_id=int(dto.violator_tgid),
-                            )
-                else:
-                    # Если нет ladder для текущего шага, сбрасываем статус без действий в Telegram
-                    await self.user_chat_status_repository.reset_status(
-                        user_id=dto.violator_id, chat_id=chat.id
-                    )
-
-            if next_ladder and next_ladder.punishment_type == PunishmentType.BAN:
-                next_step = "бессрочная блокировка."
-            elif next_ladder and next_ladder.punishment_type == PunishmentType.MUTE:
-                next_step = f"мут на {format_duration(next_ladder.duration_seconds)}."
-            else:
-                next_step = "предупреждение."
-
-            report_text = (
-                f"⏪ <b>Отмена последнего предупреждения для @{dto.violator_username}</b>\n\n"
-                f"• Чат: <b>{chat.title}</b>\n"
-                f"• Отменил: <b>@{dto.admin_username}</b>\n"
-                f"• След. шаг: <b>{next_step}</b>"
-            )
-
-            await self._send_report_to_archives(archive_chats, report_text)
-
+        if current_warn_count == 0 and member_status.is_banned:
             logger.info(
-                "Отменено последнее предупреждение для пользователя %s в чате %s",
+                "Последний варн отменен, снимаем блокировку с пользователя %s",
                 dto.violator_username,
-                chat.id,
             )
+            is_unbanned = await self.bot_message_service.unban_chat_member(
+                chat_tgid=chat.tg_id, user_tg_id=int(dto.violator_tgid)
+            )
+            if is_unbanned:
+                # Обновляем локальный статус, чтобы отчет был корректным
+                member_status.is_banned = False
+                member_status.banned_until = None
+
+        await self.user_chat_status_repository.update_status(
+            user_id=dto.violator_id,
+            chat_id=chat.id,
+            **asdict(member_status),
+        )
+        logger.info(
+            "Статус пользователя %s синхронизирован с Telegram.", dto.violator_username
+        )
+
+        next_ladder = await self.punishment_ladder_repository.get_punishment_by_step(
+            step=current_warn_count + 1, chat_id=chat.tg_id
+        )
+
+        if next_ladder and next_ladder.punishment_type == PunishmentType.BAN:
+            next_step = "бессрочная блокировка."
+        elif next_ladder and next_ladder.punishment_type == PunishmentType.MUTE:
+            next_step = f"мут на {format_duration(int(next_ladder.duration_seconds))}."
+        else:
+            next_step = "предупреждение."
+
+        active_punishment_status = "нет"
+        if member_status.is_banned:
+            active_punishment_status = "<b>блокировка</b>"
+        elif member_status.is_muted and member_status.muted_until:
+            duration = member_status.muted_until - TimeZoneService.now()
+            if duration and duration.total_seconds() > 0:
+                active_punishment_status = (
+                    f"<b>мут на {format_duration(int(duration.total_seconds()))}</b>"
+                )
+
+        report_text = (
+            f"⏪ <b>Отмена последнего предупреждения для @{dto.violator_username}</b>\n\n"
+            f"• Чат: <b>{chat.title}</b>\n"
+            f"• Отменил: <b>@{dto.admin_username}</b>\n"
+            f"• Текущее наказание: {active_punishment_status}\n"
+            f"• След. шаг: <b>{next_step}</b>"
+        )
+
+        await self._send_report_to_archives(archive_chats, report_text)
 
         return CancelWarnResultDTO(
             success=True,
-            current_warns_count=current_count,
-            next_punishment_type=next_ladder.punishment_type if next_ladder else None,
+            current_warns_count=current_warn_count,
+            next_punishment_type=next_ladder.punishment_type
+            if next_ladder
+            else PunishmentType.WARNING,
             next_punishment_duration=(
                 next_ladder.duration_seconds if next_ladder else None
             ),
