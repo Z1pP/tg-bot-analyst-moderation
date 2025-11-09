@@ -187,43 +187,6 @@ class GetReportOnSpecificChatUseCase:
 
         return "\n".join(filter(None, report_parts))
 
-    def _generate_basic_stats(
-        self,
-        messages: List[ChatMessage],
-        replies: List[MessageReply],
-        reactions: List[MessageReaction],
-        start_date: datetime,
-        end_date: datetime,
-    ) -> str:
-        """Генерирует базовую статистику."""
-        stats_parts = []
-
-        # Первые сообщения по дням
-        if messages:
-            first_messages_info = self._get_first_messages_by_day(messages=messages)
-            stats_parts.append(first_messages_info)
-
-        # Статистика активности
-        working_hours = WorkTimeService.calculate_work_hours(
-            start_date=start_date, end_date=end_date
-        )
-        total_activity = len(messages) + len(reactions)
-        activity_per_hour = self._calculate_activity_per_hour(
-            activity_count=total_activity, work_hours=working_hours
-        )
-
-        stats_parts.extend(
-            [
-                f"• <b>{len(messages)}</b> - всего сообщений",
-                f"• <b>{len(reactions)}</b> - всего реакций",
-                f"• <b>{working_hours}</b> - кол-во рабочих часов",
-                f"• <b>{activity_per_hour}</b> - активности в час",
-                f"• Из них <b>{len(replies)}</b> ответ(-ов)\n",
-            ]
-        )
-
-        return "\n".join(stats_parts)
-
     def _generate_breaks_section(
         self,
         messages: List[ChatMessage],
@@ -244,28 +207,6 @@ class GetReportOnSpecificChatUseCase:
         if breaks:
             return "<b>⏸️ Перерывы:</b>\n" + "\n".join(breaks)
         return "<b>⏸️ Перерывы:</b> отсутствуют"
-
-    def _get_first_messages_by_day(self, messages: List[ChatMessage]) -> str:
-        """Возвращает список времени первого сообщения в день."""
-        if not messages:
-            return ""
-
-        sorted_messages = sorted(messages, key=lambda m: m.created_at)
-        first_messages_by_day = {}
-
-        for message in sorted_messages:
-            date = message.created_at.date()
-            if date not in first_messages_by_day:
-                first_messages_by_day[date] = message
-
-        result = []
-        for date, message in sorted(first_messages_by_day.items()):
-            result.append(
-                f"• {message.created_at.strftime('%H:%M')} - первое сообщение "
-                f"{message.created_at.strftime('%d.%m.%Y')}"
-            )
-
-        return "\n".join(result) + "\n"
 
     def _generate_users_stats_by_chat(
         self,
@@ -607,16 +548,6 @@ class GetReportOnSpecificChatUseCase:
             start_date=report_dto.start_date,
             end_date=report_dto.end_date,
         )
-
-    def _calculate_activity_per_hour(
-        self,
-        activity_count: int,
-        work_hours: float,
-    ) -> float:
-        """Рассчитывает количество активности в час рабочего времени."""
-        if activity_count < 1 or work_hours <= 0:
-            return 0.0
-        return round(activity_count / work_hours, 2)
 
     def _split_report(self, report: str) -> List[str]:
         """Разделяет отчет на части по лимиту длины."""

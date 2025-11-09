@@ -71,7 +71,7 @@ class ModerationUseCase:
         self, dto: ModerationActionDTO
     ) -> Optional[ModerationContext]:
         if not self.is_different_sender(
-            reply_user_tg_id=dto.user_reply_tgid,
+            reply_user_tg_id=dto.violator_tgid,
             owner_tg_id=dto.admin_tgid,
         ):
             raise CannotPunishYouSelf()
@@ -85,7 +85,7 @@ class ModerationUseCase:
             raise BotInsufficientPermissionsError(chat_title=dto.chat_title)
 
         if await self.is_chat_administrator(
-            tg_id=dto.user_reply_tgid,
+            tg_id=dto.violator_tgid,
             chat_tg_id=dto.chat_tgid,
         ):
             await self.bot_message_service.delete_message_from_chat(
@@ -95,7 +95,7 @@ class ModerationUseCase:
             raise CannotPunishChatAdminError()
 
         archive_chats = await self.chat_service.get_archive_chats(
-            source_chat_title=dto.chat_title,
+            source_chat_tgid=dto.chat_tgid,
         )
 
         if not archive_chats:
@@ -103,11 +103,11 @@ class ModerationUseCase:
                 chat_id=dto.chat_tgid,
                 message_id=dto.original_message_id,
             )
-            raise ArchiveChatError()
+            raise ArchiveChatError(chat_title=dto.chat_title)
 
         violator = await self.user_service.get_user(
-            tg_id=dto.user_reply_tgid,
-            username=dto.user_reply_username,
+            tg_id=dto.violator_tgid,
+            username=dto.violator_username,
         )
         admin = await self.user_service.get_user(
             tg_id=dto.admin_tgid,
@@ -142,33 +142,49 @@ class ModerationUseCase:
         self,
         context: ModerationContext,
         report_text: str,
-        reason_text: str,
+        reason_text: Optional[str],
         admin_answer_text: str,
     ) -> None:
-        for archive_chat in context.archive_chats:
-            await self.bot_message_service.forward_message(
-                chat_tgid=archive_chat.chat_id,
-                from_chat_tgid=context.dto.chat_tgid,
-                message_tgid=context.dto.reply_message_id,
-            )
-
-        try:
-            violator_msg_deleted = (
-                await self.bot_message_service.delete_message_from_chat(
-                    chat_id=context.dto.chat_tgid,
-                    message_id=context.dto.reply_message_id,
-                    message_date=context.dto.reply_message_date,
+        # Если вызов из админ-панели, не пересылаем сообщение и не удаляем
+        if not context.dto.from_admin_panel:
+            for archive_chat in context.archive_chats:
+                await self.bot_message_service.forward_message(
+                    chat_tgid=archive_chat.chat_id,
+                    from_chat_tgid=context.dto.chat_tgid,
+                    message_tgid=context.dto.reply_message_id,
                 )
-            )
-        except MessageTooOldError as e:
-            violator_msg_deleted = False
-            await self.bot_message_service.send_private_message(
-                user_tgid=context.admin.tg_id,
-                text=e.get_user_message(),
+
+            try:
+                violator_msg_deleted = (
+                    await self.bot_message_service.delete_message_from_chat(
+                        chat_id=context.dto.chat_tgid,
+                        message_id=context.dto.reply_message_id,
+                        message_date=context.dto.reply_message_date,
+                    )
+                )
+            except MessageTooOldError as e:
+                violator_msg_deleted = False
+                await self.bot_message_service.send_private_message(
+                    user_tgid=context.admin.tg_id,
+                    text=e.get_user_message(),
+                )
+
+            if not violator_msg_deleted:
+                report_text = report_text.replace("удалено", "не удалено (старше 48ч)")
+
+            await self.bot_message_service.delete_message_from_chat(
+                chat_id=context.dto.chat_tgid,
+                message_id=context.dto.original_message_id,
+                message_date=context.dto.original_message_date,
             )
 
-        if not violator_msg_deleted:
-            report_text = report_text.replace("удалено", "не удалено (старше 48ч)")
+            context.message_deleted = violator_msg_deleted
+        else:
+            # Для админ-панели изменяем текст отчета
+            report_text = report_text.replace(
+                "Сообщение удалено", "Действие через Админ-панель"
+            )
+            context.message_deleted = False
 
         for archive_chat in context.archive_chats:
             await self.bot_message_service.send_chat_message(
@@ -176,50 +192,18 @@ class ModerationUseCase:
                 text=report_text,
             )
 
-        await self.bot_message_service.delete_message_from_chat(
-            chat_id=context.dto.chat_tgid,
-            message_id=context.dto.original_message_id,
-            message_date=context.dto.original_message_date,
-        )
-
-        await self.bot_message_service.send_chat_message(
-            chat_tgid=context.dto.chat_tgid,
-            text=reason_text,
-        )
+        # Отправляем уведомление в чат только если не из админ-панели
+        if reason_text:
+            await self.bot_message_service.send_chat_message(
+                chat_tgid=context.dto.chat_tgid,
+                text=reason_text,
+            )
 
         try:
-            await self.bot_message_service.send_private_message(
-                user_tgid=context.admin.tg_id,
-                text=admin_answer_text,
-            )
+            if admin_answer_text and not context.dto.from_admin_panel:
+                await self.bot_message_service.send_private_message(
+                    user_tgid=context.admin.tg_id,
+                    text=admin_answer_text,
+                )
         except TelegramForbiddenError:
             pass
-
-        context.message_deleted = violator_msg_deleted
-
-    async def _send_messages_to_admins(
-        self,
-        dto: ModerationActionDTO,
-        text: str,
-    ) -> None:
-        admins = await self.user_service.get_admins_for_chat(chat_tg_id=dto.chat_tgid)
-
-        if not admins:
-            return
-
-        extended_text = (
-            f"Администратор @{dto.admin_username} попытался выдать "
-            f"предупреждение пользователю @{dto.user_reply_username} в чате {dto.chat_title},"
-            "однако отсутсвует чат с историей удалённых сообщений.\n\n" + text
-        )
-
-        admins = [admin for admin in admins if admin.tg_id != dto.admin_tgid]
-
-        for admin in admins:
-            try:
-                await self.bot_message_service.send_private_message(
-                    user_tgid=admin.tg_id,
-                    text=extended_text,
-                )
-            except TelegramForbiddenError:
-                pass

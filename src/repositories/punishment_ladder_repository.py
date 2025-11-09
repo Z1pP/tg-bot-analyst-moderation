@@ -3,13 +3,16 @@ from typing import Optional
 
 from sqlalchemy import select
 
-from database.session import async_session
+from database.session import DatabaseContextManager
 from models.punishment_ladder import PunishmentLadder
 
 logger = logging.getLogger(__name__)
 
 
 class PunishmentLadderRepository:
+    def __init__(self, db_manager: DatabaseContextManager) -> None:
+        self._db = db_manager
+
     async def get_punishment_by_step(
         self,
         step: int,
@@ -21,7 +24,7 @@ class PunishmentLadderRepository:
         Сначала ищет настройку для конкретного chat_id. Если не находит,
         ищет глобальную настройку (где chat_id IS NULL).
         """
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 logger.info("Getting punishment for step %s in chat %s", step, chat_id)
                 # Сначала ищем специфичную для чата настройку
@@ -62,7 +65,7 @@ class PunishmentLadderRepository:
 
     async def get_ladder_by_chat_id(self, chat_id: str) -> list[PunishmentLadder]:
         """Возвращает всю лестницу наказаний для конкретного чата."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 logger.info("Getting punishment ladder for chat %s", chat_id)
                 stmt = (
@@ -82,7 +85,7 @@ class PunishmentLadderRepository:
 
     async def get_global_ladder(self) -> list[PunishmentLadder]:
         """Возвращает глобальную лестницу наказаний."""
-        async with async_session() as session:
+        async with self._db.session() as session:
             try:
                 logger.info("Getting global punishment ladder.")
                 stmt = (

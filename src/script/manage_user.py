@@ -6,7 +6,7 @@ from constants.enums import UserRole
 from container import ContainerSetup, container
 from database.session import async_session
 from repositories.user_repository import UserRepository
-from utils.username_validator import parse_and_validate_tg_id
+from utils.data_parser import parse_and_validate_tg_id
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

@@ -1,15 +1,16 @@
 from aiogram import Router
-from aiogram.filters import Command
+from aiogram.filters import CommandStart
 from aiogram.types import Message
 
-from constants import CommandList, Dialog
+
+from constants import Dialog
 from keyboards.reply.menu import admin_menu_kb
 from utils.send_message import send_html_message_with_kb
 
 router = Router(name=__name__)
 
 
-@router.message(Command(CommandList.START.name.lower()))
+@router.message(CommandStart())
 async def start_handler(message: Message) -> None:
     """
     Выводит приветственное сообщение

@@ -31,7 +31,7 @@ async def users_list_handler(message: Message) -> None:
         usecase: GetListTrackedUsersUseCase = container.resolve(
             GetListTrackedUsersUseCase
         )
-        users = await usecase.execute(admin_username=message.from_user.username)
+        users = await usecase.execute(admin_tgid=str(message.from_user.id))
 
         if not users:
             message_text = (

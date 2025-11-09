@@ -55,8 +55,8 @@ class BreakAnalysisService:
 
             # Ищем перерывы в пределах одного дня
             for i in range(1, len(day_activities)):
-                prev_time, prev_type = day_activities[i - 1]
-                curr_time, curr_type = day_activities[i]
+                prev_time, _ = day_activities[i - 1]
+                curr_time, _ = day_activities[i]
 
                 minutes_diff = (curr_time - prev_time).total_seconds() / 60
 

@@ -1,7 +1,5 @@
 import logging
 from datetime import datetime
-from typing import Optional
-
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -10,13 +8,14 @@ from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import AllUsersReportDTO
+from keyboards.inline import CalendarKeyboard
 from keyboards.inline.report import order_details_kb
 from keyboards.reply import get_time_period_for_full_report
-from keyboards.reply.user_actions import user_actions_kb
+from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from states import AllUsersReportStates
+from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.report import GetAllUsersReportUseCase
-from utils.command_parser import parse_date
 from utils.exception_handler import handle_exception
 from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
@@ -33,8 +32,28 @@ async def all_users_report_handler(message: Message, state: FSMContext) -> None:
     """Обработчик для получения отчета по всем пользователям за период."""
     try:
         logger.info(
-            f"Пользователь {message.from_user.id} запросил отчет по всем пользователям"
+            "Пользователь %s запросил отчет по всем пользователям",
+            message.from_user.id,
         )
+
+        # Проверяем наличие отслеживаемых чатов
+        tracked_chats_usecase: GetUserTrackedChatsUseCase = container.resolve(
+            GetUserTrackedChatsUseCase
+        )
+        user_chats_dto = await tracked_chats_usecase.execute(
+            tg_id=str(message.from_user.id)
+        )
+
+        if not user_chats_dto.chats:
+            await message.answer(
+                "❌ У вас нет отслеживаемых чатов.\n"
+                "Добавьте чаты в отслеживание для составления отчета."
+            )
+            logger.warning(
+                "Админ %s пытается получить отчет без отслеживаемых чатов",
+                message.from_user.username,
+            )
+            return
 
         await log_and_set_state(
             message=message,
@@ -58,20 +77,28 @@ async def all_users_report_handler(message: Message, state: FSMContext) -> None:
 async def process_period_selection(message: Message, state: FSMContext) -> None:
     """Обрабатывает выбор периода для отчета."""
     try:
-        logger.info(f"Выбран период: {message.text}")
+        logger.info("Выбран период: %s", message.text)
 
         if message.text == TimePeriod.CUSTOM.value:
             logger.info("Запрос пользовательского периода")
             await log_and_set_state(
                 message=message,
                 state=state,
-                new_state=AllUsersReportStates.waiting_custom_period,
+                new_state=AllUsersReportStates.selecting_custom_period,
             )
 
-            await send_html_message_with_kb(
-                message=message,
-                text="Введите период в формате DD.MM-DD.MM\n"
-                "Например: 16.04-20.04 или 16.04- (с 16.04 до сегодня)",
+            # Показываем календарь
+            now = TimeZoneService.now()
+            await state.update_data(cal_start_date=None, cal_end_date=None)
+
+            calendar_kb = CalendarKeyboard.create_calendar(
+                year=now.year,
+                month=now.month,
+            )
+
+            await message.answer(
+                text="📅 Выберите начальную дату диапазона:",
+                reply_markup=calendar_kb,
             )
             return
 
@@ -89,77 +116,28 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
         await handle_exception(message, e, "process_period_selection")
 
 
-@router.message(AllUsersReportStates.waiting_custom_period)
-async def process_custom_period_input(message: Message, state: FSMContext) -> None:
-    """Обрабатывает ввод пользовательского периода для отчета."""
-    try:
-        logger.info(f"Получен пользовательский период: {message.text}")
-
-        start_date, end_date = parse_date(message.text)
-        logger.info(f"Парсинг периода успешен: {start_date} - {end_date}")
-
-        await generate_and_send_report(
-            message=message,
-            state=state,
-            start_date=start_date,
-            end_date=end_date,
-        )
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=AllUsersReportStates.selecting_period,
-        )
-    except ValueError as e:
-        logger.warning(f"Некорректный формат даты: {message.text}, ошибка: {e}")
-        await send_html_message_with_kb(
-            message=message,
-            text=f"❌ Некорректный формат даты: {str(e)}\n"
-            "Пожалуйста, введите период в формате DD.MM-DD.MM",
-            reply_markup=get_time_period_for_full_report(),
-        )
-    except Exception as e:
-        await handle_exception(message, e, "process_custom_period_input")
-
-
-@router.message(
-    AllUsersReportStates.selecting_period,
-    F.text == KbCommands.BACK,
-)
-async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
-    """Обработчик для возврата в меню пользователя."""
-    try:
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=AllUsersReportStates.selected_all_users,
-        )
-
-        await send_html_message_with_kb(
-            message=message,
-            text="Возвращаемся в меню",
-            reply_markup=user_actions_kb(),
-        )
-    except Exception as e:
-        await handle_exception(message, e, "back_to_menu_handler")
-
-
 async def generate_and_send_report(
     message: Message,
     state: FSMContext,
     start_date: datetime,
     end_date: datetime,
-    selected_period: Optional[str] = None,
+    selected_period: str | None = None,
+    admin_tg_id: int | None = None,
 ) -> None:
     """Генерирует и отправляет отчет."""
     try:
-        logger.info(f"Начало генерации отчета за период {start_date} - {end_date}")
+        logger.info(
+            "Начало генерации отчета за период %s - %s",
+            start_date,
+            end_date,
+        )
 
         adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
             start_date, end_date
         )
 
         report_dto = AllUsersReportDTO(
-            user_tg_id=str(message.from_user.id),
+            user_tg_id=str(admin_tg_id or message.from_user.id),
             start_date=adjusted_start,
             end_date=adjusted_end,
             selected_period=selected_period,
@@ -185,5 +163,9 @@ async def generate_and_send_report(
 
         logger.info("Отчет успешно отправлен пользователю")
     except Exception as e:
-        logger.error(f"Ошибка при генерации/отправке отчета: {e}")
+        logger.error(
+            "Ошибка при генерации/отправке отчета: %s",
+            e,
+            exc_info=True,
+        )
         raise

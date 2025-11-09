@@ -9,7 +9,7 @@ from models.punishment_ladder import PunishmentLadder, PunishmentType
 from repositories import PunishmentLadderRepository, PunishmentRepository
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services.time_service import TimeZoneService
-from utils.formatter import format_seconds
+from utils.formatter import format_duration
 
 
 class PunishmentService:
@@ -52,20 +52,17 @@ class PunishmentService:
 
         if punishment_type == PunishmentType.BAN:
             text = (
-                "✅ Пользователь забанен!\n Данные отобразятся в "
-                f"<b>{chats_title}</b>"
+                f"✅ Пользователь забанен!\n Данные отобразятся в <b>{chats_title}</b>"
             )
             return text
         elif punishment_type == PunishmentType.MUTE:
             text = (
-                "✅ Пользователь замучен!\n Данные отобразятся в "
-                f"<b>{chats_title}</b>"
+                f"✅ Пользователь замучен!\n Данные отобразятся в <b>{chats_title}</b>"
             )
             return text
 
         text = (
-            "✅ Пользователь предупрежден!\n Данные отобразятся в "
-            f"<b>{chats_title}</b>"
+            f"✅ Пользователь предупрежден!\n Данные отобразятся в <b>{chats_title}</b>"
         )
 
         return text
@@ -90,7 +87,7 @@ class PunishmentService:
         punishment_text_template = PunishmentText[punishment_type.name].value
 
         if punishment_type == PunishmentType.MUTE:
-            period = format_seconds(seconds=duration_of_punishment)
+            period = format_duration(seconds=duration_of_punishment)
             return PunishmentText.MUTE.format(username=punished_username, period=period)
 
         return punishment_text_template.format(username=punished_username)
@@ -183,8 +180,8 @@ class PunishmentService:
 
         return (
             f"❌️ Сообщение {status} {date_str} в {time_str}\n\n"
-            f"• Юзер: @{dto.user_reply_username}\n"
-            f"• ID: {dto.user_reply_tgid}\n"
+            f"• Юзер: @{dto.violator_username}\n"
+            f"• ID: {dto.violator_tgid}\n"
             f"• Причина: {reason}\n"
             "• Время бана: бессрочно\n"
             f"• Выдал бан: @{dto.admin_username}\n"
@@ -218,15 +215,15 @@ class PunishmentService:
         if punishment_ladder.punishment_type == PunishmentType.BAN:
             period = "бессрочно"
         elif punishment_ladder.punishment_type == PunishmentType.MUTE:
-            period = format_seconds(seconds=punishment_ladder.duration_seconds)
+            period = format_duration(seconds=punishment_ladder.duration_seconds)
 
         mute_line = f"• Время мута: {period}\n" if period else ""
         status = "удалено" if message_deleted else "не удалено (старше 48ч)"
 
         return (
             f"❌️ Сообщение {status} {date_str} в {time_str}\n\n"
-            f"• Юзер: @{dto.user_reply_username}\n"
-            f"• ID: {dto.user_reply_tgid}\n"
+            f"• Юзер: @{dto.violator_username}\n"
+            f"• ID: <code>{dto.violator_tgid}</code>\n"
             f"• Причина: {reason}\n"
             f"{mute_line}"
             f"• Выдал пред: @{dto.admin_username}\n"
@@ -314,3 +311,32 @@ class PunishmentService:
                 is_muted=False,
                 muted_until=None,
             )
+
+    async def delete_user_punishments(self, user_id: int, chat_id: int) -> int:
+        return await self.punishment_repository.delete_user_punishments(
+            user_id, chat_id
+        )
+
+    async def get_chats_with_punishments(
+        self, user_id: int, tracked_chats: List[ChatSession]
+    ) -> List[ChatSession]:
+        """
+        Возвращает чаты из списка отслеживаемых, где у пользователя есть наказания.
+
+        Args:
+            user_id: ID пользователя в БД
+            tracked_chats: Список отслеживаемых чатов
+
+        Returns:
+            Список чатов где punishment_count > 0
+        """
+        chats_with_punishments = []
+        for chat in tracked_chats:
+            punishment_count = await self.punishment_repository.count_punishments(
+                user_id=user_id,
+                chat_id=chat.id,
+            )
+            if punishment_count > 0:
+                chats_with_punishments.append(chat)
+
+        return chats_with_punishments

@@ -70,7 +70,7 @@ def remove_inline_kb(
 
 
 def tracked_chats_inline_kb(
-    chats: List[ChatSession],
+    chats: List[ChatDTO],
     page: int = 1,
     total_count: int = 0,
     page_size: int = CHATS_PAGE_SIZE,
@@ -209,4 +209,19 @@ def conf_remove_chat_kb() -> InlineKeyboardMarkup:
         ),
         width=2,
     )
+    return builder.as_markup()
+
+
+def select_chat_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
+    """Клавиатура для выбора чата для отправки сообщения."""
+    builder = InlineKeyboardBuilder()
+
+    for chat in chats:
+        builder.row(
+            InlineKeyboardButton(
+                text=chat.title[:40],
+                callback_data=f"select_chat_{chat.id}",
+            )
+        )
+
     return builder.as_markup()

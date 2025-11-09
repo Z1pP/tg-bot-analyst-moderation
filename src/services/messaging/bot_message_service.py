@@ -77,6 +77,99 @@ class BotMessageService:
             )
             return None
 
+    async def reply_chat_message(
+        self, chat_tgid: ChatIdUnion, text: str, reply_to_message_id: int
+    ) -> None:
+        """
+        Отправляет ответ на сообщение в чате.
+
+        Args:
+            chat_tgid: Telegram ID чата
+            text: Текст ответа (HTML)
+            reply_to_message_id: ID сообщения, на которое отвечаем
+        """
+        try:
+            await self.bot.send_message(
+                chat_id=chat_tgid,
+                text=text,
+                reply_to_message_id=reply_to_message_id,
+                parse_mode="HTML",
+            )
+        except Exception as e:
+            logger.error(
+                "Произошла ошибка при отправке ответа в чат %s: %s",
+                chat_tgid,
+                e,
+            )
+            return None
+
+    async def copy_message(
+        self,
+        chat_tgid: ChatIdUnion,
+        from_chat_tgid: ChatIdUnion,
+        message_id: int,
+    ) -> Optional[int]:
+        """
+        Копирует сообщение в чат.
+
+        Args:
+            chat_tgid: Telegram ID чата-получателя
+            from_chat_tgid: Telegram ID чата-источника
+            message_id: ID сообщения для копирования
+
+        Returns:
+            ID отправленного сообщения или None при ошибке
+        """
+        try:
+            result = await self.bot.copy_message(
+                chat_id=chat_tgid,
+                from_chat_id=from_chat_tgid,
+                message_id=message_id,
+            )
+            return result.message_id
+        except Exception as e:
+            logger.error(
+                "Не удалось скопировать сообщение в чат %s: %s",
+                chat_tgid,
+                e,
+            )
+            return None
+
+    async def copy_message_as_reply(
+        self,
+        chat_tgid: ChatIdUnion,
+        from_chat_tgid: ChatIdUnion,
+        message_id: int,
+        reply_to_message_id: int,
+    ) -> Optional[int]:
+        """
+        Копирует сообщение как ответ на другое сообщение.
+
+        Args:
+            chat_tgid: Telegram ID чата-получателя
+            from_chat_tgid: Telegram ID чата-источника
+            message_id: ID сообщения для копирования
+            reply_to_message_id: ID сообщения, на которое отвечаем
+
+        Returns:
+            ID отправленного сообщения или None при ошибке
+        """
+        try:
+            result = await self.bot.copy_message(
+                chat_id=chat_tgid,
+                from_chat_id=from_chat_tgid,
+                message_id=message_id,
+                reply_to_message_id=reply_to_message_id,
+            )
+            return result.message_id
+        except Exception as e:
+            logger.error(
+                "Не удалось скопировать сообщение в чат %s: %s",
+                chat_tgid,
+                e,
+            )
+            return None
+
     async def forward_message(
         self,
         chat_tgid: ChatIdUnion,
@@ -280,6 +373,46 @@ class BotMessageService:
         except Exception as e:
             logger.error(
                 "Не удалось разбанить пользователя %s в чате %s: %s",
+                user_tg_id,
+                chat_tg_id,
+                e,
+            )
+            return False
+
+    async def unmute_chat_member(
+        self,
+        chat_tg_id: ChatIdUnion,
+        user_tg_id: int,
+    ) -> bool:
+        """
+        Размьютит пользователя в чате.
+
+        Args:
+            chat_tg_id: Telegram ID чата
+            user_tg_id: Telegram ID пользователя
+
+        Returns:
+            True если размьют применен успешно
+        """
+        permissions = ChatPermissions(
+            can_send_messages=True,
+            can_send_media_messages=True,
+            can_send_polls=True,
+            can_send_other_messages=True,
+            can_add_web_page_previews=True,
+            can_change_info=True,
+            can_invite_users=True,
+            can_pin_messages=True,
+        )
+        try:
+            return await self.bot.restrict_chat_member(
+                chat_id=chat_tg_id,
+                user_id=user_tg_id,
+                permissions=permissions,
+            )
+        except Exception as e:
+            logger.error(
+                "Не удалось размьютить пользователя %s в чате %s: %s",
                 user_tg_id,
                 chat_tg_id,
                 e,

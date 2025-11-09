@@ -3,8 +3,35 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants import InlineButtons
 from constants.pagination import TEMPLATES_PAGE_SIZE
 from models import MessageTemplate
+
+
+def templates_menu_ikb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.SELECT_TEMPLATE,
+            callback_data="select_template",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.SELECT_CATEGORY,
+            callback_data="select_category",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.ADD_TEMPLATE,
+            callback_data="add_template",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.ADD_CATEGORY,
+            callback_data="add_category",
+        ),
+        width=2,
+    )
+
+    return builder.as_markup()
 
 
 def templates_inline_kb(

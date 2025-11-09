@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
     F.data.startswith("remove_category__"),
     TemplateStateManager.listing_categories,
 )
-async def remove_category_callback(
+async def remove_category_handler(
     query: CallbackQuery,
     state: FSMContext,
 ):

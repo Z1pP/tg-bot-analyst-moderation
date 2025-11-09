@@ -1,4 +1,24 @@
+from .amnesty import (
+    AmnestyError,
+    BotCannotUnbanError,
+    NoChatsWithBannedUserError,
+    UnbanFailedError,
+    UserNotBannedError,
+    UserNotFoundError as AmnestyUserNotFoundError,
+)
 from .base import BotBaseException
+from .moderation import (
+    ArchiveChatError,
+    BotInsufficientPermissionsError,
+    CannotPunishBotAdminError,
+    CannotPunishChatAdminError,
+    CannotPunishYouSelf,
+    MessageTooOldError,
+    ModerationError,
+    PrivateModerationError,
+    PublicModerationError,
+)
+from .user import UserError, UserNotFoundException
 
 
 # Database exceptions
@@ -6,7 +26,7 @@ class DatabaseException(BotBaseException):
     default_message = "Ошибка работы с базой данных"
 
 
-class UserNotFoundException(DatabaseException):
+class UserNotFoundError(DatabaseException):
     default_message = "❌ Пользователь не найден"
 
 
@@ -50,8 +70,8 @@ class BusinessLogicException(BotBaseException):
 
 
 class UserAlreadyTrackedException(BusinessLogicException):
-    default_message = "⚠ Пользователь уже отслеживается"
+    default_message = "❌ Пользователь уже отслеживается"
 
 
 class EmptyTrackingListException(BusinessLogicException):
-    default_message = "⚠ Список отслеживания пуст"
+    default_message = "❌ У вас нет отслеживаемых чатов"

@@ -10,6 +10,7 @@ from aiogram.types import Update
 from fastapi import FastAPI, Request
 
 from bot import configure_dispatcher
+from commands.start_commands import set_bot_commands
 from container import ContainerSetup
 from utils.logger_config import setup_logger
 
@@ -108,6 +109,10 @@ async def run_polling():
     await init_bot()
     logger.info("Удаляем webhook...")
     await bot.delete_webhook(drop_pending_updates=True)
+
+    logger.info("Настраиваем команды...")
+    await set_bot_commands(bot)
+
     logger.info("Запуск polling...")
     await dp.start_polling(bot)
 
@@ -115,10 +120,10 @@ async def run_polling():
 async def main():
     """Точка входа: выбирает режим запуска (webhook/polling)."""
     try:
-        if args.webhook_url:
-            await run_webhook()
-        else:
-            await run_polling()
+        # if args.webhook_url:
+        #     await run_webhook()
+        # else:
+        await run_polling()
     except Exception as e:
         logger.error("Критическая ошибка: %s", str(e), exc_info=True)
         sys.exit(1)

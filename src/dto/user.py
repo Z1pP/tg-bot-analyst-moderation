@@ -37,40 +37,6 @@ class UserDTO:
             is_active=user.is_active,
         )
 
-    def to_dict(self) -> dict:
-        """
-        Преобразует DTO в словарь
-
-        Returns:
-            dict: Словарь с данными пользователя
-        """
-        return {
-            "id": self.id,
-            "tg_id": self.tg_id,
-            "username": self.username,
-            "role": self.role.value,
-            "is_active": self.is_active,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "UserDTO":
-        """
-        Создает DTO из словаря
-
-        Args:
-            data: Словарь с данными пользователя
-
-        Returns:
-            UserDTO: DTO пользователя
-        """
-        return cls(
-            id=data["id"],
-            tg_id=data.get("tg_id"),
-            username=data.get("username"),
-            role=UserRole(data["role"]),
-            is_active=data["is_active"],
-        )
-
 
 @dataclass
 class CreateUserDTO:
@@ -91,25 +57,6 @@ class UpdateUserDTO:
     username: Optional[str] = None
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
-
-    def to_dict(self) -> dict:
-        """
-        Преобразует DTO в словарь, исключая None значения
-
-        Returns:
-            dict: Словарь с данными для обновления
-        """
-        return {
-            k: v
-            for k, v in {
-                "id": self.id,
-                "tg_id": self.tg_id,
-                "username": self.username,
-                "role": self.role.value if self.role else None,
-                "is_active": self.is_active,
-            }.items()
-            if v is not None
-        }
 
 
 @dataclass

@@ -25,9 +25,11 @@ class StateDataExtractor:
     TemplateStateManager.listing_templates,
     F.data.startswith("prev_page__"),
 )
-async def prev_page_templates_callback(query: CallbackQuery, state: FSMContext) -> None:
+async def prev_page_templates_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     """Обработчик перехода на предыдущую страницу шаблонов"""
-    current_page = int(query.data.split("__")[1])
+    current_page = int(callback.data.split("__")[1])
     prev_page = max(1, current_page - 1)
     state_data = await extract_state_data(state=state)
 
@@ -36,23 +38,25 @@ async def prev_page_templates_callback(query: CallbackQuery, state: FSMContext) 
         page=prev_page,
     )
 
-    await query.message.edit_reply_markup(
+    await callback.message.edit_reply_markup(
         reply_markup=templates_inline_kb(
             templates=templates,
             page=prev_page,
             total_count=total_count,
         )
     )
-    await query.answer()
+    await callback.answer()
 
 
 @router.callback_query(
     TemplateStateManager.listing_templates,
     F.data.startswith("next_page__"),
 )
-async def next_page_templates_callback(query: CallbackQuery, state: FSMContext) -> None:
+async def next_page_templates_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     """Обработчик перехода на следующую страницу шаблонов"""
-    current_page = int(query.data.split("__")[1])
+    current_page = int(callback.data.split("__")[1])
     next_page = current_page + 1
     state_data = await extract_state_data(state=state)
 
@@ -62,17 +66,17 @@ async def next_page_templates_callback(query: CallbackQuery, state: FSMContext) 
     )
 
     if not templates:
-        await query.answer("Больше шаблонов нет")
+        await callback.answer("Больше шаблонов нет")
         return
 
-    await query.message.edit_reply_markup(
+    await callback.message.edit_reply_markup(
         reply_markup=templates_inline_kb(
             templates=templates,
             page=next_page,
             total_count=total_count,
         )
     )
-    await query.answer()
+    await callback.answer()
 
 
 async def get_templates_and_count(

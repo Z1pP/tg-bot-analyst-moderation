@@ -53,8 +53,8 @@ class ChatService:
 
     async def get_archive_chats(
         self,
-        source_chat_title: str,
+        source_chat_tgid: str,
     ) -> Optional[List[ChatSession]]:
         return await self._chat_repository.get_archive_chats(
-            source_chat_title=source_chat_title,
+            source_chat_tgid=source_chat_tgid,
         )

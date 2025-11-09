@@ -1,5 +1,19 @@
 from .base import BotBaseException
 
+__all__ = [
+    "ModerationError",
+    "PublicModerationError",
+    "PrivateModerationError",
+    "BotInsufficientPermissionsError",
+    "ArchiveChatError",
+    "CannotPunishChatAdminError",
+    "CannotPunishBotAdminError",
+    "CannotPunishYouSelf",
+    "MessageTooOldError",
+    "MessageDeleteError",
+    "MessageSendError",
+]
+
 
 class ModerationError(BotBaseException):
     """Базовое исключение для ошибок модерации."""
@@ -8,13 +22,9 @@ class ModerationError(BotBaseException):
 class PublicModerationError(ModerationError):
     """Исключение, текст которого будет отправляться в чат"""
 
-    delivery = "public"
-
 
 class PrivateModerationError(ModerationError):
     """Исключение, текст которого будет отправляться в ЛС админу"""
-
-    delivery = "private"
 
 
 class BotInsufficientPermissionsError(PrivateModerationError):
@@ -33,11 +43,14 @@ class BotInsufficientPermissionsError(PrivateModerationError):
 class ArchiveChatError(PrivateModerationError):
     """Проблема с архивным чатом."""
 
+    def __init__(self, chat_title: str):
+        self.chat_title = chat_title
+
     def get_user_message(self) -> str:
         return (
-            "Пожалуйста, создайте рабочий чат с историей удалённых сообщений и"
-            " добавьте его в Аналиста. В будущем это облегчит работу при поиске "
-            "заблокированных пользователей."
+            "Пожалуйста, создайте рабочий чат с историей удалённых сообщений, "
+            f"добавьте в него  Аналиста и привяжите его к чату <b>{self.chat_title}</b>.\n"
+            "В будущем это облегчит работу при поиске заблокированных пользователей."
         )
 
 
@@ -70,3 +83,21 @@ class MessageTooOldError(PrivateModerationError):
             "❌ Не удалось удалить исходное сообщение, так как оно было отправлено "
             "более 48 часов назад."
         )
+
+
+class MessageDeleteError(BotBaseException):
+    """Ошибка при удалении сообщения."""
+
+    def get_user_message(self) -> str:
+        return "❌ Не удалось удалить сообщение. Возможно, оно старше 48 часов."
+
+
+class MessageSendError(BotBaseException):
+    """Ошибка при отправке сообщения."""
+
+    def __init__(self, error: str):
+        self.error = error
+        super().__init__()
+
+    def get_user_message(self) -> str:
+        return f"❌ Не удалось отправить сообщение: {self.error}"

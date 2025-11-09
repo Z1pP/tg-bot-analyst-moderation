@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
-from keyboards.inline.categories import categories_inline_kb
+from keyboards.inline.categories import categories_inline_ikb
 from models import TemplateCategory
 from usecases.categories import GetCategoriesPaginatedUseCase
 from utils.pagination_handler import BasePaginationHandler
@@ -36,7 +36,7 @@ class CategoriesPaginationHandler(BasePaginationHandler):
         page: int,
         total_count: int,
     ) -> InlineKeyboardMarkup:
-        return categories_inline_kb(
+        return categories_inline_ikb(
             categories=items,
             page=page,
             total_count=total_count,

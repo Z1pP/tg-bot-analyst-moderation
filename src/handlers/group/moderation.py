@@ -116,8 +116,8 @@ def map_message_to_moderation_dto(message: types.Message) -> ModerationActionDTO
 
     return ModerationActionDTO(
         action=Actions.WARNING,
-        user_reply_tgid=str(reply_user.id),
-        user_reply_username=reply_user.username,
+        violator_tgid=str(reply_user.id),
+        violator_username=reply_user.username,
         admin_username=message.from_user.username,
         admin_tgid=str(message.from_user.id),
         chat_tgid=str(message.chat.id),

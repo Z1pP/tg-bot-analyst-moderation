@@ -1,24 +1,28 @@
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
 
-from constants import KbCommands
-from keyboards.reply.menu import tamplates_menu_kb
-from utils.send_message import send_html_message_with_kb
+from keyboards.inline.templates import templates_menu_ikb
+from states import TemplateStateManager
+from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 
 
-@router.message(
-    F.text == KbCommands.TEMPLATES_MENU,
-)
-async def templates_menu_handler(message: Message, state: FSMContext):
+@router.callback_query(F.data == "templates_menu")
+async def templates_menu_handler(callback: types.CallbackQuery, state: FSMContext):
     """Обработчик меню шаблонов"""
+    await callback.answer()
+    await state.clear()
 
     message_text = "Выбери действие:"
 
-    await send_html_message_with_kb(
-        message=message,
+    await callback.message.edit_text(
         text=message_text,
-        reply_markup=tamplates_menu_kb(),
+        reply_markup=templates_menu_ikb(),
+    )
+
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=TemplateStateManager.templates_menu,
     )

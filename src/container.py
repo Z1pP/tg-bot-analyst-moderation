@@ -6,6 +6,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from punq import Container
 
 from config import settings
+from database.session import DatabaseContextManager, async_session
 from di import container
 from repositories import (
     ChatRepository,
@@ -35,6 +36,19 @@ from services.templates import (
     TemplateContentService,
     TemplateService,
 )
+from usecases.admin_actions import (
+    DeleteMessageUseCase,
+    ReplyToMessageUseCase,
+    SendMessageToChatUseCase,
+)
+from usecases.amnesty import (
+    CancelLastWarnUseCase,
+    GetChatsWithBannedUserUseCase,
+    GetChatsWithMutedUserUseCase,
+    GetChatsWithPunishedUserUseCase,
+    UnbanUserUseCase,
+    UnmuteUserUseCase,
+)
 from usecases.categories import (
     CreateCategoryUseCase,
     DeleteCategoryUseCase,
@@ -44,6 +58,7 @@ from usecases.categories import (
 )
 from usecases.chat import (
     GetAllChatsUseCase,
+    GetChatsForUserActionUseCase,
     GetOrCreateChatUseCase,
     GetTrackedChatsUseCase,
 )
@@ -54,10 +69,12 @@ from usecases.chat_tracking import (
 )
 from usecases.message import (
     SaveMessageUseCase,
-    SaveModeratorReplyMessageUseCase,
+    SaveReplyMessageUseCase,
 )
-from usecases.amnesty import GetChatsWithBannedUserUseCase, UnbanUserUseCase
-from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
+from usecases.moderation import (
+    GiveUserBanUseCase,
+    GiveUserWarnUseCase,
+)
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
@@ -94,6 +111,7 @@ class ContainerSetup:
     @staticmethod
     def setup() -> None:
         ContainerSetup._register_bot_components(container)
+        ContainerSetup._register_database(container)
         ContainerSetup._register_repositories(container)
         ContainerSetup._register_services(container)
         ContainerSetup._register_usecases(container)
@@ -111,6 +129,13 @@ class ContainerSetup:
         storage = MemoryStorage()
         container.register(BaseStorage, instance=storage)
         container.register(Dispatcher, instance=Dispatcher(storage=storage))
+
+    @staticmethod
+    def _register_database(container: Container) -> None:
+        container.register(
+            DatabaseContextManager,
+            instance=DatabaseContextManager(async_session),
+        )
 
     @staticmethod
     def _register_async_error_handler(container: Container) -> None:
@@ -196,6 +221,7 @@ class ContainerSetup:
             GetOrCreateChatUseCase,
             GetAllChatsUseCase,
             GetTrackedChatsUseCase,
+            GetChatsForUserActionUseCase,
         ]
 
         for usecase in chat_usecases:
@@ -206,7 +232,7 @@ class ContainerSetup:
         """Регистрация use cases для сообщений."""
         message_usecases = [
             SaveMessageUseCase,
-            SaveModeratorReplyMessageUseCase,
+            SaveReplyMessageUseCase,
         ]
 
         for usecase in message_usecases:
@@ -217,8 +243,15 @@ class ContainerSetup:
         """Регистрация use cases для модерации."""
         container.register(GiveUserWarnUseCase)
         container.register(GiveUserBanUseCase)
+        container.register(CancelLastWarnUseCase)
         container.register(GetChatsWithBannedUserUseCase)
+        container.register(GetChatsWithMutedUserUseCase)
+        container.register(GetChatsWithPunishedUserUseCase)
         container.register(UnbanUserUseCase)
+        container.register(UnmuteUserUseCase)
+        container.register(DeleteMessageUseCase)
+        container.register(ReplyToMessageUseCase)
+        container.register(SendMessageToChatUseCase)
 
     @staticmethod
     def _register_report_usecases(container: Container) -> None:

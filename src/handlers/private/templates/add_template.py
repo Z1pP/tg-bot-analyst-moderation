@@ -1,72 +1,108 @@
 import logging
 from typing import Any, Dict
 
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from constants import KbCommands
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
-from keyboards.inline.categories import categories_inline_kb
+from keyboards.inline.categories import categories_inline_ikb
+from keyboards.inline.templates import templates_menu_ikb
 from middlewares import AlbumMiddleware
 from services.categories import CategoryService
 from services.templates import TemplateContentService
 from states import TemplateStateManager
-from utils.send_message import send_html_message_with_kb
+from utils.state_logger import log_and_set_state
+
+from .common import common_process_template_title_handler
 
 router = Router(name=__name__)
 router.message.middleware(AlbumMiddleware())
 logger = logging.getLogger(__name__)
 
 
-@router.message(F.text == KbCommands.ADD_TEMPLATE)
-async def add_template_handler(message: Message, state: FSMContext):
+@router.callback_query(
+    F.data == "add_template",
+    TemplateStateManager.templates_menu,
+)
+async def add_template_handler(callback: types.CallbackQuery, state: FSMContext):
     """Обработчик добавления нового шаблона"""
+    await callback.answer()
+
     try:
-        # Получаем сервис и категории
         category_service: CategoryService = container.resolve(CategoryService)
         categories = await category_service.get_categories()
 
-        # Устанавливаем состояние для выбора категории
-        await state.set_state(TemplateStateManager.process_template_category)
+        if not categories:
+            msg_text = "Чтобы создать шаблон, сначала создайте хотя бы одну категорию."
+            await callback.message.edit_text(
+                text=msg_text,
+                reply_markup=templates_menu_ikb(),
+            )
+            return
 
-        # Показываем первые категории
         first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
 
-        await send_html_message_with_kb(
-            message=message,
-            text=f"Пожалуйста, выберите категорию шаблона (всего {len(categories)}):",
-            reply_markup=categories_inline_kb(
+        await callback.message.edit_text(
+            text="Пожалуйста, выберите категорию шаблона.",
+            reply_markup=categories_inline_ikb(
                 categories=first_page_categories,
                 page=1,
                 total_count=len(categories),
             ),
         )
 
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.process_template_category,
+        )
+
     except Exception as e:
         logger.error(f"Ошибка при начале создания шаблона: {e}")
-        await message.answer("Произошла ошибка при создании шаблона.")
-        await state.clear()
-
-
-@router.message(TemplateStateManager.process_template_title)
-async def process_template_title_handler(message: Message, state: FSMContext):
-    """Обработчик получения названия нового шаблона"""
-    try:
-        await state.update_data(title=message.text)
-
-        # Устанавливаем состояние для ввода контента для шаблона
-        await state.set_state(TemplateStateManager.process_template_content)
-
-        await send_html_message_with_kb(
-            message=message,
-            text=f"Отправьте контент для шаблона '{message.text}' (текст, фото или медиагруппу):",
+        await callback.message.edit_text(
+            text="Произошла ошибка при создании шаблона.",
+            reply_markup=templates_menu_ikb(),
         )
-    except Exception as e:
-        logger.error(f"Ошибка при получении названия шаблона: {e}")
-        await message.answer("Произошла ошибка при создании шаблона.")
-        await state.clear()
+
+
+@router.callback_query(
+    F.data.startswith("category__"),
+    TemplateStateManager.process_template_category,
+)
+async def process_template_category_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+):
+    """Обработчик выбора категории шаблона"""
+    await callback.answer()
+    category_id = int(callback.data.split("__")[1])
+
+    await state.update_data(category_id=category_id)
+
+    await callback.message.edit_text(
+        text="Отправьте название шаблона:",
+        reply_markup=None,
+    )
+
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=TemplateStateManager.process_template_title,
+    )
+
+
+@router.callback_query(TemplateStateManager.process_template_title)
+async def process_template_title_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+):
+    """Обработчик получения названия нового шаблона"""
+    await common_process_template_title_handler(
+        callback=callback,
+        state=state,
+    )
 
 
 @router.message(TemplateStateManager.process_template_content)

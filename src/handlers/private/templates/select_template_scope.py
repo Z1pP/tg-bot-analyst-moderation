@@ -6,10 +6,11 @@ from aiogram.types import CallbackQuery
 
 from constants.pagination import TEMPLATES_PAGE_SIZE
 from container import container
-from keyboards.inline.templates import templates_inline_kb
+from keyboards.inline.templates import templates_inline_kb, templates_menu_ikb
 from services.templates import TemplateService
 from states import TemplateStateManager
 from utils.exception_handler import handle_exception
+from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -19,13 +20,14 @@ logger = logging.getLogger(__name__)
     F.data == "template_scope_global",
     TemplateStateManager.selecting_template_scope,
 )
-async def select_global_templates_callback(
-    query: CallbackQuery, state: FSMContext
+async def select_global_templates_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
 ) -> None:
     """Обработчик выбора глобальных шаблонов"""
-    try:
-        await state.set_state(TemplateStateManager.listing_templates)
+    await callback.answer()
 
+    try:
         template_service: TemplateService = container.resolve(TemplateService)
         templates = await template_service.get_global_templates_paginated(
             page=1,
@@ -34,10 +36,15 @@ async def select_global_templates_callback(
         total_count = await template_service.get_global_templates_count()
 
         if not templates:
-            await query.message.edit_text("❗ Глобальных шаблонов не найдено")
+            await callback.message.edit_text(
+                text="❗ Глобальных шаблонов не найдено",
+                reply_markup=templates_menu_ikb(),
+            )
             return
 
-        await query.message.edit_text(
+        await state.update_data(template_scope="global")
+
+        await callback.message.edit_text(
             text=f"Глобальные шаблоны ({total_count}):",
             reply_markup=templates_inline_kb(
                 templates=templates,
@@ -46,27 +53,30 @@ async def select_global_templates_callback(
             ),
         )
 
-        # Сохраняем информацию о выбранной области
-        await state.update_data(template_scope="global")
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.listing_templates,
+        )
 
     except Exception as e:
-        await handle_exception(query.message, e, "select_global_templates_callback")
-    finally:
-        await query.answer()
+        await handle_exception(callback.message, e, "select_global_templates_handler")
 
 
 @router.callback_query(
     F.data.startswith("template_scope_chat__"),
     TemplateStateManager.selecting_template_scope,
 )
-async def select_chat_templates_callback(
-    query: CallbackQuery, state: FSMContext
+async def select_chat_templates_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
 ) -> None:
     """Обработчик выбора шаблонов для конкретного чата"""
-    try:
-        chat_id = int(query.data.split("__")[1])
-        await state.set_state(TemplateStateManager.listing_templates)
+    await callback.answer()
 
+    chat_id = int(callback.data.split("__")[1])
+
+    try:
         template_service: TemplateService = container.resolve(TemplateService)
         templates = await template_service.get_chat_templates_paginated(
             chat_id=chat_id,
@@ -76,10 +86,15 @@ async def select_chat_templates_callback(
         total_count = await template_service.get_chat_templates_count(chat_id=chat_id)
 
         if not templates:
-            await query.message.edit_text("❗ Шаблонов для этого чата не найдено")
+            await callback.message.edit_text(
+                "❗ Шаблонов для этого чата не найдено",
+                reply_markup=templates_menu_ikb(),
+            )
             return
 
-        await query.message.edit_text(
+        await state.update_data(template_scope="chat", chat_id=chat_id)
+
+        await callback.message.edit_text(
             text=f"Шаблоны для чата ({total_count}):",
             reply_markup=templates_inline_kb(
                 templates=templates,
@@ -88,10 +103,11 @@ async def select_chat_templates_callback(
             ),
         )
 
-        # Сохраняем информацию о выбранной области
-        await state.update_data(template_scope="chat", chat_id=chat_id)
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.listing_templates,
+        )
 
     except Exception as e:
-        await handle_exception(query.message, e, "select_chat_templates_callback")
-    finally:
-        await query.answer()
+        await handle_exception(callback.message, e, "select_chat_templates_handler")

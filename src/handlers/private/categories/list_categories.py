@@ -1,44 +1,60 @@
-from aiogram import F, Router
-from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+import logging
 
-from constants import KbCommands
+from aiogram import F, Router, types
+from aiogram.fsm.context import FSMContext
+
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
-from keyboards.inline.categories import categories_inline_kb
-from usecases.categories import GetCategoriesPaginatedUseCase
+from keyboards.inline.categories import categories_inline_ikb
+from keyboards.inline.templates import templates_menu_ikb
+from services.categories import CategoryService
 from states import TemplateStateManager
-from utils.exception_handler import handle_exception
-from utils.send_message import send_html_message_with_kb
+from utils.state_logger import log_and_set_state
+
+logger = logging.getLogger(__name__)
+
 
 router = Router(name=__name__)
 
 
-@router.message(F.text == KbCommands.SELECT_CATEGORY)
-async def list_categories_handler(message: Message, state: FSMContext):
-    """Выводит список категорий полученных из БД"""
-
-    await state.set_state(TemplateStateManager.listing_categories)
-
-    usecase: GetCategoriesPaginatedUseCase = container.resolve(GetCategoriesPaginatedUseCase)
+@router.callback_query(F.data == "select_category", TemplateStateManager.templates_menu)
+async def select_category_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
+    await callback.answer()
 
     try:
-        # Получаем первую страницу категорий
-        categories, total_count = await usecase.execute(
-            limit=CATEGORIES_PAGE_SIZE,
-            offset=0,
-        )
+        category_service: CategoryService = container.resolve(CategoryService)
+        categories = await category_service.get_categories()
 
-        await send_html_message_with_kb(
-            message=message,
-            text=f"Выберите категорию (всего {total_count}):",
-            reply_markup=categories_inline_kb(
-                categories=categories,
+        if not categories:
+            await callback.message.edit_text(
+                text="❗ Категорий не найдено",
+                reply_markup=templates_menu_ikb(),
+            )
+            return
+
+        first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
+
+        await callback.message.edit_text(
+            text="Выберите категорию.",
+            reply_markup=categories_inline_ikb(
+                categories=first_page_categories,
                 page=1,
-                total_count=total_count,
+                total_count=len(categories),
             ),
         )
-    except Exception as e:
-        await handle_exception(
-            message=message, exc=e, context="list_categories_handler"
+
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.listing_categories,
         )
+    except Exception as e:
+        logger.error("Ошибка при получении категорий: %s", e, exc_info=True)
+        await callback.message.edit_text(
+            "Произошла ошибка при получении категорий.",
+            reply_markup=templates_menu_ikb(),
+        )
+        return

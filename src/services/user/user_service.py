@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from sqlalchemy.exc import IntegrityError
 
@@ -14,44 +15,65 @@ class UserService:
         self._user_repository = user_repository
         self._cache = cache
 
-    async def get_user(self, tg_id: str, username: str = None) -> User:
-        user = await self._cache.get(tg_id)
-        if user:
-            if username and user.username != username:
-                user = await self._user_repository.update_user(
-                    user_id=user.id,
-                    username=username,
-                )
-                await self._cache.set(tg_id, user)
-            return user
+    async def get_by_username(self, username: str) -> Optional[User]:
+        return await self._user_repository.get_user_by_username(username=username)
 
-        user = await self._user_repository.get_user_by_tg_id(tg_id)
+    async def get_user(self, tg_id: str = None, username: str = None) -> Optional[User]:
+        # Проверяем кеш по tg_id
+        if tg_id:
+            user = await self._cache.get(f"user:tg_id:{tg_id}")
+            if user:
+                if username and user.username != username:
+                    user = await self._user_repository.update_user(
+                        user_id=user.id,
+                        username=username,
+                    )
+                    await self._cache_user(user)
+                return user
+
+        # Проверяем кеш по username
+        if username:
+            user = await self._cache.get(f"user:username:{username}")
+            if user:
+                return user
+
+        # Ищем в БД
+        if tg_id:
+            user = await self._user_repository.get_user_by_tg_id(tg_id=tg_id)
+
+        if not user and username:
+            user = await self._user_repository.get_user_by_username(username=username)
+
         if user:
             if username and user.username != username:
                 user = await self._user_repository.update_user(
                     user_id=user.id,
                     username=username,
                 )
-            await self._cache.set(tg_id, user)
+            await self._cache_user(user)
 
         return user
+
+    async def _cache_user(self, user: User) -> None:
+        """Кеширует пользователя по tg_id и username"""
+        if user.tg_id:
+            await self._cache.set(f"user:tg_id:{user.tg_id}", user)
+        if user.username:
+            await self._cache.set(f"user:username:{user.username}", user)
 
     async def create_user(self, tg_id: str = None, username: str = None) -> User:
         user = await self._user_repository.create_user(tg_id=tg_id, username=username)
 
         if user:
-            await self._cache.set(tg_id, user)
+            await self._cache_user(user)
         return user
 
     async def get_or_create(self, username: str, tg_id: str) -> User:
-        user = await self.get_user(tg_id=tg_id)
+        user = await self.get_user(tg_id=tg_id, username=username)
 
         if not user:
             try:
                 new_user = await self.create_user(username=username, tg_id=tg_id)
-
-                await self._cache.set(tg_id, new_user)
-
                 return new_user
             except IntegrityError as e:
                 # Race condition: пользователь создан параллельно

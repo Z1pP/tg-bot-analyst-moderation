@@ -13,14 +13,3 @@ async def send_html_message_with_kb(
         parse_mode=parse_mode,
         reply_markup=reply_markup,
     )
-
-
-async def send_html_message(
-    text: str,
-    message: Message,
-    parse_mode: ParseMode = ParseMode.HTML,
-) -> None:
-    await message.reply(
-        text=text,
-        parse_mode=parse_mode,
-    )

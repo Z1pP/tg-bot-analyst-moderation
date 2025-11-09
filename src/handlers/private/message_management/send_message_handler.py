@@ -1,0 +1,144 @@
+import logging
+
+from aiogram import F, Router, types
+from aiogram.fsm.context import FSMContext
+
+from constants import Dialog
+from container import container
+from dto.message_action import SendMessageDTO
+from exceptions.moderation import MessageSendError
+from keyboards.inline.chats_kb import select_chat_ikb
+from states.message_management import MessageManagerState
+from usecases.admin_actions import SendMessageToChatUseCase
+from usecases.chat_tracking import GetUserTrackedChatsUseCase
+from utils.state_logger import log_and_set_state
+
+router = Router()
+logger = logging.getLogger(__name__)
+
+
+@router.callback_query(
+    MessageManagerState.waiting_message_link,
+    F.data == "send_message_to_chat",
+)
+async def send_message_button_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик нажатия кнопки отправки сообщения."""
+    await callback.answer()
+
+    # Получаем отслеживаемые чаты
+    tracked_chats_usecase: GetUserTrackedChatsUseCase = container.resolve(
+        GetUserTrackedChatsUseCase
+    )
+    user_chats_dto = await tracked_chats_usecase.execute(
+        tg_id=str(callback.from_user.id)
+    )
+
+    if not user_chats_dto.chats:
+        await callback.message.edit_text(Dialog.MessageManager.NO_TRACKED_CHATS)
+        await state.clear()
+        logger.warning(
+            "Админ %s пытается отправить сообщение без отслеживаемых чатов",
+            callback.from_user.username,
+        )
+        return
+
+    # Сохраняем список чатов в state
+    await state.update_data(user_chats=user_chats_dto.chats)
+
+    await callback.message.edit_text(
+        Dialog.MessageManager.SELECT_CHAT,
+        reply_markup=select_chat_ikb(user_chats_dto.chats),
+    )
+    await log_and_set_state(
+        callback.message, state, MessageManagerState.waiting_chat_select
+    )
+    logger.info("Админ %s выбирает чат для отправки сообщения", callback.from_user.id)
+
+
+@router.callback_query(
+    MessageManagerState.waiting_chat_select,
+    F.data.startswith("select_chat_"),
+)
+async def chat_selected_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик выбора чата для отправки сообщения."""
+    await callback.answer()
+
+    # Получаем chat_id из БД по id
+    chat_id = int(callback.data.split("_")[2])
+
+    # Получаем чат из UseCase чтобы взять chat_id (Telegram ID)
+    data = await state.get_data()
+    user_chats_dto = data.get("user_chats")
+
+    if not user_chats_dto:
+        logger.error("Отсутствуют данные о чатах в state")
+        await callback.message.edit_text(Dialog.MessageManager.INVALID_STATE_DATA)
+        await state.clear()
+        return
+
+    # Находим выбранный чат
+    selected_chat = next((chat for chat in user_chats_dto if chat.id == chat_id), None)
+    if not selected_chat:
+        logger.error("Чат с id %s не найден", chat_id)
+        await callback.message.edit_text(Dialog.MessageManager.INVALID_STATE_DATA)
+        await state.clear()
+        return
+
+    await state.update_data(chat_tgid=selected_chat.tg_id)
+
+    await callback.message.edit_text(Dialog.MessageManager.SEND_CONTENT_INPUT)
+    await log_and_set_state(
+        callback.message, state, MessageManagerState.waiting_send_content
+    )
+    logger.info(
+        "Админ %s выбрал чат %s для отправки сообщения",
+        callback.from_user.id,
+        selected_chat.tg_id,
+    )
+
+
+@router.message(MessageManagerState.waiting_send_content)
+async def send_content_handler(message: types.Message, state: FSMContext) -> None:
+    """Обработчик получения контента для отправки в чат."""
+    data = await state.get_data()
+    chat_tgid = data.get("chat_tgid")
+
+    if not chat_tgid:
+        logger.error("Некорректные данные в state: %s", data)
+        await message.reply(Dialog.MessageManager.INVALID_STATE_DATA)
+        await state.clear()
+        return
+
+    dto = SendMessageDTO(
+        chat_tgid=chat_tgid,
+        admin_tgid=str(message.from_user.id),
+        admin_username=message.from_user.username or "unknown",
+        admin_message_id=message.message_id,
+    )
+
+    usecase: SendMessageToChatUseCase = container.resolve(SendMessageToChatUseCase)
+
+    try:
+        await usecase.execute(dto)
+        await message.reply(Dialog.MessageManager.SEND_SUCCESS)
+        logger.info(
+            "Админ %s отправил сообщение в чат %s",
+            message.from_user.id,
+            chat_tgid,
+        )
+    except MessageSendError as e:
+        await message.reply(e.get_user_message())
+    except Exception as e:
+        logger.error(
+            "Ошибка отправки сообщения в чат %s: %s",
+            chat_tgid,
+            e,
+            exc_info=True,
+        )
+        await message.reply(Dialog.MessageManager.REPLY_ERROR)
+
+    await state.clear()

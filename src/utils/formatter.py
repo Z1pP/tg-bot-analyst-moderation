@@ -17,11 +17,11 @@ def format_selected_period(start_date: datetime, end_date: datetime) -> str:
         "дек.",
     )
     start_month = months[start_date.month - 1]
-    
+
     # Если это один день, показываем только одну дату
     if start_date.date() == end_date.date():
         return f"{start_date.day} {start_month}"
-    
+
     end_month = months[end_date.month - 1]
     return f"{start_date.day} {start_month} - {end_date.day} {end_month}"
 
@@ -38,6 +38,31 @@ def format_seconds(seconds: float) -> str:
     secs = int(seconds % 60)
 
     parts = []
+    if hours > 0:
+        parts.append(f"{hours} ч.")
+    if minutes > 0:
+        parts.append(f"{minutes} мин.")
+    if secs > 0:
+        parts.append(f"{secs} сек.")
+
+    return " ".join(parts)
+
+
+def format_duration(seconds: int) -> str:
+    """
+    Форматирует длительность в читаемый формат с днями, часами, минутами и секундами.
+    """
+    if seconds < 1:
+        return "0 сек."
+
+    days = seconds // 86400
+    hours = (seconds % 86400) // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+
+    parts = []
+    if days > 0:
+        parts.append(f"{days} д.")
     if hours > 0:
         parts.append(f"{hours} ч.")
     if minutes > 0:

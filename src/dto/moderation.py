@@ -9,8 +9,8 @@ from constants.punishment import PunishmentActions as Actions
 class ModerationActionDTO:
     action: Actions
     # ID и username нарушителя
-    user_reply_tgid: str
-    user_reply_username: str
+    violator_tgid: str
+    violator_username: str
     # ID и username администратора
     admin_username: str
     admin_tgid: str
@@ -18,10 +18,12 @@ class ModerationActionDTO:
     chat_tgid: str
     chat_title: str
     # ID сообщения с нарушением
-    reply_message_id: int
-    original_message_id: int
+    reply_message_id: Optional[int] = None
+    original_message_id: Optional[int] = None
     # Даты создания сообщений
-    reply_message_date: datetime
-    original_message_date: datetime
+    reply_message_date: Optional[datetime] = None
+    original_message_date: Optional[datetime] = None
     # Причина наказания
     reason: Optional[str] = None
+    # Флаг вызова из админ-панели (меняет логику отчетов и уведомлений)
+    from_admin_panel: bool = False

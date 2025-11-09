@@ -7,6 +7,7 @@ from aiogram.types import CallbackQuery, Message
 from constants import KbCommands
 from constants.pagination import USERS_PAGE_SIZE
 from container import container
+from dto import RemoveUserTrackingDTO
 from keyboards.inline.users import conf_remove_user_kb, remove_user_inline_kb
 from keyboards.reply.menu import user_menu_kb
 from states import MenuStates
@@ -39,7 +40,7 @@ async def remove_user_from_tracking_handler(message: Message) -> None:
         usecase: GetListTrackedUsersUseCase = container.resolve(
             GetListTrackedUsersUseCase
         )
-        tracked_users = await usecase.execute(admin_username=message.from_user.username)
+        tracked_users = await usecase.execute(admin_tgid=str(message.from_user.id))
 
         if not tracked_users:
             logger.info("Список пользователей пуст")
@@ -96,7 +97,7 @@ async def process_removing_user(
             await callback.answer("Пользователь не найден", show_alert=True)
             return
 
-        await state.update_data(username=user.username)
+        await state.update_data(user_id=user_id)
         logger.info(f"Запрос подтверждения удаления пользователя: {user.username}")
 
         message_text = (
@@ -124,37 +125,39 @@ async def confirmation_removing_user(
     """
     try:
         data = await state.get_data()
-        username = data.get("username")
-        admin_username = callback.from_user.username
+        user_id = data.get("user_id")
         answer = callback.data.split("__")[1]
 
-        logger.info(f"Подтверждение удаления пользователя {username}: {answer}")
+        logger.info(f"Подтверждение удаления пользователя ID {user_id}: {answer}")
 
         if answer == "yes":
+            dto = RemoveUserTrackingDTO(
+                admin_username=callback.from_user.username,
+                admin_tgid=str(callback.from_user.id),
+                user_id=user_id,
+            )
+
             usecase: RemoveUserFromTrackingUseCase = container.resolve(
                 RemoveUserFromTrackingUseCase
             )
-            success = await usecase.execute(
-                admin_username=admin_username,
-                user_username=username,
-            )
+            success = await usecase.execute(dto=dto)
 
             if success:
-                logger.info(f"Пользователь {username} успешно удален из отслеживания")
+                logger.info(f"Пользователь ID {user_id} успешно удален из отслеживания")
                 text = (
-                    f"✅ Готово! @{username} удалён из отлеживания!\n\n"
+                    f"✅ Готово! Пользователь удалён из отлеживания!\n\n"
                     "❗️Вы всегда можете вернуть пользователя "
                     "в отслеживаемые и продолжить собирать статистику"
                 )
             else:
-                logger.warning(f"Не удалось удалить пользователя {username}")
-                text = f"❌ Пользователь @{username} не найден или уже удален."
+                logger.warning(f"Не удалось удалить пользователя ID {user_id}")
+                text = f"❌ Пользователь не найден или уже удален."
 
             await callback.message.edit_text(text=text)
         else:
-            logger.info(f"Удаление пользователя {username} отменено")
+            logger.info(f"Удаление пользователя ID {user_id} отменено")
             await callback.message.edit_text(
-                text=f"❌ Удаление @{username} из отслеживания отменено!",
+                text=f"❌ Удаление из отслеживания отменено!",
             )
     except Exception as e:
         await handle_exception(callback.message, e, "confirmation_removing_user")

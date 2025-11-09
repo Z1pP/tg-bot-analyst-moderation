@@ -3,22 +3,23 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from models import ChatSession
+from constants import InlineButtons
+from dto import ChatDTO
 
 
-def template_scope_selection_kb(chats: List[ChatSession]) -> InlineKeyboardMarkup:
-    """Клавиатура для выбора области шаблонов (глобальные или по чатам)"""
+def template_scope_selection_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
+    """Keyboard for selecting where to add templates"""
     builder = InlineKeyboardBuilder()
 
-    # Кнопка для глобальных шаблонов
+    # all chats selection button
     builder.row(
         InlineKeyboardButton(
-            text="🌐 Общие шаблоны",
+            text="🌐 Для всех чатов",
             callback_data="template_scope_global",
         )
     )
 
-    # Кнопки для каждого чата
+    # button for selecting a specific chat
     for chat in chats:
         builder.row(
             InlineKeyboardButton(
@@ -26,5 +27,12 @@ def template_scope_selection_kb(chats: List[ChatSession]) -> InlineKeyboardMarku
                 callback_data=f"template_scope_chat__{chat.id}",
             )
         )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.BACK_TO_TEMPLATES_MENU,
+            callback_data="templates_menu",
+        )
+    )
 
     return builder.as_markup()

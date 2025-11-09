@@ -3,28 +3,18 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants import InlineButtons
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from models import TemplateCategory
 
 
-def categories_inline_kb(
+def categories_inline_ikb(
     categories: List[TemplateCategory],
     page: int = 1,
     total_count: int = 0,
     page_size: int = CATEGORIES_PAGE_SIZE,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-
-    if not categories:
-        builder.row(
-            InlineKeyboardButton(
-                text="Категорий не найдено, создайте категорию",
-                callback_data="categories_not_found",
-            )
-        )
-        return builder.as_markup()
-
-    # Кнопки категорий
     for category in categories:
         # Кнопка с названием категории в отдельной строке
         builder.row(
@@ -78,6 +68,13 @@ def categories_inline_kb(
 
         if pagination_buttons:
             builder.row(*pagination_buttons)
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.BACK_TO_TEMPLATES_MENU,
+            callback_data="templates_menu",
+        )
+    )
 
     return builder.as_markup()
 

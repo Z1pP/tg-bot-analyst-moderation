@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
     TemplateStateManager.listing_templates,
     F.data.startswith("template__"),
 )
-async def select_template_callback(
+async def select_template_handler(
     query: CallbackQuery,
     bot: Bot,
     state: FSMContext,
@@ -36,7 +36,7 @@ async def select_template_callback(
         f"Был выбран шаблон c ID={template_id} пользователем - {query.from_user.username}"
     )
 
-    await send_template(
+    await send_template_handler(
         bot=bot,
         message=query.message,
         template_id=int(template_id),
@@ -45,7 +45,7 @@ async def select_template_callback(
     await query.answer()
 
 
-async def send_template(
+async def send_template_handler(
     bot: Bot,
     message: Message,
     template_id: int,
