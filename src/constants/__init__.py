@@ -27,6 +27,8 @@ class InlineButtons:
         SELECT_CATEGORY = "🗃️ Категории"
         ADD_CATEGORY = "➕ Добавить категорию"
         # Common
+        BACK_TO_TEMPLATES_MENU = "⬅️ Назад в меню шаблонов"
+
         EDIT = "✏️ Изменить"
         REMOVE = "🗑 Удалить"
         CONFIRM_REMOVE = "✅ Да, удалить"
@@ -89,9 +91,6 @@ class KbCommands:
 
     # Banhammer
     LOCK_MENU = "🚫 Блокировки"
-    AMNESTY = "🕊️ Амнистия"
-    BLOCK_USER = "🚫 Блок юзера"
-    WARN_USER = "❗Предупреждение"
 
     # Message management
     MESSAGE_MANAGEMENT = "💬 Упр. сообщенями"
