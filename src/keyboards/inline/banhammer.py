@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from constants import InlineButtons
 
+from constants import InlineButtons
 
 block_actions = InlineButtons.BlockButtons()
 
