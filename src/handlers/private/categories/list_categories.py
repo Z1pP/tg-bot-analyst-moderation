@@ -1,0 +1,60 @@
+import logging
+
+from aiogram import F, Router, types
+from aiogram.fsm.context import FSMContext
+
+from constants.pagination import CATEGORIES_PAGE_SIZE
+from container import container
+from keyboards.inline.categories import categories_inline_kb
+from keyboards.inline.templates import templates_menu_ikb
+from services.categories import CategoryService
+from states import TemplateStateManager
+from utils.state_logger import log_and_set_state
+
+logger = logging.getLogger(__name__)
+
+
+router = Router(name=__name__)
+
+
+@router.callback_query(F.data == "select_category", TemplateStateManager.templates_menu)
+async def select_category_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
+    await callback.answer()
+
+    try:
+        category_service: CategoryService = container.resolve(CategoryService)
+        categories = await category_service.get_categories()
+
+        if not categories:
+            await callback.message.edit_text(
+                text="❗ Категорий не найдено",
+                reply_markup=templates_menu_ikb(),
+            )
+            return
+
+        first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
+
+        await callback.message.edit_text(
+            text="Выберите категорию.",
+            reply_markup=categories_inline_kb(
+                categories=first_page_categories,
+                page=1,
+                total_count=len(categories),
+            ),
+        )
+
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.listing_categories,
+        )
+    except Exception as e:
+        logger.error("Ошибка при получении категорий: %s", e, exc_info=True)
+        await callback.message.edit_text(
+            "Произошла ошибка при получении категорий.",
+            reply_markup=templates_menu_ikb(),
+        )
+        return
