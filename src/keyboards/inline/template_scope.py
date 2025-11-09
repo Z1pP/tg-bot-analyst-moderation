@@ -3,10 +3,11 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants import InlineButtons
 from dto import ChatDTO
 
 
-def template_scope_selection_kb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
+def template_scope_selection_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
     """Keyboard for selecting where to add templates"""
     builder = InlineKeyboardBuilder()
 
@@ -26,5 +27,12 @@ def template_scope_selection_kb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
                 callback_data=f"template_scope_chat__{chat.id}",
             )
         )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.BACK_TO_TEMPLATES_MENU,
+            callback_data="templates_menu",
+        )
+    )
 
     return builder.as_markup()
