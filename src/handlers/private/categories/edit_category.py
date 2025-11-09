@@ -1,48 +1,49 @@
 import logging
 
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery
 
 from container import container
 from states import TemplateStateManager
-from usecases.categories import UpdateCategoryNameUseCase
+from usecases.categories import GetCategoryByIdUseCase
 from utils.exception_handler import handle_exception
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message(TemplateStateManager.editing_category_name)
-async def process_edit_category_name(message: Message, state: FSMContext) -> None:
-    """Обработчик изменения названия категории"""
+@router.callback_query(F.data.startswith("edit_category__"))
+async def edit_category_handler(callback: CallbackQuery, state: FSMContext) -> None:
+    """Обработчик начала редактирования категории"""
     try:
-        data = await state.get_data()
-        category_id = data.get("edit_category_id")
+        category_id = int(callback.data.split("__")[1])
 
-        if not category_id:
-            await message.answer("❌ Ошибка: категория не найдена")
-            await state.clear()
+        # Получаем категорию через Use Case
+        usecase: GetCategoryByIdUseCase = container.resolve(GetCategoryByIdUseCase)
+        category_dto = await usecase.execute(category_id)
+
+        if not category_dto:
+            await callback.answer("Категория не найдена", show_alert=True)
             return
 
-        new_name = message.text.strip()
-
-        # Обновляем название через Use Case
-        usecase: UpdateCategoryNameUseCase = container.resolve(
-            UpdateCategoryNameUseCase
+        # Сохраняем данные категории в state
+        await state.update_data(
+            edit_category_id=category_id, original_category_name=category_dto.name
         )
-        success = await usecase.execute(category_id, new_name)
 
-        if success:
-            await message.answer(
-                f"✅ Название категории изменено на: <b>{new_name}</b>"
-            )
-        else:
-            await message.answer("❌ Ошибка при обновлении названия категории")
+        await state.set_state(TemplateStateManager.editing_category_name)
 
-        await state.set_state(TemplateStateManager.templates_menu)
-        await state.update_data(edit_category_id=None, original_category_name=None)
+        await callback.message.edit_text(
+            text=f"<b>Редактирование категории:</b> {category_dto.name}\n\n"
+            "Введите новое название для категории:"
+        )
+
+        logger.info(
+            f"Начато редактирование категории {category_id} пользователем {callback.from_user.username}"
+        )
 
     except Exception as e:
-        await handle_exception(message, e, "process_edit_category_name")
-        await state.clear()
+        await handle_exception(callback.message, e, "edit_category_callback")
+    finally:
+        await callback.answer()
