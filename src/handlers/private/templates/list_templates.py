@@ -1,39 +1,46 @@
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
 
-from constants import KbCommands
 from container import container
-from keyboards.inline.template_scope import template_scope_selection_kb
-from usecases.chat import GetTrackedChatsUseCase
+from keyboards.inline.template_scope import template_scope_selection_ikb
 from states import TemplateStateManager
+from usecases.chat import GetTrackedChatsUseCase
 from utils.exception_handler import handle_exception
-from utils.send_message import send_html_message_with_kb
+from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 
 
-@router.message(F.text == KbCommands.SELECT_TEMPLATE)
-async def templates_list_handler(message: Message, state: FSMContext) -> None:
+@router.callback_query(F.data == "select_template")
+async def templates_list_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
     """
     Обработчик команды для выбора области шаблонов.
     """
-    try:
-        await state.clear()
-        await state.set_state(TemplateStateManager.selecting_template_scope)
+    await callback.answer()
+    await state.clear()
 
+    try:
         # Получаем список чатов пользователя
         usecase: GetTrackedChatsUseCase = container.resolve(GetTrackedChatsUseCase)
-        chats = await usecase.execute(tg_id=str(message.from_user.id))
+        chats = await usecase.execute(tg_id=str(callback.from_user.id))
 
-        await send_html_message_with_kb(
-            message=message,
-            text="Выберите область шаблонов:",
-            reply_markup=template_scope_selection_kb(chats),
+        await callback.message.edit_text(
+            text="Для какого чата вы хотите получить шаблоны:",
+            reply_markup=template_scope_selection_ikb(chats),
         )
+
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.selecting_template_scope,
+        )
+
     except Exception as e:
         await handle_exception(
-            message=message,
+            message=callback,
             exc=e,
             context="templates_list_handler",
         )
