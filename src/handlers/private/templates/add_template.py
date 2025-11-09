@@ -7,7 +7,7 @@ from aiogram.types import Message
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
-from keyboards.inline.categories import categories_inline_kb
+from keyboards.inline.categories import categories_inline_ikb
 from keyboards.inline.templates import templates_menu_ikb
 from middlewares import AlbumMiddleware
 from services.categories import CategoryService
@@ -46,7 +46,7 @@ async def add_template_handler(callback: types.CallbackQuery, state: FSMContext)
 
         await callback.message.edit_text(
             text="Пожалуйста, выберите категорию шаблона.",
-            reply_markup=categories_inline_kb(
+            reply_markup=categories_inline_ikb(
                 categories=first_page_categories,
                 page=1,
                 total_count=len(categories),

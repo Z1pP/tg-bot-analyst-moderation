@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
-from keyboards.inline.categories import categories_inline_kb
+from keyboards.inline.categories import categories_inline_ikb
 from keyboards.inline.templates import templates_menu_ikb
 from services.categories import CategoryService
 from states import TemplateStateManager
@@ -39,7 +39,7 @@ async def select_category_handler(
 
         await callback.message.edit_text(
             text="Выберите категорию.",
-            reply_markup=categories_inline_kb(
+            reply_markup=categories_inline_ikb(
                 categories=first_page_categories,
                 page=1,
                 total_count=len(categories),
