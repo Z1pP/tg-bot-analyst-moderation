@@ -41,6 +41,7 @@ async def request_category_name_handler(callback: CallbackQuery, state: FSMConte
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
                 text="⚠️ Некорректный запрос. Повторите действие через меню.",
+                reply_markup=templates_menu_ikb(),
             )
         mode = "edit"
         old_name = None
