@@ -54,6 +54,8 @@ class InlineButtons:
         # Templates
         TEMPLATES_MENU = "🚀 Шаблоны ответов"
         BACK_TO_MESSAGE_MANAGEMENT = "⬅️ Назад в меню управления сообщениями"
+        HIDE_TEMPLATE = "🗑 Скрыть"
+        HIDE_ALBUM = "🗑 Скрыть альбом"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
