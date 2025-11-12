@@ -57,8 +57,6 @@ async def process_template_chat_handler(
     try:
         chat_id = int(query.data.split("__")[1])
 
-        await state.set_state(TemplateStateManager.process_template_title)
-
         if chat_id == -1:
             await state.update_data(chat_id=None)
         else:
@@ -67,6 +65,12 @@ async def process_template_chat_handler(
         text = "Укажите название шаблона:"
 
         await query.message.answer(text=text)
+
+        await log_and_set_state(
+            message=query.message,
+            state=state,
+            new_state=TemplateStateManager.process_template_title,
+        )
 
         await query.answer()
 
