@@ -1,15 +1,13 @@
 import logging
 
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
 
 from container import container
 from exceptions.category import CategoryNotFoundError
-from keyboards.inline.categories import cancel_category_ikb
 from keyboards.inline.templates import templates_menu_ikb
-from states import CategoryStateManager
-from usecases.categories import GetCategoryByIdUseCase
+from states import CategoryStateManager, TemplateStateManager
+from usecases.categories import UpdateCategoryNameUseCase
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
@@ -17,58 +15,42 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data.startswith("edit_category__"))
-async def edit_category_handler(callback: CallbackQuery, state: FSMContext) -> None:
-    """Обработчик начала редактирования категории"""
+@router.callback_query(
+    CategoryStateManager.confirm_category_edit,
+    F.data == "conf_edit_category",
+)
+async def confirm_category_edit_handler(
+    callback: types.CallbackQuery, state: FSMContext
+):
     await callback.answer()
 
-    try:
-        # Безопасный парсинг ID категории
-        category_id = int(callback.data.split("__")[1])
-    except (IndexError, ValueError):
-        logger.warning("Некорректный формат callback_data: %s", callback.data)
-        return await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text="⚠️ Некорректный запрос. Повторите действие через меню.",
-            reply_markup=templates_menu_ikb(),
-        )
-
-    logger.info(
-        "Пользователь '%s' запустил редактирование категории ID=%d",
-        callback.from_user.full_name,
-        category_id,
-    )
+    data = await state.get_data()
+    category_id = data.get("category_id")
+    old_name = data.get("old_name")
+    new_name = data.get("category_name")
 
     try:
-        usecase: GetCategoryByIdUseCase = container.resolve(GetCategoryByIdUseCase)
-        category = await usecase.execute(category_id)
-
-        await state.update_data(category_id=category.id, old_name=category.name)
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=CategoryStateManager.editing_category_name,
+        usecase: UpdateCategoryNameUseCase = container.resolve(
+            UpdateCategoryNameUseCase
         )
-
-        text = (
-            f"<b>Редактирование категории:</b> {category.name}\n\n"
-            "Введите новое название для категории:"
-        )
-
+        category = await usecase.execute(category_id=category_id, new_name=new_name)
+        text = f"✅ Категория <b>{old_name}</b> успешно изменена на <b>{category.name}</b>.\n"
     except CategoryNotFoundError as e:
-        logger.warning("Категория ID=%d не найдена: %s", category_id, e)
         text = e.get_user_message()
-
-    except Exception:
-        logger.exception("Ошибка при редактировании категории ID=%d", category_id)
-        text = "⚠️ Произошла ошибка при попытке изменить категорию."
+    except Exception as e:
+        logger.error("Ошибка при изменении категории: %s", e, exc_info=True)
+        text = "⚠️ Произошла ошибка при изменении категории."
 
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=text,
-        reply_markup=cancel_category_ikb(),
+        reply_markup=templates_menu_ikb(),
+    )
+
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=TemplateStateManager.templates_menu,
     )
