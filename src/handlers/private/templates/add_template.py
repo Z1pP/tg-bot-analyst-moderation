@@ -7,12 +7,13 @@ from aiogram.types import Message
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
-from keyboards.inline.categories import categories_inline_ikb
+from keyboards.inline.categories import categories_select_only_ikb
 from keyboards.inline.templates import cancel_template_ikb, templates_menu_ikb
 from middlewares import AlbumMiddleware
 from services.categories import CategoryService
 from services.templates import TemplateContentService
 from states import TemplateStateManager
+from usecases.categories import GetCategoriesPaginatedUseCase
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
@@ -49,7 +50,7 @@ async def add_template_handler(
 
         await callback.message.edit_text(
             text="Пожалуйста, выберите категорию шаблона.",
-            reply_markup=categories_inline_ikb(
+            reply_markup=categories_select_only_ikb(
                 categories=first_page_categories,
                 page=1,
                 total_count=len(categories),
@@ -183,3 +184,77 @@ async def process_template_content_handler(
         state=state,
         new_state=TemplateStateManager.templates_menu,
     )
+
+
+@router.callback_query(
+    F.data.startswith("prev_categories_page__"),
+    TemplateStateManager.process_template_category,
+)
+async def prev_categories_page_for_template_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик перехода на предыдущую страницу категорий при добавлении шаблона"""
+    await callback.answer()
+
+    try:
+        current_page = int(callback.data.split("__")[1])
+        prev_page = max(1, current_page - 1)
+
+        usecase: GetCategoriesPaginatedUseCase = container.resolve(
+            GetCategoriesPaginatedUseCase
+        )
+        offset = (prev_page - 1) * CATEGORIES_PAGE_SIZE
+        categories, total_count = await usecase.execute(
+            limit=CATEGORIES_PAGE_SIZE, offset=offset
+        )
+
+        keyboard = categories_select_only_ikb(
+            categories=categories,
+            page=prev_page,
+            total_count=total_count,
+        )
+
+        await callback.message.edit_reply_markup(reply_markup=keyboard)
+
+    except Exception as e:
+        logger.error(f"Ошибка при переходе на предыдущую страницу категорий: {e}")
+        await callback.answer("❌ Ошибка при переходе на предыдущую страницу")
+
+
+@router.callback_query(
+    F.data.startswith("next_categories_page__"),
+    TemplateStateManager.process_template_category,
+)
+async def next_categories_page_for_template_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик перехода на следующую страницу категорий при добавлении шаблона"""
+    await callback.answer()
+
+    try:
+        current_page = int(callback.data.split("__")[1])
+        next_page = current_page + 1
+
+        usecase: GetCategoriesPaginatedUseCase = container.resolve(
+            GetCategoriesPaginatedUseCase
+        )
+        offset = (next_page - 1) * CATEGORIES_PAGE_SIZE
+        categories, total_count = await usecase.execute(
+            limit=CATEGORIES_PAGE_SIZE, offset=offset
+        )
+
+        if not categories:
+            await callback.answer("Больше категорий нет")
+            return
+
+        keyboard = categories_select_only_ikb(
+            categories=categories,
+            page=next_page,
+            total_count=total_count,
+        )
+
+        await callback.message.edit_reply_markup(reply_markup=keyboard)
+
+    except Exception as e:
+        logger.error(f"Ошибка при переходе на следующую страницу категорий: {e}")
+        await callback.answer("❌ Ошибка при переходе на следующую страницу")
