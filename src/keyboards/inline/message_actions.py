@@ -56,3 +56,15 @@ def send_message_ikb() -> types.InlineKeyboardMarkup:
         ),
     )
     return builder.as_markup()
+
+
+def cancel_send_message_ikb() -> types.InlineKeyboardMarkup:
+    """Клавиатура с кнопкой отмены отправки сообщения."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        types.InlineKeyboardButton(
+            text=InlineButtons.MessageButtons.CANCEL,
+            callback_data="message_management_menu",
+        )
+    )
+    return builder.as_markup()
