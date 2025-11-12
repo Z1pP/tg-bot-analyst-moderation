@@ -1,25 +1,30 @@
 import logging
 
-from aiogram import Router, types
+from aiogram import Bot, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
 from container import container
 from dto.message_action import MessageActionDTO
 from exceptions.moderation import MessageSendError
+from keyboards.inline.message_actions import send_message_ikb
 from states.message_management import MessageManagerState
 from usecases.admin_actions import ReplyToMessageUseCase
+from utils.state_logger import log_and_set_state
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
 @router.message(MessageManagerState.waiting_reply_message)
-async def message_reply_handler(message: types.Message, state: FSMContext) -> None:
+async def message_reply_handler(
+    message: types.Message, state: FSMContext, bot: Bot
+) -> None:
     """Обработчик получения контента для ответа."""
     data = await state.get_data()
     chat_tgid = data.get("chat_tgid")
     message_id = data.get("message_id")
+    active_message_id = data.get("active_message_id")
 
     if not chat_tgid or not message_id:
         logger.error("Некорректные данные в state: %s", data)
@@ -35,11 +40,44 @@ async def message_reply_handler(message: types.Message, state: FSMContext) -> No
         admin_message_id=message.message_id,
     )
 
-    usecase: ReplyToMessageUseCase = container.resolve(ReplyToMessageUseCase)
-
     try:
+        usecase: ReplyToMessageUseCase = container.resolve(ReplyToMessageUseCase)
         await usecase.execute(dto)
-        await message.reply(Dialog.MessageManager.REPLY_SUCCESS)
+
+        # Удаляем сообщение пользователя с контентом только после успешной отправки
+        try:
+            await message.delete()
+        except Exception as e:
+            logger.warning(f"Не удалось удалить сообщение пользователя: {e}")
+        success_text = f"{Dialog.MessageManager.REPLY_SUCCESS}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
+
+        # Редактируем существующее сообщение или отправляем новое
+        if active_message_id:
+            try:
+                await bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=active_message_id,
+                    text=success_text,
+                    reply_markup=send_message_ikb(),
+                )
+                # Сохраняем message_id для последующего редактирования
+                await state.update_data(active_message_id=active_message_id)
+            except Exception as e:
+                logger.error(f"Ошибка при редактировании сообщения: {e}")
+                sent_msg = await message.answer(
+                    success_text, reply_markup=send_message_ikb()
+                )
+                await state.update_data(active_message_id=sent_msg.message_id)
+        else:
+            sent_msg = await message.answer(
+                success_text, reply_markup=send_message_ikb()
+            )
+            await state.update_data(active_message_id=sent_msg.message_id)
+
+        await log_and_set_state(
+            message, state, MessageManagerState.waiting_message_link
+        )
+
         logger.info(
             "Админ %s ответил на сообщение %s в чате %s",
             message.from_user.id,
@@ -47,7 +85,30 @@ async def message_reply_handler(message: types.Message, state: FSMContext) -> No
             chat_tgid,
         )
     except MessageSendError as e:
-        await message.reply(e.get_user_message())
+        error_text = (
+            f"{e.get_user_message()}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
+        )
+        if active_message_id:
+            try:
+                await bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=active_message_id,
+                    text=error_text,
+                    reply_markup=send_message_ikb(),
+                )
+                await state.update_data(active_message_id=active_message_id)
+            except Exception as e:
+                logger.error(f"Ошибка при редактировании сообщения: {e}")
+                sent_msg = await message.answer(
+                    error_text, reply_markup=send_message_ikb()
+                )
+                await state.update_data(active_message_id=sent_msg.message_id)
+        else:
+            sent_msg = await message.answer(error_text, reply_markup=send_message_ikb())
+            await state.update_data(active_message_id=sent_msg.message_id)
+        await log_and_set_state(
+            message, state, MessageManagerState.waiting_message_link
+        )
     except Exception as e:
         logger.error(
             "Ошибка отправки ответа на сообщение %s: %s",
@@ -55,6 +116,28 @@ async def message_reply_handler(message: types.Message, state: FSMContext) -> No
             e,
             exc_info=True,
         )
-        await message.reply(Dialog.MessageManager.REPLY_ERROR)
+        error_text = f"{Dialog.MessageManager.REPLY_ERROR}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
+        if active_message_id:
+            try:
+                await bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=active_message_id,
+                    text=error_text,
+                    reply_markup=send_message_ikb(),
+                )
+                await state.update_data(active_message_id=active_message_id)
+            except Exception as e:
+                logger.error(f"Ошибка при редактировании сообщения: {e}")
+                sent_msg = await message.answer(
+                    error_text, reply_markup=send_message_ikb()
+                )
+                await state.update_data(active_message_id=sent_msg.message_id)
+        else:
+            sent_msg = await message.answer(error_text, reply_markup=send_message_ikb())
+            await state.update_data(active_message_id=sent_msg.message_id)
 
-    await state.clear()
+        await log_and_set_state(
+            message,
+            state,
+            MessageManagerState.waiting_message_link,
+        )
