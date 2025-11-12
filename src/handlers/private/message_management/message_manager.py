@@ -20,10 +20,14 @@ async def message_management_handler(message: types.Message, state: FSMContext) 
         KbCommands.MESSAGE_MANAGEMENT,
     )
 
-    await message.answer(
+    sent_message = await message.answer(
         text=Dialog.MessageManager.INPUT_MESSAGE_LINK,
         reply_markup=send_message_ikb(),
     )
+
+    # Сохраняем message_id для последующего редактирования
+    await state.update_data(active_message_id=sent_message.message_id)
+
     await log_and_set_state(message, state, MessageManagerState.waiting_message_link)
 
 
@@ -43,6 +47,10 @@ async def message_management_menu_handler(
         text=Dialog.MessageManager.INPUT_MESSAGE_LINK,
         reply_markup=send_message_ikb(),
     )
+
+    # Сохраняем message_id для последующего редактирования
+    await state.update_data(active_message_id=callback.message.message_id)
+
     await log_and_set_state(
         callback.message, state, MessageManagerState.waiting_message_link
     )
