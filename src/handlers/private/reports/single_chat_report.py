@@ -201,7 +201,11 @@ async def generate_and_send_report(
         if not is_single_day:
             await state.update_data(chat_report_dto=report_dto)
 
-        await state.set_state(ChatStateManager.selecting_period)
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=ChatStateManager.selecting_period,
+        )
 
         for idx, part in enumerate(report_parts):
             if idx == len(report_parts) - 1:
