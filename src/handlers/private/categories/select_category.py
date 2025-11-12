@@ -4,12 +4,16 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
+from keyboards.inline.categories import categories_inline_ikb
 from keyboards.inline.chats_kb import template_scope_selector_kb
-from keyboards.inline.templates import templates_inline_kb
+from keyboards.inline.templates import templates_inline_kb, templates_menu_ikb
+from services.categories import CategoryService
 from services.templates import TemplateService
 from states import TemplateStateManager
 from usecases.chat import GetTrackedChatsUseCase
+from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
@@ -53,7 +57,13 @@ async def select_category_for_template_handler(
         )
     except Exception as e:
         logger.error("Ошибка при получении списка чатов чатов: %s", e, exc_info=True)
-        await callback.message.answer(f"Ошибка: {e}")
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="❌ Ошибка при получении списка чатов",
+            reply_markup=templates_menu_ikb(),
+        )
 
 
 @router.callback_query(
@@ -88,6 +98,7 @@ async def show_templates_by_category_handler(
                 templates=templates,
                 page=1,
                 total_count=total_count,
+                show_back_to_categories=True,
             ),
         )
 
@@ -98,4 +109,42 @@ async def show_templates_by_category_handler(
         )
     except Exception as e:
         logger.error("Ошибка при получении шаблонов: %s", e)
-        await callback.answer("Ошибка при получении шаблонов")
+        # Пытаемся вернуться к списку категорий
+        try:
+            category_service: CategoryService = container.resolve(CategoryService)
+            categories = await category_service.get_categories()
+            if categories:
+                first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
+                await safe_edit_message(
+                    bot=callback.bot,
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
+                    text="❌ Ошибка при получении шаблонов. Выберите категорию:",
+                    reply_markup=categories_inline_ikb(
+                        categories=first_page_categories,
+                        page=1,
+                        total_count=len(categories),
+                    ),
+                )
+                await log_and_set_state(
+                    message=callback.message,
+                    state=state,
+                    new_state=TemplateStateManager.listing_categories,
+                )
+            else:
+                await safe_edit_message(
+                    bot=callback.bot,
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
+                    text="❌ Ошибка при получении шаблонов",
+                    reply_markup=templates_menu_ikb(),
+                )
+        except Exception as inner_e:
+            logger.error("Ошибка при возврате к категориям: %s", inner_e)
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="❌ Ошибка при получении шаблонов",
+                reply_markup=templates_menu_ikb(),
+            )
