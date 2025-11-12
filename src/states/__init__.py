@@ -4,6 +4,7 @@ from .banhammer_states import (
     BanUserStates,
     WarnUserStates,
 )
+from .category import CategoryStateManager
 from .chat_states import ChatStateManager
 from .menu_states import MenuStates
 from .message_management import MessageManagerState
@@ -26,4 +27,5 @@ __all__ = [
     "BanUserStates",
     "WarnUserStates",
     "MessageManagerState",
+    "CategoryStateManager",
 ]
