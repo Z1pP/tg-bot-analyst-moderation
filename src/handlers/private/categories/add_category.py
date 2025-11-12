@@ -7,7 +7,7 @@ from container import container
 from dto import CreateCategoryDTO
 from exceptions.category import CategoryAlreadyExists
 from keyboards.inline.categories import (
-    cancel_add_category_ikb,
+    cancel_category_ikb,
     confirmation_add_category_ikb,
 )
 from keyboards.inline.templates import templates_menu_ikb
@@ -37,7 +37,7 @@ async def add_category_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text="Отправьте название новой категории:",
-        reply_markup=cancel_add_category_ikb(),
+        reply_markup=cancel_category_ikb(),
     )
 
     if sent_success:
@@ -71,7 +71,7 @@ async def process_category_name_handler(
                     "❗Недопустимый формат ввода данных.\n"
                     "Пожалуйста, отправьте название текстом (без фото, видео и т.д.)."
                 ),
-                reply_markup=cancel_add_category_ikb(),
+                reply_markup=cancel_category_ikb(),
             )
         return
 
@@ -89,7 +89,7 @@ async def process_category_name_handler(
                     "❗Недопустимый формат ввода данных.\n"
                     "Название категории должно содержать от 3 до 50 символов."
                 ),
-                reply_markup=cancel_add_category_ikb(),
+                reply_markup=cancel_category_ikb(),
             )
         return
 
@@ -116,34 +116,8 @@ async def process_category_name_handler(
 
 
 @router.callback_query(
-    F.data == "cancel_add_category",
-)
-async def cancel_category_creation_handler(
-    callback: types.CallbackQuery,
-    state: FSMContext,
-    bot: Bot,
-) -> None:
-    """Обработчик отмены создания категории"""
-    await callback.answer()
-
-    await safe_edit_message(
-        bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text="❌ Создание категории отменено.",
-        reply_markup=templates_menu_ikb(),
-    )
-
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.templates_menu,
-    )
-
-
-@router.callback_query(
     CategoryStateManager.confirm_category_creation,
-    F.data == "confirm_add_category",
+    F.data == "conf_add_category",
 )
 async def confirm_category_creation_handler(
     callback: types.CallbackQuery,
