@@ -10,6 +10,7 @@ from keyboards.inline.templates import templates_inline_kb
 from models import MessageTemplate
 from repositories import MessageTemplateRepository
 from states import TemplateStateManager
+from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 
@@ -43,6 +44,7 @@ async def prev_page_templates_handler(
             templates=templates,
             page=prev_page,
             total_count=total_count,
+            show_back_to_categories=state_data.category_id is not None,
         )
     )
     await callback.answer()
@@ -66,7 +68,26 @@ async def next_page_templates_handler(
     )
 
     if not templates:
-        await callback.answer("Больше шаблонов нет")
+        # Получаем текущую клавиатуру для сохранения кнопки возврата
+        state_data = await extract_state_data(state=state)
+        # Получаем предыдущую страницу для отображения
+        prev_templates, total_count = await get_templates_and_count(
+            data=state_data,
+            page=current_page,
+        )
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="ℹ️ Больше шаблонов нет",
+            reply_markup=templates_inline_kb(
+                templates=prev_templates,
+                page=current_page,
+                total_count=total_count,
+                show_back_to_categories=state_data.category_id is not None,
+            ),
+        )
+        await callback.answer()
         return
 
     await callback.message.edit_reply_markup(
@@ -74,6 +95,7 @@ async def next_page_templates_handler(
             templates=templates,
             page=next_page,
             total_count=total_count,
+            show_back_to_categories=state_data.category_id is not None,
         )
     )
     await callback.answer()
