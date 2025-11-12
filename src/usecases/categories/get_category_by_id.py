@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 from dto import CategoryDTO
+from exceptions.category import CategoryNotFoundError
 from repositories import TemplateCategoryRepository
 
 logger = logging.getLogger(__name__)
@@ -21,15 +22,12 @@ class GetCategoryByIdUseCase:
         Returns:
             Optional[CategoryDTO]: DTO категории или None
         """
-        try:
-            category = await self.category_repository.get_category_by_id(category_id)
+        category = await self.category_repository.get_category_by_id(category_id)
 
-            if not category:
-                logger.warning(f"Категория {category_id} не найдена")
-                return None
+        if not category:
+            logger.warning(
+                f"Попытка удалить несуществующую категорию (ID={category_id})"
+            )
+            raise CategoryNotFoundError()
 
-            return CategoryDTO.from_model(category)
-
-        except Exception as e:
-            logger.error(f"Ошибка при получении категории {category_id}: {e}")
-            raise
+        return CategoryDTO.from_model(category)
