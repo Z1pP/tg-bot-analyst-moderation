@@ -8,32 +8,42 @@ from constants.pagination import CATEGORIES_PAGE_SIZE
 from models import TemplateCategory
 
 
-def cancel_add_category_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура для отмены добавления категории."""
+def cancel_category_ikb() -> InlineKeyboardMarkup:
+    """Создаёт клавиатуру для отмены действия над категорией."""
     builder = InlineKeyboardBuilder()
-
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL_ADD_CATEGORY,
-            callback_data="cancel_add_category",
+            text=InlineButtons.TemplateButtons.CANCEL,
+            callback_data="cancel_category",
         )
     )
     return builder.as_markup()
 
 
 def confirmation_add_category_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура для подтверждения добавления категории."""
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.TemplateButtons.CONFIRM_ADD,
-            callback_data="confirm_add_category",
+            callback_data="conf_add_category",
         ),
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL_ADD_CATEGORY,
-            callback_data="cancel_add_category",
+            text=InlineButtons.TemplateButtons.CANCEL, callback_data="cancel_category"
         ),
-        width=2,
+    )
+    return builder.as_markup()
+
+
+def confirmation_edit_category_ikb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.CONFIRM_SAVE,
+            callback_data="conf_edit_category",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.CANCEL, callback_data="cancel_category"
+        ),
     )
     return builder.as_markup()
 
