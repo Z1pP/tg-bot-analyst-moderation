@@ -119,6 +119,67 @@ def categories_inline_ikb(
     return builder.as_markup()
 
 
+def categories_select_only_ikb(
+    categories: List[TemplateCategory],
+    page: int = 1,
+    total_count: int = 0,
+    page_size: int = CATEGORIES_PAGE_SIZE,
+) -> InlineKeyboardMarkup:
+    """Клавиатура для выбора категории при добавлении шаблона (только названия, без кнопок редактирования/удаления)"""
+    builder = InlineKeyboardBuilder()
+    for category in categories:
+        # Только кнопка с названием категории
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{category.name}",
+                callback_data=f"category__{category.id}",
+            )
+        )
+
+    # Пагинация (только если больше одной страницы)
+    if total_count > page_size:
+        max_pages = (total_count + page_size - 1) // page_size
+        pagination_buttons = []
+
+        # Кнопка "Назад"
+        if page > 1:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text="◀️", callback_data=f"prev_categories_page__{page}"
+                )
+            )
+
+        # Информация о странице
+        start_item = (page - 1) * page_size + 1
+        end_item = min(page * page_size, total_count)
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=f"{start_item}-{end_item} из {total_count}",
+                callback_data="categories_page_info",
+            )
+        )
+
+        # Кнопка "Вперед"
+        if page < max_pages:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text="▶️", callback_data=f"next_categories_page__{page}"
+                )
+            )
+
+        if pagination_buttons:
+            builder.row(*pagination_buttons)
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.BACK_TO_TEMPLATES_MENU,
+            callback_data="templates_menu",
+        )
+    )
+
+    return builder.as_markup()
+
+
 def conf_remove_category_kb() -> InlineKeyboardBuilder:
     builder = InlineKeyboardBuilder()
 
