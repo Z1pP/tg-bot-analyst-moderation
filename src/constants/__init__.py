@@ -53,6 +53,7 @@ class InlineButtons:
         SEND_MESSAGE = "💬 Отправить сообщение"
         # Templates
         TEMPLATES_MENU = "🚀 Шаблоны ответов"
+        BACK_TO_MESSAGE_MANAGEMENT = "⬅️ Назад в меню управления сообщениями"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
