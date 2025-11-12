@@ -10,6 +10,7 @@ from keyboards.reply import get_time_period_kb
 from services.time_service import TimeZoneService
 from states import AllUsersReportStates, ChatStateManager, SingleUserReportStates
 from utils.exception_handler import handle_exception
+from utils.state_logger import log_and_set_state
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -158,7 +159,11 @@ async def handle_confirm_action(
             chat_id=chat_id,
             admin_tg_id=callback.from_user.id,
         )
-        await state.set_state(ChatStateManager.selecting_period)
+        await log_and_set_state(
+            message=temp_message,
+            state=state,
+            new_state=ChatStateManager.selecting_period,
+        )
 
     elif current_state == SingleUserReportStates.selecting_custom_period:
         from .single_user_report import generate_and_send_report
@@ -177,7 +182,11 @@ async def handle_confirm_action(
             user_id=user_id,
             admin_tg_id=callback.from_user.id,
         )
-        await state.set_state(SingleUserReportStates.selecting_period)
+        await log_and_set_state(
+            message=temp_message,
+            state=state,
+            new_state=SingleUserReportStates.selecting_period,
+        )
 
     elif current_state == AllUsersReportStates.selecting_custom_period:
         from .all_users_report import generate_and_send_report
@@ -189,7 +198,11 @@ async def handle_confirm_action(
             end_date=cal_end,
             user_tg_id=callback.from_user.id,
         )
-        await state.set_state(AllUsersReportStates.selecting_period)
+        await log_and_set_state(
+            message=temp_message,
+            state=state,
+            new_state=AllUsersReportStates.selecting_period,
+        )
 
     await temp_message.delete()
 
