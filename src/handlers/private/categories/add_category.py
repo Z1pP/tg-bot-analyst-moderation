@@ -1,12 +1,11 @@
 import logging
 
 from aiogram import Bot, F, Router, types
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 
 from container import container
 from dto import CreateCategoryDTO
-from exceptions.caregory import CategoryAlreadyExists
+from exceptions.category import CategoryAlreadyExists
 from keyboards.inline.categories import (
     cancel_add_category_ikb,
     confirmation_add_category_ikb,
@@ -14,40 +13,11 @@ from keyboards.inline.categories import (
 from keyboards.inline.templates import templates_menu_ikb
 from states import CategoryStateManager, TemplateStateManager
 from usecases.categories import CreateCategoryUseCase
+from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
-
-
-async def safe_edit_message(
-    bot: Bot,
-    chat_id: int,
-    message_id: int,
-    text: str | None = None,
-    reply_markup: types.InlineKeyboardMarkup | None = None,
-) -> bool:
-    """Безопасное редактирование сообщения с обработкой типичных ошибок Telegram"""
-    try:
-        await bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text=text,
-            reply_markup=reply_markup,
-        )
-        return True
-
-    except TelegramBadRequest as e:
-        msg = (e.message or str(e)).lower()
-        if "message is not modified" in msg:
-            logger.debug("Сообщение %d не изменилось", message_id)
-        elif "message to edit not found" in msg:
-            logger.warning("Сообщение %d не найдено для редактирования", message_id)
-        elif "message can't be edited" in msg:
-            logger.warning("Сообщение %d больше нельзя редактировать", message_id)
-        else:
-            logger.error("Ошибка при редактировании сообщения: %s", e, exc_info=True)
-        return False
 
 
 @router.callback_query(
@@ -197,7 +167,7 @@ async def confirm_category_creation_handler(
         text = e.get_user_message()
     except Exception as e:
         logger.error("Ошибка при создании категории: %s", e, exc_info=True)
-        text = "❌ Произошла ошибка при создании категории."
+        text = "⚠️ Произошла ошибка при создании категории."
 
     await safe_edit_message(
         bot,
