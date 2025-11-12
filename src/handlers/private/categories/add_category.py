@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 
 from container import container
 from dto import CreateCategoryDTO
+from exceptions.caregory import CategoryAlreadyExists
 from keyboards.inline.categories import (
     cancel_add_category_ikb,
     confirmation_add_category_ikb,
@@ -187,33 +188,29 @@ async def confirm_category_creation_handler(
 
     try:
         usecase: CreateCategoryUseCase = container.resolve(CreateCategoryUseCase)
-        await usecase.execute(dto=CreateCategoryDTO(name=category_name))
+        category = await usecase.execute(dto=CreateCategoryDTO(name=category_name))
+        text = (
+            f"✅ Категория <b>{category.name}</b> успешно создана.\n"
+            "Теперь вы можете создавать шаблоны в этой категории."
+        )
+    except CategoryAlreadyExists as e:
+        text = e.get_user_message()
     except Exception as e:
         logger.error("Ошибка при создании категории: %s", e, exc_info=True)
-        await safe_edit_message(
-            bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text="⚠️ Произошла ошибка при создании категории.",
-            reply_markup=templates_menu_ikb(),
-        )
-        return
-    finally:
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.templates_menu,
-        )
+        text = "❌ Произошла ошибка при создании категории."
 
     await safe_edit_message(
         bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=(
-            f"✅ Категория <b>{category_name}</b> успешно создана."
-            "Теперь вы можете создавать шаблоны в этой категории."
-        ),
+        text=text,
         reply_markup=templates_menu_ikb(),
+    )
+
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=TemplateStateManager.templates_menu,
     )
 
 
