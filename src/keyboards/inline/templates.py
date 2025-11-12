@@ -8,6 +8,18 @@ from constants.pagination import TEMPLATES_PAGE_SIZE
 from models import MessageTemplate
 
 
+def cancel_template_ikb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.CANCEL,
+            callback_data="cancel_template",
+        )
+    )
+    return builder.as_markup()
+
+
 def templates_menu_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -29,6 +41,13 @@ def templates_menu_ikb() -> InlineKeyboardMarkup:
             callback_data="add_category",
         ),
         width=2,
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.MessageButtons.BACK_TO_MESSAGE_MANAGEMENT,
+            callback_data="message_management_menu",
+        )
     )
 
     return builder.as_markup()
