@@ -1,7 +1,7 @@
 import logging
 
 from dto import CategoryDTO, CreateCategoryDTO
-from exceptions.caregory import CategoryAlreadyExists
+from exceptions.category import CategoryAlreadyExists
 from repositories import TemplateCategoryRepository
 
 logger = logging.getLogger(__name__)
