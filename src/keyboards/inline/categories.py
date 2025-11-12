@@ -8,6 +8,36 @@ from constants.pagination import CATEGORIES_PAGE_SIZE
 from models import TemplateCategory
 
 
+def cancel_add_category_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура для отмены добавления категории."""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.CANCEL_ADD_CATEGORY,
+            callback_data="cancel_add_category",
+        )
+    )
+    return builder.as_markup()
+
+
+def confirmation_add_category_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура для подтверждения добавления категории."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.CONFIRM_ADD,
+            callback_data="confirm_add_category",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.CANCEL_ADD_CATEGORY,
+            callback_data="cancel_add_category",
+        ),
+        width=2,
+    )
+    return builder.as_markup()
+
+
 def categories_inline_ikb(
     categories: List[TemplateCategory],
     page: int = 1,
