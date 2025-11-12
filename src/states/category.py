@@ -7,3 +7,4 @@ class CategoryStateManager(StatesGroup):
     editing_category_name = State()
     removing_category = State()
     editing_category_name = State()
+    confirm_category_edit = State()
