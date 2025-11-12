@@ -114,12 +114,12 @@ def conf_remove_category_kb() -> InlineKeyboardBuilder:
 
     builder.row(
         InlineKeyboardButton(
-            text="Да",
-            callback_data="conf_remove_category__yes",
+            text=InlineButtons.TemplateButtons.CONFIRM_REMOVE,
+            callback_data="conf_remove_category",
         ),
         InlineKeyboardButton(
-            text="Нет",
-            callback_data="conf_remove_category__no",
+            text=InlineButtons.TemplateButtons.CANCEL_REMOVE,
+            callback_data="cancel_remove_category",
         ),
         width=2,
     )
