@@ -164,7 +164,9 @@ class BotMessageService:
             return result.message_id
         except Exception as e:
             logger.error(
-                "Не удалось скопировать сообщение в чат %s: %s",
+                "Не удалось скопировать сообщение %s из чата %s в чат %s: %s",
+                message_id,
+                from_chat_tgid,
                 chat_tgid,
                 e,
             )
