@@ -67,7 +67,6 @@ class TemplateContentService:
     ) -> Optional[MessageTemplate]:
         """Сохраняет шаблон в базу данных"""
         try:
-
             user = await self._user_repository.get_user_by_username(
                 username=author_username
             )
