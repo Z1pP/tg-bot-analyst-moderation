@@ -19,7 +19,6 @@ router = Router(name=__name__)
 
 @router.callback_query(
     F.data == "select_category",
-    TemplateStateManager.templates_menu,
 )
 async def select_category_handler(
     callback: types.CallbackQuery,
