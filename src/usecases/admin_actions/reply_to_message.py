@@ -41,16 +41,27 @@ class ReplyToMessageUseCase:
                 reply_to_message_id=dto.message_id,
             )
             if not sent_message_id:
-                raise MessageSendError("Не удалось скопировать сообщение")
+                raise MessageSendError(
+                    "❌ Не удалось скопировать сообщение. Возможно, сообщение было удалено или недоступно."
+                )
             logger.info("Ответ на сообщение %s отправлен", dto.message_id)
         except (TelegramBadRequest, TelegramForbiddenError) as e:
+            error_message = str(e)
+            if (
+                "message to copy not found" in error_message.lower()
+                or "message not found" in error_message.lower()
+            ):
+                user_message = "❌ Сообщение для копирования не найдено. Возможно, оно было удалено или недоступно."
+            else:
+                user_message = f"❌ Ошибка при отправке ответа: {error_message}"
+
             logger.error(
                 "Ошибка отправки ответа на сообщение %s: %s",
                 dto.message_id,
                 e,
                 exc_info=True,
             )
-            raise MessageSendError(str(e))
+            raise MessageSendError(user_message)
 
         try:
             archive_chats = await self.chat_service.get_archive_chats(
