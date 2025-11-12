@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from aiogram import F, Router
 from aiogram.types import (
+    CallbackQuery,
     InlineQuery,
     InlineQueryResultArticle,
     InputMediaAnimation,
@@ -22,6 +23,7 @@ from usecases.templates import (
     GetTemplateAndIncreaseUsageUseCase,
     GetTemplatesByQueryUseCase,
 )
+from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -143,7 +145,6 @@ async def send_media_group(
 ) -> None:
     """Отправляет медиа-группу"""
     try:
-
         media_group = []
         media_types = {
             "photo": InputMediaPhoto,
@@ -207,3 +208,81 @@ async def save_moderator_message(message: Message) -> None:
     from .message_handler import group_message_handler
 
     await group_message_handler(message)
+
+
+@router.callback_query(F.data.startswith("hide_template_"))
+async def hide_template_handler(callback: CallbackQuery) -> None:
+    """Обработчик скрытия шаблона (одно сообщение)"""
+    try:
+        message_id = int(callback.data.split("_")[2])
+        await callback.bot.delete_message(
+            chat_id=callback.message.chat.id,
+            message_id=message_id,
+        )
+        # Удаляем само сообщение с кнопкой, если оно существует
+        if callback.message:
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+        await callback.answer("✅ Сообщение скрыто")
+    except Exception as e:
+        logger.error(f"Ошибка при скрытии шаблона: {e}")
+        # Пытаемся отредактировать сообщение с ошибкой
+        if callback.message:
+            success = await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="❌ Ошибка при скрытии сообщения",
+            )
+            if not success:
+                # Если не удалось отредактировать, показываем alert
+                await callback.answer(
+                    "❌ Ошибка при скрытии сообщения", show_alert=True
+                )
+        else:
+            await callback.answer("❌ Ошибка при скрытии сообщения", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("hide_album_"))
+async def hide_album_handler(callback: CallbackQuery) -> None:
+    """Обработчик скрытия альбома шаблонов (несколько сообщений)"""
+    try:
+        # Извлекаем ID сообщений из callback_data
+        message_ids_str = callback.data.replace("hide_album_", "")
+        message_ids = [int(msg_id) for msg_id in message_ids_str.split(",") if msg_id]
+
+        # Удаляем все сообщения альбома
+        for msg_id in message_ids:
+            try:
+                await callback.bot.delete_message(
+                    chat_id=callback.message.chat.id,
+                    message_id=msg_id,
+                )
+            except Exception as e:
+                logger.warning(f"Не удалось удалить сообщение {msg_id}: {e}")
+
+        # Удаляем само сообщение с кнопкой
+        if callback.message:
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+
+        await callback.answer("✅ Альбом скрыт")
+    except Exception as e:
+        logger.error(f"Ошибка при скрытии альбома: {e}")
+        # Пытаемся отредактировать сообщение с ошибкой
+        if callback.message:
+            success = await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="❌ Ошибка при скрытии альбома",
+            )
+            if not success:
+                # Если не удалось отредактировать, показываем alert
+                await callback.answer("❌ Ошибка при скрытии альбома", show_alert=True)
+        else:
+            await callback.answer("❌ Ошибка при скрытии альбома", show_alert=True)
