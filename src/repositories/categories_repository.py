@@ -152,7 +152,9 @@ class TemplateCategoryRepository:
                 logger.error(f"Ошибка при подсчете категорий: {e}")
                 return 0
 
-    async def update_category_name(self, category_id: int, new_name: str) -> bool:
+    async def update_category_name(
+        self, category_id: int, new_name: str
+    ) -> TemplateCategory:
         """Обновляет название категории"""
         async with self._db.session() as session:
             try:
@@ -162,14 +164,15 @@ class TemplateCategoryRepository:
                 result = await session.execute(query)
                 category = result.scalar_one_or_none()
 
-                if category:
-                    category.name = new_name
-                    await session.commit()
-                    logger.info(
-                        f"Название категории {category_id} обновлено на '{new_name}'"
-                    )
-                    return True
-                return False
+                category.name = new_name
+                await session.commit()
+                await session.refresh(category)
+
+                logger.info(
+                    f"Название категории {category_id} обновлено на '{new_name}'"
+                )
+
+                return category
             except Exception as e:
                 logger.error(f"Ошибка при обновлении названия категории: {e}")
                 await session.rollback()
