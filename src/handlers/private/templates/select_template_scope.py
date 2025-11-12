@@ -40,6 +40,11 @@ async def select_global_templates_handler(
                 text="❗ Глобальных шаблонов не найдено",
                 reply_markup=templates_menu_ikb(),
             )
+            await log_and_set_state(
+                message=callback.message,
+                state=state,
+                new_state=TemplateStateManager.templates_menu,
+            )
             return
 
         await state.update_data(template_scope="global")
@@ -89,6 +94,11 @@ async def select_chat_templates_handler(
             await callback.message.edit_text(
                 "❗ Шаблонов для этого чата не найдено",
                 reply_markup=templates_menu_ikb(),
+            )
+            await log_and_set_state(
+                message=callback.message,
+                state=state,
+                new_state=TemplateStateManager.templates_menu,
             )
             return
 
