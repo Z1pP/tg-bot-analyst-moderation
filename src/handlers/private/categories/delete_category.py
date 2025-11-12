@@ -32,6 +32,13 @@ async def remove_category_handler(
         category_id = int(callback.data.split("__")[1])
     except (IndexError, ValueError):
         logger.warning("Некорректный формат callback_data: %s", callback.data)
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="⚠️ Некорректный запрос. Повторите действие через меню.",
+            reply_markup=templates_menu_ikb(),
+        )
         return
 
     logger.info(
