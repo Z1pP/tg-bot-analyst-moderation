@@ -4,12 +4,14 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
 from exceptions.category import CategoryNotFoundError
-from keyboards.inline.categories import conf_remove_category_kb
+from keyboards.inline.categories import categories_inline_ikb, conf_remove_category_kb
 from keyboards.inline.templates import templates_menu_ikb
+from services.categories import CategoryService
 from states import CategoryStateManager, TemplateStateManager
-from usecases.categories import DeleteCategoryUseCase
+from usecases.categories import DeleteCategoryUseCase, GetCategoryByIdUseCase
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
@@ -91,33 +93,81 @@ async def confirm_removing_category_handler(
     try:
         usecase: DeleteCategoryUseCase = container.resolve(DeleteCategoryUseCase)
         category = await usecase.execute(category_id=category_id)
-        text = (
-            f"✅ Категория <b>{category.name}</b> успешно удалена.\n"
-            "Вы всегда можете создать её снова при необходимости."
-        )
+        category_name = category.name
+        text = f"✅ Категория <b>{category_name}</b> успешно удалена."
         logger.info("Категория ID=%d успешно удалена", category_id)
+
+        # Получаем список категорий для отображения
+        category_service: CategoryService = container.resolve(CategoryService)
+        categories = await category_service.get_categories()
+
+        if not categories:
+            # Если категорий не осталось, возвращаемся в меню
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=f"{text}\n\n❗ Категорий не осталось.",
+                reply_markup=templates_menu_ikb(),
+            )
+            await log_and_set_state(
+                message=callback.message,
+                state=state,
+                new_state=TemplateStateManager.templates_menu,
+            )
+            return
+
+        first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
+
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=f"{text}\n\nВыберите категорию:",
+            reply_markup=categories_inline_ikb(
+                categories=first_page_categories,
+                page=1,
+                total_count=len(categories),
+            ),
+        )
+
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.listing_categories,
+        )
 
     except CategoryNotFoundError as e:
         logger.warning("Категория ID=%d не найдена: %s", category_id, e)
         text = e.get_user_message()
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
+            reply_markup=templates_menu_ikb(),
+        )
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.templates_menu,
+        )
 
     except Exception:
         logger.exception("Ошибка при удалении категории ID=%d", category_id)
         text = "⚠️ Произошла ошибка при удалении категории."
-
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=text,
-        reply_markup=templates_menu_ikb(),
-    )
-
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.templates_menu,
-    )
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
+            reply_markup=templates_menu_ikb(),
+        )
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.templates_menu,
+        )
 
 
 @router.callback_query(
@@ -131,20 +181,91 @@ async def cancel_removing_category_handler(
     """Обработчик отмены удаления категории"""
     await callback.answer()
 
-    logger.info(
-        "Пользователь '%s' отменил удаление категории", callback.from_user.full_name
-    )
+    data = await state.get_data()
+    category_id = data.get("category_id")
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text="❌ Удаление категории отменено.",
-        reply_markup=templates_menu_ikb(),
-    )
+    if not category_id:
+        logger.warning(
+            "Попытка отменить удаление категории без сохранённого ID в состоянии"
+        )
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="❌ Удаление категории отменено.",
+            reply_markup=templates_menu_ikb(),
+        )
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.templates_menu,
+        )
+        return
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.templates_menu,
-    )
+    try:
+        # Получаем название категории
+        get_category_usecase: GetCategoryByIdUseCase = container.resolve(
+            GetCategoryByIdUseCase
+        )
+        category = await get_category_usecase.execute(category_id)
+        category_name = category.name if category else "неизвестная"
+
+        logger.info(
+            "Пользователь '%s' отменил удаление категории '%s'",
+            callback.from_user.full_name,
+            category_name,
+        )
+
+        # Получаем список категорий для отображения
+        category_service: CategoryService = container.resolve(CategoryService)
+        categories = await category_service.get_categories()
+
+        if not categories:
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=f"❌ Удаление категории {category_name} отменено.\n\n❗ Категорий не найдено.",
+                reply_markup=templates_menu_ikb(),
+            )
+            await log_and_set_state(
+                message=callback.message,
+                state=state,
+                new_state=TemplateStateManager.templates_menu,
+            )
+            return
+
+        first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
+
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=f"❌ Удаление категории {category_name} отменено.\n\nВыберите категорию:",
+            reply_markup=categories_inline_ikb(
+                categories=first_page_categories,
+                page=1,
+                total_count=len(categories),
+            ),
+        )
+
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.listing_categories,
+        )
+
+    except Exception as e:
+        logger.exception("Ошибка при отмене удаления категории: %s", e)
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="❌ Удаление категории отменено.",
+            reply_markup=templates_menu_ikb(),
+        )
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=TemplateStateManager.templates_menu,
+        )
