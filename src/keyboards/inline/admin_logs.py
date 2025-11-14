@@ -1,0 +1,125 @@
+from typing import List, Tuple
+
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+from constants.enums import AdminActionType
+from constants.pagination import DEFAULT_PAGE_SIZE
+from models import AdminActionLog
+
+
+def admin_logs_ikb(
+    logs: List[AdminActionLog],
+    page: int = 1,
+    total_count: int = 0,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    admin_id: int = None,
+) -> InlineKeyboardMarkup:
+    """Клавиатура для списка логов действий администраторов."""
+    builder = InlineKeyboardBuilder()
+
+    # Пагинация (только если больше одной страницы)
+    if total_count > page_size:
+        max_pages = (total_count + page_size - 1) // page_size
+        pagination_buttons = []
+
+        # Кнопка "Назад"
+        if page > 1:
+            callback_data = f"prev_admin_logs_page__{page}"
+            if admin_id:
+                callback_data += f"__{admin_id}"
+            pagination_buttons.append(
+                InlineKeyboardButton(text="◀️", callback_data=callback_data)
+            )
+
+        # Информация о странице
+        start_item = (page - 1) * page_size + 1
+        end_item = min(page * page_size, total_count)
+        callback_data = "admin_logs_page_info"
+        if admin_id:
+            callback_data += f"__{admin_id}"
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=f"{start_item}-{end_item} из {total_count}",
+                callback_data=callback_data,
+            )
+        )
+
+        # Кнопка "Вперед"
+        if page < max_pages:
+            callback_data = f"next_admin_logs_page__{page}"
+            if admin_id:
+                callback_data += f"__{admin_id}"
+            pagination_buttons.append(
+                InlineKeyboardButton(text="▶️", callback_data=callback_data)
+            )
+
+        if pagination_buttons:
+            builder.row(*pagination_buttons)
+
+    # Кнопка "Выбрать администратора"
+    builder.row(
+        InlineKeyboardButton(
+            text="🔄 Выбрать администратора",
+            callback_data="admin_logs_select_admin",
+        )
+    )
+
+    # Кнопка "Назад"
+    builder.row(
+        InlineKeyboardButton(
+            text="⬅️ Назад",
+            callback_data="admin_menu",
+        )
+    )
+
+    return builder.as_markup()
+
+
+def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup:
+    """Клавиатура для выбора администратора для просмотра логов."""
+    builder = InlineKeyboardBuilder()
+
+    # Кнопка "Все администраторы"
+    builder.row(
+        InlineKeyboardButton(
+            text="📋 Все администраторы",
+            callback_data="admin_logs__all",
+        )
+    )
+
+    # Кнопки для каждого администратора
+    for admin_id, username, tg_id in admins:
+        builder.row(
+            InlineKeyboardButton(
+                text=f"👤 @{username}",
+                callback_data=f"admin_logs__{admin_id}",
+            )
+        )
+
+    # Кнопка "Назад"
+    builder.row(
+        InlineKeyboardButton(
+            text="⬅️ Назад",
+            callback_data="admin_menu",
+        )
+    )
+
+    return builder.as_markup()
+
+
+def format_action_type(action_type: AdminActionType) -> str:
+    """Форматирует тип действия для отображения."""
+    action_names = {
+        AdminActionType.REPORT_USER: "📊 Отчет по пользователю",
+        AdminActionType.REPORT_CHAT: "📊 Отчет по чату",
+        AdminActionType.REPORT_ALL_USERS: "📊 Отчет по всем пользователям",
+        AdminActionType.ADD_TEMPLATE: "➕ Добавление шаблона",
+        AdminActionType.DELETE_TEMPLATE: "🗑 Удаление шаблона",
+        AdminActionType.ADD_CATEGORY: "➕ Добавление категории",
+        AdminActionType.DELETE_CATEGORY: "🗑 Удаление категории",
+        AdminActionType.SEND_MESSAGE: "📤 Отправка сообщения",
+        AdminActionType.DELETE_MESSAGE: "🗑 Удаление сообщения",
+        AdminActionType.REPLY_MESSAGE: "💬 Ответ на сообщение",
+    }
+    return action_names.get(action_type, action_type.value)
