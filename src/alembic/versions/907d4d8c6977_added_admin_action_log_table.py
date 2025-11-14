@@ -31,65 +31,80 @@ def upgrade() -> None:
         )
     ).scalar()
 
-    if table_exists:
-        # Таблица уже существует, проверяем и добавляем поле details, если его нет
-        details_exists = conn.execute(
+    # Проверяем, существует ли enum
+    enum_exists = conn.execute(
+        sa.text(
+            "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'adminactiontype')"
+        )
+    ).scalar()
+
+    # Если enum существует, проверяем его значения
+    if enum_exists:
+        # Проверяем, есть ли неправильные значения (в верхнем регистре)
+        enum_values = conn.execute(
             sa.text(
-                "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
-                "WHERE table_name = 'admin_action_logs' AND column_name = 'details')"
+                "SELECT enumlabel FROM pg_enum "
+                "WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'adminactiontype') "
+                "ORDER BY enumsortorder"
             )
-        ).scalar()
+        ).fetchall()
+        
+        # Проверяем, есть ли значения в верхнем регистре
+        has_uppercase = any(
+            value[0] in [
+                "REPORT_USER",
+                "REPORT_CHAT",
+                "REPORT_ALL_USERS",
+                "ADD_TEMPLATE",
+                "DELETE_TEMPLATE",
+                "ADD_CATEGORY",
+                "DELETE_CATEGORY",
+                "SEND_MESSAGE",
+                "DELETE_MESSAGE",
+                "REPLY_MESSAGE",
+            ]
+            for value in enum_values
+        )
 
-        if not details_exists:
-            op.add_column(
-                "admin_action_logs", sa.Column("details", sa.Text(), nullable=True)
-            )
+        if has_uppercase:
+            # Если таблица существует, нужно удалить её сначала
+            if table_exists:
+                # Удаляем индексы (используем try-except, так как if_exists может не поддерживаться)
+                try:
+                    op.drop_index("idx_admin_action_log_type", table_name="admin_action_logs")
+                except Exception:
+                    pass
+                try:
+                    op.drop_index("idx_admin_action_log_created", table_name="admin_action_logs")
+                except Exception:
+                    pass
+                try:
+                    op.drop_index("idx_admin_action_log_admin_created", table_name="admin_action_logs")
+                except Exception:
+                    pass
+                try:
+                    op.drop_index("idx_admin_action_log_admin", table_name="admin_action_logs")
+                except Exception:
+                    pass
+                # Удаляем таблицу
+                op.drop_table("admin_action_logs")
+            
+            # Удаляем старый enum
+            op.execute("DROP TYPE IF EXISTS adminactiontype CASCADE")
+            enum_exists = False
+            table_exists = False  # Сбрасываем флаг, так как таблица была удалена
 
-        # Проверяем и добавляем 'reply_message' в enum, если его нет
-        enum_exists = conn.execute(
-            sa.text(
-                "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'adminactiontype')"
-            )
-        ).scalar()
+    # Создаем enum с правильными значениями (в нижнем регистре)
+    if not enum_exists:
+        op.execute(
+            "CREATE TYPE adminactiontype AS ENUM "
+            "('report_user', 'report_chat', 'report_all_users', 'add_template', "
+            "'delete_template', 'add_category', 'delete_category', 'send_message', "
+            "'delete_message', 'reply_message')"
+        )
 
-        if enum_exists:
-            reply_message_exists = conn.execute(
-                sa.text(
-                    "SELECT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'reply_message' "
-                    "AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'adminactiontype'))"
-                )
-            ).scalar()
-            if not reply_message_exists:
-                op.execute("ALTER TYPE adminactiontype ADD VALUE 'reply_message'")
-    else:
-        # Таблица не существует, создаем её
-        # Проверяем, существует ли enum
-        enum_exists = conn.execute(
-            sa.text(
-                "SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'adminactiontype')"
-            )
-        ).scalar()
-
-        if not enum_exists:
-            # Создаем enum, если его нет
-            op.execute(
-                "CREATE TYPE adminactiontype AS ENUM "
-                "('report_user', 'report_chat', 'report_all_users', 'add_template', "
-                "'delete_template', 'add_category', 'delete_category', 'send_message', "
-                "'delete_message', 'reply_message')"
-            )
-        else:
-            # Если enum существует, добавляем недостающие значения
-            reply_message_exists = conn.execute(
-                sa.text(
-                    "SELECT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'reply_message' "
-                    "AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'adminactiontype'))"
-                )
-            ).scalar()
-            if not reply_message_exists:
-                op.execute("ALTER TYPE adminactiontype ADD VALUE 'reply_message'")
-
-        # Создаем таблицу через прямой SQL, чтобы избежать проблем с созданием enum
+    # Создаем таблицу, если её нет
+    if not table_exists:
         op.execute(
             """
             CREATE TABLE admin_action_logs (
@@ -129,14 +144,44 @@ def upgrade() -> None:
             ["action_type"],
             unique=False,
         )
+    else:
+        # Таблица существует, проверяем и добавляем поле details, если его нет
+        details_exists = conn.execute(
+            sa.text(
+                "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+                "WHERE table_name = 'admin_action_logs' AND column_name = 'details')"
+            )
+        ).scalar()
+
+        if not details_exists:
+            op.add_column(
+                "admin_action_logs", sa.Column("details", sa.Text(), nullable=True)
+            )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index("idx_admin_action_log_type", table_name="admin_action_logs")
-    op.drop_index("idx_admin_action_log_created", table_name="admin_action_logs")
-    op.drop_index("idx_admin_action_log_admin_created", table_name="admin_action_logs")
-    op.drop_index("idx_admin_action_log_admin", table_name="admin_action_logs")
-    op.drop_table("admin_action_logs")
-    # ### end Alembic commands ###
+    # Удаляем индексы (используем try-except, так как if_exists может не поддерживаться)
+    try:
+        op.drop_index("idx_admin_action_log_type", table_name="admin_action_logs")
+    except Exception:
+        pass
+    try:
+        op.drop_index("idx_admin_action_log_created", table_name="admin_action_logs")
+    except Exception:
+        pass
+    try:
+        op.drop_index("idx_admin_action_log_admin_created", table_name="admin_action_logs")
+    except Exception:
+        pass
+    try:
+        op.drop_index("idx_admin_action_log_admin", table_name="admin_action_logs")
+    except Exception:
+        pass
+    # Удаляем таблицу
+    try:
+        op.drop_table("admin_action_logs")
+    except Exception:
+        pass
+    # Удаляем enum
+    op.execute("DROP TYPE IF EXISTS adminactiontype CASCADE")
