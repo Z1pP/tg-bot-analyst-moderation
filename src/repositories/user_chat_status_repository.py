@@ -137,16 +137,3 @@ class UserChatStatusRepository:
                 )
                 await session.rollback()
                 raise
-
-    async def reset_status(
-        self, user_id: int, chat_id: int
-    ) -> Optional[UserChatStatus]:
-        """Сбрасывает статус пользователя в чате (устанавливает is_banned=False, is_muted=False)."""
-        return await self.update_status(
-            user_id=user_id,
-            chat_id=chat_id,
-            is_banned=False,
-            is_muted=False,
-            banned_until=None,
-            muted_until=None,
-        )

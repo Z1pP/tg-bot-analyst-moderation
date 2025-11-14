@@ -14,30 +14,6 @@ class UserRepository:
     def __init__(self, db_manager: DatabaseContextManager) -> None:
         self._db = db_manager
 
-    async def update_tg_id(self, user_id: int, new_tg_id: str) -> User:
-        """Обновляет tg_id пользователя."""
-        async with self._db.session() as session:
-            try:
-                user = await session.get(User, user_id)
-                if user:
-                    user.tg_id = new_tg_id
-                    await session.commit()
-                    logger.info(
-                        "Пользователь %s обновлен: tg_id=%s",
-                        user_id,
-                        new_tg_id,
-                    )
-                else:
-                    logger.info("Пользователь %s не найден", user_id)
-                return user
-            except Exception as e:
-                logger.error(
-                    "Ошибка при обновлении tg_id пользователя %s: %s",
-                    user_id,
-                    e,
-                )
-                return None
-
     async def update_user(self, user_id: int, username: str) -> Optional[User]:
         """Обновляет username пользователя."""
         async with self._db.session() as session:

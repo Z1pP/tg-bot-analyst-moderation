@@ -77,32 +77,6 @@ class BotMessageService:
             )
             return None
 
-    async def reply_chat_message(
-        self, chat_tgid: ChatIdUnion, text: str, reply_to_message_id: int
-    ) -> None:
-        """
-        Отправляет ответ на сообщение в чате.
-
-        Args:
-            chat_tgid: Telegram ID чата
-            text: Текст ответа (HTML)
-            reply_to_message_id: ID сообщения, на которое отвечаем
-        """
-        try:
-            await self.bot.send_message(
-                chat_id=chat_tgid,
-                text=text,
-                reply_to_message_id=reply_to_message_id,
-                parse_mode="HTML",
-            )
-        except Exception as e:
-            logger.error(
-                "Произошла ошибка при отправке ответа в чат %s: %s",
-                chat_tgid,
-                e,
-            )
-            return None
-
     async def copy_message(
         self,
         chat_tgid: ChatIdUnion,
