@@ -19,9 +19,12 @@ class UsersPaginationHandler(BasePaginationHandler):
         super().__init__("пользователей")
 
     async def get_page_data(
-        self, page: int, query: CallbackQuery, state: FSMContext
+        self,
+        page: int,
+        callback: CallbackQuery,
+        state: FSMContext,
     ) -> Tuple[List[UserDTO], int]:
-        users = await get_tracked_users(query.from_user.username)
+        users = await get_tracked_users(callback.from_user.username)
         users_page, total_count = paginate_users(users, page)
         return users_page, total_count
 
@@ -38,10 +41,10 @@ class RemoveUsersPaginationHandler(BasePaginationHandler):
     async def get_page_data(
         self,
         page: int,
-        query: CallbackQuery,
+        callback: CallbackQuery,
         state: FSMContext,
     ) -> Tuple[List[UserDTO], int]:
-        users = await get_tracked_users(query.from_user.username)
+        users = await get_tracked_users(callback.from_user.username)
         users_page, total_count = paginate_users(users, page)
         return users_page, total_count
 
@@ -63,27 +66,28 @@ remove_users_handler = RemoveUsersPaginationHandler()
 
 
 @router.callback_query(F.data.startswith("prev_users_page__"))
-async def prev_users_page_callback(query: CallbackQuery, state: FSMContext) -> None:
-    await users_handler.handle_prev_page(query, state)
+async def prev_users_page_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    await users_handler.handle_prev_page(callback, state)
 
 
 @router.callback_query(F.data.startswith("next_users_page__"))
-async def next_users_page_callback(query: CallbackQuery, state: FSMContext) -> None:
-    await users_handler.handle_next_page(query, state)
+async def next_users_page_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    await users_handler.handle_next_page(callback, state)
 
 
 @router.callback_query(F.data.startswith("prev_remove_users_page__"))
 async def prev_remove_users_page_callback(
-    query: CallbackQuery, state: FSMContext
+    callback: CallbackQuery,
+    state: FSMContext,
 ) -> None:
-    await remove_users_handler.handle_prev_page(query, state)
+    await remove_users_handler.handle_prev_page(callback, state)
 
 
 @router.callback_query(F.data.startswith("next_remove_users_page__"))
 async def next_remove_users_page_callback(
-    query: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext
 ) -> None:
-    await remove_users_handler.handle_next_page(query, state)
+    await remove_users_handler.handle_next_page(callback, state)
 
 
 async def get_tracked_users(admin_username: str) -> List[UserDTO]:
@@ -103,51 +107,51 @@ def paginate_users(
 
 @router.callback_query(F.data.startswith("prev_remove_users_page__"))
 async def prev_remove_users_page_callback(
-    query: CallbackQuery,
+    callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
     """Обработчик перехода на предыдущую страницу удаления пользователей"""
     from keyboards.inline.users import remove_user_inline_kb
 
-    current_page = int(query.data.split("__")[1])
+    current_page = int(callback.data.split("__")[1])
     prev_page = max(1, current_page - 1)
 
-    users = await get_tracked_users(query.from_user.username)
+    users = await get_tracked_users(callback.from_user.username)
     users_page, total_count = paginate_users(users, prev_page)
 
-    await query.message.edit_reply_markup(
+    await callback.message.edit_reply_markup(
         reply_markup=remove_user_inline_kb(
             users=users_page,
             page=prev_page,
             total_count=total_count,
         )
     )
-    await query.answer()
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("next_remove_users_page__"))
 async def next_remove_users_page_callback(
-    query: CallbackQuery,
+    callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
     """Обработчик перехода на следующую страницу удаления пользователей"""
     from keyboards.inline.users import remove_user_inline_kb
 
-    current_page = int(query.data.split("__")[1])
+    current_page = int(callback.data.split("__")[1])
     next_page = current_page + 1
 
-    users = await get_tracked_users(query.from_user.username)
+    users = await get_tracked_users(callback.from_user.username)
     users_page, total_count = paginate_users(users, next_page)
 
     if not users_page:
-        await query.answer("Больше пользователей нет")
+        await callback.answer("Больше пользователей нет")
         return
 
-    await query.message.edit_reply_markup(
+    await callback.message.edit_reply_markup(
         reply_markup=remove_user_inline_kb(
             users=users_page,
             page=next_page,
             total_count=total_count,
         )
     )
-    await query.answer()
+    await callback.answer()
