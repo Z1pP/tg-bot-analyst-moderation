@@ -104,6 +104,9 @@ class KbCommands:
     # Message management
     MESSAGE_MANAGEMENT = "💬 Упр. сообщенями"
 
+    # Admin logs
+    ADMIN_LOGS = "📋 Логи действий"
+
     # Amnesty actions
     UNBAN = "🕊️ Полный разблок"
     CANCEL_WARN = "⏪ Отмена посл. преда"
