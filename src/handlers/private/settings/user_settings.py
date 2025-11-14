@@ -1,8 +1,7 @@
 import logging
 
-from aiogram import F, Router, types
+from aiogram import Router
 
-from constants import KbCommands
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)

@@ -3,7 +3,6 @@ import logging
 from aiogram import Router
 from aiogram.types import Message
 
-from constants.enums import UserRole
 from container import container
 from dto.message import CreateMessageDTO
 from dto.message_reply import CreateMessageReplyDTO

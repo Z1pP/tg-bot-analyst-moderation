@@ -145,19 +145,19 @@ async def confirmation_removing_user(
             if success:
                 logger.info(f"Пользователь ID {user_id} успешно удален из отслеживания")
                 text = (
-                    f"✅ Готово! Пользователь удалён из отлеживания!\n\n"
+                    "✅ Готово! Пользователь удалён из отлеживания!\n\n"
                     "❗️Вы всегда можете вернуть пользователя "
                     "в отслеживаемые и продолжить собирать статистику"
                 )
             else:
                 logger.warning(f"Не удалось удалить пользователя ID {user_id}")
-                text = f"❌ Пользователь не найден или уже удален."
+                text = "❌ Пользователь не найден или уже удален."
 
             await callback.message.edit_text(text=text)
         else:
             logger.info(f"Удаление пользователя ID {user_id} отменено")
             await callback.message.edit_text(
-                text=f"❌ Удаление из отслеживания отменено!",
+                text="❌ Удаление из отслеживания отменено!",
             )
     except Exception as e:
         await handle_exception(callback.message, e, "confirmation_removing_user")
