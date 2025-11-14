@@ -94,3 +94,48 @@ class RedisCache(ICache):
             logger.debug("Redis CLEAR: OK")
         except Exception as e:
             logger.error(f"Redis CLEAR failed: {e}")
+
+    async def increment(self, key: str, ttl: Optional[int] = None) -> int:
+        """
+        Инкрементирует значение по ключу. Если ключа нет, создает его со значением 1.
+
+        Args:
+            key: Ключ для инкремента
+            ttl: Время жизни в секундах (устанавливается только при создании ключа)
+
+        Returns:
+            Новое значение после инкремента
+        """
+        try:
+            if not await self._ensure_connection():
+                return 0
+            # Используем INCR для атомарного инкремента
+            value = await self.redis.incr(key)
+            # Если значение стало 1 (ключ только что создан), устанавливаем TTL
+            if value == 1 and ttl:
+                await self.redis.expire(key, ttl)
+            logger.debug(f"Redis INCR {key}: {value}")
+            return value
+        except Exception as e:
+            logger.error(f"Redis INCR {key} failed: {e}")
+            return 0
+
+    async def exists(self, key: str) -> bool:
+        """
+        Проверяет существование ключа в Redis.
+
+        Args:
+            key: Ключ для проверки
+
+        Returns:
+            True если ключ существует, иначе False
+        """
+        try:
+            if not await self._ensure_connection():
+                return False
+            result = bool(await self.redis.exists(key))
+            logger.debug(f"Redis EXISTS {key}: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"Redis EXISTS {key} failed: {e}")
+            return False
