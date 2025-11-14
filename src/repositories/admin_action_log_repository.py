@@ -23,7 +23,7 @@ class AdminActionLogRepository:
             try:
                 log_entry = AdminActionLog(
                     admin_id=admin_id,
-                    action_type=action_type,
+                    action_type=action_type.value,  # Явно используем значение enum
                     details=details,
                 )
                 session.add(log_entry)
