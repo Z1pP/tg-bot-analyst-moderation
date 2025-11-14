@@ -1,7 +1,10 @@
 from aiogram import Dispatcher, Router
 from aiogram.enums import ChatType
 
+from container import container
 from filters import AdminOnlyFilter, ChatTypeFilter, GroupTypeFilter
+from middlewares import AdminAntispamMiddleware
+from services.caching import ICache
 
 from .group import router as group_router
 from .private import router as private_router
@@ -16,6 +19,10 @@ def registry_admin_routers(dispatcher: Dispatcher):
         ChatTypeFilter(chat_type=[ChatType.PRIVATE]),
         AdminOnlyFilter(),
     )
+
+    # Регистрируем антиспам middleware
+    cache: ICache = container.resolve(ICache)
+    admin_router.message.middleware(AdminAntispamMiddleware(cache))
 
     # Регистрируем приватный роутер
     admin_router.include_router(private_router)
