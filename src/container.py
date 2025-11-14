@@ -9,6 +9,7 @@ from config import settings
 from database.session import DatabaseContextManager, async_session
 from di import container
 from repositories import (
+    AdminActionLogRepository,
     ChatRepository,
     ChatTrackingRepository,
     MessageReactionRepository,
@@ -24,6 +25,7 @@ from repositories import (
     UserTrackingRepository,
 )
 from services import (
+    AdminActionLogService,
     BotMessageService,
     BotPermissionService,
     ChatService,
@@ -158,6 +160,7 @@ class ContainerSetup:
             PunishmentRepository,
             PunishmentLadderRepository,
             UserChatStatusRepository,
+            AdminActionLogRepository,
         ]
 
         for repo in repositories:
@@ -175,6 +178,7 @@ class ContainerSetup:
         container.register(BotMessageService)
         container.register(PunishmentService)
         container.register(BotPermissionService)
+        container.register(AdminActionLogService)
 
     @staticmethod
     def _register_usecases(container: Container) -> None:
