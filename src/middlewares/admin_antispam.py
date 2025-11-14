@@ -97,14 +97,14 @@ class AdminAntispamMiddleware(BaseMiddleware):
         # Проверяем лимиты и применяем соответствующие действия
         if count >= MUTE_10_MIN_THRESHOLD:
             # Мут на 10 минут
-            await self._apply_mute(admin_id, MUTE_10_MINUTES)
+            await self._apply_mute(event, MUTE_10_MINUTES)
             logger.warning(
                 f"Админ {admin_id} получил мут на 10 минут ({count} сообщений за {WINDOW_SECONDS} сек)"
             )
             return None  # Игнорируем сообщение
         elif count >= MUTE_30_SEC_THRESHOLD:
             # Мут на 30 секунд
-            await self._apply_mute(admin_id, MUTE_30_SECONDS)
+            await self._apply_mute(event, MUTE_30_SECONDS)
             logger.warning(
                 f"Админ {admin_id} получил мут на 30 секунд ({count} сообщений за {WINDOW_SECONDS} сек)"
             )
@@ -119,17 +119,46 @@ class AdminAntispamMiddleware(BaseMiddleware):
         # Пропускаем сообщение дальше по цепочке
         return await handler(event, data)
 
-    async def _apply_mute(self, admin_id: int, duration_seconds: int) -> None:
+    async def _apply_mute(self, message: Message, duration_seconds: int) -> None:
         """
-        Применяет мут к администратору.
+        Применяет мут к администратору и отправляет предупреждение.
 
         Args:
-            admin_id: ID администратора
+            message: Сообщение от администратора
             duration_seconds: Длительность мута в секундах
         """
+        admin_id = message.from_user.id
         mute_key = f"antispam:mute:{admin_id}"
         await self.cache.set(mute_key, True, ttl=duration_seconds)
         logger.debug(f"Мут применен к админу {admin_id} на {duration_seconds} секунд")
+
+        # Отправляем предупреждение о муте
+        await self._send_mute_warning(message, duration_seconds)
+
+    async def _send_mute_warning(self, message: Message, duration_seconds: int) -> None:
+        """
+        Отправляет предупреждение администратору о том, что он в муте.
+
+        Args:
+            message: Сообщение, на которое нужно ответить
+            duration_seconds: Длительность мута в секундах
+        """
+        try:
+            # Форматируем длительность мута
+            if duration_seconds >= 60:
+                duration_text = f"{duration_seconds // 60} минут"
+            else:
+                duration_text = f"{duration_seconds} секунд"
+
+            mute_text = (
+                f"🔇 Вы получили мут на {duration_text} из-за слишком частых сообщений.\n"
+                f"Ваши сообщения будут игнорироваться до окончания мута."
+            )
+            await message.reply(mute_text)
+        except Exception as e:
+            logger.error(
+                f"Не удалось отправить предупреждение о муте админу {message.from_user.id}: {e}"
+            )
 
     async def _send_warning(self, message: Message) -> None:
         """
