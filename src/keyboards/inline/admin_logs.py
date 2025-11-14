@@ -108,18 +108,24 @@ def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup
     return builder.as_markup()
 
 
-def format_action_type(action_type: AdminActionType) -> str:
+def format_action_type(action_type: str | AdminActionType) -> str:
     """Форматирует тип действия для отображения."""
+    # Если передан enum, получаем его значение
+    if isinstance(action_type, AdminActionType):
+        action_type_str = action_type.value
+    else:
+        action_type_str = action_type
+    
     action_names = {
-        AdminActionType.REPORT_USER: "📊 Отчет по пользователю",
-        AdminActionType.REPORT_CHAT: "📊 Отчет по чату",
-        AdminActionType.REPORT_ALL_USERS: "📊 Отчет по всем пользователям",
-        AdminActionType.ADD_TEMPLATE: "➕ Добавление шаблона",
-        AdminActionType.DELETE_TEMPLATE: "🗑 Удаление шаблона",
-        AdminActionType.ADD_CATEGORY: "➕ Добавление категории",
-        AdminActionType.DELETE_CATEGORY: "🗑 Удаление категории",
-        AdminActionType.SEND_MESSAGE: "📤 Отправка сообщения",
-        AdminActionType.DELETE_MESSAGE: "🗑 Удаление сообщения",
-        AdminActionType.REPLY_MESSAGE: "💬 Ответ на сообщение",
+        "report_user": "📊 Отчет по пользователю",
+        "report_chat": "📊 Отчет по чату",
+        "report_all_users": "📊 Отчет по всем пользователям",
+        "add_template": "➕ Добавление шаблона",
+        "delete_template": "🗑 Удаление шаблона",
+        "add_category": "➕ Добавление категории",
+        "delete_category": "🗑 Удаление категории",
+        "send_message": "📤 Отправка сообщения",
+        "delete_message": "🗑 Удаление сообщения",
+        "reply_message": "💬 Ответ на сообщение",
     }
-    return action_names.get(action_type, action_type.value)
+    return action_names.get(action_type_str, action_type_str)
