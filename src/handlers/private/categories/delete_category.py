@@ -92,7 +92,9 @@ async def confirm_removing_category_handler(
 
     try:
         usecase: DeleteCategoryUseCase = container.resolve(DeleteCategoryUseCase)
-        category = await usecase.execute(category_id=category_id)
+        category = await usecase.execute(
+            category_id=category_id, admin_tg_id=str(callback.from_user.id)
+        )
         category_name = category.name
         text = f"✅ Категория <b>{category_name}</b> успешно удалена."
         logger.info("Категория ID=%d успешно удалена", category_id)
