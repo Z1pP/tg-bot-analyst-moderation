@@ -168,7 +168,9 @@ async def confirmation_removing_template_handler(
 
     try:
         usecase: DeleteTemplateUseCase = container.resolve(DeleteTemplateUseCase)
-        await usecase.execute(template_id=template_id)
+        await usecase.execute(
+            template_id=template_id, admin_tg_id=str(callback.from_user.id)
+        )
 
         await callback.message.edit_text(
             text="✅ Шаблон успешно удален",
