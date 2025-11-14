@@ -4,8 +4,17 @@ from statistics import mean, median
 from typing import List
 
 from constants import MAX_MSG_LENGTH
+from constants.enums import AdminActionType
 from dto.report import AllUsersReportDTO
 from models import ChatMessage, MessageReaction, MessageReply, User
+from repositories import (
+    ChatRepository,
+    MessageReactionRepository,
+    MessageReplyRepository,
+    MessageRepository,
+    UserRepository,
+)
+from services import AdminActionLogService
 from services.break_analysis_service import BreakAnalysisService
 from utils.formatter import format_seconds
 
@@ -15,6 +24,24 @@ logger = logging.getLogger(__name__)
 
 
 class GetAllUsersReportUseCase(BaseReportUseCase):
+    def __init__(
+        self,
+        msg_reply_repository: MessageReplyRepository,
+        message_repository: MessageRepository,
+        user_repository: UserRepository,
+        reaction_repository: MessageReactionRepository,
+        chat_repository: ChatRepository,
+        admin_action_log_service: AdminActionLogService = None,
+    ):
+        super().__init__(
+            msg_reply_repository,
+            message_repository,
+            user_repository,
+            reaction_repository,
+            chat_repository,
+        )
+        self._admin_action_log_service = admin_action_log_service
+
     async def execute(self, dto: AllUsersReportDTO) -> List[str]:
         """Генерирует отчет по всем пользователям за выбранным период."""
         users = await self._user_repository.get_tracked_users_for_admin(
@@ -51,7 +78,19 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             reports.append(report)
 
         full_report = "\n\n".join([report_title] + reports)
-        return self._split_report(full_report)
+        report_parts = self._split_report(full_report)
+
+        # Логируем действие после успешной генерации отчета
+        if self._admin_action_log_service:
+            period = self._format_selected_period(dto.start_date, dto.end_date)
+            details = f"Период: {period}"
+            await self._admin_action_log_service.log_action(
+                admin_tg_id=dto.user_tg_id,
+                action_type=AdminActionType.REPORT_ALL_USERS,
+                details=details,
+            )
+
+        return report_parts
 
     async def _get_user_data(self, user: User, dto: AllUsersReportDTO) -> dict:
         """Получает все данные пользователя за период."""
@@ -221,14 +260,6 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             ]
 
         return (end_date.date() - start_date.date()).days <= 1
-
-    def is_single_day_report(self, report_dto: AllUsersReportDTO) -> bool:
-        """Проверяет, является ли отчет однодневным."""
-        return self._is_single_day_report(
-            selected_period=report_dto.selected_period,
-            start_date=report_dto.start_date,
-            end_date=report_dto.end_date,
-        )
 
     def _generate_breaks_section(
         self, messages: List[ChatMessage], reactions: List[MessageReaction]

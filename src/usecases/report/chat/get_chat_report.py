@@ -6,6 +6,7 @@ from statistics import mean, median
 from typing import Awaitable, Callable, List, Optional, TypeVar
 
 from constants import MAX_MSG_LENGTH
+from constants.enums import AdminActionType
 from dto.report import ChatReportDTO
 from models import ChatMessage, ChatSession, MessageReaction, MessageReply
 from repositories import (
@@ -15,6 +16,7 @@ from repositories import (
     MessageRepository,
     UserRepository,
 )
+from services import AdminActionLogService
 from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
@@ -42,12 +44,14 @@ class GetReportOnSpecificChatUseCase:
         chat_repository: ChatRepository,
         reaction_repository: MessageReactionRepository,
         user_repository: UserRepository,
+        admin_action_log_service: AdminActionLogService = None,
     ):
         self._message_repository = message_repository
         self._msg_reply_repository = msg_reply_repository
         self._chat_repository = chat_repository
         self._reaction_repository = reaction_repository
         self._user_repository = user_repository
+        self._admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: ChatReportDTO) -> List[str]:
         """Генерирует отчет по конкретному чату за указанный период."""
@@ -71,7 +75,21 @@ class GetReportOnSpecificChatUseCase:
             tracked_user_ids=tracked_user_ids,
         )
 
-        return self._split_report(report=report)
+        report_parts = self._split_report(report=report)
+
+        # Логируем действие после успешной генерации отчета
+        if self._admin_action_log_service:
+            period = format_selected_period(
+                start_date=dto.start_date, end_date=dto.end_date
+            )
+            details = f"Чат: {chat.title}, Период: {period}"
+            await self._admin_action_log_service.log_action(
+                admin_tg_id=dto.admin_tg_id,
+                action_type=AdminActionType.REPORT_CHAT,
+                details=details,
+            )
+
+        return report_parts
 
     async def _get_chat(self, chat_id: int) -> ChatSession:
         """Получает чат по названию."""
@@ -498,7 +516,6 @@ class GetReportOnSpecificChatUseCase:
         self,
         reactions: List[MessageReaction],
     ) -> str:
-
         daily_first_reactions = defaultdict(list)
         for reaction in reactions:
             date = reaction.created_at.date()

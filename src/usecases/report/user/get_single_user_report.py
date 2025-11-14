@@ -3,9 +3,18 @@ from datetime import datetime
 from statistics import mean, median
 from typing import List
 
+from constants.enums import AdminActionType
 from dto.report import SingleUserReportDTO
 from exceptions.user import UserNotFoundException
 from models import ChatMessage, MessageReaction, MessageReply, User
+from repositories import (
+    ChatRepository,
+    MessageReactionRepository,
+    MessageReplyRepository,
+    MessageRepository,
+    UserRepository,
+)
+from services import AdminActionLogService
 from services.break_analysis_service import BreakAnalysisService
 from utils.formatter import format_seconds
 
@@ -15,6 +24,24 @@ logger = logging.getLogger(__name__)
 
 
 class GetSingleUserReportUseCase(BaseReportUseCase):
+    def __init__(
+        self,
+        msg_reply_repository: MessageReplyRepository,
+        message_repository: MessageRepository,
+        user_repository: UserRepository,
+        reaction_repository: MessageReactionRepository,
+        chat_repository: ChatRepository,
+        admin_action_log_service: AdminActionLogService = None,
+    ):
+        super().__init__(
+            msg_reply_repository,
+            message_repository,
+            user_repository,
+            reaction_repository,
+            chat_repository,
+        )
+        self._admin_action_log_service = admin_action_log_service
+
     async def execute(self, report_dto: SingleUserReportDTO) -> List[str]:
         """Генерирует отчет по выбранному пользователю."""
 
@@ -29,7 +56,21 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
             report_dto.selected_period,
         )
 
-        return self._split_report(full_report)
+        report_parts = self._split_report(full_report)
+
+        # Логируем действие после успешной генерации отчета
+        if self._admin_action_log_service:
+            period = self._format_selected_period(
+                report_dto.start_date, report_dto.end_date
+            )
+            details = f"Пользователь: @{user.username}, Период: {period}"
+            await self._admin_action_log_service.log_action(
+                admin_tg_id=report_dto.admin_tg_id,
+                action_type=AdminActionType.REPORT_USER,
+                details=details,
+            )
+
+        return report_parts
 
     def is_single_day_report(self, report_dto: SingleUserReportDTO) -> bool:
         """Проверяет, является ли отчет однодневным."""
