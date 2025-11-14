@@ -1,10 +1,8 @@
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Enum as SQLAlchemyEnum
+import sqlalchemy as sa
 from sqlalchemy import ForeignKey, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from constants.enums import AdminActionType
 
 from .base import BaseModel
 
@@ -20,7 +18,7 @@ class AdminActionLog(BaseModel):
         nullable=False,
     )
     action_type: Mapped[str] = mapped_column(
-        SQLAlchemyEnum(AdminActionType, name="adminactiontype", native_enum=True),
+        sa.String(length=50),
         nullable=False,
     )
     details: Mapped[Optional[str]] = mapped_column(
