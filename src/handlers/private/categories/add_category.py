@@ -33,7 +33,10 @@ async def confirm_category_creation_handler(
 
     try:
         usecase: CreateCategoryUseCase = container.resolve(CreateCategoryUseCase)
-        category = await usecase.execute(dto=CreateCategoryDTO(name=category_name))
+        category = await usecase.execute(
+            dto=CreateCategoryDTO(name=category_name),
+            admin_tg_id=str(callback.from_user.id),
+        )
         text = (
             f"✅ Категория <b>{category.name}</b> успешно создана.\n"
             "Теперь вы можете создавать шаблоны в этой категории."
