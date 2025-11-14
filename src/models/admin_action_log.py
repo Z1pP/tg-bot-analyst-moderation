@@ -20,7 +20,7 @@ class AdminActionLog(BaseModel):
         nullable=False,
     )
     action_type: Mapped[str] = mapped_column(
-        SQLAlchemyEnum(AdminActionType),
+        SQLAlchemyEnum(AdminActionType, name="adminactiontype", native_enum=True),
         nullable=False,
     )
     details: Mapped[Optional[str]] = mapped_column(
