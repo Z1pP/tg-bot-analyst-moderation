@@ -4,6 +4,7 @@ from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from constants import Dialog
 from container import container
 from dto import UpdateTemplateTitleDTO
 from handlers.private.templates.pagination import (
@@ -44,7 +45,9 @@ async def edit_template_handler(callback: CallbackQuery, state: FSMContext) -> N
         template = await template_repo.get_template_by_id(template_id)
 
         if not template:
-            await callback.answer("Шаблон не найден", show_alert=True)
+            await callback.answer(
+                Dialog.Template.TEMPLATE_NOT_FOUND_SHORT, show_alert=True
+            )
             return
 
         # Сохраняем данные шаблона и текущие данные из state для возврата к списку
@@ -58,8 +61,7 @@ async def edit_template_handler(callback: CallbackQuery, state: FSMContext) -> N
         )
 
         await callback.message.edit_text(
-            text=f"<b>Редактирование шаблона:</b> {template.title}\n\n"
-            "Что вы хотите изменить?",
+            text=Dialog.Template.EDIT_TEMPLATE_TITLE.format(title=template.title),
             reply_markup=edit_template_kb(),
             parse_mode="HTML",
         )
@@ -88,7 +90,7 @@ async def edit_title_handler(callback: CallbackQuery, state: FSMContext) -> None
         await state.update_data(active_message_id=callback.message.message_id)
 
         await callback.message.edit_text(
-            text="<b>Редактирование названия</b>\n\nОтправьте новое название шаблона:",
+            text=Dialog.Template.EDIT_TITLE_INPUT,
             reply_markup=cancel_edit_ikb(),
             parse_mode="HTML",
         )
@@ -115,14 +117,14 @@ async def process_edit_title_handler(
         template_id = data.get("edit_template_id")
 
         if not template_id:
-            await message.reply("❌ Ошибка: шаблон не найден")
+            await message.reply(Dialog.Template.ERROR_TEMPLATE_NOT_FOUND)
             return
 
         new_title = message.text.strip()
 
         # Валидация названия
         if not validate_template_title(new_title):
-            await message.reply("❗Название должно содержать от 3 до 50 символов.")
+            await message.reply(Dialog.Template.TITLE_VALIDATION_ERROR)
             return
 
         # Получаем старое название
@@ -139,16 +141,14 @@ async def process_edit_title_handler(
         success = await usecase.execute(update_dto)
 
         if not success:
-            await message.reply("❌ Ошибка при обновлении названия шаблона")
+            await message.reply(Dialog.Template.ERROR_UPDATE_TITLE)
             return
 
         await message.delete()
 
         # Формируем сообщение об обновлении
-        update_message = (
-            f"✅ Название шаблона обновлено\n\n"
-            f"<b>Было:</b> {old_title}\n"
-            f"<b>Стало:</b> {new_title}"
+        update_message = Dialog.Template.TITLE_UPDATED.format(
+            old_title=old_title, new_title=new_title
         )
 
         # Возвращаемся к списку шаблонов
@@ -167,7 +167,7 @@ async def process_edit_title_handler(
                 await bot.edit_message_text(
                     chat_id=message.chat.id,
                     message_id=active_message_id,
-                    text=f"{update_message}\n\nВыберите шаблон:",
+                    text=f"{update_message}\n\n{Dialog.Template.SELECT_TEMPLATE}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
                         page=1,
@@ -188,7 +188,7 @@ async def process_edit_title_handler(
                 await bot.edit_message_text(
                     chat_id=message.chat.id,
                     message_id=active_message_id,
-                    text=f"{update_message}\n\nШаблоны для чата ({total_count}):",
+                    text=f"{update_message}\n\n{Dialog.Template.TEMPLATES_FOR_CHAT.format(count=total_count)}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
                         page=1,
@@ -209,7 +209,7 @@ async def process_edit_title_handler(
                 await bot.edit_message_text(
                     chat_id=message.chat.id,
                     message_id=active_message_id,
-                    text=f"{update_message}\n\nГлобальные шаблоны ({total_count}):",
+                    text=f"{update_message}\n\n{Dialog.Template.GLOBAL_TEMPLATES.format(count=total_count)}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
                         page=1,
@@ -253,7 +253,7 @@ async def process_edit_title_handler(
 
     except Exception as e:
         logger.error("Ошибка при обновлении названия шаблона: %s", e, exc_info=True)
-        await message.reply("❌ Ошибка при обновлении названия шаблона")
+        await message.reply(Dialog.Template.ERROR_UPDATE_TITLE)
 
 
 @router.callback_query(F.data == "edit_content", TemplateStateManager.editing_template)
@@ -264,9 +264,7 @@ async def edit_content_handler(callback: CallbackQuery, state: FSMContext) -> No
         await state.update_data(active_message_id=callback.message.message_id)
 
         await callback.message.edit_text(
-            text="<b>Редактирование содержимого</b>\n\n"
-            "Отправьте новое содержимое для шаблона или перешлите сообщение из чата "
-            "(текст, фото или медиагруппу):",
+            text=Dialog.Template.EDIT_CONTENT_INPUT,
             reply_markup=cancel_edit_ikb(),
             parse_mode="HTML",
         )
@@ -296,7 +294,7 @@ async def process_edit_content_handler(
         template_id = data.get("edit_template_id")
 
         if not template_id:
-            await message.reply("❌ Ошибка: шаблон не найден")
+            await message.reply(Dialog.Template.ERROR_TEMPLATE_NOT_FOUND)
             return
 
         # Извлекаем контент из сообщения(ий)
@@ -318,7 +316,7 @@ async def process_edit_content_handler(
         )
 
         if not success:
-            await message.reply("❌ Ошибка при обновлении содержимого шаблона")
+            await message.reply(Dialog.Template.ERROR_UPDATE_CONTENT)
             return
 
         # Удаляем сообщение(я) - если медиагруппа, удаляем все сообщения
@@ -334,7 +332,7 @@ async def process_edit_content_handler(
             await message.delete()
 
         # Формируем сообщение об обновлении
-        update_message = "✅ Содержимое шаблона обновлено"
+        update_message = Dialog.Template.CONTENT_UPDATED
 
         # Возвращаемся к списку шаблонов
         active_message_id = data.get("active_message_id")
@@ -352,7 +350,7 @@ async def process_edit_content_handler(
                 await bot.edit_message_text(
                     chat_id=message.chat.id,
                     message_id=active_message_id,
-                    text=f"{update_message}\n\nВыберите шаблон:",
+                    text=f"{update_message}\n\n{Dialog.Template.SELECT_TEMPLATE}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
                         page=1,
@@ -372,7 +370,7 @@ async def process_edit_content_handler(
                 await bot.edit_message_text(
                     chat_id=message.chat.id,
                     message_id=active_message_id,
-                    text=f"{update_message}\n\nШаблоны для чата ({total_count}):",
+                    text=f"{update_message}\n\n{Dialog.Template.TEMPLATES_FOR_CHAT.format(count=total_count)}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
                         page=1,
@@ -392,7 +390,7 @@ async def process_edit_content_handler(
                 await bot.edit_message_text(
                     chat_id=message.chat.id,
                     message_id=active_message_id,
-                    text=f"{update_message}\n\nГлобальные шаблоны ({total_count}):",
+                    text=f"{update_message}\n\n{Dialog.Template.GLOBAL_TEMPLATES.format(count=total_count)}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
                         page=1,
@@ -433,7 +431,7 @@ async def process_edit_content_handler(
 
     except Exception as e:
         logger.error("Ошибка при обновлении содержимого шаблона: %s", e, exc_info=True)
-        await message.reply("❌ Ошибка при обновлении содержимого шаблона")
+        await message.reply(Dialog.Template.ERROR_UPDATE_CONTENT)
 
 
 @router.callback_query(F.data == "cancel_edit", TemplateStateManager.editing_template)
@@ -453,7 +451,7 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
                 )
 
                 await callback.message.edit_text(
-                    text="❌ Редактирование отменено\n\nВыберите шаблон:",
+                    text=f"{Dialog.Template.EDIT_CANCELLED}\n\n{Dialog.Template.SELECT_TEMPLATE}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
                         page=1,
@@ -473,7 +471,7 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
                 )
 
                 await callback.message.edit_text(
-                    text=f"❌ Редактирование отменено\n\nШаблоны для чата ({total_count}):",
+                    text=f"{Dialog.Template.EDIT_CANCELLED}\n\n{Dialog.Template.TEMPLATES_FOR_CHAT.format(count=total_count)}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
                         page=1,
@@ -493,7 +491,7 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
                 )
 
                 await callback.message.edit_text(
-                    text=f"❌ Редактирование отменено\n\nГлобальные шаблоны ({total_count}):",
+                    text=f"{Dialog.Template.EDIT_CANCELLED}\n\n{Dialog.Template.GLOBAL_TEMPLATES.format(count=total_count)}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
                         page=1,
@@ -509,7 +507,7 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
             else:
                 # Если нет ни category_id, ни chat_id, ни global scope, возвращаемся в меню
                 await callback.message.edit_text(
-                    text="❌ Редактирование отменено",
+                    text=Dialog.Template.EDIT_CANCELLED,
                     reply_markup=templates_menu_ikb(),
                 )
                 await log_and_set_state(
@@ -520,7 +518,7 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
         except Exception as e:
             logger.error("Ошибка при возврате к списку шаблонов: %s", e, exc_info=True)
             await callback.message.edit_text(
-                text="❌ Произошла ошибка при редактировнии шаблона.",
+                text=Dialog.Template.ERROR_EDIT_TEMPLATE,
                 reply_markup=templates_menu_ikb(),
             )
             await log_and_set_state(
@@ -543,7 +541,7 @@ async def _cancel_edit_title_or_content(
     template_id = data.get("edit_template_id")
 
     if not template_id:
-        await callback.answer("❌ Ошибка: шаблон не найден", show_alert=True)
+        await callback.answer(Dialog.Template.ERROR_TEMPLATE_NOT_FOUND, show_alert=True)
         return
 
     # Получаем шаблон из БД
@@ -553,13 +551,12 @@ async def _cancel_edit_title_or_content(
     template = await template_repo.get_template_by_id(template_id)
 
     if not template:
-        await callback.answer("❌ Шаблон не найден", show_alert=True)
+        await callback.answer(Dialog.Template.TEMPLATE_NOT_FOUND, show_alert=True)
         return
 
     # Возвращаемся к окну редактирования шаблона
     await callback.message.edit_text(
-        text=f"<b>Редактирование шаблона:</b> {template.title}\n\n"
-        "Что вы хотите изменить?",
+        text=Dialog.Template.EDIT_TEMPLATE_TITLE.format(title=template.title),
         reply_markup=edit_template_kb(),
         parse_mode="HTML",
     )
