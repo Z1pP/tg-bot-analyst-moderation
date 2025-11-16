@@ -4,6 +4,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants import Dialog
 from container import container
 from keyboards.inline.time_period import time_period_ikb_single_user
 from keyboards.inline.users import user_actions_ikb
@@ -32,7 +33,7 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
         await state.update_data(user_id=user_id)
 
         await callback.message.edit_text(
-            text="Выберите действие:",
+            text=Dialog.Report.SELECT_ACTION,
             reply_markup=user_actions_ikb(),
         )
 
@@ -60,7 +61,7 @@ async def get_user_report_handler(callback: CallbackQuery, state: FSMContext) ->
                 "Отсутствует user_id в state для пользователя %s",
                 callback.from_user.username,
             )
-            await callback.message.edit_text("❌ Ошибка: выберите пользователя заново")
+            await callback.message.edit_text(Dialog.User.ERROR_SELECT_USER_AGAIN)
             return
 
         logger.info(
@@ -78,10 +79,7 @@ async def get_user_report_handler(callback: CallbackQuery, state: FSMContext) ->
         )
 
         if not user_chats_dto.chats:
-            await callback.message.edit_text(
-                "❌ У вас нет отслеживаемых чатов.\n"
-                "Добавьте чаты в отслеживание для составления отчета."
-            )
+            await callback.message.edit_text(Dialog.Report.NO_TRACKED_CHATS_FOR_REPORT)
             logger.warning(
                 "Админ %s пытается получить отчет без отслеживаемых чатов",
                 callback.from_user.username,
@@ -95,7 +93,7 @@ async def get_user_report_handler(callback: CallbackQuery, state: FSMContext) ->
         )
 
         await callback.message.edit_text(
-            text="Выберите период для отчета",
+            text=Dialog.Report.SELECT_PERIOD,
             reply_markup=time_period_ikb_single_user(),
         )
     except Exception as e:
