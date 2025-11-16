@@ -68,7 +68,7 @@ async def users_menu_handler(message: Message, state: FSMContext) -> None:
     except Exception as e:
         logger.warning(f"Не удалось удалить сообщение: {e}")
 
-    message_text = "Выбери действие:"
+    message_text = Dialog.User.SELECT_ACTION
 
     await message.answer(
         text=message_text,
@@ -97,4 +97,6 @@ async def chats_menu_handler(message: Message, state: FSMContext) -> None:
 async def setting_handler(message: Message, state: FSMContext) -> None:
     await log_and_set_state(message, state, MenuStates.settings_menu)
 
-    await message.answer(f"Вкладка {KbCommands.SETTINGS} еще в разработке!")
+    await message.answer(
+        Dialog.Menu.SETTINGS_IN_DEVELOPMENT.format(settings=KbCommands.SETTINGS)
+    )
