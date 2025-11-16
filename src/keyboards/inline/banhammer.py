@@ -36,6 +36,12 @@ def block_actions_ikb() -> InlineKeyboardMarkup:
         ),
     )
     builder.adjust(1, 2)
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
+            callback_data="back_to_main_menu_from_block",
+        )
+    )
     return builder.as_markup()
 
 

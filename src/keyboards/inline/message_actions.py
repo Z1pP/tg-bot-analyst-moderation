@@ -55,6 +55,12 @@ def send_message_ikb() -> types.InlineKeyboardMarkup:
             callback_data="templates_menu",
         ),
     )
+    builder.row(
+        types.InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
+            callback_data="back_to_main_menu_from_message_management",
+        )
+    )
     return builder.as_markup()
 
 

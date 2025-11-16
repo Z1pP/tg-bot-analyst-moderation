@@ -1,15 +1,20 @@
 import logging
 from datetime import datetime
+from typing import Union
+
 from aiogram import F, Router
+from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import AllUsersReportDTO
 from keyboards.inline import CalendarKeyboard
-from keyboards.inline.report import order_details_kb
+from keyboards.inline.report import order_details_kb_all_users
+from keyboards.inline.time_period import time_period_ikb_all_users
+from keyboards.inline.users import all_users_actions_ikb
 from keyboards.reply import get_time_period_for_full_report
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
@@ -17,11 +22,167 @@ from states import AllUsersReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.report import GetAllUsersReportUseCase
 from utils.exception_handler import handle_exception
-from utils.send_message import send_html_message_with_kb
+from utils.send_message import safe_edit_message, send_html_message_with_kb
 from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
+
+
+@router.callback_query(
+    F.data == "back_from_period_all_users",
+    AllUsersReportStates.selecting_period,
+)
+async def back_from_period_all_users_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик возврата к действиям со всеми пользователями из выбора периода."""
+    try:
+        await callback.answer()
+        # Очищаем данные отчета из state
+        await state.update_data(all_users_report_dto=None)
+
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=AllUsersReportStates.selected_all_users,
+        )
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="Выбери действие:",
+            reply_markup=all_users_actions_ikb(),
+        )
+    except Exception as e:
+        await handle_exception(
+            callback.message, e, "back_from_period_all_users_handler"
+        )
+
+
+@router.callback_query(
+    F.data == "all_users",
+    AllUsersReportStates.selecting_period,
+)
+async def back_to_period_selection_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик возврата к выбору периода из детализации или отчета для всех пользователей."""
+    try:
+        await callback.answer()
+        data = await state.get_data()
+        all_users_report_dto = data.get("all_users_report_dto")
+
+        if not all_users_report_dto:
+            # Если нет данных отчета, возвращаемся к действиям
+            await state.update_data(all_users_report_dto=None)
+            await log_and_set_state(
+                message=callback.message,
+                state=state,
+                new_state=AllUsersReportStates.selected_all_users,
+            )
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="Выбери действие:",
+                reply_markup=all_users_actions_ikb(),
+            )
+            return
+
+        # Возвращаемся из детализации - показываем выбор периода
+        logger.info(
+            "Пользователь %s возвращается к выбору периода",
+            callback.from_user.id,
+        )
+
+        # Проверяем наличие отслеживаемых чатов
+        tracked_chats_usecase: GetUserTrackedChatsUseCase = container.resolve(
+            GetUserTrackedChatsUseCase
+        )
+        user_chats_dto = await tracked_chats_usecase.execute(
+            tg_id=str(callback.from_user.id)
+        )
+
+        if not user_chats_dto.chats:
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="❌ У вас нет отслеживаемых чатов.\n"
+                "Добавьте чаты в отслеживание для составления отчета.",
+            )
+            logger.warning(
+                "Админ %s пытается получить отчет без отслеживаемых чатов",
+                callback.from_user.username,
+            )
+            return
+
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=AllUsersReportStates.selecting_period,
+        )
+
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="Выберите период для отчета:",
+            reply_markup=time_period_ikb_all_users(),
+        )
+    except Exception as e:
+        await handle_exception(callback.message, e, "back_to_period_selection_handler")
+
+
+@router.callback_query(
+    F.data == "get_all_users_report",
+    AllUsersReportStates.selected_all_users,
+)
+async def get_all_users_report_callback_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик запроса на создание отчета по всем пользователям через callback."""
+    try:
+        await callback.answer()
+        logger.info(
+            "Пользователь %s запросил отчет по всем пользователям",
+            callback.from_user.id,
+        )
+
+        # Проверяем наличие отслеживаемых чатов
+        tracked_chats_usecase: GetUserTrackedChatsUseCase = container.resolve(
+            GetUserTrackedChatsUseCase
+        )
+        user_chats_dto = await tracked_chats_usecase.execute(
+            tg_id=str(callback.from_user.id)
+        )
+
+        if not user_chats_dto.chats:
+            await callback.message.edit_text(
+                "❌ У вас нет отслеживаемых чатов.\n"
+                "Добавьте чаты в отслеживание для составления отчета."
+            )
+            logger.warning(
+                "Админ %s пытается получить отчет без отслеживаемых чатов",
+                callback.from_user.username,
+            )
+            return
+
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=AllUsersReportStates.selecting_period,
+        )
+
+        await callback.message.edit_text(
+            text="Выберите период для отчета:",
+            reply_markup=time_period_ikb_all_users(),
+        )
+    except Exception as e:
+        await handle_exception(
+            callback.message, e, "get_all_users_report_callback_handler"
+        )
 
 
 @router.message(
@@ -70,12 +231,62 @@ async def all_users_report_handler(message: Message, state: FSMContext) -> None:
         await handle_exception(message, e, "all_users_report_handler")
 
 
+@router.callback_query(
+    AllUsersReportStates.selecting_period,
+    F.data.startswith("period__"),
+)
+async def process_period_selection_callback(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    """Обрабатывает выбор периода для отчета через callback."""
+    try:
+        await callback.answer()
+        period_text = callback.data.replace("period__", "")
+        logger.info("Выбран период: %s", period_text)
+
+        if period_text == TimePeriod.CUSTOM.value:
+            logger.info("Запрос пользовательского периода")
+            await log_and_set_state(
+                message=callback.message,
+                state=state,
+                new_state=AllUsersReportStates.selecting_custom_period,
+            )
+
+            # Показываем календарь
+            now = TimeZoneService.now()
+            await state.update_data(cal_start_date=None, cal_end_date=None)
+
+            calendar_kb = CalendarKeyboard.create_calendar(
+                year=now.year,
+                month=now.month,
+            )
+
+            await callback.message.edit_text(
+                text="📅 Выберите начальную дату диапазона:",
+                reply_markup=calendar_kb,
+            )
+            return
+
+        start_date, end_date = TimePeriod.to_datetime(period_text)
+        logger.info(f"Генерация отчета за период: {start_date} - {end_date}")
+
+        await generate_and_send_report(
+            callback_or_message=callback,
+            state=state,
+            start_date=start_date,
+            end_date=end_date,
+            selected_period=period_text,
+        )
+    except Exception as e:
+        await handle_exception(callback.message, e, "process_period_selection_callback")
+
+
 @router.message(
     AllUsersReportStates.selecting_period,
     F.text.in_(TimePeriod.get_all_periods()),
 )
 async def process_period_selection(message: Message, state: FSMContext) -> None:
-    """Обрабатывает выбор периода для отчета."""
+    """Обрабатывает выбор периода для отчета (для совместимости с текстовыми сообщениями)."""
     try:
         logger.info("Выбран период: %s", message.text)
 
@@ -106,7 +317,7 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
         logger.info(f"Генерация отчета за период: {start_date} - {end_date}")
 
         await generate_and_send_report(
-            message=message,
+            callback_or_message=message,
             state=state,
             start_date=start_date,
             end_date=end_date,
@@ -117,7 +328,7 @@ async def process_period_selection(message: Message, state: FSMContext) -> None:
 
 
 async def generate_and_send_report(
-    message: Message,
+    callback_or_message: Union[CallbackQuery, Message],
     state: FSMContext,
     start_date: datetime,
     end_date: datetime,
@@ -126,6 +337,17 @@ async def generate_and_send_report(
 ) -> None:
     """Генерирует и отправляет отчет."""
     try:
+        # Определяем, что передано - CallbackQuery или Message
+        is_callback = isinstance(callback_or_message, CallbackQuery)
+        if is_callback:
+            callback = callback_or_message
+            message = callback.message
+            user_id_for_dto = callback.from_user.id
+        else:
+            message = callback_or_message
+            callback = None
+            user_id_for_dto = message.from_user.id
+
         logger.info(
             "Начало генерации отчета за период %s - %s",
             start_date,
@@ -137,7 +359,7 @@ async def generate_and_send_report(
         )
 
         report_dto = AllUsersReportDTO(
-            user_tg_id=str(admin_tg_id or message.from_user.id),
+            user_tg_id=str(admin_tg_id or user_id_for_dto),
             start_date=adjusted_start,
             end_date=adjusted_end,
             selected_period=selected_period,
@@ -151,14 +373,32 @@ async def generate_and_send_report(
         if not is_single_day:
             await state.update_data(all_users_report_dto=report_dto)
 
-        for idx, part in enumerate(report_parts):
-            if idx == len(report_parts) - 1:
-                part = f"{part}\n\nДля продолжения выберите период, либо нажмите назад"
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=AllUsersReportStates.selecting_period,
+        )
 
+        # Объединяем все части отчета в один текст
+        full_report = "\n\n".join(report_parts)
+
+        # Используем edit_text для callback или send_message для обычного сообщения
+        if is_callback:
+            await callback.message.edit_text(
+                text=full_report,
+                parse_mode=ParseMode.HTML,
+                reply_markup=order_details_kb_all_users(
+                    show_details=not is_single_day,
+                ),
+            )
+            await callback.answer()
+        else:
             await send_html_message_with_kb(
                 message=message,
-                text=part,
-                reply_markup=order_details_kb(show_details=not is_single_day),
+                text=full_report,
+                reply_markup=order_details_kb_all_users(
+                    show_details=not is_single_day,
+                ),
             )
 
         logger.info("Отчет успешно отправлен пользователю")

@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
@@ -8,7 +9,8 @@ from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
-from keyboards.inline import CalendarKeyboard, order_details_kb
+from keyboards.inline import CalendarKeyboard
+from keyboards.inline.report import order_details_kb_chat
 from keyboards.reply import admin_menu_kb, chat_actions_kb, get_time_period_kb
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
@@ -214,7 +216,7 @@ async def generate_and_send_report(
             await send_html_message_with_kb(
                 message=message,
                 text=part,
-                reply_markup=order_details_kb(show_details=not is_single_day),
+                reply_markup=order_details_kb_chat(show_details=not is_single_day),
             )
 
         logger.info("Отчет по чату %s успешно отправлен", chat_id)

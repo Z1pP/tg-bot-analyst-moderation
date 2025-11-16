@@ -17,3 +17,12 @@ class AllUsersReportStates(StatesGroup):
     selected_all_users = State()
     selecting_period = State()
     selecting_custom_period = State()
+
+
+class UserStateManager(StatesGroup):
+    """Состояния для управления пользователями через inline клавиатуру"""
+
+    users_menu = State()
+    listing_users = State()
+    removing_user = State()
+    adding_user = State()

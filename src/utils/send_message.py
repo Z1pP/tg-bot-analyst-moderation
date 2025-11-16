@@ -12,8 +12,9 @@ async def send_html_message_with_kb(
     message: types.Message,
     parse_mode: ParseMode = ParseMode.HTML,
     reply_markup: types.ReplyMarkupUnion | None = None,
-) -> None:
-    await message.reply(
+) -> types.Message:
+    """Отправляет HTML сообщение с клавиатурой и возвращает объект сообщения."""
+    return await message.reply(
         text=text,
         parse_mode=parse_mode,
         reply_markup=reply_markup,
@@ -47,4 +48,34 @@ async def safe_edit_message(
             logger.warning("Сообщение %d больше нельзя редактировать", message_id)
         else:
             logger.error("Ошибка при редактировании сообщения: %s", e, exc_info=True)
+        return False
+
+
+async def safe_edit_message_reply_markup(
+    bot: Bot,
+    chat_id: int,
+    message_id: int,
+    reply_markup: types.InlineKeyboardMarkup | None = None,
+) -> bool:
+    """Безопасное редактирование только клавиатуры сообщения с обработкой типичных ошибок Telegram"""
+    try:
+        await bot.edit_message_reply_markup(
+            chat_id=chat_id,
+            message_id=message_id,
+            reply_markup=reply_markup,
+        )
+        return True
+
+    except TelegramBadRequest as e:
+        msg = (e.message or str(e)).lower()
+        if "message is not modified" in msg:
+            logger.debug("Сообщение %d не изменилось", message_id)
+        elif "message to edit not found" in msg:
+            logger.warning("Сообщение %d не найдено для редактирования", message_id)
+        elif "message can't be edited" in msg:
+            logger.warning("Сообщение %d больше нельзя редактировать", message_id)
+        else:
+            logger.error(
+                "Ошибка при редактировании клавиатуры сообщения: %s", e, exc_info=True
+            )
         return False
