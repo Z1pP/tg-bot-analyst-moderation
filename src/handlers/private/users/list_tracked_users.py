@@ -1,47 +1,45 @@
 import logging
 
 from aiogram import F, Router
-from aiogram.types import Message
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery
 
-from constants import KbCommands
 from constants.pagination import USERS_PAGE_SIZE
 from container import container
-from keyboards.inline.users import users_inline_kb
-from keyboards.reply.menu import user_menu_kb
-from states import MenuStates
+from keyboards.inline.users import users_inline_kb, users_menu_ikb
+from states import UserStateManager
 from usecases.user_tracking import GetListTrackedUsersUseCase
 from utils.exception_handler import handle_exception
-from utils.send_message import send_html_message_with_kb
+from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message(F.text == KbCommands.GET_STATISTICS, MenuStates.users_menu)
-@router.message(F.text == KbCommands.SELECT_USER)
-async def users_list_handler(message: Message) -> None:
-    """Обработчик команды для отображения списка пользователей.
-    Через inline клавиатуру
-    """
+@router.callback_query(F.data == "select_user")
+async def users_list_handler(callback: CallbackQuery, state: FSMContext) -> None:
+    """Обработчик команды для отображения списка пользователей через inline клавиатуру"""
+    await callback.answer()
+    await state.clear()
+
     try:
         logger.info(
-            f"Пользователь {message.from_user.id} запросил список пользователей для отчета"
+            f"Пользователь {callback.from_user.id} запросил список пользователей для отчета"
         )
 
         usecase: GetListTrackedUsersUseCase = container.resolve(
             GetListTrackedUsersUseCase
         )
-        users = await usecase.execute(admin_tgid=str(message.from_user.id))
+        users = await usecase.execute(admin_tgid=str(callback.from_user.id))
 
         if not users:
             message_text = (
                 "❗Чтобы получать отчёты по пользователям, "
                 "необходимо добавить пользователя в отслеживаемые"
             )
-            await send_html_message_with_kb(
-                message=message,
+            await callback.message.edit_text(
                 text=message_text,
-                reply_markup=user_menu_kb(),
+                reply_markup=users_menu_ikb(),
             )
             return
 
@@ -50,8 +48,7 @@ async def users_list_handler(message: Message) -> None:
         # Показываем первую страницу
         first_page_users = users[:USERS_PAGE_SIZE]
 
-        await send_html_message_with_kb(
-            message=message,
+        await callback.message.edit_text(
             text=f"Всего {len(users)} пользователей",
             reply_markup=users_inline_kb(
                 users=first_page_users,
@@ -59,5 +56,11 @@ async def users_list_handler(message: Message) -> None:
                 total_count=len(users),
             ),
         )
+
+        await log_and_set_state(
+            message=callback.message,
+            state=state,
+            new_state=UserStateManager.listing_users,
+        )
     except Exception as e:
-        await handle_exception(message, e, "users_list_handler")
+        await handle_exception(callback.message, e, "users_list_handler")
