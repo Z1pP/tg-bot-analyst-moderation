@@ -6,6 +6,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants import Dialog
 from constants.period import TimePeriod
 from container import container
 from dto.report import SingleUserReportDTO
@@ -62,7 +63,7 @@ async def back_from_period_handler(callback: CallbackQuery, state: FSMContext) -
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="Выберите действие:",
+            text=Dialog.Report.SELECT_ACTION,
             reply_markup=user_actions_ikb(),
         )
     except Exception as e:
@@ -95,7 +96,7 @@ async def back_to_period_selection_handler(
                     bot=callback.bot,
                     chat_id=callback.message.chat.id,
                     message_id=callback.message.message_id,
-                    text="❌ Ошибка: выберите пользователя заново",
+                    text=Dialog.Report.ERROR_SELECT_USER_AGAIN,
                 )
                 return
 
@@ -140,14 +141,7 @@ async def back_to_period_selection_handler(
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
-                text=(
-                    "❌ У вас нет отслеживаемых чатов.\n\n"
-                    "📋 <b>Как добавить чат в отслеживание:</b>\n"
-                    "1️⃣ Добавьте бота в нужный чат\n"
-                    "2️⃣ Дайте боту права администратора\n"
-                    "3️⃣ Напишите команду <code>/track</code> в чате\n\n"
-                    "После добавления чата вы сможете создавать отчеты."
-                ),
+                text=Dialog.Report.NO_TRACKED_CHATS_WITH_INSTRUCTIONS,
             )
             return
 
@@ -161,7 +155,7 @@ async def back_to_period_selection_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="Выберите период для отчета",
+            text=Dialog.Report.SELECT_PERIOD,
             reply_markup=time_period_ikb_single_user(),
         )
     except Exception as e:
@@ -186,7 +180,7 @@ async def get_user_report_callback_handler(
                 "Отсутствует user_id в state для пользователя %s",
                 callback.from_user.username,
             )
-            await callback.message.edit_text("❌ Ошибка: выберите пользователя заново")
+            await callback.message.edit_text(Dialog.Report.ERROR_SELECT_USER_AGAIN)
             return
 
         # Проверяем наличие отслеживаемых чатов
@@ -199,12 +193,7 @@ async def get_user_report_callback_handler(
 
         if not user_chats_dto.chats:
             await callback.message.edit_text(
-                "❌ У вас нет отслеживаемых чатов.\n\n"
-                "📋 <b>Как добавить чат в отслеживание:</b>\n"
-                "1️⃣ Добавьте бота в нужный чат\n"
-                "2️⃣ Дайте боту права администратора\n"
-                "3️⃣ Напишите команду <code>/track</code> в чате\n\n"
-                "После добавления чата вы сможете создавать отчеты."
+                Dialog.Report.NO_TRACKED_CHATS_WITH_INSTRUCTIONS
             )
             return
 
@@ -215,7 +204,7 @@ async def get_user_report_callback_handler(
         )
 
         await callback.message.edit_text(
-            text="Выберите период для отчета",
+            text=Dialog.Report.SELECT_PERIOD,
             reply_markup=time_period_ikb_single_user(),
         )
     except Exception as e:
@@ -244,7 +233,7 @@ async def process_period_selection_callback(
 
         if not user_id:
             logger.warning("Отсутствует user_id при выборе периода")
-            await callback.message.edit_text("❌ Ошибка: выберите пользователя заново")
+            await callback.message.edit_text(Dialog.Report.ERROR_SELECT_USER_AGAIN)
             return
 
         if period_text == TimePeriod.CUSTOM.value:
@@ -264,7 +253,7 @@ async def process_period_selection_callback(
             )
 
             await callback.message.edit_text(
-                text="📅 Выберите начальную дату диапазона:",
+                text=Dialog.Report.SELECT_START_DATE,
                 reply_markup=calendar_kb,
             )
             return
