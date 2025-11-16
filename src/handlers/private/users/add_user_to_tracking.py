@@ -65,7 +65,7 @@ async def cancel_add_user_handler(callback: CallbackQuery, state: FSMContext) ->
     await state.clear()
 
     await callback.message.edit_text(
-        text="❌ Действие отменено.",
+        text=Dialog.User.ACTION_CANCELLED,
         reply_markup=users_menu_ikb(),
     )
 
@@ -103,7 +103,7 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
             return
 
         if user_data is None:
-            text = "❗Неверный формат ввода. Попробуйте еще раз."
+            text = Dialog.User.INVALID_FORMAT_RETRY
             if active_message_id:
                 await safe_edit_message(
                     bot=message.bot,
