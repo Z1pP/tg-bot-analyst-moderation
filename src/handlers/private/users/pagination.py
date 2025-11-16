@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants import Dialog
 from constants.pagination import USERS_PAGE_SIZE
 from container import container
 from keyboards.inline.users import users_inline_kb
@@ -24,7 +25,7 @@ async def prev_page_users_handler(callback: CallbackQuery, state: FSMContext) ->
     users = await usecase.execute(admin_tgid=str(callback.from_user.id))
 
     if not users:
-        await callback.answer("Нет пользователей для отображения", show_alert=True)
+        await callback.answer(Dialog.User.NO_USERS_TO_DISPLAY, show_alert=True)
         return
 
     total_count = len(users)
@@ -55,14 +56,14 @@ async def next_page_users_handler(callback: CallbackQuery, state: FSMContext) ->
     users = await usecase.execute(admin_tgid=str(callback.from_user.id))
 
     if not users:
-        await callback.answer("Нет пользователей для отображения", show_alert=True)
+        await callback.answer(Dialog.User.NO_USERS_TO_DISPLAY, show_alert=True)
         return
 
     total_count = len(users)
     max_pages = (total_count + USERS_PAGE_SIZE - 1) // USERS_PAGE_SIZE
 
     if next_page > max_pages:
-        await callback.answer("ℹ️ Больше пользователей нет")
+        await callback.answer(Dialog.User.NO_MORE_USERS)
         return
 
     start_index = (next_page - 1) * USERS_PAGE_SIZE
@@ -96,7 +97,7 @@ async def prev_page_remove_users_handler(
     users = await usecase.execute(admin_tgid=str(callback.from_user.id))
 
     if not users:
-        await callback.answer("Нет пользователей для отображения", show_alert=True)
+        await callback.answer(Dialog.User.NO_USERS_TO_DISPLAY, show_alert=True)
         return
 
     total_count = len(users)
@@ -132,14 +133,14 @@ async def next_page_remove_users_handler(
     users = await usecase.execute(admin_tgid=str(callback.from_user.id))
 
     if not users:
-        await callback.answer("Нет пользователей для отображения", show_alert=True)
+        await callback.answer(Dialog.User.NO_USERS_TO_DISPLAY, show_alert=True)
         return
 
     total_count = len(users)
     max_pages = (total_count + USERS_PAGE_SIZE - 1) // USERS_PAGE_SIZE
 
     if next_page > max_pages:
-        await callback.answer("ℹ️ Больше пользователей нет")
+        await callback.answer(Dialog.User.NO_MORE_USERS)
         return
 
     start_index = (next_page - 1) * USERS_PAGE_SIZE
