@@ -5,7 +5,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from constants import KbCommands
+from constants import Dialog, KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
@@ -53,8 +53,7 @@ async def single_chat_report_handler(message: Message, state: FSMContext) -> Non
 
         if not tracked_users:
             await message.answer(
-                "❌ У вас нет отслеживаемых пользователей.\n"
-                "Добавьте пользователей в отслеживание для составления отчета.",
+                Dialog.Report.NO_TRACKED_USERS,
                 reply_markup=chat_actions_kb(),
             )
             logger.warning(
@@ -70,7 +69,7 @@ async def single_chat_report_handler(message: Message, state: FSMContext) -> Non
         )
 
         await send_html_message_with_kb(
-            text="Выберите период для отчета",
+            text=Dialog.Report.SELECT_PERIOD,
             message=message,
             reply_markup=get_time_period_kb(),
         )
@@ -116,7 +115,7 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
             )
 
             await message.answer(
-                text="📅 Выберите начальную дату диапазона:",
+                text=Dialog.Report.SELECT_START_DATE,
                 reply_markup=calendar_kb,
             )
             return
@@ -152,7 +151,7 @@ async def select_chat_again(message: Message, state: FSMContext) -> None:
     )
     await send_html_message_with_kb(
         message=message,
-        text="Выберите чат заново",
+        text=Dialog.Report.SELECT_CHAT_AGAIN,
         reply_markup=admin_menu_kb(),
     )
 
@@ -211,7 +210,7 @@ async def generate_and_send_report(
 
         for idx, part in enumerate(report_parts):
             if idx == len(report_parts) - 1:
-                part = f"{part}\n\nДля продолжения выберите период, либо нажмите назад"
+                part = f"{part}{Dialog.Report.CONTINUE_SELECT_PERIOD}"
 
             await send_html_message_with_kb(
                 message=message,
