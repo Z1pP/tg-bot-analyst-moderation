@@ -1,8 +1,16 @@
 from .dialogs import (
+    AdminLogsDialogs,
     AmnestyUserDialogs,
     BanUserDialogs,
     BlockMenuDialogs,
+    CalendarDialogs,
+    ChatDialogs,
+    CommonDialogs,
+    MenuDialogs,
     MessageManagerDialogs,
+    ReportDialogs,
+    TemplateDialogs,
+    UserDialogs,
     UserTrackingDialogs,
     WarnUserDialogs,
 )
@@ -138,6 +146,22 @@ class Dialog:
     AmnestyUser = AmnestyUserDialogs
     # Message Management
     MessageManager = MessageManagerDialogs
+    # Reports
+    Report = ReportDialogs
+    # Users
+    User = UserDialogs
+    # Calendar
+    Calendar = CalendarDialogs
+    # Menu
+    Menu = MenuDialogs
+    # Chats
+    Chat = ChatDialogs
+    # Templates
+    Template = TemplateDialogs
+    # Admin Logs
+    AdminLogs = AdminLogsDialogs
+    # Common
+    Common = CommonDialogs
 
     MENU_TEXT = """
     <b>Привет, {username}!</b> ✨
