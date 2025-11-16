@@ -19,7 +19,7 @@ async def users_menu_handler(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
     await state.clear()
 
-    message_text = "Выбери действие:"
+    message_text = Dialog.User.SELECT_ACTION
 
     await callback.message.edit_text(
         text=message_text,
