@@ -4,6 +4,7 @@ from aiogram import F, Router, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
+from constants import Dialog
 from constants.pagination import DEFAULT_PAGE_SIZE
 from container import container
 from keyboards.inline.admin_logs import (
@@ -32,14 +33,13 @@ async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
 
         if not admins:
             await message.answer(
-                "📋 Логи действий администраторов\n\nЛоги отсутствуют.",
+                f"{Dialog.AdminLogs.ADMIN_LOGS_TITLE}\n\n{Dialog.AdminLogs.NO_LOGS}",
                 reply_markup=admin_menu_kb(),
             )
             return
 
         # Формируем текст сообщения
-        text = "📋 <b>Выберите администратора для просмотра логов</b>\n\n"
-        text += "Или выберите <b>Все администраторы</b> для просмотра всех логов."
+        text = Dialog.AdminLogs.SELECT_ADMIN
 
         await message.answer(
             text,
@@ -51,7 +51,7 @@ async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
             "Ошибка при получении списка администраторов: %s", e, exc_info=True
         )
         await message.answer(
-            "⚠️ Произошла ошибка при получении списка администраторов.",
+            Dialog.AdminLogs.ERROR_GET_ADMINS,
             reply_markup=admin_menu_kb(),
         )
 
@@ -78,7 +78,7 @@ async def admin_logs_select_handler(
             logs, total_count = await log_repository.get_logs_paginated(
                 page=1, limit=DEFAULT_PAGE_SIZE
             )
-            header_text = "📋 <b>Логи действий всех администраторов</b>\n"
+            header_text = Dialog.AdminLogs.ALL_ADMINS_LOGS
         else:
             # Показываем логи конкретного администратора
             admin_id = int(admin_id_str)
@@ -92,18 +92,18 @@ async def admin_logs_select_handler(
                     if logs[0].admin.username
                     else f"ID:{logs[0].admin.tg_id}"
                 )
-                header_text = (
-                    f"📋 <b>Логи действий администратора @{admin_username}</b>\n"
+                header_text = Dialog.AdminLogs.ADMIN_LOGS_FORMAT.format(
+                    username=admin_username
                 )
             else:
                 admin_username = "неизвестен"
-                header_text = (
-                    f"📋 <b>Логи действий администратора @{admin_username}</b>\n"
+                header_text = Dialog.AdminLogs.ADMIN_LOGS_FORMAT.format(
+                    username=admin_username
                 )
 
         if not logs:
             await callback.message.edit_text(
-                f"{header_text}\nЛоги отсутствуют.",
+                f"{header_text}\n{Dialog.AdminLogs.NO_LOGS}",
                 reply_markup=admin_logs_ikb(
                     logs=logs,
                     page=1,
@@ -146,7 +146,7 @@ async def admin_logs_select_handler(
 
     except Exception as e:
         logger.error("Ошибка при получении логов администратора: %s", e, exc_info=True)
-        await callback.answer("⚠️ Произошла ошибка при получении логов", show_alert=True)
+        await callback.answer(Dialog.AdminLogs.ERROR_GET_LOGS, show_alert=True)
 
 
 @router.callback_query(F.data == "admin_logs_select_admin")
@@ -166,13 +166,12 @@ async def admin_logs_select_admin_handler(
 
         if not admins:
             await callback.message.edit_text(
-                "📋 Логи действий администраторов\n\nЛоги отсутствуют.",
+                f"{Dialog.AdminLogs.ADMIN_LOGS_TITLE}\n\n{Dialog.AdminLogs.NO_LOGS}",
             )
             return
 
         # Формируем текст сообщения
-        text = "📋 <b>Выберите администратора для просмотра логов</b>\n\n"
-        text += "Или выберите <b>Все администраторы</b> для просмотра всех логов."
+        text = Dialog.AdminLogs.SELECT_ADMIN
 
         from keyboards.inline.admin_logs import admin_select_ikb
 
@@ -186,6 +185,6 @@ async def admin_logs_select_admin_handler(
             "Ошибка при получении списка администраторов: %s", e, exc_info=True
         )
         await callback.answer(
-            "⚠️ Произошла ошибка при получении списка администраторов",
+            Dialog.AdminLogs.ERROR_GET_ADMINS_ALERT,
             show_alert=True,
         )
