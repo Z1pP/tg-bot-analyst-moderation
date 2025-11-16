@@ -6,7 +6,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from keyboards.inline import CalendarKeyboard
-from keyboards.reply import get_time_period_kb
+from keyboards.inline.time_period import (
+    time_period_ikb_all_users,
+    time_period_ikb_chat,
+    time_period_ikb_single_user,
+)
 from services.time_service import TimeZoneService
 from states import AllUsersReportStates, ChatStateManager, SingleUserReportStates
 from utils.exception_handler import handle_exception
@@ -110,13 +114,24 @@ async def handle_reset(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
 
-async def handle_cancel(callback: CallbackQuery) -> None:
+async def handle_cancel(callback: CallbackQuery, state: FSMContext) -> None:
     """Отмена выбора периода."""
-    await callback.message.delete()
-    await callback.bot.send_message(
-        chat_id=callback.message.chat.id,
-        text="Выбор периода отменён",
-        reply_markup=get_time_period_kb(),
+
+    current_state = await state.get_state()
+
+    # Выбираем клавиатуру в зависимости от состояния
+    if current_state == SingleUserReportStates.selecting_custom_period:
+        keyboard = time_period_ikb_single_user()
+    elif current_state == AllUsersReportStates.selecting_custom_period:
+        keyboard = time_period_ikb_all_users()
+    elif current_state == ChatStateManager.selecting_custom_period:
+        keyboard = time_period_ikb_chat()
+    else:
+        keyboard = time_period_ikb_single_user()
+
+    await callback.message.edit_text(
+        text="Выберите период для отчета",
+        reply_markup=keyboard,
     )
 
 
@@ -135,15 +150,15 @@ async def handle_confirm_action(
     current_state = await state.get_state()
     logger.info("Подтверждение выбора дат в state: %s", current_state)
 
-    await callback.message.delete()
-    temp_message = await callback.bot.send_message(
-        chat_id=callback.message.chat.id,
-        text="⏳ Составляю отчёт...",
-    )
-
     # В зависимости от state вызываем нужную функцию генерации отчета
     if current_state == ChatStateManager.selecting_custom_period:
         from .single_chat_report import generate_and_send_report
+
+        await callback.message.delete()
+        temp_message = await callback.bot.send_message(
+            chat_id=callback.message.chat.id,
+            text="⏳ Составляю отчёт...",
+        )
 
         chat_id = user_data.get("chat_id")
         if not chat_id:
@@ -171,40 +186,36 @@ async def handle_confirm_action(
         user_id = user_data.get("user_id")
         if not user_id:
             logger.error("Отсутствует user_id при confirm")
-            await temp_message.delete()
+            await callback.answer(
+                "❌ Ошибка: выберите пользователя заново", show_alert=True
+            )
             return
 
+        # Редактируем сообщение с календарем
+        await callback.message.edit_text(text="⏳ Составляю отчёт...")
+
         await generate_and_send_report(
-            message=temp_message,
+            callback_or_message=callback,
             state=state,
             start_date=cal_start,
             end_date=cal_end,
             user_id=user_id,
             admin_tg_id=callback.from_user.id,
         )
-        await log_and_set_state(
-            message=temp_message,
-            state=state,
-            new_state=SingleUserReportStates.selecting_period,
-        )
 
     elif current_state == AllUsersReportStates.selecting_custom_period:
         from .all_users_report import generate_and_send_report
 
+        # Редактируем сообщение с календарем
+        await callback.message.edit_text(text="⏳ Составляю отчёт...")
+
         await generate_and_send_report(
-            message=temp_message,
+            callback_or_message=callback,
             state=state,
             start_date=cal_start,
             end_date=cal_end,
-            user_tg_id=callback.from_user.id,
+            admin_tg_id=callback.from_user.id,
         )
-        await log_and_set_state(
-            message=temp_message,
-            state=state,
-            new_state=AllUsersReportStates.selecting_period,
-        )
-
-    await temp_message.delete()
 
 
 @router.callback_query(F.data.startswith("cal_"))
@@ -237,7 +248,7 @@ async def calendar_callback_handler(callback: CallbackQuery, state: FSMContext) 
             await handle_reset(callback, state)
 
         elif action == "cancel":
-            await handle_cancel(callback)
+            await handle_cancel(callback, state)
 
         elif action == "confirm":
             await handle_confirm_action(callback, state, cal_start, cal_end, user_data)
