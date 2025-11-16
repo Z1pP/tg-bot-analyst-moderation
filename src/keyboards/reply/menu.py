@@ -41,24 +41,6 @@ def tamplates_menu_kb():
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 
-def user_menu_kb():
-    buttons = [
-        [
-            KeyboardButton(text=KbCommands.GET_STATISTICS),
-        ],
-        [
-            KeyboardButton(text=KbCommands.ADD_USER),
-            KeyboardButton(text=KbCommands.REMOVE_USER),
-        ],
-        [
-            KeyboardButton(text=KbCommands.MENU),
-        ],
-    ]
-    return ReplyKeyboardMarkup(
-        keyboard=buttons, resize_keyboard=True, one_time_keyboard=True
-    )
-
-
 def chat_menu_kb():
     buttons = [
         [
