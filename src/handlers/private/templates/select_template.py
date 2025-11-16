@@ -11,6 +11,7 @@ from aiogram.types import (
     Message,
 )
 
+from constants import Dialog
 from container import container
 from keyboards.inline.message_actions import hide_album_ikb, hide_template_ikb
 from models import MessageTemplate, TemplateMedia
@@ -59,7 +60,7 @@ async def send_template_handler(
     template = await template_repo.get_template_by_id(template_id=template_id)
 
     if not template:
-        await message.reply("❌ Шаблон не найден")
+        await message.reply(Dialog.Template.TEMPLATE_NOT_FOUND)
         return
 
     media_items = template.media_items
@@ -90,7 +91,7 @@ async def send_template_handler(
             message_ids = [msg.message_id for msg in sent_messages]
             await bot.send_message(
                 chat_id=message.chat.id,
-                text="🗑 Скрыть альбом",
+                text=Dialog.Template.HIDE_ALBUM,
                 reply_markup=hide_album_ikb(message_ids),
             )
 
@@ -208,7 +209,7 @@ async def send_media_group(
             logger.error(f"Ошибка при отправке медиа-группы: {e}")
             sent_message = await bot.send_message(
                 chat_id=message.chat.id,
-                text=f"❌ Медиа недоступно. Текст шаблона:\n\n{template.content}",
+                text=Dialog.Template.MEDIA_UNAVAILABLE.format(content=template.content),
                 parse_mode="HTML",
             )
             return [sent_message]
@@ -230,7 +231,7 @@ async def hide_template_handler(callback: CallbackQuery) -> None:
                 await callback.message.delete()
             except Exception:
                 pass
-        await callback.answer("✅ Сообщение скрыто")
+        await callback.answer(Dialog.Template.MESSAGE_HIDDEN)
     except Exception as e:
         logger.error(f"Ошибка при скрытии шаблона: {e}")
         # Пытаемся отредактировать сообщение с ошибкой
@@ -239,15 +240,15 @@ async def hide_template_handler(callback: CallbackQuery) -> None:
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
-                text="❌ Ошибка при скрытии сообщения",
+                text=Dialog.Template.ERROR_HIDE_MESSAGE,
             )
             if not success:
                 # Если не удалось отредактировать, показываем alert
                 await callback.answer(
-                    "❌ Ошибка при скрытии сообщения", show_alert=True
+                    Dialog.Template.ERROR_HIDE_MESSAGE, show_alert=True
                 )
         else:
-            await callback.answer("❌ Ошибка при скрытии сообщения", show_alert=True)
+            await callback.answer(Dialog.Template.ERROR_HIDE_MESSAGE, show_alert=True)
 
 
 @router.callback_query(F.data.startswith("hide_album_"))
@@ -275,7 +276,7 @@ async def hide_album_handler(callback: CallbackQuery) -> None:
             except Exception:
                 pass
 
-        await callback.answer("✅ Альбом скрыт")
+        await callback.answer(Dialog.Template.ALBUM_HIDDEN)
     except Exception as e:
         logger.error(f"Ошибка при скрытии альбома: {e}")
         # Пытаемся отредактировать сообщение с ошибкой
@@ -284,10 +285,10 @@ async def hide_album_handler(callback: CallbackQuery) -> None:
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
-                text="❌ Ошибка при скрытии альбома",
+                text=Dialog.Template.ERROR_HIDE_ALBUM,
             )
             if not success:
                 # Если не удалось отредактировать, показываем alert
-                await callback.answer("❌ Ошибка при скрытии альбома", show_alert=True)
+                await callback.answer(Dialog.Template.ERROR_HIDE_ALBUM, show_alert=True)
         else:
-            await callback.answer("❌ Ошибка при скрытии альбома", show_alert=True)
+            await callback.answer(Dialog.Template.ERROR_HIDE_ALBUM, show_alert=True)
