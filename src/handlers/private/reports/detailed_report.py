@@ -3,6 +3,7 @@ import logging
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
+from constants import Dialog
 from container import container
 from dto.report import AllUsersReportDTO, ChatReportDTO
 from keyboards.inline.report import hide_details_ikb
@@ -53,7 +54,7 @@ async def detailed_report_handler(
         else:
             await send_html_message_with_kb(
                 message=callback.message,
-                text="Не удалось получить данные для отчета",
+                text=Dialog.Report.ERROR_GET_REPORT_DATA,
             )
 
     except Exception as e:
@@ -98,7 +99,7 @@ async def _handle_all_users_details(callback: types.CallbackQuery, report_dto) -
     if not isinstance(report_dto, AllUsersReportDTO):
         await send_html_message_with_kb(
             message=callback.message,
-            text="Ошибка: неверный тип данных для детализации",
+            text=Dialog.Report.ERROR_INVALID_REPORT_DATA_TYPE,
         )
         return
 
@@ -136,7 +137,7 @@ async def _handle_chat_details(callback: types.CallbackQuery, report_dto) -> Non
     if not isinstance(report_dto, ChatReportDTO):
         await send_html_message_with_kb(
             message=callback.message,
-            text="Ошибка: неверный тип данных для детализации",
+            text=Dialog.Report.ERROR_INVALID_REPORT_DATA_TYPE,
         )
         return
 
@@ -175,7 +176,9 @@ async def hide_details_handler(callback: types.CallbackQuery) -> None:
         message_ids = [int(msg_id) for msg_id in message_ids_str.split(",") if msg_id]
 
         if not message_ids:
-            await callback.answer("❌ Ошибка: не найдены ID сообщений", show_alert=True)
+            await callback.answer(
+                Dialog.Report.ERROR_MESSAGE_IDS_NOT_FOUND, show_alert=True
+            )
             return
 
         # Удаляем все сообщения детализации
@@ -198,9 +201,9 @@ async def hide_details_handler(callback: types.CallbackQuery) -> None:
                 pass
 
         if deleted_count > 0:
-            await callback.answer("✅ Детализация скрыта")
+            await callback.answer(Dialog.Report.DETAILS_HIDDEN)
         else:
-            await callback.answer("❌ Не удалось скрыть детализацию", show_alert=True)
+            await callback.answer(Dialog.Report.ERROR_HIDE_DETAILS, show_alert=True)
 
     except Exception as e:
         logger.error(f"Ошибка при скрытии детализации: {e}", exc_info=True)
@@ -210,12 +213,13 @@ async def hide_details_handler(callback: types.CallbackQuery) -> None:
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
-                text="❌ Ошибка при скрытии детализации",
+                text=Dialog.Report.ERROR_HIDE_DETAILS_FAILED,
             )
             if not success:
                 await callback.answer(
-                    "❌ Ошибка при скрытии детализации", show_alert=True
+                    Dialog.Report.ERROR_HIDE_DETAILS_FAILED, show_alert=True
                 )
         else:
-            await callback.answer("❌ Ошибка при скрытии детализации", show_alert=True)
-
+            await callback.answer(
+                Dialog.Report.ERROR_HIDE_DETAILS_FAILED, show_alert=True
+            )
