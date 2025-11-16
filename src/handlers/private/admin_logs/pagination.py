@@ -3,6 +3,7 @@ import logging
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
+from constants import Dialog
 from constants.pagination import DEFAULT_PAGE_SIZE
 from container import container
 from keyboards.inline.admin_logs import admin_logs_ikb, format_action_type
@@ -95,7 +96,7 @@ async def prev_admin_logs_page_handler(
         logger.error(
             "Ошибка при переходе на предыдущую страницу логов: %s", e, exc_info=True
         )
-        await callback.answer("⚠️ Ошибка при загрузке страницы", show_alert=True)
+        await callback.answer(Dialog.AdminLogs.ERROR_LOAD_PAGE, show_alert=True)
 
 
 @router.callback_query(F.data.startswith("next_admin_logs_page__"))
@@ -114,7 +115,7 @@ async def next_admin_logs_page_handler(
 
         logs, total_count = await _get_logs_page(next_page, admin_id=admin_id)
         if not logs:
-            await callback.answer("Это последняя страница", show_alert=True)
+            await callback.answer(Dialog.AdminLogs.LAST_PAGE, show_alert=True)
             return
 
         text = await _format_logs_message(logs, admin_id=admin_id)
@@ -133,7 +134,7 @@ async def next_admin_logs_page_handler(
         logger.error(
             "Ошибка при переходе на следующую страницу логов: %s", e, exc_info=True
         )
-        await callback.answer("⚠️ Ошибка при загрузке страницы", show_alert=True)
+        await callback.answer(Dialog.AdminLogs.ERROR_LOAD_PAGE, show_alert=True)
 
 
 @router.callback_query(F.data == "admin_logs_page_info")
