@@ -1,13 +1,11 @@
 import logging
 from datetime import datetime
-from typing import Union
 
 from aiogram import F, Router
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery
 
-from constants import KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import SingleUserReportDTO
@@ -15,14 +13,13 @@ from keyboards.inline import CalendarKeyboard
 from keyboards.inline.report import order_details_kb_single_user
 from keyboards.inline.time_period import time_period_ikb_single_user
 from keyboards.inline.users import user_actions_ikb
-from keyboards.reply import get_time_period_kb
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from states import SingleUserReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.report import GetSingleUserReportUseCase
 from utils.exception_handler import handle_exception
-from utils.send_message import safe_edit_message, send_html_message_with_kb
+from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
@@ -143,8 +140,14 @@ async def back_to_period_selection_handler(
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
-                text="❌ У вас нет отслеживаемых чатов.\n"
-                "Добавьте чаты в отслеживание для составления отчета.",
+                text=(
+                    "❌ У вас нет отслеживаемых чатов.\n\n"
+                    "📋 <b>Как добавить чат в отслеживание:</b>\n"
+                    "1️⃣ Добавьте бота в нужный чат\n"
+                    "2️⃣ Дайте боту права администратора\n"
+                    "3️⃣ Напишите команду <code>/track</code> в чате\n\n"
+                    "После добавления чата вы сможете создавать отчеты."
+                ),
             )
             return
 
@@ -196,8 +199,12 @@ async def get_user_report_callback_handler(
 
         if not user_chats_dto.chats:
             await callback.message.edit_text(
-                "❌ У вас нет отслеживаемых чатов.\n"
-                "Добавьте чаты в отслеживание для составления отчета."
+                "❌ У вас нет отслеживаемых чатов.\n\n"
+                "📋 <b>Как добавить чат в отслеживание:</b>\n"
+                "1️⃣ Добавьте бота в нужный чат\n"
+                "2️⃣ Дайте боту права администратора\n"
+                "3️⃣ Напишите команду <code>/track</code> в чате\n\n"
+                "После добавления чата вы сможете создавать отчеты."
             )
             return
 
@@ -213,64 +220,6 @@ async def get_user_report_callback_handler(
         )
     except Exception as e:
         await handle_exception(callback.message, e, "get_user_report_callback_handler")
-
-
-@router.message(
-    F.text == KbCommands.GET_REPORT,
-    SingleUserReportStates.selected_single_user,
-)
-async def single_user_report_handler(message: Message, state: FSMContext) -> None:
-    """Обработчик запроса на создание отчета о времени ответа."""
-    try:
-        data = await state.get_data()
-        user_id = data.get("user_id")
-
-        if not user_id:
-            logger.warning(
-                "Отсутствует user_id в state для пользователя %s",
-                message.from_user.username,
-            )
-            await message.answer("❌ Ошибка: выберите пользователя заново")
-            return
-
-        logger.info(
-            "Пользователь %s запросил отчет по user_id %s",
-            message.from_user.username,
-            user_id,
-        )
-
-        # Проверяем наличие отслеживаемых чатов
-        tracked_chats_usecase: GetUserTrackedChatsUseCase = container.resolve(
-            GetUserTrackedChatsUseCase
-        )
-        user_chats_dto = await tracked_chats_usecase.execute(
-            tg_id=str(message.from_user.id)
-        )
-
-        if not user_chats_dto.chats:
-            await message.answer(
-                "❌ У вас нет отслеживаемых чатов.\n"
-                "Добавьте чаты в отслеживание для составления отчета."
-            )
-            logger.warning(
-                "Админ %s пытается получить отчет без отслеживаемых чатов",
-                message.from_user.username,
-            )
-            return
-
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=SingleUserReportStates.selecting_period,
-        )
-
-        await send_html_message_with_kb(
-            message=message,
-            text="Выберите период для отчета",
-            reply_markup=get_time_period_kb(),
-        )
-    except Exception as e:
-        await handle_exception(message, e, "single_user_report_handler")
 
 
 @router.callback_query(
@@ -329,7 +278,7 @@ async def process_period_selection_callback(
         )
 
         await generate_and_send_report(
-            callback_or_message=callback,
+            callback=callback,
             state=state,
             user_id=user_id,
             start_date=start_date,
@@ -340,71 +289,8 @@ async def process_period_selection_callback(
         await handle_exception(callback.message, e, "process_period_selection_callback")
 
 
-@router.message(
-    SingleUserReportStates.selecting_period,
-    F.text.in_(TimePeriod.get_all_periods()),
-)
-async def process_period_selection(message: Message, state: FSMContext) -> None:
-    """Обрабатывает выбор периода для отчета о времени ответа (для совместимости с текстовыми сообщениями)."""
-    try:
-        user_data = await state.get_data()
-        user_id = user_data.get("user_id")
-
-        logger.info(
-            "Выбран период для user_id %s: %s",
-            user_id,
-            message.text,
-        )
-
-        if not user_id:
-            logger.warning("Отсутствует user_id при выборе периода")
-            await message.answer("❌ Ошибка: выберите пользователя заново")
-            return
-
-        if message.text == TimePeriod.CUSTOM.value:
-            await log_and_set_state(
-                message=message,
-                state=state,
-                new_state=SingleUserReportStates.selecting_custom_period,
-            )
-
-            # Показываем календарь
-            now = TimeZoneService.now()
-            await state.update_data(cal_start_date=None, cal_end_date=None)
-
-            calendar_kb = CalendarKeyboard.create_calendar(
-                year=now.year,
-                month=now.month,
-            )
-
-            await message.answer(
-                text="📅 Выберите начальную дату диапазона:",
-                reply_markup=calendar_kb,
-            )
-            return
-
-        start_date, end_date = TimePeriod.to_datetime(period=message.text)
-        logger.info(
-            "Генерация отчета по user_id %s за период: %s - %s",
-            user_id,
-            start_date,
-            end_date,
-        )
-
-        await generate_and_send_report(
-            message=message,
-            state=state,
-            user_id=user_id,
-            start_date=start_date,
-            end_date=end_date,
-            selected_period=message.text,
-        )
-    except Exception as e:
-        await handle_exception(message, e, "process_period_selection")
-
-
 async def generate_and_send_report(
-    callback_or_message: Union[CallbackQuery, Message],
+    callback: CallbackQuery,
     state: FSMContext,
     user_id: int,
     start_date: datetime,
@@ -414,17 +300,6 @@ async def generate_and_send_report(
 ) -> None:
     """Генерирует и отправляет отчет."""
     try:
-        # Определяем, что передано - CallbackQuery или Message
-        is_callback = isinstance(callback_or_message, CallbackQuery)
-        if is_callback:
-            callback = callback_or_message
-            message = callback.message
-            user_id_for_dto = callback.from_user.id
-        else:
-            message = callback_or_message
-            callback = None
-            user_id_for_dto = message.from_user.id
-
         logger.info(
             "Начало генерации отчета по user_id %s за период %s - %s",
             user_id,
@@ -438,7 +313,7 @@ async def generate_and_send_report(
 
         report_dto = SingleUserReportDTO(
             user_id=user_id,
-            admin_tg_id=str(admin_tg_id or user_id_for_dto),
+            admin_tg_id=str(admin_tg_id or callback.from_user.id),
             start_date=adjusted_start,
             end_date=adjusted_end,
             selected_period=selected_period,
@@ -461,7 +336,7 @@ async def generate_and_send_report(
             await state.update_data(report_dto=report_dto)
 
         await log_and_set_state(
-            message=message,
+            message=callback.message,
             state=state,
             new_state=SingleUserReportStates.selecting_period,
         )
@@ -469,24 +344,14 @@ async def generate_and_send_report(
         # Объединяем все части отчета в один текст
         full_report = "\n\n".join(report_parts)
 
-        # Используем edit_text для callback или send_message для обычного сообщения
-        if is_callback:
-            await callback.message.edit_text(
-                text=full_report,
-                parse_mode=ParseMode.HTML,
-                reply_markup=order_details_kb_single_user(
-                    show_details=not is_single_day,
-                ),
-            )
-            await callback.answer()
-        else:
-            await send_html_message_with_kb(
-                message=message,
-                text=full_report,
-                reply_markup=order_details_kb_single_user(
-                    show_details=not is_single_day,
-                ),
-            )
+        await callback.message.edit_text(
+            text=full_report,
+            parse_mode=ParseMode.HTML,
+            reply_markup=order_details_kb_single_user(
+                show_details=not is_single_day,
+            ),
+        )
+        await callback.answer()
 
         logger.info("Отчет по user_id %s успешно отправлен", user_id)
     except Exception as e:
@@ -496,9 +361,4 @@ async def generate_and_send_report(
             e,
             exc_info=True,
         )
-        target = (
-            callback_or_message.message
-            if isinstance(callback_or_message, CallbackQuery)
-            else callback_or_message
-        )
-        await handle_exception(target, e, "generate_and_send_report")
+        await handle_exception(callback.message, e, "generate_and_send_report")
