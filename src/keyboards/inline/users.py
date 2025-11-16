@@ -196,3 +196,63 @@ def conf_remove_user_kb() -> InlineKeyboardMarkup:
         width=2,
     )
     return builder.as_markup()
+
+
+def user_actions_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура действий с выбранным пользователем"""
+    from constants import KbCommands
+
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.GET_REPORT,
+            callback_data="get_user_report",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.SELECT_USER,
+            callback_data="select_user",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
+            callback_data="users_menu",
+        )
+    )
+
+    return builder.as_markup()
+
+
+def all_users_actions_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура действий со всеми пользователями"""
+    from constants import KbCommands
+
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.GET_REPORT,
+            callback_data="get_all_users_report",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.SELECT_USER,
+            callback_data="select_user",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
+            callback_data="users_menu",
+        )
+    )
+
+    return builder.as_markup()
