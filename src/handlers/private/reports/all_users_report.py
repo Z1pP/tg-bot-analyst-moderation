@@ -6,6 +6,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants import Dialog
 from constants.period import TimePeriod
 from container import container
 from dto.report import AllUsersReportDTO
@@ -48,7 +49,7 @@ async def back_from_period_all_users_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="Выбери действие:",
+            text=Dialog.Report.SELECT_ACTION_COLON,
             reply_markup=all_users_actions_ikb(),
         )
     except Exception as e:
@@ -106,8 +107,7 @@ async def back_to_period_selection_handler(
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
-                text="❌ У вас нет отслеживаемых чатов.\n"
-                "Добавьте чаты в отслеживание для составления отчета.",
+                text=Dialog.Report.NO_TRACKED_CHATS_FOR_REPORT,
             )
             logger.warning(
                 "Админ %s пытается получить отчет без отслеживаемых чатов",
@@ -125,7 +125,7 @@ async def back_to_period_selection_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="Выберите период для отчета:",
+            text=Dialog.Report.SELECT_PERIOD_COLON,
             reply_markup=time_period_ikb_all_users(),
         )
     except Exception as e:
@@ -157,12 +157,7 @@ async def get_all_users_report_callback_handler(
 
         if not user_chats_dto.chats:
             await callback.message.edit_text(
-                "❌ У вас нет отслеживаемых чатов.\n\n"
-                "📋 <b>Как добавить чат в отслеживание:</b>\n"
-                "1️⃣ Добавьте бота в нужный чат\n"
-                "2️⃣ Дайте боту права администратора\n"
-                "3️⃣ Напишите команду <code>/track</code> в чате\n\n"
-                "После добавления чата вы сможете создавать отчеты."
+                Dialog.Report.NO_TRACKED_CHATS_WITH_INSTRUCTIONS
             )
             logger.warning(
                 "Админ %s пытается получить отчет без отслеживаемых чатов",
@@ -177,7 +172,7 @@ async def get_all_users_report_callback_handler(
         )
 
         await callback.message.edit_text(
-            text="Выберите период для отчета:",
+            text=Dialog.Report.SELECT_PERIOD_COLON,
             reply_markup=time_period_ikb_all_users(),
         )
     except Exception as e:
@@ -217,7 +212,7 @@ async def process_period_selection_callback(
             )
 
             await callback.message.edit_text(
-                text="📅 Выберите начальную дату диапазона:",
+                text=Dialog.Report.SELECT_START_DATE,
                 reply_markup=calendar_kb,
             )
             return
