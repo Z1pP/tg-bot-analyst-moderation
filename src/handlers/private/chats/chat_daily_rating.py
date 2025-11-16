@@ -5,7 +5,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from constants import KbCommands
+from constants import Dialog, KbCommands
 from container import container
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from utils.exception_handler import handle_exception
@@ -25,7 +25,7 @@ async def chat_daily_rating_handler(message: Message, state: FSMContext) -> None
         chat_id = data.get("chat_id")
 
         if not chat_id:
-            await message.answer("❌ Чат не выбран. Сначала выберите чат.")
+            await message.answer(Dialog.Chat.CHAT_NOT_SELECTED)
             return
 
         # Получаем рейтинг за сегодня
