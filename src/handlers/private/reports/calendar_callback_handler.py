@@ -5,6 +5,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants import Dialog
 from keyboards.inline import CalendarKeyboard
 from keyboards.inline.time_period import (
     time_period_ikb_all_users,
@@ -47,9 +48,9 @@ async def handle_navigation(
         end_date=cal_end,
     )
 
-    text = "📅 Выберите начальную дату диапазона:"
+    text = Dialog.Calendar.SELECT_START_DATE
     if cal_start:
-        text = "📅 Выберите конечную дату диапазона:"
+        text = Dialog.Calendar.SELECT_END_DATE
 
     await callback.message.edit_text(text=text, reply_markup=calendar_kb)
 
@@ -76,7 +77,7 @@ async def handle_day_selection(
         )
 
         await callback.message.edit_text(
-            text="📅 Выберите конечную дату диапазона:",
+            text=Dialog.Calendar.SELECT_END_DATE,
             reply_markup=calendar_kb,
         )
     else:
@@ -93,7 +94,10 @@ async def handle_day_selection(
         )
 
         await callback.message.edit_text(
-            text=f"✅ Выбран диапазон: {cal_start.strftime('%d.%m.%Y')} - {selected_date.strftime('%d.%m.%Y')}",
+            text=Dialog.Report.DATE_RANGE_SELECTED.format(
+                start_date=cal_start.strftime("%d.%m.%Y"),
+                end_date=selected_date.strftime("%d.%m.%Y"),
+            ),
             reply_markup=calendar_kb,
         )
 
@@ -109,7 +113,7 @@ async def handle_reset(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
     await callback.message.edit_text(
-        text="📅 Выберите начальную дату диапазона:",
+        text=Dialog.Calendar.SELECT_START_DATE,
         reply_markup=calendar_kb,
     )
 
@@ -130,7 +134,7 @@ async def handle_cancel(callback: CallbackQuery, state: FSMContext) -> None:
         keyboard = time_period_ikb_single_user()
 
     await callback.message.edit_text(
-        text="Выберите период для отчета",
+        text=Dialog.Calendar.SELECT_PERIOD,
         reply_markup=keyboard,
     )
 
@@ -144,7 +148,7 @@ async def handle_confirm_action(
 ) -> None:
     """Обработка подтверждения выбора дат - вызов генерации отчета."""
     if not (cal_start and cal_end):
-        await callback.answer("⚠️ Выберите обе даты", show_alert=True)
+        await callback.answer(Dialog.Calendar.SELECT_BOTH_DATES, show_alert=True)
         return
 
     current_state = await state.get_state()
@@ -157,7 +161,7 @@ async def handle_confirm_action(
         await callback.message.delete()
         temp_message = await callback.bot.send_message(
             chat_id=callback.message.chat.id,
-            text="⏳ Составляю отчёт...",
+            text=Dialog.Calendar.GENERATING_REPORT,
         )
 
         chat_id = user_data.get("chat_id")
@@ -187,12 +191,12 @@ async def handle_confirm_action(
         if not user_id:
             logger.error("Отсутствует user_id при confirm")
             await callback.answer(
-                "❌ Ошибка: выберите пользователя заново", show_alert=True
+                Dialog.Report.ERROR_SELECT_USER_AGAIN, show_alert=True
             )
             return
 
         # Редактируем сообщение с календарем
-        await callback.message.edit_text(text="⏳ Составляю отчёт...")
+        await callback.message.edit_text(text=Dialog.Calendar.GENERATING_REPORT)
 
         await generate_and_send_report(
             callback=callback,
@@ -207,7 +211,7 @@ async def handle_confirm_action(
         from .all_users_report import generate_and_send_report
 
         # Редактируем сообщение с календарем
-        await callback.message.edit_text(text="⏳ Составляю отчёт...")
+        await callback.message.edit_text(text=Dialog.Calendar.GENERATING_REPORT)
 
         await generate_and_send_report(
             callback=callback,
