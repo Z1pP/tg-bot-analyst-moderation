@@ -195,11 +195,11 @@ async def handle_confirm_action(
         await callback.message.edit_text(text="⏳ Составляю отчёт...")
 
         await generate_and_send_report(
-            callback_or_message=callback,
+            callback=callback,
             state=state,
+            user_id=user_id,
             start_date=cal_start,
             end_date=cal_end,
-            user_id=user_id,
             admin_tg_id=callback.from_user.id,
         )
 
@@ -210,7 +210,7 @@ async def handle_confirm_action(
         await callback.message.edit_text(text="⏳ Составляю отчёт...")
 
         await generate_and_send_report(
-            callback_or_message=callback,
+            callback=callback,
             state=state,
             start_date=cal_start,
             end_date=cal_end,
