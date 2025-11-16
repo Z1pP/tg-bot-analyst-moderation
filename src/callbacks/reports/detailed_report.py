@@ -5,13 +5,18 @@ from aiogram.fsm.context import FSMContext
 
 from container import container
 from dto.report import AllUsersReportDTO, ChatReportDTO
+from keyboards.inline.report import hide_details_ikb
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
     GetBreaksDetailReportUseCase,
     GetChatBreaksDetailReportUseCase,
 )
 from utils.exception_handler import handle_exception
-from utils.send_message import send_html_message_with_kb
+from utils.send_message import (
+    safe_edit_message,
+    safe_edit_message_reply_markup,
+    send_html_message_with_kb,
+)
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -64,10 +69,22 @@ async def _handle_single_user_details(
     )
     report_parts = await usecase.execute(report_dto)
 
+    message_ids = []
     for part in report_parts:
-        await send_html_message_with_kb(
+        sent_message = await send_html_message_with_kb(
             message=callback.message,
             text=part,
+        )
+        message_ids.append(sent_message.message_id)
+
+    # Добавляем кнопку "Скрыть детализацию" к последнему сообщению
+    if message_ids:
+        last_message_id = message_ids[-1]
+        await safe_edit_message_reply_markup(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=last_message_id,
+            reply_markup=hide_details_ikb(message_ids),
         )
 
     logger.info(
@@ -90,10 +107,22 @@ async def _handle_all_users_details(callback: types.CallbackQuery, report_dto) -
     )
     report_parts = await usecase.execute(report_dto)
 
+    message_ids = []
     for part in report_parts:
-        await send_html_message_with_kb(
+        sent_message = await send_html_message_with_kb(
             message=callback.message,
             text=part,
+        )
+        message_ids.append(sent_message.message_id)
+
+    # Добавляем кнопку "Скрыть детализацию" к последнему сообщению
+    if message_ids:
+        last_message_id = message_ids[-1]
+        await safe_edit_message_reply_markup(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=last_message_id,
+            reply_markup=hide_details_ikb(message_ids),
         )
 
     logger.info(
@@ -116,10 +145,76 @@ async def _handle_chat_details(callback: types.CallbackQuery, report_dto) -> Non
     )
     report_parts = await usecase.execute(report_dto)
 
+    message_ids = []
     for part in report_parts:
-        await send_html_message_with_kb(
+        sent_message = await send_html_message_with_kb(
             message=callback.message,
             text=part,
         )
+        message_ids.append(sent_message.message_id)
+
+    # Добавляем кнопку "Скрыть детализацию" к последнему сообщению
+    if message_ids:
+        last_message_id = message_ids[-1]
+        await safe_edit_message_reply_markup(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=last_message_id,
+            reply_markup=hide_details_ikb(message_ids),
+        )
 
     logger.info(f"Детализация перерывов отправлена для чата {report_dto.chat_id}")
+
+
+@router.callback_query(F.data.startswith("hide_details_"))
+async def hide_details_handler(callback: types.CallbackQuery) -> None:
+    """Обработчик скрытия детализации (одно или несколько сообщений)"""
+    try:
+        # Извлекаем ID сообщений из callback_data
+        message_ids_str = callback.data.replace("hide_details_", "")
+        message_ids = [int(msg_id) for msg_id in message_ids_str.split(",") if msg_id]
+
+        if not message_ids:
+            await callback.answer("❌ Ошибка: не найдены ID сообщений", show_alert=True)
+            return
+
+        # Удаляем все сообщения детализации
+        deleted_count = 0
+        for msg_id in message_ids:
+            try:
+                await callback.bot.delete_message(
+                    chat_id=callback.message.chat.id,
+                    message_id=msg_id,
+                )
+                deleted_count += 1
+            except Exception as e:
+                logger.warning(f"Не удалось удалить сообщение {msg_id}: {e}")
+
+        # Удаляем само сообщение с кнопкой, если оно существует
+        if callback.message:
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+
+        if deleted_count > 0:
+            await callback.answer("✅ Детализация скрыта")
+        else:
+            await callback.answer("❌ Не удалось скрыть детализацию", show_alert=True)
+
+    except Exception as e:
+        logger.error(f"Ошибка при скрытии детализации: {e}", exc_info=True)
+        # Пытаемся отредактировать сообщение с ошибкой
+        if callback.message:
+            success = await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="❌ Ошибка при скрытии детализации",
+            )
+            if not success:
+                await callback.answer(
+                    "❌ Ошибка при скрытии детализации", show_alert=True
+                )
+        else:
+            await callback.answer("❌ Ошибка при скрытии детализации", show_alert=True)
