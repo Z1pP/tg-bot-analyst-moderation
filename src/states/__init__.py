@@ -12,6 +12,7 @@ from .templates import TemplateStateManager
 from .user_states import (
     AllUsersReportStates,
     SingleUserReportStates,
+    UserStateManager,
     UsernameStates,
 )
 
@@ -20,6 +21,7 @@ __all__ = [
     "UsernameStates",
     "AllUsersReportStates",
     "SingleUserReportStates",
+    "UserStateManager",
     "TemplateStateManager",
     "MenuStates",
     "BanHammerStates",
