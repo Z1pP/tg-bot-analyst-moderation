@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    F.data == "get_chat_report",
+    F.data == CallbackData.Chat.GET_REPORT,
     ChatStateManager.selecting_chat,
 )
 async def chat_report_handler(callback: CallbackQuery, state: FSMContext) -> None:
@@ -146,25 +147,6 @@ async def process_period_selection_callback(
         end_date,
         chat_id,
         selected_period=period_text,
-    )
-
-
-async def select_chat_again(callback: CallbackQuery, state: FSMContext) -> None:
-    """Повторно запрашивает выбор чата."""
-    logger.info("Запрос повторного выбора чата")
-
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ChatStateManager.selecting_chat,
-    )
-
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=Dialog.Report.SELECT_CHAT_AGAIN,
-        reply_markup=chat_actions_ikb(),
     )
 
 
