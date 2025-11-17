@@ -55,6 +55,29 @@ async def handle_navigation(
     await callback.message.edit_text(text=text, reply_markup=calendar_kb)
 
 
+def _create_calendar_by_state(
+    current_state,
+    year: int,
+    month: int,
+    start_date: datetime,
+    end_date: datetime = None,
+):
+    """Создает календарь в зависимости от текущего состояния."""
+    if current_state == SingleUserReportStates.selecting_custom_period:
+        return CalendarKeyboard.create_calendar_single_user(
+            year=year, month=month, start_date=start_date, end_date=end_date
+        )
+    elif current_state == AllUsersReportStates.selecting_custom_period:
+        return CalendarKeyboard.create_calendar_all_users(
+            year=year, month=month, start_date=start_date, end_date=end_date
+        )
+    elif current_state == ChatStateManager.selecting_custom_period:
+        return CalendarKeyboard.create_calendar_chat(
+            year=year, month=month, start_date=start_date, end_date=end_date
+        )
+    return None
+
+
 async def handle_day_selection(
     callback: CallbackQuery,
     state: FSMContext,
@@ -67,10 +90,13 @@ async def handle_day_selection(
     """Обработка выбора дня в календаре."""
     selected_date = datetime(year, month, day)
 
-    if not cal_start or (cal_start and cal_end):
+    current_state = await state.get_state()
+
+    if not cal_start or cal_end:
         await state.update_data(cal_start_date=selected_date, cal_end_date=None)
 
-        calendar_kb = CalendarKeyboard.create_calendar(
+        calendar_kb = _create_calendar_by_state(
+            current_state=current_state,
             year=year,
             month=month,
             start_date=selected_date,
@@ -80,26 +106,28 @@ async def handle_day_selection(
             text=Dialog.Calendar.SELECT_END_DATE,
             reply_markup=calendar_kb,
         )
-    else:
-        if selected_date < cal_start:
-            cal_start, selected_date = selected_date, cal_start
+        return
 
-        await state.update_data(cal_start_date=cal_start, cal_end_date=selected_date)
+    if cal_start and selected_date < cal_start:
+        cal_start, selected_date = selected_date, cal_start
 
-        calendar_kb = CalendarKeyboard.create_calendar(
-            year=year,
-            month=month,
-            start_date=cal_start,
-            end_date=selected_date,
-        )
+    await state.update_data(cal_start_date=cal_start, cal_end_date=selected_date)
 
-        await callback.message.edit_text(
-            text=Dialog.Report.DATE_RANGE_SELECTED.format(
-                start_date=cal_start.strftime("%d.%m.%Y"),
-                end_date=selected_date.strftime("%d.%m.%Y"),
-            ),
-            reply_markup=calendar_kb,
-        )
+    calendar_kb = _create_calendar_by_state(
+        current_state=current_state,
+        year=year,
+        month=month,
+        start_date=cal_start,
+        end_date=selected_date,
+    )
+
+    await callback.message.edit_text(
+        text=Dialog.Report.DATE_RANGE_SELECTED.format(
+            start_date=cal_start.strftime("%d.%m.%Y"),
+            end_date=selected_date.strftime("%d.%m.%Y"),
+        ),
+        reply_markup=calendar_kb,
+    )
 
 
 async def handle_reset(callback: CallbackQuery, state: FSMContext) -> None:
@@ -107,10 +135,22 @@ async def handle_reset(callback: CallbackQuery, state: FSMContext) -> None:
     now = TimeZoneService.now()
     await state.update_data(cal_start_date=None, cal_end_date=None)
 
-    calendar_kb = CalendarKeyboard.create_calendar(
-        year=now.year,
-        month=now.month,
-    )
+    current_state = await state.get_state()
+    if current_state == SingleUserReportStates.selecting_custom_period:
+        calendar_kb = CalendarKeyboard.create_calendar_single_user(
+            year=now.year,
+            month=now.month,
+        )
+    elif current_state == AllUsersReportStates.selecting_custom_period:
+        calendar_kb = CalendarKeyboard.create_calendar_all_users(
+            year=now.year,
+            month=now.month,
+        )
+    elif current_state == ChatStateManager.selecting_custom_period:
+        calendar_kb = CalendarKeyboard.create_calendar_chat(
+            year=now.year,
+            month=now.month,
+        )
 
     await callback.message.edit_text(
         text=Dialog.Calendar.SELECT_START_DATE,
@@ -130,8 +170,6 @@ async def handle_cancel(callback: CallbackQuery, state: FSMContext) -> None:
         keyboard = time_period_ikb_all_users()
     elif current_state == ChatStateManager.selecting_custom_period:
         keyboard = time_period_ikb_chat()
-    else:
-        keyboard = time_period_ikb_single_user()
 
     await callback.message.edit_text(
         text=Dialog.Calendar.SELECT_PERIOD,
@@ -156,7 +194,7 @@ async def handle_confirm_action(
 
     # В зависимости от state вызываем нужную функцию генерации отчета
     if current_state == ChatStateManager.selecting_custom_period:
-        from .single_chat_report import generate_and_send_report
+        from .chat.chat_report_handler import generate_and_send_report
 
         await callback.message.delete()
         temp_message = await callback.bot.send_message(
@@ -185,7 +223,7 @@ async def handle_confirm_action(
         )
 
     elif current_state == SingleUserReportStates.selecting_custom_period:
-        from .single_user_report import generate_and_send_report
+        from .single_user.single_user_report_handler import generate_and_send_report
 
         user_id = user_data.get("user_id")
         if not user_id:
@@ -208,7 +246,7 @@ async def handle_confirm_action(
         )
 
     elif current_state == AllUsersReportStates.selecting_custom_period:
-        from .all_users_report import generate_and_send_report
+        from .all_users.all_users_report_handler import generate_and_send_report
 
         # Редактируем сообщение с календарем
         await callback.message.edit_text(text=Dialog.Calendar.GENERATING_REPORT)
