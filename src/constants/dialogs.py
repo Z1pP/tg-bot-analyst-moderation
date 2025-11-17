@@ -255,6 +255,7 @@ class ChatDialogs:
         "3️⃣ Напишите команду <code>/track</code> в чате\n\n"
         "✅ Если все успешно, вы получите уведомление здесь об успешном добавлении чата"
     )
+    ANSWER_NOT_VALID = "❌ Неверный ответ. Пожалуйста, выберите да или нет."
     SELECT_ACTION = "Выберите необходимое действие:"
     ENTER_TEMPLATE_NAME = "Укажите название шаблона:"
     CHAT_NOT_SELECTED = "❌ Чат не выбран. Сначала выберите чат."
@@ -280,6 +281,7 @@ class ChatDialogs:
     ERROR_GETTING_RATING = "❌ Произошла ошибка при получении рейтинга чата"
     REMOVE_CANCELLED = "❌ Удаление чата из отслеживания отменено!"
     ERROR_FORMATTING_RATING = "❌ Произошла ошибка при форматировании рейтинга чата"
+    CHAT_NOT_FOUND_OR_ALREADY_REMOVED = "❌ Чат не найден или уже удален"
 
 
 class TemplateDialogs:
