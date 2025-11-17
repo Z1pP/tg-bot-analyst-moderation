@@ -1,14 +1,16 @@
 import logging
 from datetime import datetime
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from constants import KbCommands
+from constants import Dialog, KbCommands
 from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
-from keyboards.inline import CalendarKeyboard, order_details_kb
+from keyboards.inline import CalendarKeyboard
+from keyboards.inline.report import order_details_kb_chat
 from keyboards.reply import admin_menu_kb, chat_actions_kb, get_time_period_kb
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
@@ -27,7 +29,7 @@ logger = logging.getLogger(__name__)
     ChatStateManager.selecting_chat,
     F.text == KbCommands.GET_REPORT,
 )
-async def single_chat_report_handler(message: Message, state: FSMContext) -> None:
+async def chat_report_handler(message: Message, state: FSMContext) -> None:
     """Обработчик запроса на создание отчета по конкретному чату."""
     try:
         data = await state.get_data()
@@ -51,8 +53,7 @@ async def single_chat_report_handler(message: Message, state: FSMContext) -> Non
 
         if not tracked_users:
             await message.answer(
-                "❌ У вас нет отслеживаемых пользователей.\n"
-                "Добавьте пользователей в отслеживание для составления отчета.",
+                Dialog.Report.NO_TRACKED_USERS,
                 reply_markup=chat_actions_kb(),
             )
             logger.warning(
@@ -68,7 +69,7 @@ async def single_chat_report_handler(message: Message, state: FSMContext) -> Non
         )
 
         await send_html_message_with_kb(
-            text="Выберите период для отчета",
+            text=Dialog.Report.SELECT_PERIOD,
             message=message,
             reply_markup=get_time_period_kb(),
         )
@@ -114,7 +115,7 @@ async def process_report_input(message: Message, state: FSMContext) -> None:
             )
 
             await message.answer(
-                text="📅 Выберите начальную дату диапазона:",
+                text=Dialog.Report.SELECT_START_DATE,
                 reply_markup=calendar_kb,
             )
             return
@@ -150,7 +151,7 @@ async def select_chat_again(message: Message, state: FSMContext) -> None:
     )
     await send_html_message_with_kb(
         message=message,
-        text="Выберите чат заново",
+        text=Dialog.Report.SELECT_CHAT_AGAIN,
         reply_markup=admin_menu_kb(),
     )
 
@@ -201,16 +202,20 @@ async def generate_and_send_report(
         if not is_single_day:
             await state.update_data(chat_report_dto=report_dto)
 
-        await state.set_state(ChatStateManager.selecting_period)
+        await log_and_set_state(
+            message=message,
+            state=state,
+            new_state=ChatStateManager.selecting_period,
+        )
 
         for idx, part in enumerate(report_parts):
             if idx == len(report_parts) - 1:
-                part = f"{part}\n\nДля продолжения выберите период, либо нажмите назад"
+                part = f"{part}{Dialog.Report.CONTINUE_SELECT_PERIOD}"
 
             await send_html_message_with_kb(
                 message=message,
                 text=part,
-                reply_markup=order_details_kb(show_details=not is_single_day),
+                reply_markup=order_details_kb_chat(show_details=not is_single_day),
             )
 
         logger.info("Отчет по чату %s успешно отправлен", chat_id)

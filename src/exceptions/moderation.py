@@ -100,4 +100,4 @@ class MessageSendError(BotBaseException):
         super().__init__()
 
     def get_user_message(self) -> str:
-        return f"❌ Не удалось отправить сообщение: {self.error}"
+        return "❌ Не удалось отправить сообщение"

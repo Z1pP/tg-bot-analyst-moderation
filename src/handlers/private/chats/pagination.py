@@ -21,10 +21,10 @@ class ChatsPaginationHandler(BasePaginationHandler):
     async def get_page_data(
         self,
         page: int,
-        query: CallbackQuery,
+        callback: CallbackQuery,
         state: FSMContext,
     ) -> Tuple[List[ChatSession], int]:
-        chats = await get_tracked_chats(query.from_user.username)
+        chats = await get_tracked_chats(callback.from_user.username)
         chats_page, total_count = paginate_chats(chats, page)
         return chats_page, total_count
 
@@ -48,10 +48,10 @@ class RemoveChatsPaginationHandler(BasePaginationHandler):
     async def get_page_data(
         self,
         page: int,
-        query: CallbackQuery,
+        callback: CallbackQuery,
         state: FSMContext,
     ) -> Tuple[List[ChatSession], int]:
-        chats = await get_tracked_chats(query.from_user.username)
+        chats = await get_tracked_chats(callback.from_user.username)
         chats_page, total_count = paginate_chats(chats, page)
         return chats_page, total_count
 
@@ -73,27 +73,27 @@ remove_chats_handler = RemoveChatsPaginationHandler()
 
 
 @router.callback_query(F.data.startswith("prev_chats_page__"))
-async def prev_chats_page_callback(query: CallbackQuery, state: FSMContext) -> None:
-    await chats_handler.handle_prev_page(query, state)
+async def prev_chats_page_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    await chats_handler.handle_prev_page(callback, state)
 
 
 @router.callback_query(F.data.startswith("next_chats_page__"))
-async def next_chats_page_callback(query: CallbackQuery, state: FSMContext) -> None:
-    await chats_handler.handle_next_page(query, state)
+async def next_chats_page_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    await chats_handler.handle_next_page(callback, state)
 
 
 @router.callback_query(F.data.startswith("prev_remove_chats_page__"))
 async def prev_remove_chats_page_callback(
-    query: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext
 ) -> None:
-    await remove_chats_handler.handle_prev_page(query, state)
+    await remove_chats_handler.handle_prev_page(callback, state)
 
 
 @router.callback_query(F.data.startswith("next_remove_chats_page__"))
 async def next_remove_chats_page_callback(
-    query: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext
 ) -> None:
-    await remove_chats_handler.handle_next_page(query, state)
+    await remove_chats_handler.handle_next_page(callback, state)
 
 
 async def get_tracked_chats(admin_username: str) -> List[ChatSession]:
@@ -112,3 +112,4 @@ def paginate_chats(
     start_idx = (page - 1) * page_size
     end_idx = start_idx + page_size
     return chats[start_idx:end_idx], len(chats)
+

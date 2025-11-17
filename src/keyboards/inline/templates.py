@@ -8,6 +8,31 @@ from constants.pagination import TEMPLATES_PAGE_SIZE
 from models import MessageTemplate
 
 
+def cancel_template_ikb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.CANCEL,
+            callback_data="cancel_template",
+        )
+    )
+    return builder.as_markup()
+
+
+def cancel_edit_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура для отмены редактирования названия или содержимого шаблона"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.TemplateButtons.CANCEL_EDIT,
+            callback_data="cancel_edit_title_or_content",
+        )
+    )
+    return builder.as_markup()
+
+
 def templates_menu_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -31,6 +56,13 @@ def templates_menu_ikb() -> InlineKeyboardMarkup:
         width=2,
     )
 
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.MessageButtons.BACK_TO_MESSAGE_MANAGEMENT,
+            callback_data="message_management_menu",
+        )
+    )
+
     return builder.as_markup()
 
 
@@ -39,6 +71,7 @@ def templates_inline_kb(
     page: int = 1,
     total_count: int = 0,
     page_size: int = TEMPLATES_PAGE_SIZE,
+    show_back_to_categories: bool = False,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -89,6 +122,24 @@ def templates_inline_kb(
 
         if pagination_buttons:
             builder.row(*pagination_buttons)
+
+    # Кнопка возврата
+    if show_back_to_categories:
+        # Кнопка возврата к категориям
+        builder.row(
+            InlineKeyboardButton(
+                text="⬅️ Вернуться к категориям",
+                callback_data="select_category",
+            )
+        )
+    else:
+        # Кнопка возврата к списку чатов
+        builder.row(
+            InlineKeyboardButton(
+                text="⬅️ Назад к выбору чата",
+                callback_data="select_template",
+            )
+        )
 
     return builder.as_markup()
 

@@ -316,27 +316,3 @@ class PunishmentService:
         return await self.punishment_repository.delete_user_punishments(
             user_id, chat_id
         )
-
-    async def get_chats_with_punishments(
-        self, user_id: int, tracked_chats: List[ChatSession]
-    ) -> List[ChatSession]:
-        """
-        Возвращает чаты из списка отслеживаемых, где у пользователя есть наказания.
-
-        Args:
-            user_id: ID пользователя в БД
-            tracked_chats: Список отслеживаемых чатов
-
-        Returns:
-            Список чатов где punishment_count > 0
-        """
-        chats_with_punishments = []
-        for chat in tracked_chats:
-            punishment_count = await self.punishment_repository.count_punishments(
-                user_id=user_id,
-                chat_id=chat.id,
-            )
-            if punishment_count > 0:
-                chats_with_punishments.append(chat)
-
-        return chats_with_punishments

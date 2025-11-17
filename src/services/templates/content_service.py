@@ -3,12 +3,14 @@ from typing import Any, Dict, Optional
 
 from aiogram.types import Message
 
+from constants.enums import AdminActionType
 from models import MessageTemplate
 from repositories import (
     MessageTemplateRepository,
     TemplateMediaRepository,
     UserRepository,
 )
+from services import AdminActionLogService
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +23,12 @@ class TemplateContentService:
         user_repository: UserRepository,
         template_repository: MessageTemplateRepository,
         media_repository: TemplateMediaRepository,
+        admin_action_log_service: AdminActionLogService = None,
     ):
         self._user_repository = user_repository
         self._template_repository = template_repository
         self._media_repository = media_repository
+        self._admin_action_log_service = admin_action_log_service
 
     def extract_media_content(self, messages: list[Message]) -> Dict[str, Any]:
         """
@@ -67,7 +71,6 @@ class TemplateContentService:
     ) -> Optional[MessageTemplate]:
         """Сохраняет шаблон в базу данных"""
         try:
-
             user = await self._user_repository.get_user_by_username(
                 username=author_username
             )
@@ -84,6 +87,14 @@ class TemplateContentService:
 
             # Сохраняем медиа с привязкой к шаблону
             await self.save_media_files(template_id=new_template.id, content=content)
+
+            # Логируем действие после успешного создания шаблона
+            if self._admin_action_log_service and user.tg_id:
+                await self._admin_action_log_service.log_action(
+                    admin_tg_id=user.tg_id,
+                    action_type=AdminActionType.ADD_TEMPLATE,
+                )
+
             return new_template
         except Exception as e:
             logger.error(f"Ошибка сохранения шаблона: {e}", exc_info=True)

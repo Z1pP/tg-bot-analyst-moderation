@@ -1,5 +1,3 @@
-from models import MessageReaction
-from repositories import MessageReactionRepository
 
 
 class GetUserReactionsUseCase:

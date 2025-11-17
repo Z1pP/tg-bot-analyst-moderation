@@ -2,9 +2,10 @@ import logging
 
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
+from constants.enums import AdminActionType
 from dto.message_action import SendMessageDTO
 from exceptions.moderation import MessageSendError
-from services import BotMessageService, ChatService
+from services import AdminActionLogService, BotMessageService, ChatService
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +17,11 @@ class SendMessageToChatUseCase:
         self,
         bot_message_service: BotMessageService,
         chat_service: ChatService,
+        admin_action_log_service: AdminActionLogService = None,
     ):
         self.bot_message_service = bot_message_service
         self.chat_service = chat_service
+        self._admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: SendMessageDTO) -> None:
         """Отправляет сообщение в чат от имени бота (копирует контент)."""
@@ -77,3 +80,10 @@ class SendMessageToChatUseCase:
                         )
         except Exception as e:
             logger.debug("Архивные чаты не найдены или ошибка: %s", e)
+
+        # Логируем действие после успешной отправки сообщения
+        if self._admin_action_log_service:
+            await self._admin_action_log_service.log_action(
+                admin_tg_id=dto.admin_tgid,
+                action_type=AdminActionType.SEND_MESSAGE,
+            )

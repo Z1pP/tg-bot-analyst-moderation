@@ -32,7 +32,11 @@ async def back_to_menu_handler(message: Message, state: FSMContext) -> None:
                 text="Выберите чат заново",
                 reply_markup=admin_menu_kb(),
             )
-            await state.set_state(ChatStateManager.selecting_chat)
+            await log_and_set_state(
+                message=message,
+                state=state,
+                new_state=ChatStateManager.selecting_chat,
+            )
             return
 
         await log_and_set_state(

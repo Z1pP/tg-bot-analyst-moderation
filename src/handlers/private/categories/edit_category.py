@@ -1,49 +1,56 @@
 import logging
 
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
 
 from container import container
-from states import TemplateStateManager
-from usecases.categories import GetCategoryByIdUseCase
-from utils.exception_handler import handle_exception
+from exceptions.category import CategoryNotFoundError
+from keyboards.inline.templates import templates_menu_ikb
+from states import CategoryStateManager, TemplateStateManager
+from usecases.categories import UpdateCategoryNameUseCase
+from utils.send_message import safe_edit_message
+from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data.startswith("edit_category__"))
-async def edit_category_handler(callback: CallbackQuery, state: FSMContext) -> None:
-    """Обработчик начала редактирования категории"""
+@router.callback_query(
+    CategoryStateManager.confirm_category_edit,
+    F.data == "conf_edit_category",
+)
+async def confirm_category_edit_handler(
+    callback: types.CallbackQuery, state: FSMContext
+):
+    await callback.answer()
+
+    data = await state.get_data()
+    category_id = data.get("category_id")
+    old_name = data.get("old_name")
+    new_name = data.get("category_name")
+
     try:
-        category_id = int(callback.data.split("__")[1])
-
-        # Получаем категорию через Use Case
-        usecase: GetCategoryByIdUseCase = container.resolve(GetCategoryByIdUseCase)
-        category_dto = await usecase.execute(category_id)
-
-        if not category_dto:
-            await callback.answer("Категория не найдена", show_alert=True)
-            return
-
-        # Сохраняем данные категории в state
-        await state.update_data(
-            edit_category_id=category_id, original_category_name=category_dto.name
+        usecase: UpdateCategoryNameUseCase = container.resolve(
+            UpdateCategoryNameUseCase
         )
-
-        await state.set_state(TemplateStateManager.editing_category_name)
-
-        await callback.message.edit_text(
-            text=f"<b>Редактирование категории:</b> {category_dto.name}\n\n"
-            "Введите новое название для категории:"
-        )
-
-        logger.info(
-            f"Начато редактирование категории {category_id} пользователем {callback.from_user.username}"
-        )
-
+        category = await usecase.execute(category_id=category_id, new_name=new_name)
+        text = f"✅ Категория <b>{old_name}</b> успешно изменена на <b>{category.name}</b>.\n"
+    except CategoryNotFoundError as e:
+        text = e.get_user_message()
     except Exception as e:
-        await handle_exception(callback.message, e, "edit_category_callback")
-    finally:
-        await callback.answer()
+        logger.error("Ошибка при изменении категории: %s", e, exc_info=True)
+        text = "⚠️ Произошла ошибка при изменении категории."
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=text,
+        reply_markup=templates_menu_ikb(),
+    )
+
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=TemplateStateManager.templates_menu,
+    )

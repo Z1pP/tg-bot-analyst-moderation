@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants import Dialog
 from keyboards.reply.chat_actions import chat_actions_kb
 from states import ChatStateManager, TemplateStateManager
 from utils.exception_handler import handle_exception
@@ -31,7 +32,7 @@ async def chat_selected_handler(
 
         await send_html_message_with_kb(
             message=query.message,
-            text="Выберите необходимое действие:",
+            text=Dialog.Chat.SELECT_ACTION,
             reply_markup=chat_actions_kb(),
         )
 
@@ -57,16 +58,20 @@ async def process_template_chat_handler(
     try:
         chat_id = int(query.data.split("__")[1])
 
-        await state.set_state(TemplateStateManager.process_template_title)
-
         if chat_id == -1:
             await state.update_data(chat_id=None)
         else:
             await state.update_data(chat_id=int(chat_id))
 
-        text = "Укажите название шаблона:"
+        text = Dialog.Chat.ENTER_TEMPLATE_NAME
 
         await query.message.answer(text=text)
+
+        await log_and_set_state(
+            message=query.message,
+            state=state,
+            new_state=TemplateStateManager.process_template_title,
+        )
 
         await query.answer()
 

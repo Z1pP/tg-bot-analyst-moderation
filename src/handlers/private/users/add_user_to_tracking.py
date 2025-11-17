@@ -3,17 +3,17 @@ from dataclasses import dataclass
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
-from constants import Dialog, KbCommands
+from constants import Dialog
 from container import container
 from dto import UserTrackingDTO
-from keyboards.reply import get_back_kb, user_menu_kb
-from states import MenuStates
+from keyboards.inline.users import cancel_add_user_ikb, users_menu_ikb
+from states import UserStateManager
 from states.user_states import UsernameStates
 from usecases.user_tracking import AddUserToTrackingUseCase
 from utils.exception_handler import handle_exception
-from utils.send_message import send_html_message_with_kb
+from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 from utils.user_data_parser import parse_data_from_text
 
@@ -27,33 +27,53 @@ class ParsedData:
     user_tgid: str
 
 
-@router.message(
-    F.text == KbCommands.ADD_USER,
-    MenuStates.users_menu,
-)
-async def add_user_to_tracking_handler(message: Message, state: FSMContext) -> None:
+@router.callback_query(F.data == "add_user")
+async def add_user_to_tracking_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     """
     Хендлер для обработки добавления пользователя в список отслеживания.
     """
+    await callback.answer()
+
     try:
         logger.info(
-            f"Пользователь {message.from_user.id} начал добавление "
+            f"Пользователь {callback.from_user.id} начал добавление "
             "нового пользователя в отслеживание"
         )
 
+        await callback.message.edit_text(
+            text=Dialog.INPUT_MODERATOR_USERNAME,
+            reply_markup=cancel_add_user_ikb(),
+        )
+
+        await state.update_data(active_message_id=callback.message.message_id)
+
         await log_and_set_state(
-            message=message,
+            message=callback.message,
             state=state,
             new_state=UsernameStates.waiting_user_data_input,
         )
-
-        await send_html_message_with_kb(
-            message=message,
-            text=Dialog.INPUT_MODERATOR_USERNAME,
-            reply_markup=get_back_kb(),
-        )
     except Exception as e:
-        await handle_exception(message, e, "add_user_to_tracking_handler")
+        await handle_exception(callback.message, e, "add_user_to_tracking_handler")
+
+
+@router.callback_query(F.data == "cancel_add_user")
+async def cancel_add_user_handler(callback: CallbackQuery, state: FSMContext) -> None:
+    """Обработчик отмены добавления пользователя"""
+    await callback.answer()
+    await state.clear()
+
+    await callback.message.edit_text(
+        text=Dialog.User.ACTION_CANCELLED,
+        reply_markup=users_menu_ikb(),
+    )
+
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=UserStateManager.users_menu,
+    )
 
 
 @router.message(UsernameStates.waiting_user_data_input)
@@ -65,22 +85,34 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
         admin_username = message.from_user.username
         logger.info(f"Обработка добавления пользователя от {admin_username}")
 
-        if message.text == KbCommands.BACK:
-            await back_to_user_menu_handler(message, state)
-            return
+        data = await state.get_data()
+        active_message_id = data.get("active_message_id")
 
         try:
             user_data = parse_data_from_text(text=message.text)
         except ValueError:
-            await send_html_message_with_kb(
-                message=message,
-                text=Dialog.Error.INVALID_USERNAME_FORMAT,
-            )
+            if active_message_id:
+                await safe_edit_message(
+                    bot=message.bot,
+                    chat_id=message.chat.id,
+                    message_id=active_message_id,
+                    text=Dialog.Error.INVALID_USERNAME_FORMAT,
+                    reply_markup=cancel_add_user_ikb(),
+                )
+            await message.delete()
             return
 
         if user_data is None:
-            text = "❗Неверный формат ввода. Попробуйте еще раз."
-            await message.reply(text=text)
+            text = Dialog.User.INVALID_FORMAT_RETRY
+            if active_message_id:
+                await safe_edit_message(
+                    bot=message.bot,
+                    chat_id=message.chat.id,
+                    message_id=active_message_id,
+                    text=text,
+                    reply_markup=cancel_add_user_ikb(),
+                )
+            await message.delete()
             return
 
         tracking_dto = UserTrackingDTO(
@@ -93,52 +125,39 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
         usecase: AddUserToTrackingUseCase = container.resolve(AddUserToTrackingUseCase)
         result = await usecase.execute(dto=tracking_dto)
 
+        await message.delete()
+
         if not result.success:
             logger.info(
                 f"Ошибка добавления пользователя {user_data.username} в отслеживание"
             )
-            await send_html_message_with_kb(
-                message=message,
-                text=result.message,
-                reply_markup=user_menu_kb(),
-            )
+            if active_message_id:
+                await safe_edit_message(
+                    bot=message.bot,
+                    chat_id=message.chat.id,
+                    message_id=active_message_id,
+                    text=result.message,
+                    reply_markup=users_menu_ikb(),
+                )
             return
 
         logger.info(
             f"Пользователь {user_data.username} успешно добавлен администратором {admin_username}"
         )
-        await send_html_message_with_kb(
-            message=message,
-            text=result.message,
-            reply_markup=user_menu_kb(),
-        )
+
+        if active_message_id:
+            await safe_edit_message(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=result.message,
+                reply_markup=users_menu_ikb(),
+            )
 
         await log_and_set_state(
             message=message,
             state=state,
-            new_state=MenuStates.users_menu,
+            new_state=UserStateManager.users_menu,
         )
     except Exception as e:
         await handle_exception(message, e, "process_adding_user")
-
-
-async def back_to_user_menu_handler(message: Message, state: FSMContext) -> None:
-    """
-    Обработчик для возврата в меню управления пользователями.
-    """
-    try:
-        logger.info(f"Пользователь {message.from_user.id} возвращается в главное меню")
-
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=MenuStates.users_menu,
-        )
-
-        await send_html_message_with_kb(
-            message=message,
-            text="Возвращаемся в главное меню",
-            reply_markup=user_menu_kb(),
-        )
-    except Exception as e:
-        await handle_exception(message, e, "back_to_menu_handler")

@@ -1,5 +1,6 @@
 from aiogram import Router
 
+from .admin_logs import router as admin_logs_router, pagination_router as admin_logs_pagination_router
 from .banhammer import router as banhammer_router
 from .categories import router as categories_router
 from .chats import router as chats_router
@@ -20,3 +21,5 @@ router.include_router(templates_router)
 router.include_router(categories_router)
 router.include_router(user_settings_router)
 router.include_router(message_management_router)
+router.include_router(admin_logs_router)
+router.include_router(admin_logs_pagination_router)

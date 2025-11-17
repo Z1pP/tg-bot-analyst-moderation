@@ -4,7 +4,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from constants import KbCommands
+from constants import Dialog, KbCommands
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
 from keyboards.inline.chats_kb import conf_remove_chat_kb, remove_inline_kb
@@ -43,10 +43,7 @@ async def delete_chat_handler(
         await state.update_data(user_id=user_chats_dto.user_id)
 
         if not user_chats_dto.chats:
-            message_text = (
-                "❌ У вас нет отслеживаемых чатов\n\n"
-                "Сначала добавьте чаты в отслеживание."
-            )
+            message_text = Dialog.Chat.NO_TRACKED_CHATS
 
             await send_html_message_with_kb(
                 message=message,
@@ -54,13 +51,7 @@ async def delete_chat_handler(
             )
             return
 
-        message_text = (
-            "📋 <b>Удаление чата из отслеживания</b>\n\n"
-            "Выберите способ удаления:\n\n"
-            "🔹 <b>Способ 1:</b> Выберите чат из списка ниже\n"
-            "🔹 <b>Способ 2:</b> Выполните команду <code>/untrack</code> в нужном чате\n\n"
-            "📋 <b>Ваши отслеживаемые чаты:</b>"
-        )
+        message_text = Dialog.Chat.REMOVE_CHAT_TITLE
 
         # Показываем первую страницу
         first_page_chats = user_chats_dto.chats[:CHATS_PAGE_SIZE]
@@ -82,7 +73,7 @@ async def delete_chat_handler(
 
     except Exception as e:
         logger.error(f"Ошибка при получении списка чатов: {e}", exc_info=True)
-        await message.answer("❌ Произошла ошибка при получении списка чатов")
+        await message.answer(Dialog.Chat.ERROR_GET_CHATS)
 
 
 @router.callback_query(F.data.startswith("untrack_chat__"))
@@ -101,7 +92,7 @@ async def process_untracking_chat(
         await state.update_data(chat_id=chat_id)
         logger.info(f"Запрос подтверждения удаления чата из отслеживания: {chat_id}")
 
-        message_text = "❗Вы уверены, что хотите удалить из отслеживаемых?"
+        message_text = Dialog.Chat.CONFIRM_REMOVE_CHAT
 
         await send_html_message_with_kb(
             message=callback.message,
@@ -110,7 +101,7 @@ async def process_untracking_chat(
         )
     except Exception as e:
         logger.error(f"Ошибка при удалении чата из отслеживания:{e}")
-        await callback.message.edit_text("Ошибка при отвязывании группы!")
+        await callback.message.edit_text(Dialog.Chat.ERROR_UNTRACK_CHAT)
     finally:
         await callback.answer()
 
@@ -137,19 +128,17 @@ async def confirmation_removing_chat(
             )
 
             if success:
-                text = (
-                    "✅ Готово! Чат удалён из отлеживания!\n\n"
-                    "❗️Вы всегда можете вернуть чат в отслеживаемые "
-                    "и продолжить собирать статистику"
-                )
+                text = Dialog.Chat.CHAT_REMOVED
             else:
-                text = f"❌ Ошибка: {error_msg or 'Чат не найден или уже удален'}"
+                text = Dialog.Chat.ERROR_REMOVE_CHAT.format(
+                    error_msg=error_msg or "Чат не найден или уже удален"
+                )
 
             await callback.message.edit_text(text=text)
         else:
             logger.info(f"Удаление чата chat_id={chat_id} из отслеживания отменено")
             await callback.message.edit_text(
-                text="❌ Удаление чата из отслеживания отменено!",
+                text=Dialog.Chat.REMOVE_CANCELLED,
             )
     except Exception as e:
         await handle_exception(callback.message, e, "confirmation_removing_user")

@@ -29,6 +29,19 @@ class TemplateCategoryRepository:
                 logger.error("Ошибка при получении списка категорий: %s", e)
                 return []
 
+    async def get_category_by_name(self, name: str) -> Optional[TemplateCategory]:
+        """Получаем категорию по имени"""
+        async with self._db.session() as session:
+            try:
+                result = await session.execute(
+                    select(TemplateCategory).where(TemplateCategory.name == name)
+                )
+
+                return result.scalars().first()
+            except Exception as e:
+                logger.error("Ошибка при получении категории c именем: %s", str(e))
+                return None
+
     async def get_last_category(self) -> Optional[TemplateCategory]:
         """Получаем последнюю созданную категорию"""
         async with self._db.session() as session:
@@ -118,7 +131,7 @@ class TemplateCategoryRepository:
                 )
                 categories = result.scalars().all()
                 logger.info(
-                    f"Получено {len(categories)} категорий (страница {offset//limit + 1})"
+                    f"Получено {len(categories)} категорий (страница {offset // limit + 1})"
                 )
                 return categories
             except Exception as e:
@@ -139,7 +152,9 @@ class TemplateCategoryRepository:
                 logger.error(f"Ошибка при подсчете категорий: {e}")
                 return 0
 
-    async def update_category_name(self, category_id: int, new_name: str) -> bool:
+    async def update_category_name(
+        self, category_id: int, new_name: str
+    ) -> TemplateCategory:
         """Обновляет название категории"""
         async with self._db.session() as session:
             try:
@@ -149,14 +164,15 @@ class TemplateCategoryRepository:
                 result = await session.execute(query)
                 category = result.scalar_one_or_none()
 
-                if category:
-                    category.name = new_name
-                    await session.commit()
-                    logger.info(
-                        f"Название категории {category_id} обновлено на '{new_name}'"
-                    )
-                    return True
-                return False
+                category.name = new_name
+                await session.commit()
+                await session.refresh(category)
+
+                logger.info(
+                    f"Название категории {category_id} обновлено на '{new_name}'"
+                )
+
+                return category
             except Exception as e:
                 logger.error(f"Ошибка при обновлении названия категории: {e}")
                 await session.rollback()

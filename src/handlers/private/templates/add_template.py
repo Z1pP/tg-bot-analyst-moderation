@@ -1,18 +1,21 @@
 import logging
 from typing import Any, Dict
 
-from aiogram import F, Router, types
+from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from constants import Dialog
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
-from keyboards.inline.categories import categories_inline_ikb
-from keyboards.inline.templates import templates_menu_ikb
+from keyboards.inline.categories import categories_select_only_ikb
+from keyboards.inline.templates import cancel_template_ikb, templates_menu_ikb
 from middlewares import AlbumMiddleware
 from services.categories import CategoryService
 from services.templates import TemplateContentService
 from states import TemplateStateManager
+from usecases.categories import GetCategoriesPaginatedUseCase
+from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
 from .common import common_process_template_title_handler
@@ -26,7 +29,9 @@ logger = logging.getLogger(__name__)
     F.data == "add_template",
     TemplateStateManager.templates_menu,
 )
-async def add_template_handler(callback: types.CallbackQuery, state: FSMContext):
+async def add_template_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
     """Обработчик добавления нового шаблона"""
     await callback.answer()
 
@@ -35,7 +40,7 @@ async def add_template_handler(callback: types.CallbackQuery, state: FSMContext)
         categories = await category_service.get_categories()
 
         if not categories:
-            msg_text = "Чтобы создать шаблон, сначала создайте хотя бы одну категорию."
+            msg_text = Dialog.Template.CREATE_CATEGORY_FIRST
             await callback.message.edit_text(
                 text=msg_text,
                 reply_markup=templates_menu_ikb(),
@@ -45,8 +50,8 @@ async def add_template_handler(callback: types.CallbackQuery, state: FSMContext)
         first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
 
         await callback.message.edit_text(
-            text="Пожалуйста, выберите категорию шаблона.",
-            reply_markup=categories_inline_ikb(
+            text=Dialog.Template.SELECT_CATEGORY,
+            reply_markup=categories_select_only_ikb(
                 categories=first_page_categories,
                 page=1,
                 total_count=len(categories),
@@ -62,7 +67,7 @@ async def add_template_handler(callback: types.CallbackQuery, state: FSMContext)
     except Exception as e:
         logger.error(f"Ошибка при начале создания шаблона: {e}")
         await callback.message.edit_text(
-            text="Произошла ошибка при создании шаблона.",
+            text=Dialog.Template.ERROR_CREATE_TEMPLATE,
             reply_markup=templates_menu_ikb(),
         )
 
@@ -77,13 +82,29 @@ async def process_template_category_handler(
 ):
     """Обработчик выбора категории шаблона"""
     await callback.answer()
-    category_id = int(callback.data.split("__")[1])
 
-    await state.update_data(category_id=category_id)
+    try:
+        category_id = int(callback.data.split("__")[1])
+    except (IndexError, ValueError):
+        logger.warning("Некорректный формат callback_data: %s", callback.data)
+        return await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Template.INVALID_REQUEST,
+            reply_markup=templates_menu_ikb(),
+        )
 
-    await callback.message.edit_text(
-        text="Отправьте название шаблона:",
-        reply_markup=None,
+    await state.update_data(
+        category_id=category_id, active_message_id=callback.message.message_id
+    )
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.Template.SEND_TEMPLATE_NAME,
+        reply_markup=cancel_template_ikb(),
     )
 
     await log_and_set_state(
@@ -93,15 +114,17 @@ async def process_template_category_handler(
     )
 
 
-@router.callback_query(TemplateStateManager.process_template_title)
+@router.message(TemplateStateManager.process_template_title)
 async def process_template_title_handler(
-    callback: types.CallbackQuery,
+    message: Message,
     state: FSMContext,
+    bot: Bot,
 ):
     """Обработчик получения названия нового шаблона"""
     await common_process_template_title_handler(
-        callback=callback,
+        message=message,
         state=state,
+        bot=bot,
     )
 
 
@@ -109,17 +132,15 @@ async def process_template_title_handler(
 async def process_template_content_handler(
     message: Message,
     state: FSMContext,
+    bot: Bot,
     album_messages: list[Message] | None = None,
 ):
     """Обработчик получения контента шаблона"""
     state_data = await state.get_data()
     title = state_data.get("title")
+    active_message_id = state_data.get("active_message_id")
 
     try:
-        # Устанавлием состояния меню шаблонов
-        await state.set_state(TemplateStateManager.templates_menu)
-
-        # Получаем сервисы
         content_service: TemplateContentService = container.resolve(
             TemplateContentService
         )
@@ -139,9 +160,102 @@ async def process_template_content_handler(
             author_username=message.from_user.username,
             content=content_data,
         )
-        await message.answer(f"✅ Шаблон '{title}' создан!")
+
+        if active_message_id:
+            await safe_edit_message(
+                bot=bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=Dialog.Template.TEMPLATE_CREATED.format(title=title),
+                reply_markup=templates_menu_ikb(),
+            )
 
     except Exception as e:
         logger.error(f"Ошибка при создании шаблона: {e}", exc_info=True)
-        await message.reply(f"❌ Ошибка при создании шаблона: {str(e)}")
-        await state.clear()
+        await safe_edit_message(
+            bot=bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            text=Dialog.Template.ERROR_CREATE_TEMPLATE_FAILED,
+            reply_markup=templates_menu_ikb(),
+        )
+
+    await log_and_set_state(
+        message=message,
+        state=state,
+        new_state=TemplateStateManager.templates_menu,
+    )
+
+
+@router.callback_query(
+    F.data.startswith("prev_categories_page__"),
+    TemplateStateManager.process_template_category,
+)
+async def prev_categories_page_for_template_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик перехода на предыдущую страницу категорий при добавлении шаблона"""
+    await callback.answer()
+
+    try:
+        current_page = int(callback.data.split("__")[1])
+        prev_page = max(1, current_page - 1)
+
+        usecase: GetCategoriesPaginatedUseCase = container.resolve(
+            GetCategoriesPaginatedUseCase
+        )
+        offset = (prev_page - 1) * CATEGORIES_PAGE_SIZE
+        categories, total_count = await usecase.execute(
+            limit=CATEGORIES_PAGE_SIZE, offset=offset
+        )
+
+        keyboard = categories_select_only_ikb(
+            categories=categories,
+            page=prev_page,
+            total_count=total_count,
+        )
+
+        await callback.message.edit_reply_markup(reply_markup=keyboard)
+
+    except Exception as e:
+        logger.error(f"Ошибка при переходе на предыдущую страницу категорий: {e}")
+        await callback.answer(Dialog.Template.ERROR_PREV_PAGE)
+
+
+@router.callback_query(
+    F.data.startswith("next_categories_page__"),
+    TemplateStateManager.process_template_category,
+)
+async def next_categories_page_for_template_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик перехода на следующую страницу категорий при добавлении шаблона"""
+    await callback.answer()
+
+    try:
+        current_page = int(callback.data.split("__")[1])
+        next_page = current_page + 1
+
+        usecase: GetCategoriesPaginatedUseCase = container.resolve(
+            GetCategoriesPaginatedUseCase
+        )
+        offset = (next_page - 1) * CATEGORIES_PAGE_SIZE
+        categories, total_count = await usecase.execute(
+            limit=CATEGORIES_PAGE_SIZE, offset=offset
+        )
+
+        if not categories:
+            await callback.answer(Dialog.Template.NO_MORE_CATEGORIES)
+            return
+
+        keyboard = categories_select_only_ikb(
+            categories=categories,
+            page=next_page,
+            total_count=total_count,
+        )
+
+        await callback.message.edit_reply_markup(reply_markup=keyboard)
+
+    except Exception as e:
+        logger.error(f"Ошибка при переходе на следующую страницу категорий: {e}")
+        await callback.answer(Dialog.Template.ERROR_NEXT_PAGE)

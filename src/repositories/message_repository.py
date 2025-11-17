@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload

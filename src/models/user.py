@@ -11,6 +11,7 @@ from .associations import admin_user_tracking
 from .base import BaseModel
 
 if TYPE_CHECKING:
+    from .admin_action_log import AdminActionLog
     from .admin_chat_access import AdminChatAccess
     from .message import ChatMessage
     from .message_templates import MessageTemplate
@@ -40,6 +41,11 @@ class User(BaseModel):
         Boolean,
         nullable=False,
         default=True,
+    )
+    language: Mapped[str] = mapped_column(
+        String(length=10),
+        nullable=False,
+        default="ru",
     )
 
     # Realationships
@@ -89,6 +95,12 @@ class User(BaseModel):
     chat_statuses: Mapped[list["UserChatStatus"]] = relationship(
         "UserChatStatus",
         back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    action_logs: Mapped[list["AdminActionLog"]] = relationship(
+        "AdminActionLog",
+        back_populates="admin",
         cascade="all, delete-orphan",
     )
 

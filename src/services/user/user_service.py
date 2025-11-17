@@ -61,19 +61,27 @@ class UserService:
         if user.username:
             await self._cache.set(f"user:username:{user.username}", user)
 
-    async def create_user(self, tg_id: str = None, username: str = None) -> User:
-        user = await self._user_repository.create_user(tg_id=tg_id, username=username)
+    async def create_user(
+        self, tg_id: str = None, username: str = None, language: str = "ru"
+    ) -> User:
+        user = await self._user_repository.create_user(
+            tg_id=tg_id, username=username, language=language
+        )
 
         if user:
             await self._cache_user(user)
         return user
 
-    async def get_or_create(self, username: str, tg_id: str) -> User:
+    async def get_or_create(
+        self, username: str, tg_id: str, language: str = "ru"
+    ) -> User:
         user = await self.get_user(tg_id=tg_id, username=username)
 
         if not user:
             try:
-                new_user = await self.create_user(username=username, tg_id=tg_id)
+                new_user = await self.create_user(
+                    username=username, tg_id=tg_id, language=language
+                )
                 return new_user
             except IntegrityError as e:
                 # Race condition: пользователь создан параллельно

@@ -8,6 +8,7 @@ from container import container
 from dto.message_action import SendMessageDTO
 from exceptions.moderation import MessageSendError
 from keyboards.inline.chats_kb import select_chat_ikb
+from keyboards.inline.message_actions import cancel_send_message_ikb, send_message_ikb
 from states.message_management import MessageManagerState
 from usecases.admin_actions import SendMessageToChatUseCase
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
@@ -17,10 +18,7 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(
-    MessageManagerState.waiting_message_link,
-    F.data == "send_message_to_chat",
-)
+@router.callback_query(F.data == "send_message_to_chat")
 async def send_message_button_handler(
     callback: types.CallbackQuery, state: FSMContext
 ) -> None:
@@ -36,7 +34,10 @@ async def send_message_button_handler(
     )
 
     if not user_chats_dto.chats:
-        await callback.message.edit_text(Dialog.MessageManager.NO_TRACKED_CHATS)
+        await callback.message.edit_text(
+            Dialog.MessageManager.NO_TRACKED_CHATS,
+            reply_markup=send_message_ikb(),
+        )
         await state.clear()
         logger.warning(
             "Админ %s пытается отправить сообщение без отслеживаемых чатов",
@@ -76,7 +77,10 @@ async def chat_selected_handler(
 
     if not user_chats_dto:
         logger.error("Отсутствуют данные о чатах в state")
-        await callback.message.edit_text(Dialog.MessageManager.INVALID_STATE_DATA)
+        await callback.message.edit_text(
+            Dialog.MessageManager.INVALID_STATE_DATA,
+            reply_markup=send_message_ikb(),
+        )
         await state.clear()
         return
 
@@ -84,13 +88,19 @@ async def chat_selected_handler(
     selected_chat = next((chat for chat in user_chats_dto if chat.id == chat_id), None)
     if not selected_chat:
         logger.error("Чат с id %s не найден", chat_id)
-        await callback.message.edit_text(Dialog.MessageManager.INVALID_STATE_DATA)
+        await callback.message.edit_text(
+            Dialog.MessageManager.INVALID_STATE_DATA,
+            reply_markup=send_message_ikb(),
+        )
         await state.clear()
         return
 
     await state.update_data(chat_tgid=selected_chat.tg_id)
 
-    await callback.message.edit_text(Dialog.MessageManager.SEND_CONTENT_INPUT)
+    await callback.message.edit_text(
+        Dialog.MessageManager.SEND_CONTENT_INPUT,
+        reply_markup=cancel_send_message_ikb(),
+    )
     await log_and_set_state(
         callback.message, state, MessageManagerState.waiting_send_content
     )
@@ -109,7 +119,10 @@ async def send_content_handler(message: types.Message, state: FSMContext) -> Non
 
     if not chat_tgid:
         logger.error("Некорректные данные в state: %s", data)
-        await message.reply(Dialog.MessageManager.INVALID_STATE_DATA)
+        await message.answer(
+            Dialog.MessageManager.INVALID_STATE_DATA,
+            reply_markup=send_message_ikb(),
+        )
         await state.clear()
         return
 
@@ -124,14 +137,24 @@ async def send_content_handler(message: types.Message, state: FSMContext) -> Non
 
     try:
         await usecase.execute(dto)
-        await message.reply(Dialog.MessageManager.SEND_SUCCESS)
+        success_text = (
+            f"{Dialog.MessageManager.SEND_SUCCESS}\n\n"
+            f"{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
+        )
+        await message.answer(
+            success_text,
+            reply_markup=send_message_ikb(),
+        )
         logger.info(
             "Админ %s отправил сообщение в чат %s",
             message.from_user.id,
             chat_tgid,
         )
     except MessageSendError as e:
-        await message.reply(e.get_user_message())
+        await message.answer(
+            e.get_user_message(),
+            reply_markup=send_message_ikb(),
+        )
     except Exception as e:
         logger.error(
             "Ошибка отправки сообщения в чат %s: %s",
@@ -139,6 +162,9 @@ async def send_content_handler(message: types.Message, state: FSMContext) -> Non
             e,
             exc_info=True,
         )
-        await message.reply(Dialog.MessageManager.REPLY_ERROR)
+        await message.answer(
+            Dialog.MessageManager.REPLY_ERROR,
+            reply_markup=send_message_ikb(),
+        )
 
-    await state.clear()
+    await log_and_set_state(message, state, MessageManagerState.waiting_message_link)

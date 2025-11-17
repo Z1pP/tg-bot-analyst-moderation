@@ -3,6 +3,7 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants import InlineButtons
 from constants.pagination import CHATS_PAGE_SIZE
 from dto import ChatDTO
 from models import ChatSession
@@ -223,5 +224,12 @@ def select_chat_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
                 callback_data=f"select_chat_{chat.id}",
             )
         )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.MessageButtons.BACK_TO_MESSAGE_MANAGEMENT,
+            callback_data="message_management_menu",
+        )
+    )
 
     return builder.as_markup()

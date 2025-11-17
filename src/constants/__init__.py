@@ -1,8 +1,16 @@
 from .dialogs import (
+    AdminLogsDialogs,
     AmnestyUserDialogs,
     BanUserDialogs,
     BlockMenuDialogs,
+    CalendarDialogs,
+    ChatDialogs,
+    CommonDialogs,
+    MenuDialogs,
     MessageManagerDialogs,
+    ReportDialogs,
+    TemplateDialogs,
+    UserDialogs,
     UserTrackingDialogs,
     WarnUserDialogs,
 )
@@ -22,17 +30,23 @@ class InlineButtons:
         ADD_TEMPLATE = "➕ Добавить шаблон"
         BIND_TEMPLATE = "🔗 Привязать"
         SELECT_SCOPE = "🌐 Выбрать область применения"
+        CANCEL_ADD_TEMPLATE = "❌ Отмена"
 
         # Category
         SELECT_CATEGORY = "🗃️ Категории"
         ADD_CATEGORY = "➕ Добавить категорию"
         # Common
         BACK_TO_TEMPLATES_MENU = "⬅️ Назад в меню шаблонов"
+        CANCEL = "❌ Отмена"
 
         EDIT = "✏️ Изменить"
         REMOVE = "🗑 Удалить"
-        CONFIRM_REMOVE = "✅ Да, удалить"
-        CANCEL_REMOVE = "❌ Нет, отмена"
+
+        CONFIRM_ADD = "✅ Подтвердить"
+        CONFIRM_SAVE = "✅ Сохранить"
+        CONFIRM_REMOVE = "✅ Удалить"
+        CANCEL_REMOVE = "❌ Отмена"
+
         EDIT_TITLE = "✏️ Изменить название"
         EDIT_CONTENT = "📝 Изменить содержимое"
         CANCEL_EDIT = "❌ Отмена"
@@ -47,6 +61,22 @@ class InlineButtons:
         SEND_MESSAGE = "💬 Отправить сообщение"
         # Templates
         TEMPLATES_MENU = "🚀 Шаблоны ответов"
+        BACK_TO_MESSAGE_MANAGEMENT = "⬅️ Назад в меню управления сообщениями"
+        HIDE_TEMPLATE = "🗑 Скрыть"
+        HIDE_ALBUM = "🗑 Скрыть альбом"
+        HIDE_DETAILS = "🗑 Скрыть детализацию"
+
+    class UserButtons:
+        """Кнопки для действий с пользователями"""
+
+        SELECT_USER = "📊 Статистика"
+        ADD_USER = "➕ Добавить"
+        REMOVE_USER = "❌ Удалить"
+        BACK_TO_USERS_MENU = "⬅️ Назад в меню пользователей"
+        BACK_TO_USERS_LIST = "⬅️ Назад к списку пользователей"
+        BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
+        CANCEL = "❌ Отмена"
+        HIDE = "🗑 Скрыть"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
@@ -67,19 +97,15 @@ class KbCommands:
     # Users
     USERS_MENU = "😀 Пользователи"
     SELECT_USER = "🔄 Выбрать другого пользователя"
-    ADD_USER = "➕ Добавить"
-    REMOVE_USER = "❌ Удалить"
 
     # Chats
     CHATS_MENU = "📝 Чаты"
     SELECT_CHAT = "🔄 Выбрать другой чат"
     ADD_CHAT = "➕ Добавить"
     REMOVE_CHAT = "❌ Удалить"
-    TRACKED_CHATS = "📊 Отслеживаемые чаты"
 
     # Reports
     GET_REPORT = "⏱️ Получить отчет"
-    FULL_REPORT = "📋 Общий отчет"
     GET_STATISTICS = "📊 Статистика"
     DAILY_RATING = "🏆 Рейтинг за сутки"
 
@@ -94,6 +120,9 @@ class KbCommands:
 
     # Message management
     MESSAGE_MANAGEMENT = "💬 Упр. сообщенями"
+
+    # Admin logs
+    ADMIN_LOGS = "📋 Логи действий"
 
     # Amnesty actions
     UNBAN = "🕊️ Полный разблок"
@@ -117,14 +146,26 @@ class Dialog:
     AmnestyUser = AmnestyUserDialogs
     # Message Management
     MessageManager = MessageManagerDialogs
+    # Reports
+    Report = ReportDialogs
+    # Users
+    User = UserDialogs
+    # Calendar
+    Calendar = CalendarDialogs
+    # Menu
+    Menu = MenuDialogs
+    # Chats
+    Chat = ChatDialogs
+    # Templates
+    Template = TemplateDialogs
+    # Admin Logs
+    AdminLogs = AdminLogsDialogs
+    # Common
+    Common = CommonDialogs
 
     MENU_TEXT = """
     <b>Привет, {username}!</b> ✨
     <i>Рад видеть тебя здесь!</i>
-    """
-
-    USER_MENU_TEXT = """
-    Выберите нужный пункт ниже
     """
 
     CHATS_MENU_TEXT = """
@@ -144,12 +185,4 @@ class Dialog:
         INVALID_USERNAME_FORMAT = (
             "❗️ Неверный формат ввода данных:\n\n"
             "<i>Пример: @john_pidor или <code>123456789</code></i>"
-        )
-
-        ADD_USER_ERROR = (
-            "❌ Ошибка добавления пользователя\n\n"
-            "⚠️ Проблема: {problem}\n\n"
-            "❗️{solution}\n\n"
-            "✅ Если всё сделано правильно, вы получите уведомление "
-            "об успешном добавлении пользователя"
         )

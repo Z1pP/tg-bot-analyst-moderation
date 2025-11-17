@@ -3,8 +3,52 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants import InlineButtons
 from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
+
+
+def users_menu_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура меню пользователей"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.SELECT_USER,
+            callback_data="select_user",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.ADD_USER,
+            callback_data="add_user",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.REMOVE_USER,
+            callback_data="remove_user",
+        ),
+        width=2,
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
+            callback_data="back_to_main_menu_from_users",
+        )
+    )
+
+    return builder.as_markup()
+
+
+def cancel_add_user_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура для отмены добавления пользователя"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.CANCEL,
+            callback_data="cancel_add_user",
+        )
+    )
+    return builder.as_markup()
 
 
 def users_inline_kb(
@@ -63,6 +107,14 @@ def users_inline_kb(
         if pagination_buttons:
             builder.row(*pagination_buttons)
 
+    # Кнопка возврата в меню (в самом низу)
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
+            callback_data="users_menu",
+        )
+    )
+
     return builder.as_markup()
 
 
@@ -118,6 +170,14 @@ def remove_user_inline_kb(
         if pagination_buttons:
             builder.row(*pagination_buttons)
 
+    # Кнопка возврата в меню (в самом низу)
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
+            callback_data="users_menu",
+        )
+    )
+
     return builder.as_markup()
 
 
@@ -135,4 +195,64 @@ def conf_remove_user_kb() -> InlineKeyboardMarkup:
         ),
         width=2,
     )
+    return builder.as_markup()
+
+
+def user_actions_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура действий с выбранным пользователем"""
+    from constants import KbCommands
+
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.GET_REPORT,
+            callback_data="get_user_report",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.SELECT_USER,
+            callback_data="select_user",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
+            callback_data="users_menu",
+        )
+    )
+
+    return builder.as_markup()
+
+
+def all_users_actions_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура действий со всеми пользователями"""
+    from constants import KbCommands
+
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.GET_REPORT,
+            callback_data="get_all_users_report",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.SELECT_USER,
+            callback_data="select_user",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
+            callback_data="users_menu",
+        )
+    )
+
     return builder.as_markup()

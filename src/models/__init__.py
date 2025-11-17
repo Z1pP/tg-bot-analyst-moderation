@@ -1,3 +1,4 @@
+from .admin_action_log import AdminActionLog
 from .admin_chat_access import AdminChatAccess
 from .associations import admin_user_tracking
 from .base import Base
@@ -18,6 +19,7 @@ __all__ = [
     "MessageReply",
     "User",
     "AdminChatAccess",
+    "AdminActionLog",
     "TemplateCategory",
     "MessageTemplate",
     "TemplateMedia",

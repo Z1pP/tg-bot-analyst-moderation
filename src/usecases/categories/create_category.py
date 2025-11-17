@@ -1,46 +1,51 @@
 import logging
 
+from constants.enums import AdminActionType
 from dto import CategoryDTO, CreateCategoryDTO
+from exceptions.category import CategoryAlreadyExists
 from repositories import TemplateCategoryRepository
+from services import AdminActionLogService
 
 logger = logging.getLogger(__name__)
 
 
 class CreateCategoryUseCase:
-    def __init__(self, category_repository: TemplateCategoryRepository):
+    def __init__(
+        self,
+        category_repository: TemplateCategoryRepository,
+        admin_action_log_service: AdminActionLogService = None,
+    ):
         self.category_repository = category_repository
+        self._admin_action_log_service = admin_action_log_service
 
-    async def execute(self, create_dto: CreateCategoryDTO) -> CategoryDTO:
+    async def execute(
+        self, dto: CreateCategoryDTO, admin_tg_id: str = None
+    ) -> CategoryDTO:
         """
         Создает новую категорию шаблонов.
 
         Args:
-            name: Название категории
+            dto: DTO с названием категории
+            admin_tg_id: Telegram ID администратора (опционально)
 
         Returns:
             CategoryDTO: Созданная категория
         """
-        try:
-            # Валидация названия
-            validated_name = self._validate_category_name(create_dto.name)
+        existing = await self.category_repository.get_category_by_name(name=dto.name)
 
-            # Создание категории
-            category = await self.category_repository.create_category(
-                name=validated_name
+        if existing:
+            logger.warning(f"Категория с именем '{dto.name}' уже существует")
+            raise CategoryAlreadyExists(name=dto.name)
+
+        category = await self.category_repository.create_category(name=dto.name)
+
+        logger.info(f"Создана новая категория: '{category.name}'")
+
+        # Логируем действие после успешного создания категории
+        if self._admin_action_log_service and admin_tg_id:
+            await self._admin_action_log_service.log_action(
+                admin_tg_id=admin_tg_id,
+                action_type=AdminActionType.ADD_CATEGORY,
             )
 
-            logger.info(f"Создана новая категория: '{category.name}'")
-            return CategoryDTO.from_model(category)
-
-        except Exception as e:
-            logger.error(f"Ошибка при создании категории: {e}")
-            raise
-
-    def _validate_category_name(self, name: str) -> str:
-        """Валидация названия категории"""
-        if len(name) > 50:
-            raise ValueError("Название категории не может быть длиннее 50 символов")
-        if len(name) < 3:
-            raise ValueError("Название категории не может быть короче 3 символов")
-
-        return name.strip().upper()
+        return CategoryDTO.from_model(category)

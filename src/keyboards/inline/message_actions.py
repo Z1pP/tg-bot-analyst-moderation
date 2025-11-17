@@ -55,4 +55,60 @@ def send_message_ikb() -> types.InlineKeyboardMarkup:
             callback_data="templates_menu",
         ),
     )
+    builder.row(
+        types.InlineKeyboardButton(
+            text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
+            callback_data="back_to_main_menu_from_message_management",
+        )
+    )
+    return builder.as_markup()
+
+
+def cancel_send_message_ikb() -> types.InlineKeyboardMarkup:
+    """Клавиатура с кнопкой отмены отправки сообщения."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        types.InlineKeyboardButton(
+            text=InlineButtons.MessageButtons.CANCEL,
+            callback_data="message_management_menu",
+        )
+    )
+    return builder.as_markup()
+
+
+def cancel_reply_ikb() -> types.InlineKeyboardMarkup:
+    """Клавиатура с кнопкой отмены ответа на сообщение."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        types.InlineKeyboardButton(
+            text=InlineButtons.MessageButtons.CANCEL,
+            callback_data="cancel_reply_message",
+        )
+    )
+    return builder.as_markup()
+
+
+def hide_template_ikb(message_id: int) -> types.InlineKeyboardMarkup:
+    """Клавиатура с кнопкой скрытия шаблона."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        types.InlineKeyboardButton(
+            text=InlineButtons.MessageButtons.HIDE_TEMPLATE,
+            callback_data=f"hide_template_{message_id}",
+        )
+    )
+    return builder.as_markup()
+
+
+def hide_album_ikb(message_ids: list[int]) -> types.InlineKeyboardMarkup:
+    """Клавиатура с кнопкой скрытия альбома шаблонов."""
+    builder = InlineKeyboardBuilder()
+    # Сохраняем ID всех сообщений через запятую
+    message_ids_str = ",".join(map(str, message_ids))
+    builder.row(
+        types.InlineKeyboardButton(
+            text=InlineButtons.MessageButtons.HIDE_ALBUM,
+            callback_data=f"hide_album_{message_ids_str}",
+        )
+    )
     return builder.as_markup()

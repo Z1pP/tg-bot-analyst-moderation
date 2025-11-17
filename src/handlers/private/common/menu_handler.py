@@ -3,11 +3,15 @@ import logging
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 
 from constants import Dialog, KbCommands
-from keyboards.reply.menu import admin_menu_kb, chat_menu_kb, user_menu_kb
-from states import MenuStates
+from constants.i18n import DEFAULT_LANGUAGE, get_all_translations
+from container import container
+from keyboards.inline.users import users_menu_ikb
+from keyboards.reply.menu import admin_menu_kb, chat_menu_kb
+from services.user import UserService
+from states import MenuStates, UserStateManager
 from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
 
@@ -24,21 +28,76 @@ async def menu_handler(message: Message, state: FSMContext) -> None:
     username = message.from_user.first_name
     menu_text = Dialog.MENU_TEXT.format(username=username)
 
+    # Получаем язык пользователя из БД (LanguageMiddleware уже сохранил его)
+    user_service: UserService = container.resolve(UserService)
+    db_user = await user_service.get_user(tg_id=str(message.from_user.id))
+    user_language = (
+        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
+    )
+
     await send_html_message_with_kb(
         message=message,
         text=menu_text,
-        reply_markup=admin_menu_kb(),
+        reply_markup=admin_menu_kb(user_language),
     )
 
 
-@router.message(F.text == KbCommands.USERS_MENU)
-async def users_menu_handler(message: Message, state: FSMContext) -> None:
-    await log_and_set_state(message, state, MenuStates.users_menu)
+@router.callback_query(F.data == "main_menu")
+async def main_menu_callback_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик возврата в главное меню через callback"""
+    await callback.answer()
+    await state.clear()
+
+    username = callback.from_user.first_name
+    menu_text = Dialog.MENU_TEXT.format(username=username)
+
+    # Получаем язык пользователя из БД (LanguageMiddleware уже сохранил его)
+    user_service: UserService = container.resolve(UserService)
+    db_user = await user_service.get_user(tg_id=str(callback.from_user.id))
+    user_language = (
+        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
+    )
+
+    await callback.message.edit_text(
+        text=menu_text,
+        reply_markup=None,  # Убираем inline клавиатуру, показываем reply
+    )
 
     await send_html_message_with_kb(
+        message=callback.message,
+        text=menu_text,
+        reply_markup=admin_menu_kb(user_language),
+    )
+
+    await log_and_set_state(callback.message, state, MenuStates.main_menu)
+
+
+@router.message(
+    F.text.in_([KbCommands.USERS_MENU] + get_all_translations("USERS_MENU"))
+)
+async def users_menu_handler(message: Message, state: FSMContext) -> None:
+    """Обработчик меню пользователей через текстовую команду"""
+    await state.clear()
+
+    # Удаляем исходное сообщение
+    try:
+        await message.delete()
+    except Exception as e:
+        logger.warning(f"Не удалось удалить сообщение: {e}")
+
+    message_text = Dialog.User.SELECT_ACTION
+
+    await message.answer(
+        text=message_text,
+        reply_markup=users_menu_ikb(),
+    )
+
+    await log_and_set_state(
         message=message,
-        text=Dialog.USER_MENU_TEXT,
-        reply_markup=user_menu_kb(),
+        state=state,
+        new_state=UserStateManager.users_menu,
     )
 
 
@@ -57,4 +116,6 @@ async def chats_menu_handler(message: Message, state: FSMContext) -> None:
 async def setting_handler(message: Message, state: FSMContext) -> None:
     await log_and_set_state(message, state, MenuStates.settings_menu)
 
-    await message.answer(f"Вкладка {KbCommands.SETTINGS} еще в разработке!")
+    await message.answer(
+        Dialog.Menu.SETTINGS_IN_DEVELOPMENT.format(settings=KbCommands.SETTINGS)
+    )

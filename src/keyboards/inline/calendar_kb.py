@@ -25,9 +25,55 @@ class CalendarKeyboard:
     DAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
     @staticmethod
+    def create_calendar_single_user(
+        year: int,
+        month: int,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> InlineKeyboardMarkup:
+        return CalendarKeyboard.create_calendar(
+            year=year,
+            month=month,
+            back_callback="back_to_periods",
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    @staticmethod
+    def create_calendar_all_users(
+        year: int,
+        month: int,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> InlineKeyboardMarkup:
+        return CalendarKeyboard.create_calendar(
+            year=year,
+            month=month,
+            back_callback="all_users",
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    @staticmethod
+    def create_calendar_chat(
+        year: int,
+        month: int,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> InlineKeyboardMarkup:
+        return CalendarKeyboard._create_calendar(
+            year=year,
+            month=month,
+            back_callback="select_chat",
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    @staticmethod
     def create_calendar(
         year: int,
         month: int,
+        back_callback: str,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> InlineKeyboardMarkup:
@@ -117,7 +163,7 @@ class CalendarKeyboard:
             )
 
         control_row.append(
-            InlineKeyboardButton(text="❌ Отмена", callback_data="cal_cancel")
+            InlineKeyboardButton(text="⬅️ Назад к периоду", callback_data=back_callback)
         )
 
         keyboard.append(control_row)

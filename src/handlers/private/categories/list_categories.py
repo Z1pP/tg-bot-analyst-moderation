@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 router = Router(name=__name__)
 
 
-@router.callback_query(F.data == "select_category", TemplateStateManager.templates_menu)
+@router.callback_query(
+    F.data == "select_category",
+)
 async def select_category_handler(
     callback: types.CallbackQuery,
     state: FSMContext,

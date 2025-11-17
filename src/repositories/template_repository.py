@@ -256,22 +256,7 @@ class MessageTemplateRepository:
 
         async with self._db.session() as session:
             try:
-                # Предварительно удаляем медиа с таким же unique_id из ДРУГИХ шаблонов
-                if "media_items" in content_data and content_data["media_items"]:
-                    unique_ids_to_update = {
-                        item["file_unique_id"] for item in content_data["media_items"]
-                    }
-
-                    stmt = select(TemplateMedia).where(
-                        TemplateMedia.file_unique_id.in_(unique_ids_to_update),
-                        TemplateMedia.template_id != template_id,
-                    )
-                    result = await session.execute(stmt)
-                    conflicting_media = result.scalars().all()
-
-                    for media in conflicting_media:
-                        await session.delete(media)
-
+                # Сначала загружаем шаблон и очищаем его медиа
                 query = (
                     select(MessageTemplate)
                     .options(selectinload(MessageTemplate.media_items))
@@ -280,29 +265,49 @@ class MessageTemplateRepository:
                 result = await session.execute(query)
                 template = result.scalar_one_or_none()
 
-                if template:
-                    # Обновляем текстовое содержимое
-                    if "text" in content_data:
-                        template.content = content_data["text"]
+                if not template:
+                    return False
 
-                    # Обновляем медиа-файлы, используя cascade="all, delete-orphan"
-                    template.media_items.clear()  # Очищаем старые медиа
-                    if "media_items" in content_data:
-                        for position, media_data in enumerate(
-                            content_data["media_items"]
-                        ):
-                            media_item = TemplateMedia(
-                                media_type=media_data["media_type"],
-                                file_id=media_data["file_id"],
-                                file_unique_id=media_data["file_unique_id"],
-                                position=position,
-                            )
-                            template.media_items.append(media_item)
+                # Очищаем старые медиа текущего шаблона
+                template.media_items.clear()
+                await session.flush()  # Фиксируем удаление старых медиа
 
-                    await session.commit()
-                    logger.info(f"Содержимое шаблона {template_id} обновлено")
-                    return True
-                return False
+                # Теперь удаляем медиа с таким же unique_id из ДРУГИХ шаблонов
+                if "media_items" in content_data and content_data["media_items"]:
+                    unique_ids_to_update = {
+                        item["file_unique_id"] for item in content_data["media_items"]
+                    }
+
+                    if unique_ids_to_update:
+                        stmt = select(TemplateMedia).where(
+                            TemplateMedia.file_unique_id.in_(unique_ids_to_update),
+                            TemplateMedia.template_id != template_id,
+                        )
+                        result = await session.execute(stmt)
+                        conflicting_media = result.scalars().all()
+
+                        for media in conflicting_media:
+                            await session.delete(media)
+                        await session.flush()  # Фиксируем удаление конфликтующих медиа
+
+                # Обновляем текстовое содержимое
+                if "text" in content_data:
+                    template.content = content_data["text"]
+
+                # Добавляем новые медиа-файлы
+                if "media_items" in content_data:
+                    for position, media_data in enumerate(content_data["media_items"]):
+                        media_item = TemplateMedia(
+                            media_type=media_data["media_type"],
+                            file_id=media_data["file_id"],
+                            file_unique_id=media_data["file_unique_id"],
+                            position=position,
+                        )
+                        template.media_items.append(media_item)
+
+                await session.commit()
+                logger.info(f"Содержимое шаблона {template_id} обновлено")
+                return True
             except Exception as e:
                 logger.error(f"Ошибка при обновлении содержимого шаблона: {e}")
                 await session.rollback()
