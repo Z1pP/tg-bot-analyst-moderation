@@ -42,6 +42,11 @@ class User(BaseModel):
         nullable=False,
         default=True,
     )
+    language: Mapped[str] = mapped_column(
+        String(length=10),
+        nullable=False,
+        default="ru",
+    )
 
     # Realationships
     messages: Mapped[list["ChatMessage"]] = relationship(
