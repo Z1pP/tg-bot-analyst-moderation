@@ -38,22 +38,14 @@ def _build_time_period_keyboard(
 
 def time_period_ikb_single_user(include_custom: bool = True) -> InlineKeyboardMarkup:
     """Создает inline клавиатуру с выбором периода времени для отчетов по одному пользователю."""
-    return _build_time_period_keyboard(include_custom, "back_from_period_single_user")
+    return _build_time_period_keyboard(include_custom, "back_to_single_user_actions")
 
 
 def time_period_ikb_all_users(include_custom: bool = True) -> InlineKeyboardMarkup:
     """Создает inline клавиатуру с выбором периода времени для отчетов по всем пользователям."""
-    return _build_time_period_keyboard(include_custom, "back_from_period_all_users")
+    return _build_time_period_keyboard(include_custom, "back_to_all_users_actions")
 
 
 def time_period_ikb_chat(include_custom: bool = True) -> InlineKeyboardMarkup:
     """Создает inline клавиатуру с выбором периода времени для отчетов по чату."""
     return _build_time_period_keyboard(include_custom, "select_chat")
-
-
-# Для обратной совместимости
-def time_period_ikb(
-    include_custom: bool = True, back_callback: str = "back_from_period_single_user"
-) -> InlineKeyboardMarkup:
-    """Создает inline клавиатуру с выбором периода времени для отчетов (устаревшая функция)."""
-    return _build_time_period_keyboard(include_custom, back_callback)
