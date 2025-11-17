@@ -8,8 +8,9 @@ from aiogram.types import CallbackQuery, Message
 from constants import Dialog, KbCommands
 from constants.i18n import DEFAULT_LANGUAGE, get_all_translations
 from container import container
+from keyboards.inline.chats_kb import chats_menu_ikb
 from keyboards.inline.users import users_menu_ikb
-from keyboards.reply.menu import admin_menu_kb, chat_menu_kb
+from keyboards.reply.menu import admin_menu_kb
 from services.user import UserService
 from states import MenuStates, UserStateManager
 from utils.send_message import send_html_message_with_kb
@@ -105,11 +106,21 @@ async def users_menu_handler(message: Message, state: FSMContext) -> None:
 async def chats_menu_handler(message: Message, state: FSMContext) -> None:
     await log_and_set_state(message, state, MenuStates.chats_menu)
 
-    await send_html_message_with_kb(
-        message=message,
+    await message.answer(
         text=Dialog.CHATS_MENU_TEXT,
-        reply_markup=chat_menu_kb(),
+        reply_markup=chats_menu_ikb(),
     )
+
+    await log_and_set_state(
+        message=message,
+        state=state,
+        new_state=MenuStates.chats_menu,
+    )
+
+    try:
+        await message.delete()
+    except Exception as e:
+        logger.warning("Не удалось удалить сообщение меню чатов: %s", e)
 
 
 @router.message(F.text == KbCommands.SETTINGS)
