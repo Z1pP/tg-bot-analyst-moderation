@@ -211,6 +211,9 @@ class ReportDialogs:
     ERROR_HIDE_DETAILS_FAILED = "❌ Ошибка при скрытии детализации"
     ERROR_GETTING_TRACKED_CHATS = "❌ Ошибка при получении отслеживаемых чатов"
     ERROR_GENERATING_REPORT = "❌ Произошла ошибка при генерации отчета"
+    ERROR_GET_TRACKED_USERS = (
+        "❌ Ошибка при получении списка отслеживаемых пользователей"
+    )
 
 
 class UserDialogs:
