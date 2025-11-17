@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
 from keyboards.inline.categories import categories_inline_ikb
-from keyboards.inline.chats_kb import template_scope_selector_kb
+from keyboards.inline.chats_kb import template_scope_selector_ikb
 from keyboards.inline.templates import templates_inline_kb, templates_menu_ikb
 from services.categories import CategoryService
 from services.templates import TemplateService
@@ -47,7 +47,7 @@ async def select_category_for_template_handler(
         chats = await usecase.execute(tg_id=str(callback.from_user.id))
         await callback.message.edit_text(
             text="Выбери группу для шаблона:",
-            reply_markup=template_scope_selector_kb(chats=chats),
+            reply_markup=template_scope_selector_ikb(chats=chats),
         )
 
         await log_and_set_state(
