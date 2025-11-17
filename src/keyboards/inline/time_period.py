@@ -48,4 +48,4 @@ def time_period_ikb_all_users(include_custom: bool = True) -> InlineKeyboardMark
 
 def time_period_ikb_chat(include_custom: bool = True) -> InlineKeyboardMarkup:
     """Создает inline клавиатуру с выбором периода времени для отчетов по чату."""
-    return _build_time_period_keyboard(include_custom, "select_chat")
+    return _build_time_period_keyboard(include_custom, "back_to_chat_actions")
