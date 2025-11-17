@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
 from keyboards.inline.chats_kb import chat_actions_ikb, tracked_chats_ikb
@@ -82,8 +83,9 @@ async def process_template_chat_handler(
     await callback.answer()
 
 
-@router.callback_query(F.data == "select_chat")
-async def back_to_select_chat_handler(
+@router.callback_query(F.data == CallbackData.Chat.GET_STATISTICS)
+@router.callback_query(F.data == CallbackData.Chat.SELECT_ANOTHER_CHAT)
+async def get_list_tracked_chats_handler(
     callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
