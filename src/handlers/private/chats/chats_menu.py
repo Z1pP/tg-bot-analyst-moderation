@@ -24,13 +24,11 @@ async def show_chats_menu_handler(
     await callback.answer()
     await state.clear()
 
-    message_text = Dialog.Chat.SELECT_ACTION
-
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=message_text,
+        text=Dialog.Chat.SELECT_ACTION,
         reply_markup=chats_menu_ikb(),
     )
 
