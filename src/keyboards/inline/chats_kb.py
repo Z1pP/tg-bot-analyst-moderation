@@ -4,6 +4,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import InlineButtons, KbCommands
+from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from dto import ChatDTO
 from models import ChatSession
@@ -15,30 +16,15 @@ def remove_chat_ikb(
     total_count: int = 0,
     page_size: int = CHATS_PAGE_SIZE,
 ) -> InlineKeyboardMarkup:
+    """Клавиатура для удаления чатов с пагинацией"""
     builder = InlineKeyboardBuilder()
 
-    if not chats:
-        builder.row(
-            InlineKeyboardButton(
-                text="Список чатов пуст. Добавьте бот в чат и выдайте ему админ права",
-                callback_data="no_chat",
-            )
-        )
-        builder.row(
-            InlineKeyboardButton(
-                text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
-                callback_data="chats_menu",
-            )
-        )
-        return builder.as_markup()
-
-    # Кнопки удаления чатов
     start_index = (page - 1) * page_size
     for index, chat in enumerate(chats):
         builder.row(
             InlineKeyboardButton(
                 text=f"{start_index + index + 1}. Удалить {chat.title[:30]}",
-                callback_data=f"untrack_chat__{chat.id}",
+                callback_data=f"{CallbackData.Chat.PREFIX_UNTRACK_CHAT}{chat.id}",
             )
         )
 
@@ -77,7 +63,7 @@ def remove_chat_ikb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
-            callback_data="chats_menu",
+            callback_data=CallbackData.Chat.CHATS_MENU,
         )
     )
 
@@ -224,11 +210,11 @@ def conf_remove_chat_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text="Да",
-            callback_data="conf_remove_chat__yes",
+            callback_data=f"{CallbackData.Chat.PREFIX_CONFIRM_REMOVE_CHAT}yes",
         ),
         InlineKeyboardButton(
             text="Нет",
-            callback_data="conf_remove_chat__no",
+            callback_data=f"{CallbackData.Chat.PREFIX_CONFIRM_REMOVE_CHAT}no",
         ),
         width=2,
     )
@@ -264,21 +250,21 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=KbCommands.GET_REPORT,
-            callback_data="get_chat_report",
+            callback_data=CallbackData.Chat.GET_REPORT,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
             text=KbCommands.DAILY_RATING,
-            callback_data="get_chat_daily_rating",
+            callback_data=CallbackData.Chat.GET_DAILY_RATING,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
             text=KbCommands.SELECT_CHAT,
-            callback_data="select_chat",
+            callback_data=CallbackData.Chat.SELECT_ANOTHER_CHAT,
         )
     )
 
@@ -299,11 +285,11 @@ def chats_menu_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=KbCommands.GET_STATISTICS,
-            callback_data="select_chat",
+            callback_data=CallbackData.Chat.GET_STATISTICS,
         ),
         InlineKeyboardButton(
             text=KbCommands.ADD_CHAT,
-            callback_data="add_chat",
+            callback_data=CallbackData.Chat.ADD,
         ),
         width=2,
     )
@@ -311,14 +297,14 @@ def chats_menu_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=KbCommands.REMOVE_CHAT,
-            callback_data="remove_chat",
+            callback_data=CallbackData.Chat.REMOVE,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_MAIN_MENU,
-            callback_data="back_to_main_menu_from_chats",
+            callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU,
         )
     )
 
