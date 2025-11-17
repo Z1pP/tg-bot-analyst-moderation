@@ -1,12 +1,10 @@
 from .calendar_kb import CalendarKeyboard
 from .report import (
-    order_details_kb,
     order_details_kb_all_users,
     order_details_kb_chat,
     order_details_kb_single_user,
 )
 from .time_period import (
-    time_period_ikb,
     time_period_ikb_all_users,
     time_period_ikb_chat,
     time_period_ikb_single_user,
@@ -27,7 +25,6 @@ __all__ = [
     "cancel_add_user_ikb",
     "user_actions_ikb",
     "all_users_actions_ikb",
-    "order_details_kb",
     "order_details_kb_single_user",
     "order_details_kb_all_users",
     "order_details_kb_chat",
