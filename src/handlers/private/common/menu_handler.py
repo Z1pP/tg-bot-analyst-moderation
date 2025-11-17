@@ -6,8 +6,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from constants import Dialog, KbCommands
+from constants.i18n import DEFAULT_LANGUAGE, get_all_translations
+from container import container
 from keyboards.inline.users import users_menu_ikb
 from keyboards.reply.menu import admin_menu_kb, chat_menu_kb
+from services.user import UserService
 from states import MenuStates, UserStateManager
 from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
@@ -25,10 +28,17 @@ async def menu_handler(message: Message, state: FSMContext) -> None:
     username = message.from_user.first_name
     menu_text = Dialog.MENU_TEXT.format(username=username)
 
+    # Получаем язык пользователя из БД (LanguageMiddleware уже сохранил его)
+    user_service: UserService = container.resolve(UserService)
+    db_user = await user_service.get_user(tg_id=str(message.from_user.id))
+    user_language = (
+        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
+    )
+
     await send_html_message_with_kb(
         message=message,
         text=menu_text,
-        reply_markup=admin_menu_kb(),
+        reply_markup=admin_menu_kb(user_language),
     )
 
 
@@ -43,6 +53,13 @@ async def main_menu_callback_handler(
     username = callback.from_user.first_name
     menu_text = Dialog.MENU_TEXT.format(username=username)
 
+    # Получаем язык пользователя из БД (LanguageMiddleware уже сохранил его)
+    user_service: UserService = container.resolve(UserService)
+    db_user = await user_service.get_user(tg_id=str(callback.from_user.id))
+    user_language = (
+        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
+    )
+
     await callback.message.edit_text(
         text=menu_text,
         reply_markup=None,  # Убираем inline клавиатуру, показываем reply
@@ -51,13 +68,15 @@ async def main_menu_callback_handler(
     await send_html_message_with_kb(
         message=callback.message,
         text=menu_text,
-        reply_markup=admin_menu_kb(),
+        reply_markup=admin_menu_kb(user_language),
     )
 
     await log_and_set_state(callback.message, state, MenuStates.main_menu)
 
 
-@router.message(F.text == KbCommands.USERS_MENU)
+@router.message(
+    F.text.in_([KbCommands.USERS_MENU] + get_all_translations("USERS_MENU"))
+)
 async def users_menu_handler(message: Message, state: FSMContext) -> None:
     """Обработчик меню пользователей через текстовую команду"""
     await state.clear()
