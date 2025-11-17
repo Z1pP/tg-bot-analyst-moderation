@@ -7,13 +7,11 @@ from aiogram.types import Message
 from constants import KbCommands
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
-from keyboards.inline.chats_kb import tracked_chats_inline_kb
-from keyboards.reply import chat_menu_kb
+from keyboards.inline.chats_kb import chats_menu_ikb, tracked_chats_ikb
 from states import MenuStates
 from states.chat_states import ChatStateManager
 from usecases.chat import GetTrackedChatsUseCase
 from utils.exception_handler import handle_exception
-from utils.send_message import send_html_message_with_kb
 from utils.state_logger import log_and_set_state
 
 logger = logging.getLogger(__name__)
@@ -38,10 +36,9 @@ async def list_of_tracking_chats_handler(message: Message, state: FSMContext) ->
                 "❗Чтобы получать отчёты по чату, необходимо добавить чат "
                 "в отслеживаемые, а также пользователей для сбора статистики"
             )
-            await send_html_message_with_kb(
-                message=message,
+            await message.answer(
                 text=message_text,
-                reply_markup=chat_menu_kb(),
+                reply_markup=chats_menu_ikb(),
             )
             return
 
@@ -54,10 +51,9 @@ async def list_of_tracking_chats_handler(message: Message, state: FSMContext) ->
         first_page_chats = chats[:CHATS_PAGE_SIZE]
 
         # Отправляем сообщение с кнопками для выбора действия
-        await send_html_message_with_kb(
-            message=message,
+        await message.answer(
             text=f"Найдено {len(chats)} чат(-ов):",
-            reply_markup=tracked_chats_inline_kb(
+            reply_markup=tracked_chats_ikb(
                 chats=first_page_chats,
                 page=1,
                 total_count=len(chats),
