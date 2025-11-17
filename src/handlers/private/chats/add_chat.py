@@ -1,29 +1,29 @@
+import logging
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery
 
-from constants import KbCommands
-from utils.send_message import send_html_message_with_kb
+from constants import Dialog
+from keyboards.inline.chats_kb import chats_menu_ikb
 
 router = Router(name=__name__)
+logger = logging.getLogger(__name__)
 
 
-@router.message(F.text == KbCommands.ADD_CHAT)
-async def add_chat_handler(message: Message, state: FSMContext) -> None:
+@router.callback_query(F.data == "add_chat")
+async def add_chat_callback_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """
-    Хендлер для команды добавления чата.
+    Хендлер для команды добавления чата через callback.
     """
+    await callback.answer()
 
-    message_text = (
-        "📨 <b>Добавление чата в отслеживание</b>\n\n"
-        "📋 <b>Инструкция:</b>\n"
-        "1️⃣ Добавьте бота в нужный чат\n"
-        "2️⃣ Дайте боту права администратора\n"
-        "3️⃣ Напишите команду <code>/track</code> в чате\n\n"
-        "✅ Если все успешно, вы получите уведомление здесь об успешном добавлении чата"
+    logger.info(
+        "Пользователь %s начал добавление чата в отслеживание",
+        callback.from_user.username,
     )
 
-    await send_html_message_with_kb(
-        message=message,
-        text=message_text,
+    await callback.message.edit_text(
+        text=Dialog.Chat.ADD_CHAT_INSTRUCTION,
+        reply_markup=chats_menu_ikb(),
     )
