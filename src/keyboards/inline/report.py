@@ -30,25 +30,17 @@ def _build_order_details_keyboard(
 
 def order_details_kb_single_user(show_details: bool = True) -> InlineKeyboardMarkup:
     """Клавиатура с детализацией для отчета по одному пользователю."""
-    return _build_order_details_keyboard(show_details, "get_user_report")
+    return _build_order_details_keyboard(show_details, "back_to_periods")
 
 
 def order_details_kb_all_users(show_details: bool = True) -> InlineKeyboardMarkup:
     """Клавиатура с детализацией для отчета по всем пользователям."""
-    return _build_order_details_keyboard(show_details, "all_users")
+    return _build_order_details_keyboard(show_details, "back_to_periods")
 
 
 def order_details_kb_chat(show_details: bool = True) -> InlineKeyboardMarkup:
     """Клавиатура с детализацией для отчета по чату."""
     return _build_order_details_keyboard(show_details, "select_chat")
-
-
-# Для обратной совместимости
-def order_details_kb(
-    show_details: bool = True, back_to_period_callback: str = "get_user_report"
-) -> InlineKeyboardMarkup:
-    """Клавиатура с детализацией (устаревшая функция)."""
-    return _build_order_details_keyboard(show_details, back_to_period_callback)
 
 
 def hide_details_ikb(message_ids: list[int]) -> InlineKeyboardMarkup:
