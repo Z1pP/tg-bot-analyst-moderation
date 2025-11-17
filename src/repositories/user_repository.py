@@ -236,6 +236,7 @@ class UserRepository:
         tg_id: str = None,
         username: str = None,
         role: Optional[UserRole] = UserRole.USER,
+        language: str = "ru",
     ) -> User:
         """Создает нового пользователя."""
         if tg_id is None and username is None:
@@ -247,6 +248,7 @@ class UserRepository:
                     tg_id=tg_id,
                     username=username,
                     role=role,
+                    language=language,
                 )
                 session.add(user)
                 await session.commit()
@@ -265,6 +267,33 @@ class UserRepository:
                 )
                 await session.rollback()
                 raise e
+
+    async def update_user_language(self, user_id: int, language: str) -> Optional[User]:
+        """Обновляет язык пользователя."""
+        async with self._db.session() as session:
+            try:
+                user = await session.get(User, user_id)
+                if not user:
+                    logger.warning("Пользователь %s не найден", user_id)
+                    return None
+
+                user.language = language
+                await session.commit()
+                await session.refresh(user)
+                logger.info(
+                    "Язык обновлен для пользователя %s: %s",
+                    user_id,
+                    language,
+                )
+                return user
+            except Exception as e:
+                logger.error(
+                    "Ошибка при обновлении языка пользователя %s: %s",
+                    user_id,
+                    e,
+                )
+                await session.rollback()
+                raise
 
     async def delete_user(self, user_id: int) -> bool:
         """Удаляет пользователя по его ID"""
