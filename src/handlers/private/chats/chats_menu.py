@@ -4,6 +4,7 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
+from constants.callback import CallbackData
 from keyboards.inline.chats_kb import chats_menu_ikb
 from keyboards.reply.menu import admin_menu_kb
 from states import MenuStates
@@ -15,8 +16,8 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == "chats_menu")
-async def chats_menu_handler(
+@router.callback_query(F.data == CallbackData.Chat.CHATS_MENU)
+async def show_chats_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
 ) -> None:
@@ -40,8 +41,8 @@ async def chats_menu_handler(
     )
 
 
-@router.callback_query(F.data == "back_to_main_menu_from_chats")
-async def back_to_main_menu_from_chats_handler(
+@router.callback_query(F.data == CallbackData.Chat.BACK_TO_MAIN_MENU)
+async def return_to_main_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
 ) -> None:
