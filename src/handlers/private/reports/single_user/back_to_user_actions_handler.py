@@ -27,6 +27,11 @@ async def back_to_single_user_actions_handler(
 
     await state.update_data(report_dto=None)
 
+    logger.info(
+        "Пользователь %s возвращается к действиям с пользователем",
+        callback.from_user.id,
+    )
+
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,

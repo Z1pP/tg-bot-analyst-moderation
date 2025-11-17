@@ -1,3 +1,5 @@
+import logging
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
@@ -9,6 +11,7 @@ from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
+logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
@@ -23,6 +26,11 @@ async def back_to_all_users_actions_handler(
     await callback.answer()
 
     await state.update_data(all_users_report_dto=None)
+
+    logger.info(
+        "Пользователь %s возвращается к действиям со всеми пользователями",
+        callback.from_user.id,
+    )
 
     await safe_edit_message(
         bot=callback.bot,

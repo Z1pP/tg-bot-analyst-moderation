@@ -14,7 +14,7 @@ from keyboards.inline.banhammer import (
     amnesty_actions_ikb,
     block_actions_ikb,
 )
-from keyboards.inline.chats_kb import tracked_chats_with_all_kb
+from keyboards.inline.chats_kb import tracked_chats_with_all_ikb
 from states import AmnestyStates, BanHammerStates
 from usecases.amnesty import (
     CancelLastWarnUseCase,
@@ -156,7 +156,7 @@ async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> No
     await state.update_data(chat_dtos=chat_dtos)
     await callback.message.edit_text(
         text=text,
-        reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
+        reply_markup=tracked_chats_with_all_ikb(dtos=chat_dtos),
     )
 
     await log_and_set_state(

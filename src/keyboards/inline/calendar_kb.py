@@ -49,7 +49,7 @@ class CalendarKeyboard:
         return CalendarKeyboard.create_calendar(
             year=year,
             month=month,
-            back_callback="all_users",
+            back_callback="back_to_periods",
             start_date=start_date,
             end_date=end_date,
         )
@@ -61,10 +61,10 @@ class CalendarKeyboard:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
     ) -> InlineKeyboardMarkup:
-        return CalendarKeyboard._create_calendar(
+        return CalendarKeyboard.create_calendar(
             year=year,
             month=month,
-            back_callback="select_chat",
+            back_callback="back_to_periods",
             start_date=start_date,
             end_date=end_date,
         )

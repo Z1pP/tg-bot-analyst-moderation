@@ -3,13 +3,13 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import InlineButtons
+from constants import InlineButtons, KbCommands
 from constants.pagination import CHATS_PAGE_SIZE
 from dto import ChatDTO
 from models import ChatSession
 
 
-def remove_inline_kb(
+def remove_chat_ikb(
     chats: List[ChatSession],
     page: int = 1,
     total_count: int = 0,
@@ -22,6 +22,12 @@ def remove_inline_kb(
             InlineKeyboardButton(
                 text="Список чатов пуст. Добавьте бот в чат и выдайте ему админ права",
                 callback_data="no_chat",
+            )
+        )
+        builder.row(
+            InlineKeyboardButton(
+                text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
+                callback_data="chats_menu",
             )
         )
         return builder.as_markup()
@@ -67,10 +73,18 @@ def remove_inline_kb(
         if pagination_buttons:
             builder.row(*pagination_buttons)
 
+    # Кнопка возврата в меню (в самом низу)
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
+            callback_data="chats_menu",
+        )
+    )
+
     return builder.as_markup()
 
 
-def tracked_chats_inline_kb(
+def tracked_chats_ikb(
     chats: List[ChatDTO],
     page: int = 1,
     total_count: int = 0,
@@ -115,10 +129,18 @@ def tracked_chats_inline_kb(
         if pagination_buttons:
             builder.row(*pagination_buttons)
 
+    # Кнопка возврата в меню (в самом низу)
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
+            callback_data="chats_menu",
+        )
+    )
+
     return builder.as_markup()
 
 
-def tracked_chats_with_all_kb(
+def tracked_chats_with_all_ikb(
     dtos: List[ChatDTO],
     page: int = 1,
     total_count: int = 0,
@@ -175,7 +197,7 @@ def tracked_chats_with_all_kb(
     return builder.as_markup()
 
 
-def template_scope_selector_kb(chats: List[ChatSession]) -> InlineKeyboardMarkup:
+def template_scope_selector_ikb(chats: List[ChatSession]) -> InlineKeyboardMarkup:
     """Клавиатура для выбора области применения шаблона"""
     kb = InlineKeyboardBuilder()
 
@@ -196,7 +218,7 @@ def template_scope_selector_kb(chats: List[ChatSession]) -> InlineKeyboardMarkup
     return kb.as_markup()
 
 
-def conf_remove_chat_kb() -> InlineKeyboardMarkup:
+def conf_remove_chat_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.row(
@@ -229,6 +251,74 @@ def select_chat_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=InlineButtons.MessageButtons.BACK_TO_MESSAGE_MANAGEMENT,
             callback_data="message_management_menu",
+        )
+    )
+
+    return builder.as_markup()
+
+
+def chat_actions_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура действий с выбранным чатом"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.GET_REPORT,
+            callback_data="get_chat_report",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.DAILY_RATING,
+            callback_data="get_chat_daily_rating",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.SELECT_CHAT,
+            callback_data="select_chat",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
+            callback_data="chats_menu",
+        )
+    )
+
+    return builder.as_markup()
+
+
+def chats_menu_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура меню чатов"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.GET_STATISTICS,
+            callback_data="select_chat",
+        ),
+        InlineKeyboardButton(
+            text=KbCommands.ADD_CHAT,
+            callback_data="add_chat",
+        ),
+        width=2,
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=KbCommands.REMOVE_CHAT,
+            callback_data="remove_chat",
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_MAIN_MENU,
+            callback_data="back_to_main_menu_from_chats",
         )
     )
 

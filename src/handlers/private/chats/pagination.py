@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
-from keyboards.inline.chats_kb import remove_inline_kb, tracked_chats_inline_kb
+from keyboards.inline.chats_kb import remove_chat_ikb, tracked_chats_ikb
 from models import ChatSession
 from usecases.chat import GetTrackedChatsUseCase
 from utils.pagination_handler import BasePaginationHandler
@@ -34,7 +34,7 @@ class ChatsPaginationHandler(BasePaginationHandler):
         page: int,
         total_count: int,
     ) -> InlineKeyboardMarkup:
-        return tracked_chats_inline_kb(
+        return tracked_chats_ikb(
             chats=items,
             page=page,
             total_count=total_count,
@@ -61,7 +61,7 @@ class RemoveChatsPaginationHandler(BasePaginationHandler):
         page: int,
         total_count: int,
     ) -> InlineKeyboardMarkup:
-        return remove_inline_kb(
+        return remove_chat_ikb(
             chats=items,
             page=page,
             total_count=total_count,
@@ -112,4 +112,3 @@ def paginate_chats(
     start_idx = (page - 1) * page_size
     end_idx = start_idx + page_size
     return chats[start_idx:end_idx], len(chats)
-

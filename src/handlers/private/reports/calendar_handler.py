@@ -15,7 +15,6 @@ from keyboards.inline.time_period import (
 from services.time_service import TimeZoneService
 from states import AllUsersReportStates, ChatStateManager, SingleUserReportStates
 from utils.exception_handler import handle_exception
-from utils.state_logger import log_and_set_state
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -196,30 +195,22 @@ async def handle_confirm_action(
     if current_state == ChatStateManager.selecting_custom_period:
         from .chat.chat_report_handler import generate_and_send_report
 
-        await callback.message.delete()
-        temp_message = await callback.bot.send_message(
-            chat_id=callback.message.chat.id,
-            text=Dialog.Calendar.GENERATING_REPORT,
-        )
-
         chat_id = user_data.get("chat_id")
         if not chat_id:
-            logger.error("Отсутствует chat_id при confirm")
-            await temp_message.delete()
+            await callback.answer(
+                Dialog.Report.ERROR_SELECT_CHAT_AGAIN, show_alert=True
+            )
             return
 
+        await callback.message.edit_text(text=Dialog.Calendar.GENERATING_REPORT)
+
         await generate_and_send_report(
-            message=temp_message,
+            callback=callback,
             state=state,
             start_date=cal_start,
             end_date=cal_end,
             chat_id=chat_id,
             admin_tg_id=callback.from_user.id,
-        )
-        await log_and_set_state(
-            message=temp_message,
-            state=state,
-            new_state=ChatStateManager.selecting_period,
         )
 
     elif current_state == SingleUserReportStates.selecting_custom_period:
@@ -261,7 +252,7 @@ async def handle_confirm_action(
 
 
 @router.callback_query(F.data.startswith("cal_"))
-async def calendar_callback_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def calendar_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Главный обработчик callback-кнопок календаря."""
     try:
         await callback.answer()

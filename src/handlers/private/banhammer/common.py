@@ -11,7 +11,7 @@ from constants.punishment import PunishmentActions as Actions
 from container import container
 from dto import ModerationActionDTO
 from keyboards.inline.banhammer import back_to_block_menu_ikb, block_actions_ikb
-from keyboards.inline.chats_kb import tracked_chats_with_all_kb
+from keyboards.inline.chats_kb import tracked_chats_with_all_ikb
 from services import UserService
 from states.banhammer_states import BanHammerStates
 from usecases.chat import GetChatsForUserActionUseCase
@@ -293,7 +293,7 @@ async def process_reason_common(
             chat_id=chat_id,
             message_id=message_to_edit_id,
             text=Dialog.WarnUser.SELECT_CHAT.format(username=username),
-            reply_markup=tracked_chats_with_all_kb(dtos=chat_dtos),
+            reply_markup=tracked_chats_with_all_ikb(dtos=chat_dtos),
         )
     except TelegramBadRequest as e:
         logger.error("Ошибка при редактировании сообщения: %s", e, exc_info=True)
