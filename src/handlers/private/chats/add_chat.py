@@ -5,13 +5,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from keyboards.inline.chats_kb import chats_menu_ikb
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == "add_chat")
+@router.callback_query(F.data == CallbackData.Chat.ADD)
 async def add_chat_callback_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """
     Хендлер для команды добавления чата через callback.
