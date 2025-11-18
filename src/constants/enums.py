@@ -35,3 +35,4 @@ class AdminActionType(str, Enum):
     SEND_MESSAGE = "send_message"
     DELETE_MESSAGE = "delete_message"
     REPLY_MESSAGE = "reply_message"
+    CHANGE_USER_ROLE = "change_user_role"
