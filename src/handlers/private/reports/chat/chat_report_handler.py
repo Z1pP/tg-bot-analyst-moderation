@@ -2,7 +2,6 @@ import logging
 from datetime import datetime
 
 from aiogram import F, Router
-from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
@@ -224,7 +223,6 @@ async def generate_and_send_report(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=full_report,
-        parse_mode=ParseMode.HTML,
         reply_markup=order_details_kb_chat(show_details=not is_single_day),
     )
 
