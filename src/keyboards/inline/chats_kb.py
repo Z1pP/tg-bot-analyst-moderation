@@ -318,7 +318,7 @@ def chats_menu_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_MAIN_MENU,
-            callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU,
+            callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
         )
     )
 
