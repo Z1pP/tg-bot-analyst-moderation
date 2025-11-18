@@ -87,7 +87,7 @@ async def chat_report_handler(callback: CallbackQuery, state: FSMContext) -> Non
 
 @router.callback_query(
     ChatStateManager.selecting_period,
-    F.data.startswith("period__"),
+    F.data.startswith(CallbackData.Report.PREFIX_PERIOD),
 )
 async def process_period_selection_callback(
     callback: CallbackQuery, state: FSMContext
@@ -95,7 +95,7 @@ async def process_period_selection_callback(
     """Обрабатывает выбор периода для отчета по чату через callback."""
     await callback.answer()
 
-    period_text = callback.data.replace("period__", "")
+    period_text = callback.data.replace(CallbackData.Report.PREFIX_PERIOD, "")
     data = await state.get_data()
     chat_id = data.get("chat_id")
 
