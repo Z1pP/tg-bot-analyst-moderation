@@ -4,6 +4,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
 from container import container
 from dto import RemoveUserTrackingDTO
@@ -25,7 +26,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == "remove_user")
+@router.callback_query(F.data == CallbackData.User.REMOVE)
 async def remove_user_from_tracking_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -85,7 +86,7 @@ async def remove_user_from_tracking_handler(
         )
 
 
-@router.callback_query(F.data.startswith("remove_user__"))
+@router.callback_query(F.data.startswith(CallbackData.User.PREFIX_REMOVE_USER))
 async def process_removing_user(
     callback: CallbackQuery,
     state: FSMContext,
@@ -94,7 +95,7 @@ async def process_removing_user(
     Обработчик для получения ID выбранного пользователя на удаление.
     """
     try:
-        user_id = int(callback.data.split("__")[1])
+        user_id = int(callback.data.replace(CallbackData.User.PREFIX_REMOVE_USER, ""))
         logger.info(f"Запрос на удаление пользователя с ID: {user_id}")
 
         # Сохраняем текущую страницу из state (если есть)
@@ -130,7 +131,7 @@ async def process_removing_user(
         await callback.answer()
 
 
-@router.callback_query(F.data.startswith("conf_remove_user__"))
+@router.callback_query(F.data.startswith(CallbackData.User.PREFIX_CONFIRM_REMOVE_USER))
 async def confirmation_removing_user(
     callback: CallbackQuery,
     state: FSMContext,
@@ -142,7 +143,7 @@ async def confirmation_removing_user(
         data = await state.get_data()
         user_id = data.get("user_id")
         current_page = data.get("current_page", 1)
-        answer = callback.data.split("__")[1]
+        answer = callback.data.replace(CallbackData.User.PREFIX_CONFIRM_REMOVE_USER, "")
 
         logger.info(f"Подтверждение удаления пользователя ID {user_id}: {answer}")
 
