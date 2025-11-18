@@ -94,7 +94,7 @@ async def process_untracking_chat_handler(
     """Обработчик для получения ID выбранного чата на удаление."""
     await callback.answer()
 
-    chat_id = int(callback.data.split("__")[1])
+    chat_id = int(callback.data.replace(CallbackData.Chat.PREFIX_UNTRACK_CHAT, ""))
 
     logger.info(
         "Пользователь %s начал удаление чата из отслеживания: %s",
@@ -125,7 +125,7 @@ async def confirmation_removing_chat_handler(
     """Обработчик подтверждения удаления чата из отслеживания"""
     await callback.answer()
 
-    answer = callback.data.split("__")[1]
+    answer = callback.data.replace(CallbackData.Chat.PREFIX_CONFIRM_REMOVE_CHAT, "")
 
     data = await state.get_data()
     chat_id = data.get("chat_id", None)

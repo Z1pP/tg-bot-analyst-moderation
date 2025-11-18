@@ -39,7 +39,7 @@ async def show_chats_menu_handler(
     )
 
 
-@router.callback_query(F.data == CallbackData.Chat.BACK_TO_MAIN_MENU)
+@router.callback_query(F.data == CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS)
 async def return_to_main_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
