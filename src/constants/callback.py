@@ -67,9 +67,30 @@ class UserCallbackData:
     PREFIX_NEXT_REMOVE_USERS_PAGE = "next_remove_users_page__"
 
 
+class MenuCallbackData:
+    """Класс для хранения callback данных главного меню"""
+
+    # Commands
+    USERS_MENU = "users_menu"
+    CHATS_MENU = "chats_menu"
+    MESSAGE_MANAGEMENT = "message_management"
+    LOCK_MENU = "lock_menu"
+    ADMIN_LOGS = "admin_logs"
+    MAIN_MENU = "main_menu"
+
+
+class AdminLogsCallbackData:
+    """Класс для хранения callback данных логов администраторов"""
+
+    # Commands
+    HIDE_LOGS = "hide_admin_logs"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
     Chat = ChatCallbackData()
     Report = ReportCallbackData()
     User = UserCallbackData()
+    Menu = MenuCallbackData()
+    AdminLogs = AdminLogsCallbackData()
