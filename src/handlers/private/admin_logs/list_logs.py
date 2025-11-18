@@ -12,7 +12,7 @@ from keyboards.inline.admin_logs import (
     admin_select_ikb,
     format_action_type,
 )
-from keyboards.reply.menu import admin_menu_kb
+from keyboards.inline.menu import admin_menu_ikb
 from repositories import AdminActionLogRepository
 from services.time_service import TimeZoneService
 
@@ -23,6 +23,12 @@ logger = logging.getLogger(__name__)
 @router.message(Command("logs"))
 async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
     """Обработчик просмотра логов действий администраторов - показывает список администраторов."""
+    # Удаляем исходное сообщение с командой
+    try:
+        await message.delete()
+    except Exception as e:
+        logger.warning("Не удалось удалить сообщение с командой /logs: %s", e)
+
     try:
         log_repository: AdminActionLogRepository = container.resolve(
             AdminActionLogRepository
@@ -31,15 +37,11 @@ async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
         # Получаем список администраторов с логами
         admins = await log_repository.get_admins_with_logs()
 
-        if not admins:
-            await message.answer(
-                f"{Dialog.AdminLogs.ADMIN_LOGS_TITLE}\n\n{Dialog.AdminLogs.NO_LOGS}",
-                reply_markup=admin_menu_kb(),
-            )
-            return
-
         # Формируем текст сообщения
-        text = Dialog.AdminLogs.SELECT_ADMIN
+        if not admins:
+            text = f"{Dialog.AdminLogs.ADMIN_LOGS_TITLE}\n\n{Dialog.AdminLogs.NO_LOGS}"
+        else:
+            text = Dialog.AdminLogs.SELECT_ADMIN
 
         await message.answer(
             text,
@@ -50,9 +52,10 @@ async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
         logger.error(
             "Ошибка при получении списка администраторов: %s", e, exc_info=True
         )
+
         await message.answer(
             Dialog.AdminLogs.ERROR_GET_ADMINS,
-            reply_markup=admin_menu_kb(),
+            reply_markup=admin_menu_ikb(),
         )
 
 
