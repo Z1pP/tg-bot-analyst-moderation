@@ -19,40 +19,48 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data.startswith("chat__"))
+@router.callback_query(F.data.startswith(CallbackData.Chat.PREFIX_CHAT))
 async def chat_selected_handler(
-    query: CallbackQuery,
+    callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
     """
     Обработчик выбора чата из списка чатов.
     """
     try:
-        chat_id = int(query.data.split("__")[1])
+        # Проверяем, выбран ли "все чаты"
+        if callback.data == CallbackData.Chat.ALL_CHATS:
+            await log_and_set_state(
+                message=callback.message,
+                state=state,
+                new_state=ChatStateManager.selecting_all_chats,
+            )
+            await state.update_data(chat_id="all", chat_title="all")
+        else:
+            chat_id = int(callback.data.replace(CallbackData.Chat.PREFIX_CHAT, ""))
+            await log_and_set_state(
+                message=callback.message,
+                state=state,
+                new_state=ChatStateManager.selecting_chat,
+            )
+            await state.update_data(chat_id=chat_id)
 
-        await log_and_set_state(
-            message=query.message,
-            state=state,
-            new_state=ChatStateManager.selecting_chat,
-        )
-        await state.update_data(chat_id=chat_id)
-
-        await query.message.edit_text(
+        await callback.message.edit_text(
             text=Dialog.Chat.SELECT_ACTION,
             reply_markup=chat_actions_ikb(),
         )
 
-        await query.answer()
+        await callback.answer()
 
     except Exception as e:
         await handle_exception(
-            message=query.message, exc=e, context="chat_selected_handler"
+            message=callback.message, exc=e, context="chat_selected_handler"
         )
 
 
 @router.callback_query(
     TemplateStateManager.process_template_chat,
-    F.data.startswith("template_scope__"),
+    F.data.startswith(CallbackData.Chat.PREFIX_TEMPLATE_SCOPE),
 )
 async def process_template_chat_handler(
     callback: CallbackQuery,
@@ -63,7 +71,7 @@ async def process_template_chat_handler(
     """
     await callback.answer()
 
-    chat_id = int(callback.data.split("__")[1])
+    chat_id = int(callback.data.replace(CallbackData.Chat.PREFIX_TEMPLATE_SCOPE, ""))
 
     if chat_id == -1:
         await state.update_data(chat_id=None)
