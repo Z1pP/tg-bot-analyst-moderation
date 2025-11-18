@@ -43,8 +43,33 @@ class ReportCallbackData:
     PREFIX_CALENDAR = "cal_"
 
 
+class UserCallbackData:
+    """Класс для хранения callback данных пользователей"""
+
+    # Commands
+    SELECT_USER = "select_user"
+    ADD = "add_user"
+    REMOVE = "remove_user"
+    USERS_MENU = "users_menu"
+    BACK_TO_MAIN_MENU_FROM_USERS = "back_to_main_menu_from_users"
+    CANCEL_ADD = "cancel_add_user"
+    ALL_USERS = "all_users"
+    USERS_PAGE_INFO = "users_page_info"
+    REMOVE_USERS_PAGE_INFO = "remove_users_page_info"
+
+    # Prefixes
+    PREFIX_USER = "user__"
+    PREFIX_REMOVE_USER = "remove_user__"
+    PREFIX_CONFIRM_REMOVE_USER = "conf_remove_user__"
+    PREFIX_PREV_USERS_PAGE = "prev_users_page__"
+    PREFIX_NEXT_USERS_PAGE = "next_users_page__"
+    PREFIX_PREV_REMOVE_USERS_PAGE = "prev_remove_users_page__"
+    PREFIX_NEXT_REMOVE_USERS_PAGE = "next_remove_users_page__"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
     Chat = ChatCallbackData()
     Report = ReportCallbackData()
+    User = UserCallbackData()
