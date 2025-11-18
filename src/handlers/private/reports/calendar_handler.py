@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from keyboards.inline import CalendarKeyboard
 from keyboards.inline.time_period import (
     time_period_ikb_all_users,
@@ -251,7 +252,7 @@ async def handle_confirm_action(
         )
 
 
-@router.callback_query(F.data.startswith("cal_"))
+@router.callback_query(F.data.startswith(CallbackData.Report.PREFIX_CALENDAR))
 async def calendar_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Главный обработчик callback-кнопок календаря."""
     try:
