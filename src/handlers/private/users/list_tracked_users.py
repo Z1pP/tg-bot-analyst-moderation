@@ -4,6 +4,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
 from container import container
 from keyboards.inline.users import users_inline_kb, users_menu_ikb
@@ -16,7 +17,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == "select_user")
+@router.callback_query(F.data == CallbackData.User.SELECT_USER)
 async def users_list_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик команды для отображения списка пользователей через inline клавиатуру"""
     await callback.answer()
