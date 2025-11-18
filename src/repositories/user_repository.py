@@ -295,6 +295,37 @@ class UserRepository:
                 await session.rollback()
                 raise
 
+    async def update_user_role(
+        self, user_id: int, new_role: UserRole
+    ) -> Optional[User]:
+        """Обновляет роль пользователя."""
+        async with self._db.session() as session:
+            try:
+                user = await session.get(User, user_id)
+                if not user:
+                    logger.warning("Пользователь %s не найден", user_id)
+                    return None
+
+                old_role = user.role
+                user.role = new_role
+                await session.commit()
+                await session.refresh(user)
+                logger.info(
+                    "Роль обновлена для пользователя %s: %s -> %s",
+                    user_id,
+                    old_role.value,
+                    new_role.value,
+                )
+                return user
+            except Exception as e:
+                logger.error(
+                    "Ошибка при обновлении роли пользователя %s: %s",
+                    user_id,
+                    e,
+                )
+                await session.rollback()
+                raise
+
     async def delete_user(self, user_id: int) -> bool:
         """Удаляет пользователя по его ID"""
         async with self._db.session() as session:
