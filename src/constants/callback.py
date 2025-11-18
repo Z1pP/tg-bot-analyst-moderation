@@ -65,6 +65,7 @@ class UserCallbackData:
     PREFIX_NEXT_USERS_PAGE = "next_users_page__"
     PREFIX_PREV_REMOVE_USERS_PAGE = "prev_remove_users_page__"
     PREFIX_NEXT_REMOVE_USERS_PAGE = "next_remove_users_page__"
+    PREFIX_ROLE_SELECT = "role_select__"
 
 
 class MenuCallbackData:
