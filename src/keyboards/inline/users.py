@@ -4,6 +4,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import InlineButtons
+from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
 
@@ -15,15 +16,15 @@ def users_menu_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.SELECT_USER,
-            callback_data="select_user",
+            callback_data=CallbackData.User.SELECT_USER,
         ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.ADD_USER,
-            callback_data="add_user",
+            callback_data=CallbackData.User.ADD,
         ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.REMOVE_USER,
-            callback_data="remove_user",
+            callback_data=CallbackData.User.REMOVE,
         ),
         width=2,
     )
@@ -31,7 +32,7 @@ def users_menu_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
-            callback_data="back_to_main_menu_from_users",
+            callback_data=CallbackData.User.BACK_TO_MAIN_MENU_FROM_USERS,
         )
     )
 
@@ -45,7 +46,7 @@ def cancel_add_user_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.CANCEL,
-            callback_data="cancel_add_user",
+            callback_data=CallbackData.User.CANCEL_ADD,
         )
     )
     return builder.as_markup()
@@ -63,7 +64,7 @@ def users_inline_kb(
     builder.row(
         InlineKeyboardButton(
             text="Все пользователи",
-            callback_data="all_users",
+            callback_data=CallbackData.User.ALL_USERS,
         )
     )
 
@@ -73,7 +74,7 @@ def users_inline_kb(
         builder.row(
             InlineKeyboardButton(
                 text=f"{start_index + index + 1}. {user.username}",
-                callback_data=f"user__{user.id}",
+                callback_data=f"{CallbackData.User.PREFIX_USER}{user.id}",
             )
         )
 
@@ -85,7 +86,10 @@ def users_inline_kb(
         # Кнопка "Назад"
         if page > 1:
             pagination_buttons.append(
-                InlineKeyboardButton(text="◀️", callback_data=f"prev_users_page__{page}")
+                InlineKeyboardButton(
+                    text="◀️",
+                    callback_data=f"{CallbackData.User.PREFIX_PREV_USERS_PAGE}{page}",
+                )
             )
 
         # Информация о странице
@@ -94,14 +98,17 @@ def users_inline_kb(
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=f"{start_item}-{end_item} из {total_count}",
-                callback_data="users_page_info",
+                callback_data=CallbackData.User.USERS_PAGE_INFO,
             )
         )
 
         # Кнопка "Вперед"
         if page < max_pages:
             pagination_buttons.append(
-                InlineKeyboardButton(text="▶️", callback_data=f"next_users_page__{page}")
+                InlineKeyboardButton(
+                    text="▶️",
+                    callback_data=f"{CallbackData.User.PREFIX_NEXT_USERS_PAGE}{page}",
+                )
             )
 
         if pagination_buttons:
@@ -111,7 +118,7 @@ def users_inline_kb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data="users_menu",
+            callback_data=CallbackData.User.USERS_MENU,
         )
     )
 
@@ -132,7 +139,7 @@ def remove_user_inline_kb(
         builder.row(
             InlineKeyboardButton(
                 text=f"{start_index + index + 1}. Удалить {user.username}",
-                callback_data=f"remove_user__{user.id}",
+                callback_data=f"{CallbackData.User.PREFIX_REMOVE_USER}{user.id}",
             )
         )
 
@@ -145,7 +152,8 @@ def remove_user_inline_kb(
         if page > 1:
             pagination_buttons.append(
                 InlineKeyboardButton(
-                    text="◀️", callback_data=f"prev_remove_users_page__{page}"
+                    text="◀️",
+                    callback_data=f"{CallbackData.User.PREFIX_PREV_REMOVE_USERS_PAGE}{page}",
                 )
             )
 
@@ -155,7 +163,7 @@ def remove_user_inline_kb(
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=f"{start_item}-{end_item} из {total_count}",
-                callback_data="remove_users_page_info",
+                callback_data=CallbackData.User.REMOVE_USERS_PAGE_INFO,
             )
         )
 
@@ -163,7 +171,8 @@ def remove_user_inline_kb(
         if page < max_pages:
             pagination_buttons.append(
                 InlineKeyboardButton(
-                    text="▶️", callback_data=f"next_remove_users_page__{page}"
+                    text="▶️",
+                    callback_data=f"{CallbackData.User.PREFIX_NEXT_REMOVE_USERS_PAGE}{page}",
                 )
             )
 
@@ -174,7 +183,7 @@ def remove_user_inline_kb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data="users_menu",
+            callback_data=CallbackData.User.USERS_MENU,
         )
     )
 
@@ -187,11 +196,11 @@ def conf_remove_user_kb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text="Да",
-            callback_data="conf_remove_user__yes",
+            callback_data=f"{CallbackData.User.PREFIX_CONFIRM_REMOVE_USER}yes",
         ),
         InlineKeyboardButton(
             text="Нет",
-            callback_data="conf_remove_user__no",
+            callback_data=f"{CallbackData.User.PREFIX_CONFIRM_REMOVE_USER}no",
         ),
         width=2,
     )
@@ -207,21 +216,21 @@ def user_actions_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=KbCommands.GET_REPORT,
-            callback_data="get_user_report",
+            callback_data=CallbackData.Report.GET_USER_REPORT,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
             text=KbCommands.SELECT_USER,
-            callback_data="select_user",
+            callback_data=CallbackData.User.SELECT_USER,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data="users_menu",
+            callback_data=CallbackData.User.USERS_MENU,
         )
     )
 
@@ -237,21 +246,21 @@ def all_users_actions_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=KbCommands.GET_REPORT,
-            callback_data="get_all_users_report",
+            callback_data=CallbackData.Report.GET_ALL_USERS_REPORT,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
             text=KbCommands.SELECT_USER,
-            callback_data="select_user",
+            callback_data=CallbackData.User.SELECT_USER,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data="users_menu",
+            callback_data=CallbackData.User.USERS_MENU,
         )
     )
 
