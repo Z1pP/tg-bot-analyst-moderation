@@ -26,7 +26,25 @@ class ChatCallbackData:
     PREFIX_NEXT_REMOVE_CHATS_PAGE = "next_remove_chats_page__"
 
 
+class ReportCallbackData:
+    """Класс для хранения callback данных отчетов"""
+
+    # Commands
+    GET_USER_REPORT = "get_user_report"
+    GET_ALL_USERS_REPORT = "get_all_users_report"
+    BACK_TO_PERIODS = "back_to_periods"
+    ORDER_DETAILS = "order_details"
+    BACK_TO_SINGLE_USER_ACTIONS = "back_to_single_user_actions"
+    BACK_TO_ALL_USERS_ACTIONS = "back_to_all_users_actions"
+
+    # Prefixes
+    PREFIX_PERIOD = "period__"
+    PREFIX_HIDE_DETAILS = "hide_details_"
+    PREFIX_CALENDAR = "cal_"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
     Chat = ChatCallbackData()
+    Report = ReportCallbackData()
