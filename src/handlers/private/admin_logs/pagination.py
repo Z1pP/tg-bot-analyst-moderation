@@ -4,6 +4,7 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
+from constants.callback import CallbackData
 from constants.pagination import DEFAULT_PAGE_SIZE
 from container import container
 from keyboards.inline.admin_logs import admin_logs_ikb, format_action_type
@@ -145,25 +146,14 @@ async def admin_logs_page_info_handler(
     await callback.answer()
 
 
-@router.callback_query(F.data == "admin_menu")
-async def admin_menu_from_logs_handler(
+@router.callback_query(F.data == CallbackData.AdminLogs.HIDE_LOGS)
+async def hide_admin_logs_handler(
     callback: types.CallbackQuery, state: FSMContext
 ) -> None:
-    """Обработчик возврата в главное меню из логов."""
-    from constants import Dialog
-    from keyboards.reply.menu import admin_menu_kb
-    from states import MenuStates
-    from utils.send_message import send_html_message_with_kb
-    from utils.state_logger import log_and_set_state
-
+    """Обработчик скрытия логов администраторов."""
     await callback.answer()
-    await log_and_set_state(callback.message, state, MenuStates.main_menu)
 
-    username = callback.from_user.first_name
-    menu_text = Dialog.MENU_TEXT.format(username=username)
-
-    await send_html_message_with_kb(
-        message=callback.message,
-        text=menu_text,
-        reply_markup=admin_menu_kb(),
-    )
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        logger.warning("Не удалось удалить сообщение с логами: %s", e)
