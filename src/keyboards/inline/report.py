@@ -40,7 +40,7 @@ def order_details_kb_all_users(show_details: bool = True) -> InlineKeyboardMarku
 
 def order_details_kb_chat(show_details: bool = True) -> InlineKeyboardMarkup:
     """Клавиатура с детализацией для отчета по чату."""
-    return _build_order_details_keyboard(show_details, "select_chat")
+    return _build_order_details_keyboard(show_details, "back_to_periods")
 
 
 def hide_details_ikb(message_ids: list[int]) -> InlineKeyboardMarkup:
