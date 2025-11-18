@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from container import container
 from keyboards.inline.time_period import time_period_ikb_single_user
 from keyboards.inline.users import user_actions_ikb
@@ -17,13 +18,13 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data.startswith("user__"))
+@router.callback_query(F.data.startswith(CallbackData.User.PREFIX_USER))
 async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """
     Обработчик выбора пользователя из списка.
     """
     try:
-        user_id = int(callback.data.split("__")[1])
+        user_id = int(callback.data.replace(CallbackData.User.PREFIX_USER, ""))
 
         await log_and_set_state(
             message=callback.message,
@@ -46,7 +47,7 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
 
 
 @router.callback_query(
-    F.data == "get_user_report",
+    F.data == CallbackData.Report.GET_USER_REPORT,
     SingleUserReportStates.selected_single_user,
 )
 async def get_user_report_handler(callback: CallbackQuery, state: FSMContext) -> None:
