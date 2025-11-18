@@ -2,6 +2,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
+from constants.callback import CallbackData
 from keyboards.inline.users import all_users_actions_ikb
 from states import AllUsersReportStates
 from utils.exception_handler import handle_exception
@@ -10,7 +11,7 @@ from utils.state_logger import log_and_set_state
 router = Router(name=__name__)
 
 
-@router.callback_query(F.data == "all_users")
+@router.callback_query(F.data == CallbackData.User.ALL_USERS)
 async def all_users_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """
     Обработчик команды для получения списка всех пользователей.
