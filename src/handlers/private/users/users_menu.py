@@ -5,9 +5,13 @@ from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
 from constants.callback import CallbackData
+from constants.i18n import DEFAULT_LANGUAGE
+from container import container
+from keyboards.inline.menu import admin_menu_ikb
 from keyboards.inline.users import users_menu_ikb
-from keyboards.reply.menu import admin_menu_kb
+from services.user import UserService
 from states import MenuStates, UserStateManager
+from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
@@ -45,9 +49,19 @@ async def back_to_main_menu_from_users_handler(
     username = callback.from_user.first_name
     menu_text = Dialog.MENU_TEXT.format(username=username)
 
-    await callback.message.answer(
+    # Получаем язык пользователя из БД
+    user_service: UserService = container.resolve(UserService)
+    db_user = await user_service.get_user(tg_id=str(callback.from_user.id))
+    user_language = (
+        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
+    )
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=menu_text,
-        reply_markup=admin_menu_kb(),
+        reply_markup=admin_menu_ikb(user_language),
     )
 
     await log_and_set_state(
@@ -55,8 +69,3 @@ async def back_to_main_menu_from_users_handler(
         state=state,
         new_state=MenuStates.main_menu,
     )
-
-    try:
-        await callback.message.delete()
-    except Exception as e:
-        logger.warning(f"Не удалось удалить сообщение меню пользователей: {e}")
