@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import KbCommands
+from constants import Dialog
 from constants.callback import CallbackData
 from constants.period import TimePeriod
 
@@ -29,7 +29,7 @@ def _build_time_period_keyboard(
     # Кнопка "Назад"
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.BACK,
+            text=Dialog.Menu.BACK,
             callback_data=back_callback,
         )
     )
