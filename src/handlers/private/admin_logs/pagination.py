@@ -146,7 +146,7 @@ async def admin_logs_page_info_handler(
     await callback.answer()
 
 
-@router.callback_query(F.data == CallbackData.AdminLogs.HIDE_LOGS)
+@router.callback_query(F.data == CallbackData.AdminLogs.MENU)
 async def hide_admin_logs_handler(
     callback: types.CallbackQuery, state: FSMContext
 ) -> None:
