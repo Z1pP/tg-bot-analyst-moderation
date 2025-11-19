@@ -18,7 +18,7 @@ from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
-router = Router(name="broadcast_release_note_router")
+router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
