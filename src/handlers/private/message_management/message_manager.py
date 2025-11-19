@@ -65,7 +65,7 @@ async def back_to_main_menu_from_message_management_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=menu_text,
-        reply_markup=admin_menu_ikb(user_language),
+        reply_markup=admin_menu_ikb(user_language, admin_tg_id=callback.from_user.id),
     )
 
     await log_and_set_state(
