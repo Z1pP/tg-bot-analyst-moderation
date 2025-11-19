@@ -49,7 +49,7 @@ async def process_user_data_input(
         state=state,
         bot=bot,
         dialog_texts={
-            "invalid_format": Dialog.Error.INVALID_USERNAME_FORMAT,
+            "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT,
             "user_not_found": Dialog.WarnUser.USER_NOT_FOUND,
             "user_info": Dialog.WarnUser.USER_INFO,
         },
