@@ -78,6 +78,7 @@ class MenuCallbackData:
     LOCK_MENU = "lock_menu"
     ADMIN_LOGS = "admin_logs"
     MAIN_MENU = "main_menu"
+    RELEASE_NOTES = "release_notes"
 
 
 class AdminLogsCallbackData:
@@ -85,6 +86,34 @@ class AdminLogsCallbackData:
 
     # Commands
     HIDE_LOGS = "hide_admin_logs"
+
+
+class ReleaseNotesCallbackData:
+    """Класс для хранения callback данных релизных заметок"""
+
+    # Commands
+    MENU = "release_notes_menu"
+    ADD = "add_release_note"
+    BACK = "back_to_release_notes"
+    PAGE_INFO = "release_notes_page_info"
+    EDIT = "edit_release_note"
+    DELETE = "delete_release_note"
+    EDIT_TITLE = "edit_release_note_title"
+    EDIT_CONTENT = "edit_release_note_content"
+    CANCEL_EDIT = "cancel_edit_release_note"
+    BROADCAST = "broadcast_release_note"
+    CANCEL_ADD = "cancel_add_release_note"
+    CHANGE_TITLE_WHILE_ADDING = "change_title_while_adding_release_note"
+    SAVE_NOTE = "save_release_note"
+
+    # Prefixes
+    PREFIX_SELECT = "release_note__"
+    PREFIX_PREV_PAGE = "prev_release_notes_page__"
+    PREFIX_NEXT_PAGE = "next_release_notes_page__"
+    PREFIX_CONFIRM_DELETE = "conf_delete_release_note__"
+    PREFIX_CONFIRM_BROADCAST = "conf_broadcast_release_note__"
+    PREFIX_SELECT_LANGUAGE = "select_language__"
+    PREFIX_SELECT_ADD_LANGUAGE = "select_add_language__"
 
 
 class CallbackData:
@@ -95,3 +124,4 @@ class CallbackData:
     User = UserCallbackData()
     Menu = MenuCallbackData()
     AdminLogs = AdminLogsCallbackData()
+    ReleaseNotes = ReleaseNotesCallbackData()
