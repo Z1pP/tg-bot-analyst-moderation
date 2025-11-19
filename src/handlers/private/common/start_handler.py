@@ -28,5 +28,5 @@ async def start_handler(message: Message) -> None:
 
     await message.answer(
         text=welcome_text,
-        reply_markup=admin_menu_ikb(user_language),
+        reply_markup=admin_menu_ikb(user_language, str(message.from_user.id)),
     )
