@@ -1,10 +1,10 @@
 import logging
 
 from aiogram import F, Router, types
-from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
+from constants.callback import CallbackData
 from constants.pagination import DEFAULT_PAGE_SIZE
 from container import container
 from keyboards.inline.admin_logs import (
@@ -15,19 +15,16 @@ from keyboards.inline.admin_logs import (
 from keyboards.inline.menu import admin_menu_ikb
 from repositories import AdminActionLogRepository
 from services.time_service import TimeZoneService
+from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message(Command("logs"))
-async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
+@router.callback_query(F.data == CallbackData.AdminLogs.MENU)
+async def admin_logs_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Обработчик просмотра логов действий администраторов - показывает список администраторов."""
-    # Удаляем исходное сообщение с командой
-    try:
-        await message.delete()
-    except Exception as e:
-        logger.warning("Не удалось удалить сообщение с командой /logs: %s", e)
+    await callback.answer()
 
     try:
         log_repository: AdminActionLogRepository = container.resolve(
@@ -43,8 +40,11 @@ async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
         else:
             text = Dialog.AdminLogs.SELECT_ADMIN
 
-        await message.answer(
-            text,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
             reply_markup=admin_select_ikb(admins),
         )
 
@@ -53,8 +53,11 @@ async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
             "Ошибка при получении списка администраторов: %s", e, exc_info=True
         )
 
-        await message.answer(
-            Dialog.AdminLogs.ERROR_GET_ADMINS,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.AdminLogs.ERROR_GET_ADMINS,
             reply_markup=admin_menu_ikb(),
         )
 
