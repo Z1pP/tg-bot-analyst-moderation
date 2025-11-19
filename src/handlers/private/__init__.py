@@ -1,11 +1,17 @@
 from aiogram import Router
 
-from .admin_logs import router as admin_logs_router, pagination_router as admin_logs_pagination_router
+from .admin_logs import (
+    pagination_router as admin_logs_pagination_router,
+)
+from .admin_logs import (
+    router as admin_logs_router,
+)
 from .banhammer import router as banhammer_router
 from .categories import router as categories_router
 from .chats import router as chats_router
 from .common import router as common_router
 from .message_management import router as message_management_router
+from .release_notes import router as release_notes_router
 from .reports import router as reports_router
 from .settings import router as user_settings_router
 from .templates import router as templates_router
@@ -23,3 +29,4 @@ router.include_router(user_settings_router)
 router.include_router(message_management_router)
 router.include_router(admin_logs_router)
 router.include_router(admin_logs_pagination_router)
+router.include_router(release_notes_router)
