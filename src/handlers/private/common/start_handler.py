@@ -17,7 +17,7 @@ async def start_handler(message: Message) -> None:
     Выводит приветственное сообщение
     """
     username = message.from_user.full_name
-    welcome_text = Dialog.MENU_TEXT.format(username=username)
+    welcome_text = Dialog.Menu.MENU_TEXT.format(username=username)
 
     # Получаем язык пользователя из БД (LanguageMiddleware уже сохранил его)
     user_service: UserService = container.resolve(UserService)
