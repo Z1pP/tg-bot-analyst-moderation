@@ -63,16 +63,16 @@ def admin_logs_ikb(
     if logs:
         builder.row(
             InlineKeyboardButton(
-                text="🔄 Выбрать администратора",
-                callback_data="admin_logs_select_admin",
+                text=InlineButtons.AdminLogsButtons.SELECT_ADMIN,
+                callback_data=CallbackData.AdminLogs.SELECT_ADMIN,
             )
         )
 
     # Кнопка "Скрыть"
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.UserButtons.HIDE,
-            callback_data=CallbackData.AdminLogs.HIDE_LOGS,
+            text=InlineButtons.AdminLogsButtons.BACK_TO_ADMIN_LOGS_MENU,
+            callback_data=CallbackData.AdminLogs.MENU,
         )
     )
 
@@ -92,7 +92,7 @@ def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup
     )
 
     # Кнопки для каждого администратора
-    for admin_id, username, tg_id in admins:
+    for admin_id, username, _ in admins:
         builder.row(
             InlineKeyboardButton(
                 text=f"👤 @{username}",
@@ -103,8 +103,8 @@ def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup
     # Кнопка "Скрыть"
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.UserButtons.HIDE,
-            callback_data=CallbackData.AdminLogs.HIDE_LOGS,
+            text=InlineButtons.AdminLogsButtons.BACK_TO_MAIN_MENU,
+            callback_data=CallbackData.Menu.MAIN_MENU,
         )
     )
 
