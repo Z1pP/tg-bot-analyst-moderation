@@ -20,6 +20,7 @@ def admin_menu_ikb(user_language: str = None) -> InlineKeyboardMarkup:
         user_language = DEFAULT_LANGUAGE
 
     users_menu_text = get_text("USERS_MENU", user_language)
+    release_notes_text = get_text("RELEASE_NOTES", user_language)
 
     builder = InlineKeyboardBuilder()
 
@@ -45,6 +46,13 @@ def admin_menu_ikb(user_language: str = None) -> InlineKeyboardMarkup:
             callback_data=CallbackData.Menu.LOCK_MENU,
         ),
         width=2,
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=release_notes_text,
+            callback_data=CallbackData.ReleaseNotes.MENU,
+        )
     )
 
     return builder.as_markup()
