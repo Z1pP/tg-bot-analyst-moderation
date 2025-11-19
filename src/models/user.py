@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .message_templates import MessageTemplate
     from .punishment import Punishment
     from .reaction import MessageReaction
+    from .release_note import ReleaseNote
     from .user_chat_status import UserChatStatus
 
 
@@ -61,6 +62,10 @@ class User(BaseModel):
     )
     message_templates: Mapped[list["MessageTemplate"]] = relationship(
         "MessageTemplate",
+        back_populates="author",
+    )
+    release_notes: Mapped[list["ReleaseNote"]] = relationship(
+        "ReleaseNote",
         back_populates="author",
     )
     reactions: Mapped[list["MessageReaction"]] = relationship(

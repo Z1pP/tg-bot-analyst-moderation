@@ -205,6 +205,26 @@ class UserRepository:
                 logger.error("Ошибка при получении списка модераторов: %s", e)
                 return []
 
+    async def get_all_admins(self) -> List[User]:
+        """Получает список всех администраторов."""
+        async with self._db.session() as session:
+            try:
+                result = await session.execute(
+                    select(User)
+                    .where(
+                        User.role == UserRole.ADMIN,
+                        User.is_active.is_(True),
+                    )
+                    .order_by(User.username),
+                )
+
+                users = result.scalars().all()
+                logger.info("Получено %d администраторов", len(users))
+                return users
+            except Exception as e:
+                logger.error("Ошибка при получении списка администраторов: %s", e)
+                return []
+
     async def get_user_by_username(self, username: str) -> Optional[User]:
         """Получает пользователя по имени пользователя."""
         async with self._db.session() as session:
@@ -289,6 +309,37 @@ class UserRepository:
             except Exception as e:
                 logger.error(
                     "Ошибка при обновлении языка пользователя %s: %s",
+                    user_id,
+                    e,
+                )
+                await session.rollback()
+                raise
+
+    async def update_user_role(
+        self, user_id: int, new_role: UserRole
+    ) -> Optional[User]:
+        """Обновляет роль пользователя."""
+        async with self._db.session() as session:
+            try:
+                user = await session.get(User, user_id)
+                if not user:
+                    logger.warning("Пользователь %s не найден", user_id)
+                    return None
+
+                old_role = user.role
+                user.role = new_role
+                await session.commit()
+                await session.refresh(user)
+                logger.info(
+                    "Роль обновлена для пользователя %s: %s -> %s",
+                    user_id,
+                    old_role.value,
+                    new_role.value,
+                )
+                return user
+            except Exception as e:
+                logger.error(
+                    "Ошибка при обновлении роли пользователя %s: %s",
                     user_id,
                     e,
                 )

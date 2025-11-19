@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from keyboards.inline.users import all_users_actions_ikb
 from states import AllUsersReportStates
 from utils.send_message import safe_edit_message
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    F.data == "back_to_all_users_actions",
+    F.data == CallbackData.Report.BACK_TO_ALL_USERS_ACTIONS,
     AllUsersReportStates.selecting_period,
 )
 async def back_to_all_users_actions_handler(

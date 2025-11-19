@@ -4,6 +4,7 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
+from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
 from keyboards.inline.chats_kb import remove_chat_ikb, tracked_chats_ikb
@@ -72,24 +73,28 @@ chats_handler = ChatsPaginationHandler()
 remove_chats_handler = RemoveChatsPaginationHandler()
 
 
-@router.callback_query(F.data.startswith("prev_chats_page__"))
+@router.callback_query(F.data.startswith(CallbackData.Chat.PREFIX_PREV_CHATS_PAGE))
 async def prev_chats_page_callback(callback: CallbackQuery, state: FSMContext) -> None:
     await chats_handler.handle_prev_page(callback, state)
 
 
-@router.callback_query(F.data.startswith("next_chats_page__"))
+@router.callback_query(F.data.startswith(CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE))
 async def next_chats_page_callback(callback: CallbackQuery, state: FSMContext) -> None:
     await chats_handler.handle_next_page(callback, state)
 
 
-@router.callback_query(F.data.startswith("prev_remove_chats_page__"))
+@router.callback_query(
+    F.data.startswith(CallbackData.Chat.PREFIX_PREV_REMOVE_CHATS_PAGE)
+)
 async def prev_remove_chats_page_callback(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     await remove_chats_handler.handle_prev_page(callback, state)
 
 
-@router.callback_query(F.data.startswith("next_remove_chats_page__"))
+@router.callback_query(
+    F.data.startswith(CallbackData.Chat.PREFIX_NEXT_REMOVE_CHATS_PAGE)
+)
 async def next_remove_chats_page_callback(
     callback: CallbackQuery, state: FSMContext
 ) -> None:

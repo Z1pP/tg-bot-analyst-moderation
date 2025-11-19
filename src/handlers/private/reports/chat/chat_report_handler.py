@@ -2,11 +2,11 @@ import logging
 from datetime import datetime
 
 from aiogram import F, Router
-from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    F.data == "get_chat_report",
+    F.data == CallbackData.Chat.GET_REPORT,
     ChatStateManager.selecting_chat,
 )
 async def chat_report_handler(callback: CallbackQuery, state: FSMContext) -> None:
@@ -87,7 +87,7 @@ async def chat_report_handler(callback: CallbackQuery, state: FSMContext) -> Non
 
 @router.callback_query(
     ChatStateManager.selecting_period,
-    F.data.startswith("period__"),
+    F.data.startswith(CallbackData.Report.PREFIX_PERIOD),
 )
 async def process_period_selection_callback(
     callback: CallbackQuery, state: FSMContext
@@ -95,7 +95,7 @@ async def process_period_selection_callback(
     """Обрабатывает выбор периода для отчета по чату через callback."""
     await callback.answer()
 
-    period_text = callback.data.replace("period__", "")
+    period_text = callback.data.replace(CallbackData.Report.PREFIX_PERIOD, "")
     data = await state.get_data()
     chat_id = data.get("chat_id")
 
@@ -146,25 +146,6 @@ async def process_period_selection_callback(
         end_date,
         chat_id,
         selected_period=period_text,
-    )
-
-
-async def select_chat_again(callback: CallbackQuery, state: FSMContext) -> None:
-    """Повторно запрашивает выбор чата."""
-    logger.info("Запрос повторного выбора чата")
-
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ChatStateManager.selecting_chat,
-    )
-
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=Dialog.Report.SELECT_CHAT_AGAIN,
-        reply_markup=chat_actions_ikb(),
     )
 
 
@@ -242,7 +223,6 @@ async def generate_and_send_report(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=full_report,
-        parse_mode=ParseMode.HTML,
         reply_markup=order_details_kb_chat(show_details=not is_single_day),
     )
 

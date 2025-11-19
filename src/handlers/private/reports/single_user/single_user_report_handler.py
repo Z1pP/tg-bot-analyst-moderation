@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from constants.period import TimePeriod
 from container import container
 from dto.report import SingleUserReportDTO
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    F.data == "get_user_report",
+    F.data == CallbackData.Report.GET_USER_REPORT,
     SingleUserReportStates.selected_single_user,
 )
 async def get_user_report_handler(
@@ -108,7 +109,7 @@ async def get_user_report_handler(
 
 @router.callback_query(
     SingleUserReportStates.selecting_period,
-    F.data.startswith("period__"),
+    F.data.startswith(CallbackData.Report.PREFIX_PERIOD),
 )
 async def process_period_selection_callback(
     callback: CallbackQuery, state: FSMContext
@@ -116,7 +117,7 @@ async def process_period_selection_callback(
     """Обрабатывает выбор периода для отчета о времени ответа через callback."""
     await callback.answer()
 
-    period_text = callback.data.replace("period__", "")
+    period_text = callback.data.replace(CallbackData.Report.PREFIX_PERIOD, "")
     user_data = await state.get_data()
     user_id = user_data.get("user_id")
 

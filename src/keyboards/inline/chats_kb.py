@@ -3,7 +3,8 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import InlineButtons, KbCommands
+from constants import Dialog, InlineButtons
+from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from dto import ChatDTO
 from models import ChatSession
@@ -15,30 +16,15 @@ def remove_chat_ikb(
     total_count: int = 0,
     page_size: int = CHATS_PAGE_SIZE,
 ) -> InlineKeyboardMarkup:
+    """Клавиатура для удаления чатов с пагинацией"""
     builder = InlineKeyboardBuilder()
 
-    if not chats:
-        builder.row(
-            InlineKeyboardButton(
-                text="Список чатов пуст. Добавьте бот в чат и выдайте ему админ права",
-                callback_data="no_chat",
-            )
-        )
-        builder.row(
-            InlineKeyboardButton(
-                text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
-                callback_data="chats_menu",
-            )
-        )
-        return builder.as_markup()
-
-    # Кнопки удаления чатов
     start_index = (page - 1) * page_size
     for index, chat in enumerate(chats):
         builder.row(
             InlineKeyboardButton(
                 text=f"{start_index + index + 1}. Удалить {chat.title[:30]}",
-                callback_data=f"untrack_chat__{chat.id}",
+                callback_data=f"{CallbackData.Chat.PREFIX_UNTRACK_CHAT}{chat.id}",
             )
         )
 
@@ -50,7 +36,8 @@ def remove_chat_ikb(
         if page > 1:
             pagination_buttons.append(
                 InlineKeyboardButton(
-                    text="◀️", callback_data=f"prev_remove_chats_page__{page}"
+                    text="◀️",
+                    callback_data=f"{CallbackData.Chat.PREFIX_PREV_REMOVE_CHATS_PAGE}{page}",
                 )
             )
 
@@ -59,14 +46,15 @@ def remove_chat_ikb(
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=f"{start_item}-{end_item} из {total_count}",
-                callback_data="remove_chats_page_info",
+                callback_data=CallbackData.Chat.REMOVE_CHATS_PAGE_INFO,
             )
         )
 
         if page < max_pages:
             pagination_buttons.append(
                 InlineKeyboardButton(
-                    text="▶️", callback_data=f"next_remove_chats_page__{page}"
+                    text="▶️",
+                    callback_data=f"{CallbackData.Chat.PREFIX_NEXT_REMOVE_CHATS_PAGE}{page}",
                 )
             )
 
@@ -77,7 +65,7 @@ def remove_chat_ikb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
-            callback_data="chats_menu",
+            callback_data=CallbackData.Chat.CHATS_MENU,
         )
     )
 
@@ -98,7 +86,7 @@ def tracked_chats_ikb(
         builder.row(
             InlineKeyboardButton(
                 text=f"{start_index + index + 1}. {chat.title[:30]}",
-                callback_data=f"chat__{chat.id}",
+                callback_data=f"{CallbackData.Chat.PREFIX_CHAT}{chat.id}",
             )
         )
 
@@ -109,7 +97,10 @@ def tracked_chats_ikb(
 
         if page > 1:
             pagination_buttons.append(
-                InlineKeyboardButton(text="◀️", callback_data=f"prev_chats_page__{page}")
+                InlineKeyboardButton(
+                    text="◀️",
+                    callback_data=f"{CallbackData.Chat.PREFIX_PREV_CHATS_PAGE}{page}",
+                )
             )
 
         start_item = (page - 1) * page_size + 1
@@ -117,13 +108,16 @@ def tracked_chats_ikb(
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=f"{start_item}-{end_item} из {total_count}",
-                callback_data="chats_page_info",
+                callback_data=CallbackData.Chat.CHATS_PAGE_INFO,
             )
         )
 
         if page < max_pages:
             pagination_buttons.append(
-                InlineKeyboardButton(text="▶️", callback_data=f"next_chats_page__{page}")
+                InlineKeyboardButton(
+                    text="▶️",
+                    callback_data=f"{CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE}{page}",
+                )
             )
 
         if pagination_buttons:
@@ -133,7 +127,7 @@ def tracked_chats_ikb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
-            callback_data="chats_menu",
+            callback_data=CallbackData.Chat.CHATS_MENU,
         )
     )
 
@@ -153,7 +147,7 @@ def tracked_chats_with_all_ikb(
         builder.row(
             InlineKeyboardButton(
                 text="🌐 Все чаты",
-                callback_data="chat__all",
+                callback_data=CallbackData.Chat.ALL_CHATS,
             )
         )
 
@@ -163,7 +157,7 @@ def tracked_chats_with_all_ikb(
         builder.row(
             InlineKeyboardButton(
                 text=f"{start_index + index + 1}. {dto.title[:30]}",
-                callback_data=f"chat__{dto.id}",
+                callback_data=f"{CallbackData.Chat.PREFIX_CHAT}{dto.id}",
             )
         )
 
@@ -174,7 +168,10 @@ def tracked_chats_with_all_ikb(
 
         if page > 1:
             pagination_buttons.append(
-                InlineKeyboardButton(text="◀️", callback_data=f"prev_chats_page__{page}")
+                InlineKeyboardButton(
+                    text="◀️",
+                    callback_data=f"{CallbackData.Chat.PREFIX_PREV_CHATS_PAGE}{page}",
+                )
             )
 
         start_item = (page - 1) * page_size + 1
@@ -182,13 +179,16 @@ def tracked_chats_with_all_ikb(
         pagination_buttons.append(
             InlineKeyboardButton(
                 text=f"{start_item}-{end_item} из {total_count}",
-                callback_data="chats_page_info",
+                callback_data=CallbackData.Chat.CHATS_PAGE_INFO,
             )
         )
 
         if page < max_pages:
             pagination_buttons.append(
-                InlineKeyboardButton(text="▶️", callback_data=f"next_chats_page__{page}")
+                InlineKeyboardButton(
+                    text="▶️",
+                    callback_data=f"{CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE}{page}",
+                )
             )
 
         if pagination_buttons:
@@ -203,14 +203,14 @@ def template_scope_selector_ikb(chats: List[ChatSession]) -> InlineKeyboardMarku
 
     kb.button(
         text="🌐 Для всех чатов",
-        callback_data="template_scope__-1",
+        callback_data=f"{CallbackData.Chat.PREFIX_TEMPLATE_SCOPE}-1",
     )
 
     # Добавляем доступные чаты
     for chat in chats:
         kb.button(
             text=f"💬 {chat.title[:30]}",
-            callback_data=f"template_scope__{chat.id}",
+            callback_data=f"{CallbackData.Chat.PREFIX_TEMPLATE_SCOPE}{chat.id}",
         )
 
     # Формируем сетку 1 кнопка в ряд
@@ -224,11 +224,11 @@ def conf_remove_chat_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text="Да",
-            callback_data="conf_remove_chat__yes",
+            callback_data=f"{CallbackData.Chat.PREFIX_CONFIRM_REMOVE_CHAT}yes",
         ),
         InlineKeyboardButton(
             text="Нет",
-            callback_data="conf_remove_chat__no",
+            callback_data=f"{CallbackData.Chat.PREFIX_CONFIRM_REMOVE_CHAT}no",
         ),
         width=2,
     )
@@ -263,29 +263,29 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.GET_REPORT,
-            callback_data="get_chat_report",
+            text=Dialog.Chat.GET_REPORT,
+            callback_data=CallbackData.Chat.GET_REPORT,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.DAILY_RATING,
-            callback_data="get_chat_daily_rating",
+            text=Dialog.Chat.DAILY_RATING,
+            callback_data=CallbackData.Chat.GET_DAILY_RATING,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.SELECT_CHAT,
-            callback_data="select_chat",
+            text=Dialog.Chat.SELECT_CHAT,
+            callback_data=CallbackData.Chat.SELECT_ANOTHER_CHAT,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
-            callback_data="chats_menu",
+            callback_data=CallbackData.Chat.CHATS_MENU,
         )
     )
 
@@ -298,27 +298,27 @@ def chats_menu_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.GET_STATISTICS,
-            callback_data="select_chat",
+            text=Dialog.Chat.GET_STATISTICS,
+            callback_data=CallbackData.Chat.GET_STATISTICS,
         ),
         InlineKeyboardButton(
-            text=KbCommands.ADD_CHAT,
-            callback_data="add_chat",
+            text=Dialog.Chat.ADD_CHAT,
+            callback_data=CallbackData.Chat.ADD,
         ),
         width=2,
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.REMOVE_CHAT,
-            callback_data="remove_chat",
+            text=Dialog.Chat.REMOVE_CHAT,
+            callback_data=CallbackData.Chat.REMOVE,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_MAIN_MENU,
-            callback_data="back_to_main_menu_from_chats",
+            callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
         )
     )
 

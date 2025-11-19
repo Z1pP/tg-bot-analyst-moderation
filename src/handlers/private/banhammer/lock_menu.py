@@ -3,37 +3,17 @@ import logging
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
-from constants import Dialog, KbCommands
-from keyboards.inline.banhammer import block_actions_ikb
-from keyboards.reply.menu import admin_menu_kb
-from states import BanHammerStates, MenuStates
+from constants import Dialog
+from constants.i18n import DEFAULT_LANGUAGE
+from container import container
+from keyboards.inline.menu import admin_menu_ikb
+from services.user import UserService
+from states import MenuStates
+from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
-
-
-@router.message(F.text == KbCommands.LOCK_MENU)
-async def lock_menu_handler(message: types.Message, state: FSMContext) -> None:
-    """
-    Обработчик отвечающий за вывод настроек блокировки.
-    """
-    # Удаляем исходное сообщение
-    try:
-        await message.delete()
-    except Exception as e:
-        logger.warning(f"Не удалось удалить сообщение: {e}")
-
-    await log_and_set_state(
-        message=message,
-        state=state,
-        new_state=BanHammerStates.block_menu,
-    )
-
-    await message.answer(
-        text=Dialog.BlockMenu.SELECT_ACTION,
-        reply_markup=block_actions_ikb(),
-    )
 
 
 @router.callback_query(F.data == "back_to_main_menu_from_block")
@@ -45,11 +25,21 @@ async def back_to_main_menu_from_block_handler(
     await state.clear()
 
     username = callback.from_user.first_name
-    menu_text = Dialog.MENU_TEXT.format(username=username)
+    menu_text = Dialog.Menu.MENU_TEXT.format(username=username)
 
-    await callback.message.answer(
+    # Получаем язык пользователя из БД
+    user_service: UserService = container.resolve(UserService)
+    db_user = await user_service.get_user(tg_id=str(callback.from_user.id))
+    user_language = (
+        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
+    )
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=menu_text,
-        reply_markup=admin_menu_kb(),
+        reply_markup=admin_menu_ikb(user_language, admin_tg_id=callback.from_user.id),
     )
 
     await log_and_set_state(
@@ -57,8 +47,3 @@ async def back_to_main_menu_from_block_handler(
         state=state,
         new_state=MenuStates.main_menu,
     )
-
-    try:
-        await callback.message.delete()
-    except Exception as e:
-        logger.warning(f"Не удалось удалить сообщение меню блокировок: {e}")

@@ -8,7 +8,9 @@ from .dialogs import (
     CommonDialogs,
     MenuDialogs,
     MessageManagerDialogs,
+    ReleaseNotesDialogs,
     ReportDialogs,
+    RolesDialogs,
     TemplateDialogs,
     UserDialogs,
     UserTrackingDialogs,
@@ -17,6 +19,11 @@ from .dialogs import (
 
 MAX_MSG_LENGTH = 4000  # Указывает максимальную длину сообщения для вывода
 BREAK_TIME = 15  # Время перерыва между сообщенями
+
+# ID пользователей, которым разрешено управлять релизными заметками
+RELEASE_NOTES_ADMIN_IDS = ["879565689", "295451688"]
+# Защищенный пользователь - нельзя изменить роль
+PROTECTED_USER_TG_ID = "879565689"
 
 
 class InlineButtons:
@@ -98,48 +105,25 @@ class InlineButtons:
         NO_REASON = "❌ Без причины"
         CANCEL = "❌ Отмена"
 
+    class ReleaseNotesButtons:
+        """Кнопки для действий с релизными заметками"""
 
-class KbCommands:
-    # Users
-    USERS_MENU = "😀 Пользователи"
-    SELECT_USER = "🔄 Выбрать другого пользователя"
+        ADD_NOTE = "➕ Добавить заметку"
+        BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
+        BACK_TO_LIST = "⬅️ Вернуться к списку"
+        EDIT = "✏️ Изменить"
+        DELETE = "🗑 Удалить"
+        EDIT_TITLE = "✏️ Изменить заголовок"
+        EDIT_CONTENT = "📝 Изменить содержимое"
+        CANCEL_EDIT = "❌ Отмена"
+        BROADCAST = "📢 Рассылка"
 
-    # Chats
-    CHATS_MENU = "📝 Чаты"
-    SELECT_CHAT = "🔄 Выбрать другой чат"
-    ADD_CHAT = "➕ Добавить"
-    REMOVE_CHAT = "❌ Удалить"
+    class AdminLogsButtons:
+        """Кнопки для действий с логами администраторов"""
 
-    # Reports
-    GET_REPORT = "⏱️ Получить отчет"
-    GET_STATISTICS = "📊 Статистика"
-    DAILY_RATING = "🏆 Рейтинг за сутки"
-
-    # Templates
-    ADD_TEMPLATE = "➕ Добавить шаблон"
-    ADD_CATEGORY = "➕ Добавить категорию"
-    SELECT_TEMPLATE = "🔖 Шаблоны"
-    SELECT_CATEGORY = "🗃️ Категории"
-
-    # Banhammer
-    LOCK_MENU = "🚫 Блокировки"
-
-    # Message management
-    MESSAGE_MANAGEMENT = "💬 Упр. сообщенями"
-
-    # Admin logs
-    ADMIN_LOGS = "📋 Логи действий"
-
-    # Amnesty actions
-    UNBAN = "🕊️ Полный разблок"
-    CANCEL_WARN = "⏪ Отмена посл. преда"
-    UNMUTE = "🔊 Размут"
-
-    # Navigation
-    SETTINGS = "⚙️ Настройки"
-    FAQ = "❓ FAQ"
-    MENU = "📋 Меню"
-    BACK = "⬅️ Назад"
+        SELECT_ADMIN = "🔄 Выбрать администратора"
+        BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
+        BACK_TO_ADMIN_LOGS_MENU = "⬅️ Назад в меню логов"
 
 
 class Dialog:
@@ -147,8 +131,11 @@ class Dialog:
     UserTracking = UserTrackingDialogs
     # Moderation User
     BlockMenu = BlockMenuDialogs
+    # Ban User
     BanUser = BanUserDialogs
+    # Warn User
     WarnUser = WarnUserDialogs
+    # Amnesty User
     AmnestyUser = AmnestyUserDialogs
     # Message Management
     MessageManager = MessageManagerDialogs
@@ -166,29 +153,9 @@ class Dialog:
     Template = TemplateDialogs
     # Admin Logs
     AdminLogs = AdminLogsDialogs
+    # Release Notes
+    ReleaseNotes = ReleaseNotesDialogs
+    # Roles
+    Roles = RolesDialogs
     # Common
     Common = CommonDialogs
-
-    MENU_TEXT = """
-    <b>Привет, {username}!</b> ✨
-    <i>Рад видеть тебя здесь!</i>
-    """
-
-    CHATS_MENU_TEXT = """
-    Выберите нужный пункт ниже
-    """
-
-    INPUT_MODERATOR_USERNAME = (
-        "❗Чтобы получать статистику по пользователю, "
-        "пожалуйста, пришлите в ответ на это сообщение "
-        "@username или Telegram ID пользователя\n\n"
-        "<i>Пример: @john_pidor или <code>123456789</code></i>\n\n"
-        "✅Если всё сделано правильно, вы получите уведомление "
-        "об успешном добавлении пользователя"
-    )
-
-    class Error:
-        INVALID_USERNAME_FORMAT = (
-            "❗️ Неверный формат ввода данных:\n\n"
-            "<i>Пример: @john_pidor или <code>123456789</code></i>"
-        )

@@ -1,4 +1,5 @@
 from .calendar_kb import CalendarKeyboard
+from .menu import admin_menu_ikb
 from .report import (
     order_details_kb_all_users,
     order_details_kb_chat,
@@ -19,6 +20,7 @@ from .users import (
 )
 
 __all__ = [
+    "admin_menu_ikb",
     "users_inline_kb",
     "remove_user_inline_kb",
     "users_menu_ikb",

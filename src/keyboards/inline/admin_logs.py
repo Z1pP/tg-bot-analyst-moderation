@@ -3,6 +3,8 @@ from typing import List, Tuple
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from constants import InlineButtons
+from constants.callback import CallbackData
 from constants.enums import AdminActionType
 from constants.pagination import DEFAULT_PAGE_SIZE
 from models import AdminActionLog
@@ -57,19 +59,20 @@ def admin_logs_ikb(
         if pagination_buttons:
             builder.row(*pagination_buttons)
 
-    # Кнопка "Выбрать администратора"
-    builder.row(
-        InlineKeyboardButton(
-            text="🔄 Выбрать администратора",
-            callback_data="admin_logs_select_admin",
+    # Кнопка "Выбрать администратора" (только если есть логи)
+    if logs:
+        builder.row(
+            InlineKeyboardButton(
+                text=InlineButtons.AdminLogsButtons.SELECT_ADMIN,
+                callback_data=CallbackData.AdminLogs.SELECT_ADMIN,
+            )
         )
-    )
 
-    # Кнопка "Назад"
+    # Кнопка "Скрыть"
     builder.row(
         InlineKeyboardButton(
-            text="⬅️ Назад",
-            callback_data="admin_menu",
+            text=InlineButtons.AdminLogsButtons.BACK_TO_ADMIN_LOGS_MENU,
+            callback_data=CallbackData.AdminLogs.MENU,
         )
     )
 
@@ -89,7 +92,7 @@ def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup
     )
 
     # Кнопки для каждого администратора
-    for admin_id, username, tg_id in admins:
+    for admin_id, username, _ in admins:
         builder.row(
             InlineKeyboardButton(
                 text=f"👤 @{username}",
@@ -97,11 +100,11 @@ def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup
             )
         )
 
-    # Кнопка "Назад"
+    # Кнопка "Скрыть"
     builder.row(
         InlineKeyboardButton(
-            text="⬅️ Назад",
-            callback_data="admin_menu",
+            text=InlineButtons.AdminLogsButtons.BACK_TO_MAIN_MENU,
+            callback_data=CallbackData.Menu.MAIN_MENU,
         )
     )
 
@@ -115,7 +118,7 @@ def format_action_type(action_type: str | AdminActionType) -> str:
         action_type_str = action_type.value
     else:
         action_type_str = action_type
-    
+
     action_names = {
         "report_user": "📊 Отчет по пользователю",
         "report_chat": "📊 Отчет по чату",

@@ -1,10 +1,10 @@
 import logging
 
 from aiogram import F, Router, types
-from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
+from constants.callback import CallbackData
 from constants.pagination import DEFAULT_PAGE_SIZE
 from container import container
 from keyboards.inline.admin_logs import (
@@ -12,17 +12,20 @@ from keyboards.inline.admin_logs import (
     admin_select_ikb,
     format_action_type,
 )
-from keyboards.reply.menu import admin_menu_kb
+from keyboards.inline.menu import admin_menu_ikb
 from repositories import AdminActionLogRepository
 from services.time_service import TimeZoneService
+from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message(Command("logs"))
-async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
+@router.callback_query(F.data == CallbackData.AdminLogs.MENU)
+async def admin_logs_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Обработчик просмотра логов действий администраторов - показывает список администраторов."""
+    await callback.answer()
+
     try:
         log_repository: AdminActionLogRepository = container.resolve(
             AdminActionLogRepository
@@ -31,18 +34,17 @@ async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
         # Получаем список администраторов с логами
         admins = await log_repository.get_admins_with_logs()
 
-        if not admins:
-            await message.answer(
-                f"{Dialog.AdminLogs.ADMIN_LOGS_TITLE}\n\n{Dialog.AdminLogs.NO_LOGS}",
-                reply_markup=admin_menu_kb(),
-            )
-            return
-
         # Формируем текст сообщения
-        text = Dialog.AdminLogs.SELECT_ADMIN
+        if not admins:
+            text = f"{Dialog.AdminLogs.ADMIN_LOGS_TITLE}\n\n{Dialog.AdminLogs.NO_LOGS}"
+        else:
+            text = Dialog.AdminLogs.SELECT_ADMIN
 
-        await message.answer(
-            text,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
             reply_markup=admin_select_ikb(admins),
         )
 
@@ -50,9 +52,13 @@ async def admin_logs_handler(message: types.Message, state: FSMContext) -> None:
         logger.error(
             "Ошибка при получении списка администраторов: %s", e, exc_info=True
         )
-        await message.answer(
-            Dialog.AdminLogs.ERROR_GET_ADMINS,
-            reply_markup=admin_menu_kb(),
+
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.AdminLogs.ERROR_GET_ADMINS,
+            reply_markup=admin_menu_ikb(admin_tg_id=callback.from_user.id),
         )
 
 

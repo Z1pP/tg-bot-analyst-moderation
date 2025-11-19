@@ -24,6 +24,7 @@ from repositories import (
     UserRepository,
     UserTrackingRepository,
 )
+from repositories.release_note_repository import ReleaseNoteRepository
 from services import (
     AdminActionLogService,
     BotMessageService,
@@ -34,6 +35,7 @@ from services import (
 )
 from services.caching import ICache, RedisCache
 from services.categories import CategoryService
+from services.release_note_service import ReleaseNoteService
 from services.templates import (
     TemplateContentService,
     TemplateService,
@@ -161,6 +163,7 @@ class ContainerSetup:
             PunishmentLadderRepository,
             UserChatStatusRepository,
             AdminActionLogRepository,
+            ReleaseNoteRepository,
         ]
 
         for repo in repositories:
@@ -179,6 +182,7 @@ class ContainerSetup:
         container.register(PunishmentService)
         container.register(BotPermissionService)
         container.register(AdminActionLogService)
+        container.register(ReleaseNoteService)
 
     @staticmethod
     def _register_usecases(container: Container) -> None:

@@ -4,6 +4,7 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
+from constants.callback import CallbackData
 from container import container
 from dto.report import AllUsersReportDTO, ChatReportDTO
 from keyboards.inline.report import hide_details_ikb
@@ -23,7 +24,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == "order_details")
+@router.callback_query(F.data == CallbackData.Report.ORDER_DETAILS)
 async def detailed_report_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
@@ -167,12 +168,14 @@ async def _handle_chat_details(callback: types.CallbackQuery, report_dto) -> Non
     logger.info(f"Детализация перерывов отправлена для чата {report_dto.chat_id}")
 
 
-@router.callback_query(F.data.startswith("hide_details_"))
+@router.callback_query(F.data.startswith(CallbackData.Report.PREFIX_HIDE_DETAILS))
 async def hide_details_handler(callback: types.CallbackQuery) -> None:
     """Обработчик скрытия детализации (одно или несколько сообщений)"""
     try:
         # Извлекаем ID сообщений из callback_data
-        message_ids_str = callback.data.replace("hide_details_", "")
+        message_ids_str = callback.data.replace(
+            CallbackData.Report.PREFIX_HIDE_DETAILS, ""
+        )
         message_ids = [int(msg_id) for msg_id in message_ids_str.split(",") if msg_id]
 
         if not message_ids:

@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from container import container
 from keyboards.inline.chats_kb import chat_actions_ikb
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 router = Router(name=__name__)
 
 
-@router.callback_query(F.data == "get_chat_daily_rating")
+@router.callback_query(F.data == CallbackData.Chat.GET_DAILY_RATING)
 async def chat_daily_rating_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик для показа рейтинга выбранного чата за сутки."""
     await callback.answer()
@@ -53,8 +54,8 @@ async def chat_daily_rating_handler(callback: CallbackQuery, state: FSMContext) 
         )
         return
 
-    # Форматируем рейтинг
     try:
+        # Форматируем рейтинг
         rating_text = RatingFormatter.format_daily_rating(stats)
     except Exception as e:
         logger.error("Ошибка при форматировании рейтинга чата: %s", e, exc_info=True)

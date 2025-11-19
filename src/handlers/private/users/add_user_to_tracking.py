@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from constants import Dialog
+from constants.callback import CallbackData
 from container import container
 from dto import UserTrackingDTO
 from keyboards.inline.users import cancel_add_user_ikb, users_menu_ikb
@@ -27,7 +28,7 @@ class ParsedData:
     user_tgid: str
 
 
-@router.callback_query(F.data == "add_user")
+@router.callback_query(F.data == CallbackData.User.ADD)
 async def add_user_to_tracking_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
@@ -43,7 +44,7 @@ async def add_user_to_tracking_handler(
         )
 
         await callback.message.edit_text(
-            text=Dialog.INPUT_MODERATOR_USERNAME,
+            text=Dialog.User.INPUT_USERNAME,
             reply_markup=cancel_add_user_ikb(),
         )
 
@@ -58,7 +59,7 @@ async def add_user_to_tracking_handler(
         await handle_exception(callback.message, e, "add_user_to_tracking_handler")
 
 
-@router.callback_query(F.data == "cancel_add_user")
+@router.callback_query(F.data == CallbackData.User.CANCEL_ADD)
 async def cancel_add_user_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик отмены добавления пользователя"""
     await callback.answer()
@@ -96,7 +97,7 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
                     bot=message.bot,
                     chat_id=message.chat.id,
                     message_id=active_message_id,
-                    text=Dialog.Error.INVALID_USERNAME_FORMAT,
+                    text=Dialog.User.INVALID_USERNAME_FORMAT,
                     reply_markup=cancel_add_user_ikb(),
                 )
             await message.delete()

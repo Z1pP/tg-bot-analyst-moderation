@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
+from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
 from container import container
 from keyboards.inline.users import users_inline_kb
@@ -14,11 +15,13 @@ router = Router(name=__name__)
 
 @router.callback_query(
     UserStateManager.listing_users,
-    F.data.startswith("prev_users_page__"),
+    F.data.startswith(CallbackData.User.PREFIX_PREV_USERS_PAGE),
 )
 async def prev_page_users_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик перехода на предыдущую страницу пользователей"""
-    current_page = int(callback.data.split("__")[1])
+    current_page = int(
+        callback.data.replace(CallbackData.User.PREFIX_PREV_USERS_PAGE, "")
+    )
     prev_page = max(1, current_page - 1)
 
     usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
@@ -45,11 +48,13 @@ async def prev_page_users_handler(callback: CallbackQuery, state: FSMContext) ->
 
 @router.callback_query(
     UserStateManager.listing_users,
-    F.data.startswith("next_users_page__"),
+    F.data.startswith(CallbackData.User.PREFIX_NEXT_USERS_PAGE),
 )
 async def next_page_users_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик перехода на следующую страницу пользователей"""
-    current_page = int(callback.data.split("__")[1])
+    current_page = int(
+        callback.data.replace(CallbackData.User.PREFIX_NEXT_USERS_PAGE, "")
+    )
     next_page = current_page + 1
 
     usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
@@ -82,13 +87,15 @@ async def next_page_users_handler(callback: CallbackQuery, state: FSMContext) ->
 
 @router.callback_query(
     UserStateManager.removing_user,
-    F.data.startswith("prev_remove_users_page__"),
+    F.data.startswith(CallbackData.User.PREFIX_PREV_REMOVE_USERS_PAGE),
 )
 async def prev_page_remove_users_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """Обработчик перехода на предыдущую страницу для удаления пользователей"""
-    current_page = int(callback.data.split("__")[1])
+    current_page = int(
+        callback.data.replace(CallbackData.User.PREFIX_PREV_REMOVE_USERS_PAGE, "")
+    )
     prev_page = max(1, current_page - 1)
 
     from keyboards.inline.users import remove_user_inline_kb
@@ -118,13 +125,15 @@ async def prev_page_remove_users_handler(
 
 @router.callback_query(
     UserStateManager.removing_user,
-    F.data.startswith("next_remove_users_page__"),
+    F.data.startswith(CallbackData.User.PREFIX_NEXT_REMOVE_USERS_PAGE),
 )
 async def next_page_remove_users_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """Обработчик перехода на следующую страницу для удаления пользователей"""
-    current_page = int(callback.data.split("__")[1])
+    current_page = int(
+        callback.data.replace(CallbackData.User.PREFIX_NEXT_REMOVE_USERS_PAGE, "")
+    )
     next_page = current_page + 1
 
     from keyboards.inline.users import remove_user_inline_kb
