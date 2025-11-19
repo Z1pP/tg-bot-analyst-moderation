@@ -3,7 +3,7 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import InlineButtons, KbCommands
+from constants import Dialog, InlineButtons
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from dto import ChatDTO
@@ -263,21 +263,21 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.GET_REPORT,
+            text=Dialog.Chat.GET_REPORT,
             callback_data=CallbackData.Chat.GET_REPORT,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.DAILY_RATING,
+            text=Dialog.Chat.DAILY_RATING,
             callback_data=CallbackData.Chat.GET_DAILY_RATING,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.SELECT_CHAT,
+            text=Dialog.Chat.SELECT_CHAT,
             callback_data=CallbackData.Chat.SELECT_ANOTHER_CHAT,
         )
     )
@@ -298,11 +298,11 @@ def chats_menu_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.GET_STATISTICS,
+            text=Dialog.Chat.GET_STATISTICS,
             callback_data=CallbackData.Chat.GET_STATISTICS,
         ),
         InlineKeyboardButton(
-            text=KbCommands.ADD_CHAT,
+            text=Dialog.Chat.ADD_CHAT,
             callback_data=CallbackData.Chat.ADD,
         ),
         width=2,
@@ -310,7 +310,7 @@ def chats_menu_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.REMOVE_CHAT,
+            text=Dialog.Chat.REMOVE_CHAT,
             callback_data=CallbackData.Chat.REMOVE,
         )
     )
