@@ -6,9 +6,11 @@ from typing import Optional
 TRANSLATIONS = {
     "ru": {
         "USERS_MENU": "😀 Пользователи",
+        "RELEASE_NOTES": "📝 Релизные заметки",
     },
     "en": {
         "USERS_MENU": "😀 Users",
+        "RELEASE_NOTES": "📝 Release Notes",
     },
 }
 
