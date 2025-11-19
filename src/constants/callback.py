@@ -86,6 +86,8 @@ class AdminLogsCallbackData:
 
     # Commands
     HIDE_LOGS = "hide_admin_logs"
+    MENU = "admin_logs_menu"
+    SELECT_ADMIN = "admin_logs_select_admin"
 
 
 class ReleaseNotesCallbackData:
@@ -116,6 +118,13 @@ class ReleaseNotesCallbackData:
     PREFIX_SELECT_ADD_LANGUAGE = "select_add_language__"
 
 
+class PermissionsCallbackData:
+    """Класс для хранения callback данных управления доступом"""
+
+    # Commands
+    MENU = "permissions_menu"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
@@ -125,3 +134,4 @@ class CallbackData:
     Menu = MenuCallbackData()
     AdminLogs = AdminLogsCallbackData()
     ReleaseNotes = ReleaseNotesCallbackData()
+    Permissions = PermissionsCallbackData()
