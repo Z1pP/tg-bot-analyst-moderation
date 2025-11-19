@@ -9,6 +9,7 @@ from .message_templates import MessageTemplate, TemplateCategory, TemplateMedia
 from .punishment import Punishment
 from .punishment_ladder import PunishmentLadder
 from .reaction import MessageReaction
+from .release_note import ReleaseNote
 from .user import User
 from .user_chat_status import UserChatStatus
 
@@ -28,4 +29,5 @@ __all__ = [
     "Punishment",
     "PunishmentLadder",
     "UserChatStatus",
+    "ReleaseNote",
 ]
