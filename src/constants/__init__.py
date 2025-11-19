@@ -131,8 +131,11 @@ class Dialog:
     UserTracking = UserTrackingDialogs
     # Moderation User
     BlockMenu = BlockMenuDialogs
+    # Ban User
     BanUser = BanUserDialogs
+    # Warn User
     WarnUser = WarnUserDialogs
+    # Amnesty User
     AmnestyUser = AmnestyUserDialogs
     # Message Management
     MessageManager = MessageManagerDialogs
