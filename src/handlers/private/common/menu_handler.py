@@ -43,7 +43,7 @@ async def main_menu_callback_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=menu_text,
-        reply_markup=admin_menu_ikb(user_language),
+        reply_markup=admin_menu_ikb(user_language, str(callback.from_user.id)),
     )
 
     await log_and_set_state(callback.message, state, MenuStates.main_menu)
