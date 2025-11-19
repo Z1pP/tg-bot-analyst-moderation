@@ -210,20 +210,20 @@ def conf_remove_user_kb() -> InlineKeyboardMarkup:
 
 def user_actions_ikb() -> InlineKeyboardMarkup:
     """Клавиатура действий с выбранным пользователем"""
-    from constants import KbCommands
+    from constants import Dialog
 
     builder = InlineKeyboardBuilder()
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.GET_REPORT,
+            text=Dialog.Report.GET_REPORT,
             callback_data=CallbackData.Report.GET_USER_REPORT,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.SELECT_USER,
+            text=Dialog.User.SELECT_USER,
             callback_data=CallbackData.User.SELECT_USER,
         )
     )
@@ -240,20 +240,20 @@ def user_actions_ikb() -> InlineKeyboardMarkup:
 
 def all_users_actions_ikb() -> InlineKeyboardMarkup:
     """Клавиатура действий со всеми пользователями"""
-    from constants import KbCommands
+    from constants import Dialog
 
     builder = InlineKeyboardBuilder()
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.GET_REPORT,
+            text=Dialog.Report.GET_REPORT,
             callback_data=CallbackData.Report.GET_ALL_USERS_REPORT,
         )
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.SELECT_USER,
+            text=Dialog.User.SELECT_USER,
             callback_data=CallbackData.User.SELECT_USER,
         )
     )
