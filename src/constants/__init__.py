@@ -8,6 +8,7 @@ from .dialogs import (
     CommonDialogs,
     MenuDialogs,
     MessageManagerDialogs,
+    ReleaseNotesDialogs,
     ReportDialogs,
     TemplateDialogs,
     UserDialogs,
@@ -17,6 +18,9 @@ from .dialogs import (
 
 MAX_MSG_LENGTH = 4000  # Указывает максимальную длину сообщения для вывода
 BREAK_TIME = 15  # Время перерыва между сообщенями
+
+# ID пользователей, которым разрешено управлять релизными заметками
+RELEASE_NOTES_ADMIN_IDS = ["879565689", "295451688"]
 
 
 class InlineButtons:
@@ -98,6 +102,19 @@ class InlineButtons:
         NO_REASON = "❌ Без причины"
         CANCEL = "❌ Отмена"
 
+    class ReleaseNotesButtons:
+        """Кнопки для действий с релизными заметками"""
+
+        ADD_NOTE = "➕ Добавить заметку"
+        BACK_TO_MENU = "📋 Вернуться в главное меню"
+        BACK_TO_LIST = "⬅️ Вернуться к списку"
+        EDIT = "✏️ Изменить"
+        DELETE = "🗑 Удалить"
+        EDIT_TITLE = "✏️ Изменить заголовок"
+        EDIT_CONTENT = "📝 Изменить содержимое"
+        CANCEL_EDIT = "❌ Отмена"
+        BROADCAST = "📢 Рассылка"
+
 
 class KbCommands:
     # Users
@@ -141,6 +158,9 @@ class KbCommands:
     MENU = "📋 Меню"
     BACK = "⬅️ Назад"
 
+    # Release Notes
+    RELEASE_NOTES = "📝 Релизные заметки"
+
 
 class Dialog:
     # User Tracking
@@ -166,6 +186,8 @@ class Dialog:
     Template = TemplateDialogs
     # Admin Logs
     AdminLogs = AdminLogsDialogs
+    # Release Notes
+    ReleaseNotes = ReleaseNotesDialogs
     # Common
     Common = CommonDialogs
 
