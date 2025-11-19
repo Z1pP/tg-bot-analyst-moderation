@@ -52,7 +52,7 @@ async def return_to_main_menu_handler(
     await state.clear()
 
     username = callback.from_user.first_name
-    menu_text = Dialog.MENU_TEXT.format(username=username)
+    menu_text = Dialog.Menu.MENU_TEXT.format(username=username)
 
     # Получаем язык пользователя из БД
     user_service: UserService = container.resolve(UserService)
