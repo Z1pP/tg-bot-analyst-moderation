@@ -3,7 +3,7 @@ from typing import Optional
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import RELEASE_NOTES_ADMIN_IDS, KbCommands
+from constants import RELEASE_NOTES_ADMIN_IDS, Dialog
 from constants.callback import CallbackData
 from constants.i18n import DEFAULT_LANGUAGE, get_text
 
@@ -35,7 +35,7 @@ def admin_menu_ikb(
             callback_data=CallbackData.Menu.USERS_MENU,
         ),
         InlineKeyboardButton(
-            text=KbCommands.CHATS_MENU,
+            text=Dialog.Chat.CHATS_MENU,
             callback_data=CallbackData.Menu.CHATS_MENU,
         ),
         width=2,
@@ -43,11 +43,11 @@ def admin_menu_ikb(
 
     builder.row(
         InlineKeyboardButton(
-            text=KbCommands.MESSAGE_MANAGEMENT,
+            text=Dialog.MessageManager.MESSAGE_MANAGEMENT,
             callback_data=CallbackData.Menu.MESSAGE_MANAGEMENT,
         ),
         InlineKeyboardButton(
-            text=KbCommands.LOCK_MENU,
+            text=Dialog.BlockMenu.LOCK_MENU,
             callback_data=CallbackData.Menu.LOCK_MENU,
         ),
         width=2,
@@ -58,11 +58,11 @@ def admin_menu_ikb(
     if admin_tg_id and admin_tg_id in RELEASE_NOTES_ADMIN_IDS:
         builder.row(
             InlineKeyboardButton(
-                text=KbCommands.ADMIN_LOGS,
+                text=Dialog.AdminLogs.ADMIN_LOGS,
                 callback_data=CallbackData.AdminLogs.MENU,
             ),
             InlineKeyboardButton(
-                text=KbCommands.PERMISSIONS_MENU,
+                text=Dialog.Roles.PERMISSIONS_MENU,
                 callback_data=CallbackData.Permissions.MENU,
             ),
             width=2,
