@@ -44,7 +44,7 @@ async def add_user_to_tracking_handler(
         )
 
         await callback.message.edit_text(
-            text=Dialog.INPUT_MODERATOR_USERNAME,
+            text=Dialog.User.INPUT_USERNAME,
             reply_markup=cancel_add_user_ikb(),
         )
 
@@ -97,7 +97,7 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
                     bot=message.bot,
                     chat_id=message.chat.id,
                     message_id=active_message_id,
-                    text=Dialog.Error.INVALID_USERNAME_FORMAT,
+                    text=Dialog.User.INVALID_USERNAME_FORMAT,
                     reply_markup=cancel_add_user_ikb(),
                 )
             await message.delete()
