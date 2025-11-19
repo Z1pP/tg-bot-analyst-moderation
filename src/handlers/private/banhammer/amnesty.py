@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 
-from constants import Dialog, InlineButtons, KbCommands
+from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentType
 from container import container
 from dto import AmnestyUserDTO
@@ -64,7 +64,7 @@ async def waiting_user_data_input(
         state=state,
         bot=bot,
         dialog_texts={
-            "invalid_format": Dialog.Error.INVALID_USERNAME_FORMAT,
+            "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT,
             "user_not_found": Dialog.BanUser.USER_NOT_FOUND,
             "user_info": Dialog.AmnestyUser.SELECT_ACTION,
         },
@@ -223,7 +223,7 @@ async def execute_amnesty_action(
         chat_dtos=chat_dtos,
     )
 
-    if action == KbCommands.UNBAN:
+    if action == Dialog.AmnestyUser.UNBAN:
         unban_usecase: UnbanUserUseCase = container.resolve(UnbanUserUseCase)
         try:
             await unban_usecase.execute(dto=amnesty_dto)
@@ -239,7 +239,7 @@ async def execute_amnesty_action(
             f"✅ @{amnesty_dto.violator_username} амнистирован — "
             "все предупреждения были сброшены!"
         )
-    elif action == KbCommands.UNMUTE:
+    elif action == Dialog.AmnestyUser.UNMUTE:
         unmute_usecase: UnmuteUserUseCase = container.resolve(UnmuteUserUseCase)
         try:
             await unmute_usecase.execute(dto=amnesty_dto)
@@ -255,7 +255,7 @@ async def execute_amnesty_action(
             f"✅ @{amnesty_dto.violator_username} размучен!\n\n"
             "❗Все предыдущие предупреждения для пользователя сохранены."
         )
-    elif action == KbCommands.CANCEL_WARN:
+    elif action == Dialog.AmnestyUser.CANCEL_WARN:
         cancel_warn_usecase: CancelLastWarnUseCase = container.resolve(
             CancelLastWarnUseCase
         )
@@ -348,15 +348,15 @@ async def handle_chats_error(
 
 
 ACTION_CONFIG = {
-    KbCommands.UNBAN: {
+    Dialog.AmnestyUser.UNBAN: {
         "usecase": GetChatsWithBannedUserUseCase,
         "text": lambda username: f"Выберите чат, где нужно произвести амнистию @{username}",
     },
-    KbCommands.UNMUTE: {
+    Dialog.AmnestyUser.UNMUTE: {
         "usecase": GetChatsWithMutedUserUseCase,
         "text": lambda username: f"Выберите чат, где нужно произвести размут @{username}",
     },
-    KbCommands.CANCEL_WARN: {
+    Dialog.AmnestyUser.CANCEL_WARN: {
         "usecase": GetChatsWithPunishedUserUseCase,
         "text": lambda username: f"Выберите чат, где нужно отменить последнее предупреждение для @{username}",
     },
