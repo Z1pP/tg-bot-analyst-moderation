@@ -1,109 +1,129 @@
 import logging
 
 from aiogram import F, Router
-from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from constants import PROTECTED_USER_TG_ID
+from constants import PROTECTED_USER_TG_ID, Dialog
 from constants.callback import CallbackData
 from constants.enums import UserRole
 from container import container
-from keyboards.inline.users import role_select_ikb
+from keyboards.inline.roles import cancel_role_select_ikb, role_select_ikb
 from repositories import UserRepository
 from services.caching import ICache
 from services.user import UserService
+from states import RoleState
+from utils.send_message import safe_edit_message
+from utils.state_logger import log_and_set_state
 from utils.user_data_parser import parse_data_from_text
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message(Command("role"))
-async def role_command_handler(message: Message) -> None:
+@router.callback_query(F.data == CallbackData.Role.INPUT_USER_DATA)
+async def input_user_data_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """
-    Обработчик команды /role для изменения роли пользователя.
-    Формат: /role @username или /role tg_id
+    Обработчик ввода данных пользователя для изменения роли.
     """
-    try:
-        # Удаляем исходное сообщение с командой
-        try:
-            await message.delete()
-        except Exception as e:
-            logger.warning("Не удалось удалить сообщение с командой /role: %s", e)
+    await callback.answer()
+    await state.clear()
 
-        # Парсим аргументы команды
-        if not message.text:
-            await message.answer(
-                "❌ Не указан пользователь. Используйте: /role @username или /role tg_id"
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.Roles.INPUT_USER_DATA,
+        reply_markup=cancel_role_select_ikb(),
+    )
+
+    await state.update_data(active_message_id=callback.message.message_id)
+
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=RoleState.waiting_user_input,
+    )
+
+
+@router.message(RoleState.waiting_user_input)
+async def process_user_data_input(message: Message, state: FSMContext) -> None:
+    """
+    Обработчик ввода данных пользователя для изменения роли.
+    """
+
+    user_data = parse_data_from_text(text=message.text)
+    active_message_id = await state.get_value("active_message_id")
+
+    if not user_data:
+        if active_message_id:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=Dialog.User.INVALID_USERNAME_FORMAT,
+                reply_markup=cancel_role_select_ikb(),
             )
-            return
+        return
 
-        # Разделяем команду и аргументы
-        parts = message.text.split(maxsplit=1)
-        if len(parts) < 2:
-            await message.answer(
-                "❌ Не указан пользователь. Используйте: /role @username или /role tg_id"
+    user_service: UserService = container.resolve(UserService)
+    user = None
+
+    if user_data.tg_id:
+        user = await user_service.get_user(tg_id=user_data.tg_id)
+    elif user_data.username:
+        user = await user_service.get_by_username(username=user_data.username)
+
+    if not user:
+        if active_message_id:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=f"❌ Пользователь не найден.\n"
+                f"Проверьте правильность введенных данных: {message.text}",
+                reply_markup=cancel_role_select_ikb(),
             )
-            return
+        return
 
-        user_input = parts[1].strip()
-        user_data = parse_data_from_text(text=user_input)
-
-        if user_data is None:
-            await message.answer(
-                "❌ Неверный формат. Используйте: /role @username или /role tg_id"
+    # Защита от изменения роли для захардкоженного пользователя
+    if user.tg_id == PROTECTED_USER_TG_ID:
+        if active_message_id:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text="❌ Нельзя изменить роль этому пользователю",
+                reply_markup=cancel_role_select_ikb(),
             )
-            return
+        return
 
-        # Находим пользователя
-        user_service: UserService = container.resolve(UserService)
-        user = None
+    # Формируем текст сообщения
+    username_display = user.username if user.username else f"ID:{user.tg_id}"
+    role_display = {
+        UserRole.ADMIN: "👑 Администратор",
+        UserRole.MODERATOR: "🛡️ Модератор",
+        UserRole.USER: "👤 Пользователь",
+    }.get(user.role, "❓ Неизвестно")
 
-        if user_data.tg_id:
-            user = await user_service.get_user(tg_id=user_data.tg_id)
-        elif user_data.username:
-            user = await user_service.get_by_username(username=user_data.username)
+    text = (
+        f"🔧 <b>Изменение роли пользователя</b>\n\n"
+        f"👤 Пользователь: @{username_display}\n"
+        f"📋 Текущая роль: {role_display}\n\n"
+        f"Выберите новую роль:"
+    )
 
-        if not user:
-            await message.answer(
-                f"❌ Пользователь не найден.\n"
-                f"Проверьте правильность введенных данных: {user_input}"
-            )
-            return
-
-        # Защита от изменения роли для захардкоженного пользователя
-        if user.tg_id == PROTECTED_USER_TG_ID:
-            await message.answer("❌ Нельзя изменить роль этому пользователю")
-            return
-
-        # Формируем текст сообщения
-        username_display = user.username if user.username else f"ID:{user.tg_id}"
-        role_display = {
-            UserRole.ADMIN: "👑 Администратор",
-            UserRole.MODERATOR: "🛡️ Модератор",
-            UserRole.USER: "👤 Пользователь",
-        }.get(user.role, "❓ Неизвестно")
-
-        text = (
-            f"🔧 <b>Изменение роли пользователя</b>\n\n"
-            f"👤 Пользователь: @{username_display}\n"
-            f"📋 Текущая роль: {role_display}\n\n"
-            f"Выберите новую роль:"
-        )
-
-        # Показываем клавиатуру выбора роли
-        await message.answer(
+    if active_message_id:
+        await message.bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=active_message_id,
             text=text,
             reply_markup=role_select_ikb(user_id=user.id, current_role=user.role),
         )
 
-        logger.info(
-            f"Админ {message.from_user.id} запросил изменение роли для пользователя {user.id} ({username_display})"
-        )
+    try:
+        await message.delete()
+    except Exception:
+        pass
 
-    except Exception as e:
-        logger.error(f"Ошибка при обработке команды /role: {e}", exc_info=True)
-        await message.answer("❌ Произошла ошибка при обработке команды")
+    await state.clear()
 
 
 @router.callback_query(F.data.startswith(CallbackData.User.PREFIX_ROLE_SELECT))
@@ -183,7 +203,7 @@ async def role_select_callback_handler(callback: CallbackQuery) -> None:
 
             await callback.message.edit_text(
                 text=text,
-                reply_markup=role_select_ikb(user_id=user.id, current_role=new_role),
+                reply_markup=role_select_ikb(),
             )
             return
 
