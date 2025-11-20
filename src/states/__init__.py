@@ -8,12 +8,13 @@ from .category import CategoryStateManager
 from .chat_states import ChatStateManager
 from .menu_states import MenuStates
 from .message_management import MessageManagerState
+from .roles import RoleState
 from .templates import TemplateStateManager
 from .user_states import (
     AllUsersReportStates,
     SingleUserReportStates,
-    UserStateManager,
     UsernameStates,
+    UserStateManager,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "WarnUserStates",
     "MessageManagerState",
     "CategoryStateManager",
+    "RoleState",
 ]
