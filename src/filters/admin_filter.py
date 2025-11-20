@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from aiogram.filters import Filter
-from aiogram.types import InlineQuery, Message, MessageReactionUpdated
+from aiogram.types import CallbackQuery, InlineQuery, Message, MessageReactionUpdated
 
 from constants.enums import UserRole
 from container import container
@@ -72,9 +72,15 @@ class BaseUserFilter(Filter):
 
 
 class AdminOnlyFilter(BaseUserFilter):
-    async def __call__(self, message: Message) -> bool:
-        tg_id = str(message.from_user.id)
-        current_username = message.from_user.username
+    async def __call__(self, event: Message | CallbackQuery, *args, **kwds) -> bool:
+        if isinstance(event, Message):
+            tg_id = str(event.from_user.id)
+            current_username = event.from_user.username
+        elif isinstance(event, CallbackQuery):
+            tg_id = str(event.from_user.id)
+            current_username = event.from_user.username
+        else:
+            return False
 
         user = await self.get_user(tg_id=tg_id, current_username=current_username)
         return user is not None and user.role == UserRole.ADMIN
