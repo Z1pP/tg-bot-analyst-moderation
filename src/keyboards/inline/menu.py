@@ -62,8 +62,8 @@ def admin_menu_ikb(
                 callback_data=CallbackData.AdminLogs.MENU,
             ),
             InlineKeyboardButton(
-                text=Dialog.Roles.PERMISSIONS_MENU,
-                callback_data=CallbackData.Permissions.MENU,
+                text=Dialog.Roles.MENU,
+                callback_data=CallbackData.Role.INPUT_USER_DATA,
             ),
             width=2,
         )
