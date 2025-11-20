@@ -125,6 +125,11 @@ class InlineButtons:
         BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
         BACK_TO_ADMIN_LOGS_MENU = "⬅️ Назад в меню логов"
 
+    class RoleButtons:
+        """Кнопки для действий с ролями"""
+
+        CANCEL = "❌ Отмена"
+
 
 class Dialog:
     # User Tracking
