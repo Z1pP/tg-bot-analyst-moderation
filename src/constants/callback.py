@@ -125,13 +125,26 @@ class PermissionsCallbackData:
     MENU = "permissions_menu"
 
 
+class RoleCallbackData:
+    """Класс для хранения callback данных ролей"""
+
+    # Commands
+    INPUT_USER_DATA = "input_user_data"
+    SELECT_ROLE = "select_role"
+    ADD_ROLE = "add_role"
+    REMOVE_ROLE = "remove_role"
+    ROLES_MENU = "roles_menu"
+    BACK_TO_MAIN_MENU_FROM_ROLES = "back_to_main_menu_from_roles"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
-    Chat = ChatCallbackData()
-    Report = ReportCallbackData()
-    User = UserCallbackData()
-    Menu = MenuCallbackData()
-    AdminLogs = AdminLogsCallbackData()
-    ReleaseNotes = ReleaseNotesCallbackData()
-    Permissions = PermissionsCallbackData()
+    Chat = ChatCallbackData
+    Report = ReportCallbackData
+    User = UserCallbackData
+    Menu = MenuCallbackData
+    AdminLogs = AdminLogsCallbackData
+    ReleaseNotes = ReleaseNotesCallbackData
+    Permissions = PermissionsCallbackData
+    Role = RoleCallbackData
