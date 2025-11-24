@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from models import ChatSession
 from repositories import ChatRepository
@@ -51,10 +51,11 @@ class ChatService:
         await self._cache.set(chat_id, new_chat)
         return new_chat
 
-    async def get_archive_chats(
+    async def get_archive_for_chat(
         self,
-        source_chat_tgid: str,
-    ) -> Optional[List[ChatSession]]:
-        return await self._chat_repository.get_archive_chats(
-            source_chat_tgid=source_chat_tgid,
-        )
+        chat_tgid: str,
+    ) -> Optional[ChatSession]:
+        chat = await self.get_chat(chat_id=chat_tgid)
+        if chat and chat.archive_chat:
+            return chat.archive_chat
+        return None
