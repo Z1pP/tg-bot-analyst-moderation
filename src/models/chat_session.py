@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Index, String
+from sqlalchemy import ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -29,6 +29,7 @@ class ChatSession(BaseModel):
 
     archive_chat_id: Mapped[Optional[str]] = mapped_column(
         String(length=32),
+        ForeignKey("chat_sessions.chat_id", ondelete="SET NULL"),
         nullable=True,
         doc="ID of the chat to which moderation reports are sent.",
     )
@@ -63,6 +64,19 @@ class ChatSession(BaseModel):
         "UserChatStatus",
         back_populates="chat",
         cascade="all, delete-orphan",
+    )
+
+    archive_chat: Mapped[Optional["ChatSession"]] = relationship(
+        "ChatSession",
+        remote_side=[chat_id],
+        back_populates="linked_work_chats",
+        foreign_keys=[archive_chat_id],
+    )
+
+    linked_work_chats: Mapped[list["ChatSession"]] = relationship(
+        "ChatSession",
+        back_populates="archive_chat",
+        foreign_keys=[archive_chat_id],
     )
 
     __table_args__ = (
