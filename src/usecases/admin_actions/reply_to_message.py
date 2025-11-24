@@ -68,8 +68,8 @@ class ReplyToMessageUseCase:
 
         chat = None
         try:
-            archive_chats = await self.chat_service.get_archive_chats(
-                source_chat_tgid=dto.chat_tgid,
+            archive_chats = await self.chat_service.get_archive_for_chat(
+                chat_tgid=dto.chat_tgid,
             )
             if archive_chats:
                 chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
