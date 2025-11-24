@@ -94,8 +94,8 @@ class ModerationUseCase:
             )
             raise CannotPunishChatAdminError()
 
-        archive_chats = await self.chat_service.get_archive_chats(
-            source_chat_tgid=dto.chat_tgid,
+        archive_chats = await self.chat_service.get_archive_for_chat(
+            chat_tgid=dto.chat_tgid,
         )
 
         if not archive_chats:
