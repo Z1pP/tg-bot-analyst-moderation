@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from database.session import DatabaseContextManager
 from models.chat_session import ChatSession
@@ -34,11 +35,17 @@ class ChatRepository:
         async with self._db.session() as session:
             try:
                 chat = await session.scalar(
-                    select(ChatSession).where(ChatSession.chat_id == chat_tgid)
+                    select(ChatSession)
+                    .where(ChatSession.chat_id == chat_tgid)
+                    .options(
+                        selectinload(ChatSession.archive_chat),
+                    )
                 )
                 if chat:
                     logger.info(
-                        "Получен чат: chat_id=%s, title=%s", chat.chat_id, chat.title
+                        "Получен чат: chat_id=%s, title=%s",
+                        chat.chat_id,
+                        chat.title,
                     )
                 else:
                     logger.info("Чат не найден: chat_id=%s", chat_tgid)
@@ -117,23 +124,3 @@ class ChatRepository:
                     f"Error getting tracked chats for admin {admin_tg_id}: {e}"
                 )
                 return []
-
-    async def get_archive_chats(
-        self,
-        source_chat_tgid: str,
-    ) -> Optional[List[ChatSession]]:
-        """Получает архивный чат по названию источника"""
-        async with self._db.session() as session:
-            try:
-                query = select(ChatSession).where(
-                    ChatSession.archive_chat_id == source_chat_tgid
-                )
-
-                result = await session.execute(query)
-                chats = result.scalars().all()
-
-                logger.info("Получено %d архивных чатов", len(chats))
-                return chats
-            except Exception as e:
-                logger.error("Произошла ошибка при получении архивных чатов: %s", e)
-                raise e
