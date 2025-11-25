@@ -285,7 +285,7 @@ class ChatDialogs:
     GET_STATISTICS = "📊 Статистика"
     GET_REPORT = "⏱️ Получить отчет"
     DAILY_RATING = "🏆 Рейтинг за сутки"
-
+    CHAT_MANAGEMENT = "🔧 Управление чатом"
     ADD_CHAT_INSTRUCTION = (
         "📨 <b>Добавление чата в отслеживание</b>\n\n"
         "📋 <b>Инструкция:</b>\n"
