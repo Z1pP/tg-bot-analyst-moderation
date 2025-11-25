@@ -7,6 +7,7 @@ class ChatCallbackData:
     GET_REPORT = "get_chat_report"
     GET_DAILY_RATING = "get_chat_daily_rating"
     GET_STATISTICS = "get_chat_statistics"
+    CHAT_MANAGEMENT = "chat_management"
     CHATS_MENU = "chats_menu"
     BACK_TO_MAIN_MENU_FROM_CHATS = "back_to_main_menu_from_chats"
     SELECT_ANOTHER_CHAT = "select_another_chat"
