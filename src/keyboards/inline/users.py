@@ -3,7 +3,7 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import InlineButtons
+from constants import Dialog, InlineButtons
 from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
@@ -26,15 +26,13 @@ def users_menu_ikb() -> InlineKeyboardMarkup:
             text=InlineButtons.UserButtons.REMOVE_USER,
             callback_data=CallbackData.User.REMOVE,
         ),
-        width=2,
-    )
-
-    builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
             callback_data=CallbackData.User.BACK_TO_MAIN_MENU_FROM_USERS,
-        )
+        ),
     )
+
+    builder.adjust(1, 2, 1)
 
     return builder.as_markup()
 
@@ -209,29 +207,22 @@ def conf_remove_user_kb() -> InlineKeyboardMarkup:
 
 def user_actions_ikb() -> InlineKeyboardMarkup:
     """Клавиатура действий с выбранным пользователем"""
-    from constants import Dialog
-
     builder = InlineKeyboardBuilder()
 
     builder.row(
         InlineKeyboardButton(
             text=Dialog.Report.GET_REPORT,
             callback_data=CallbackData.Report.GET_USER_REPORT,
-        )
-    )
-
-    builder.row(
+        ),
         InlineKeyboardButton(
             text=Dialog.User.SELECT_USER,
             callback_data=CallbackData.User.SELECT_USER,
-        )
-    )
-
-    builder.row(
+        ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
             callback_data=CallbackData.User.USERS_MENU,
-        )
+        ),
+        width=1,
     )
 
     return builder.as_markup()
@@ -239,7 +230,6 @@ def user_actions_ikb() -> InlineKeyboardMarkup:
 
 def all_users_actions_ikb() -> InlineKeyboardMarkup:
     """Клавиатура действий со всеми пользователями"""
-    from constants import Dialog
 
     builder = InlineKeyboardBuilder()
 
@@ -247,21 +237,16 @@ def all_users_actions_ikb() -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=Dialog.Report.GET_REPORT,
             callback_data=CallbackData.Report.GET_ALL_USERS_REPORT,
-        )
-    )
-
-    builder.row(
+        ),
         InlineKeyboardButton(
             text=Dialog.User.SELECT_USER,
             callback_data=CallbackData.User.SELECT_USER,
-        )
-    )
-
-    builder.row(
+        ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
             callback_data=CallbackData.User.USERS_MENU,
-        )
+        ),
+        width=1,
     )
 
     return builder.as_markup()
