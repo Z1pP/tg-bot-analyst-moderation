@@ -265,28 +265,24 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=Dialog.Chat.GET_REPORT,
             callback_data=CallbackData.Chat.GET_REPORT,
-        )
-    )
-
-    builder.row(
+        ),
         InlineKeyboardButton(
             text=Dialog.Chat.DAILY_RATING,
             callback_data=CallbackData.Chat.GET_DAILY_RATING,
-        )
-    )
-
-    builder.row(
+        ),
+        InlineKeyboardButton(
+            text=Dialog.Chat.CHAT_MANAGEMENT,
+            callback_data=CallbackData.Chat.CHAT_MANAGEMENT,
+        ),
         InlineKeyboardButton(
             text=Dialog.Chat.SELECT_CHAT,
             callback_data=CallbackData.Chat.SELECT_ANOTHER_CHAT,
-        )
-    )
-
-    builder.row(
+        ),
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
             callback_data=CallbackData.Chat.CHATS_MENU,
-        )
+        ),
+        width=1,
     )
 
     return builder.as_markup()
@@ -305,21 +301,16 @@ def chats_menu_ikb() -> InlineKeyboardMarkup:
             text=Dialog.Chat.ADD_CHAT,
             callback_data=CallbackData.Chat.ADD,
         ),
-        width=2,
-    )
-
-    builder.row(
         InlineKeyboardButton(
             text=Dialog.Chat.REMOVE_CHAT,
             callback_data=CallbackData.Chat.REMOVE,
-        )
-    )
-
-    builder.row(
+        ),
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_MAIN_MENU,
             callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
-        )
+        ),
     )
+
+    builder.adjust(1, 2, 1)
 
     return builder.as_markup()
