@@ -88,8 +88,27 @@ class InlineButtons:
     class ChatButtons:
         """Кнопки для действий с чатами"""
 
-        BACK_TO_CHATS_MENU = "⬅️ Назад в меню чатов"
+        # Main menu
+        CHATS_MANAGEMENT = "📋 Упр. чатами"
+        # Chat management menu
+        SELECT_CHAT = "📋 Выбрать чат"
+        ADD = "➕ Добавить"
+        REMOVE = "❌ Удалить"
         BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
+        # List of chats
+        BACK_TO_CHATS_MANAGEMENT = "⬅️ Вернуться к упр. чатами"
+        # Actions with chat
+        GET_STATISTICS = "📊 Статистика"
+        GET_DAILY_RATING = "🏆 Рейтинг за сутки"
+        ARCHIVE_CHANNEL_SETTING = "⚙️ Настройка архив. канала"
+        BACK_TO_SELECTION_CHAT = "⬅️ Вернуться к выбору чата"
+
+        ARCHIVE_CHANNEL_UNBIND = "🔄 Перепривязать"
+        ARCHIVE_CHANNEL_BIND = "🔗 Привязать"
+
+        BACK_TO_CHATS_MENU = "⬅️ Назад в меню чатов"
+
+        BACK_TO_SELECT_ACTION = "⬅️ Назад к выбору действия"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
