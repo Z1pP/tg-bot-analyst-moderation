@@ -14,23 +14,31 @@ class ChatRepository:
     def __init__(self, db_manager: DatabaseContextManager) -> None:
         self._db = db_manager
 
-    async def get_chat(self, chat_id: int) -> Optional[ChatSession]:
+    async def get_chat_by_id(self, chat_id: int) -> Optional[ChatSession]:
         """Получает чат по идентификатору."""
         async with self._db.session() as session:
             try:
-                chat = await session.get(ChatSession, chat_id)
+                chat = await session.scalar(
+                    select(ChatSession)
+                    .where(ChatSession.id == chat_id)
+                    .options(
+                        selectinload(ChatSession.archive_chat),
+                    )
+                )
                 if chat:
                     logger.info(
-                        "Получен чат: chat_id=%s, title=%s", chat_id, chat.title
+                        "Получен чат: chat_id=%s, title=%s",
+                        chat.id,
+                        chat.title,
                     )
                 else:
-                    logger.info("Чат не найден: chat_id=%s", chat_id)
+                    logger.info("Чат не найден: id=%s", chat.id)
                 return chat
             except Exception as e:
-                logger.error("Произошла ошибка при получении чата: %s, %s", chat_id, e)
+                logger.error("Произошла ошибка при получении чата: %s, %s", chat.id, e)
                 raise e
 
-    async def get_chat_by_chat_id(self, chat_tgid: str) -> Optional[ChatSession]:
+    async def get_chat_by_tgid(self, chat_tgid: str) -> Optional[ChatSession]:
         """Получает чат по Telegram chat_id."""
         async with self._db.session() as session:
             try:
