@@ -72,3 +72,39 @@ class ChatService:
             chat = await self.get_chat(chat_tgid=chat_tgid)
 
         return chat or None
+
+    async def bind_archive_chat(
+        self,
+        work_chat_id: int,
+        archive_chat_tgid: str,
+        archive_chat_title: Optional[str] = None,
+    ) -> Optional[ChatSession]:
+        """
+        Привязывает архивный чат к рабочему.
+
+        Args:
+            work_chat_id: ID рабочего чата из БД
+            archive_chat_tgid: Telegram ID архивного чата
+            archive_chat_title: Название архивного чата (опционально)
+
+        Returns:
+            Обновленный рабочий чат или None
+        """
+        work_chat = await self._chat_repository.bind_archive_chat(
+            work_chat_id=work_chat_id,
+            archive_chat_tgid=archive_chat_tgid,
+            archive_chat_title=archive_chat_title,
+        )
+
+        if work_chat:
+            # Обновляем кеш для рабочего чата
+            await self._cache.set(work_chat.chat_id, work_chat)
+            # Обновляем кеш для архивного чата если он был создан
+            if work_chat.archive_chat_id:
+                archive_chat = await self._chat_repository.get_chat_by_tgid(
+                    work_chat.archive_chat_id
+                )
+                if archive_chat:
+                    await self._cache.set(archive_chat.chat_id, archive_chat)
+
+        return work_chat
