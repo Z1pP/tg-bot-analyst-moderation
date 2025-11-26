@@ -43,7 +43,7 @@ class BaseAmnestyUseCase:
         if not can_moderate:
             raise BotInsufficientPermissionsError(chat_title=chat.title)
 
-        archive_chats = await self.chat_service.get_archive_for_chat(
+        archive_chats = await self.chat_service.get_chat_with_archive(
             chat_tgid=chat.tg_id,
         )
 

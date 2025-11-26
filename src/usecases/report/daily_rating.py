@@ -28,7 +28,7 @@ class GetDailyTopUsersUseCase:
             ChatDailyStatsDTO с топом пользователей и общей статистикой
         """
         # Получаем информацию о чате
-        chat = await self.chat_repository.get_chat(chat_id)
+        chat = await self.chat_repository.get_chat_by_id(chat_id)
         chat_title = chat.title if chat else "Неизвестный чат"
 
         # Получаем топ пользователей

@@ -93,7 +93,7 @@ class GetReportOnSpecificChatUseCase:
 
     async def _get_chat(self, chat_id: int) -> ChatSession:
         """Получает чат по названию."""
-        chat = await self._chat_repository.get_chat(chat_id=chat_id)
+        chat = await self._chat_repository.get_chat_by_id(chat_id=chat_id)
         if not chat:
             raise ValueError("Чат не найден")
         return chat

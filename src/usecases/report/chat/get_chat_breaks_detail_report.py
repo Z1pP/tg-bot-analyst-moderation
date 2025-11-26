@@ -22,7 +22,7 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
             return ["⚠️ Список пользователей пуст, добавьте пользователя!"]
 
         # Получаем информацию о чате
-        chat = await self._chat_repository.get_chat(dto.chat_id)
+        chat = await self._chat_repository.get_chat_by_id(dto.chat_id)
         if not chat:
             return ["⚠️ Чат не найден!"]
 

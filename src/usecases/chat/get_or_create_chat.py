@@ -7,7 +7,7 @@ class GetOrCreateChatUseCase:
         self.chat_repository = chat_repository
 
     async def execute(self, chat_id: str, title: str) -> ChatSession:
-        chat = await self.chat_repository.get_chat(chat_id=chat_id)
+        chat = await self.chat_repository.get_chat_by_id(chat_id=chat_id)
 
         if not chat:
             chat = await self.chat_repository.create_chat(chat_id=chat_id, title=title)
