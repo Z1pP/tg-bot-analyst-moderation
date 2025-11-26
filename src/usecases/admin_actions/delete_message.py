@@ -32,7 +32,7 @@ class DeleteMessageUseCase:
             dto.admin_tgid,
         )
 
-        archive_chats = await self.chat_service.get_archive_for_chat(
+        archive_chats = await self.chat_service.get_chat_with_archive(
             chat_tgid=dto.chat_tgid,
         )
 
@@ -79,7 +79,7 @@ class DeleteMessageUseCase:
 
         if archive_chats:
             try:
-                chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
+                chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
                 report_text = (
                     f"🗑 <b>Удалено сообщение ботом</b>\n\n"
                     f"Чат: {chat.title}\n"
