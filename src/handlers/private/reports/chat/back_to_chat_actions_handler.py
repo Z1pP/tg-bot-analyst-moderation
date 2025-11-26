@@ -34,7 +34,7 @@ async def back_to_chat_actions_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Chat.SELECT_ACTION,
+        text=Dialog.Chat.CHAT_MANAGEMENT,
         reply_markup=chat_actions_ikb(),
     )
 
