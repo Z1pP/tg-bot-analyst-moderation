@@ -49,17 +49,9 @@ async def archive_channel_setting_handler(
         return
 
     if chat.archive_chat:
-        text = (
-            f"У Вас уже имеется привязанный архивный канал к чату <b>{chat.title}.</b>\n\n"
-            "Вы можете перейти в него, нажав на кнопку с названием канала, "
-            'либо же привязать другой архивный канал, нажав кнопку "Перепривязать".'
-        )
+        text = Dialog.Chat.ARCHIVE_CHANNEL_EXISTS.format(title=chat.title)
     else:
-        text = (
-            f"У Вас нет привязанного архивного канала к чату <b>{chat.title}</b>.\n\n"
-            "Пожалуйста, привяжите архивный канал, чтобы получать "
-            "автоматический ежедневный отчёт со статистикой по чату."
-        )
+        text = Dialog.Chat.ARCHIVE_CHANNEL_MISSING.format(title=chat.title)
 
     await safe_edit_message(
         bot=callback.bot,
