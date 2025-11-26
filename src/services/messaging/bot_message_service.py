@@ -7,6 +7,7 @@ from aiogram.types import ChatIdUnion, ChatPermissions
 
 from constants.punishment import PunishmentType
 from exceptions.moderation import MessageTooOldError
+from services.permissions import BotPermissionService
 from services.time_service import TimeZoneService
 
 logger = logging.getLogger(__name__)
@@ -21,13 +22,17 @@ class BotMessageService:
     - Пересылку сообщений
     - Удаление сообщений
     - Применение наказаний (mute/ban)
+
+    Автоматически проверяет права бота перед выполнением действий.
     """
 
     def __init__(
         self,
         bot: Bot,
+        permission_service: BotPermissionService,
     ):
         self.bot = bot
+        self.permission_service = permission_service
 
     async def send_private_message(self, user_tgid: ChatIdUnion, text: str) -> None:
         """
@@ -58,10 +63,19 @@ class BotMessageService:
         """
         Отправляет сообщение в чат.
 
+        Проверяет право can_post_messages перед отправкой.
+
         Args:
             chat_tgid: Telegram ID чата
             text: Текст сообщения (HTML)
         """
+        can_post = await self.permission_service.can_post_messages(chat_tgid=chat_tgid)
+        if not can_post:
+            logger.warning(
+                "Bot cannot post messages in chat %s. Skipping message send.",
+                chat_tgid,
+            )
+            return None
 
         try:
             await self.bot.send_message(
@@ -181,6 +195,7 @@ class BotMessageService:
 
         Проверяет возраст сообщения - Telegram не позволяет
         удалять сообщения старше 48 часов.
+        Проверяет право can_delete_messages перед удалением.
 
         Args:
             chat_id: Telegram ID чата
@@ -193,6 +208,16 @@ class BotMessageService:
         Raises:
             MessageTooOldError: Если сообщение старше 48 часов
         """
+        can_delete = await self.permission_service.can_delete_messages(
+            chat_tgid=chat_id
+        )
+        if not can_delete:
+            logger.warning(
+                "Bot cannot delete messages in chat %s. Skipping deletion.",
+                chat_id,
+            )
+            return False
+
         if message_date:
             now_local = TimeZoneService.now()
             if now_local - message_date > timedelta(hours=48):
@@ -219,6 +244,8 @@ class BotMessageService:
         """
         Применяет наказание к пользователю в чате.
 
+        Проверяет право can_moderate перед применением MUTE/BAN.
+
         Args:
             chat_tg_id: Telegram ID чата
             user_tg_id: Telegram ID пользователя
@@ -228,6 +255,20 @@ class BotMessageService:
         Returns:
             True если наказание применено успешно
         """
+        # Проверка прав для действий, требующих модерации
+        if action in (PunishmentType.MUTE, PunishmentType.BAN):
+            can_moderate = await self.permission_service.can_moderate(
+                chat_tgid=chat_tg_id
+            )
+            if not can_moderate:
+                logger.warning(
+                    "Bot cannot moderate in chat %s. Skipping punishment %s for user %s.",
+                    chat_tg_id,
+                    action,
+                    user_tg_id,
+                )
+                return False
+
         try:
             if action == PunishmentType.MUTE:
                 return await self.mute_chat_member(
@@ -263,6 +304,8 @@ class BotMessageService:
         """
         Ограничивает права пользователя в чате (mute).
 
+        Проверяет право can_moderate перед применением.
+
         Args:
             chat_tg_id: Telegram ID чата
             user_tg_id: Telegram ID пользователя
@@ -271,6 +314,15 @@ class BotMessageService:
         Returns:
             True если мьют применен успешно
         """
+        can_moderate = await self.permission_service.can_moderate(chat_tgid=chat_tg_id)
+        if not can_moderate:
+            logger.warning(
+                "Bot cannot moderate in chat %s. Skipping mute for user %s.",
+                chat_tg_id,
+                user_tg_id,
+            )
+            return False
+
         permissions = ChatPermissions(
             can_send_messages=False,
             can_send_media_messages=False,
@@ -305,6 +357,8 @@ class BotMessageService:
         """
         Банит пользователя в чате бессрочно.
 
+        Проверяет право can_moderate перед применением.
+
         Args:
             chat_tg_id: Telegram ID чата
             user_tg_id: Telegram ID пользователя
@@ -312,6 +366,15 @@ class BotMessageService:
         Returns:
             True если бан применен успешно
         """
+        can_moderate = await self.permission_service.can_moderate(chat_tgid=chat_tg_id)
+        if not can_moderate:
+            logger.warning(
+                "Bot cannot moderate in chat %s. Skipping ban for user %s.",
+                chat_tg_id,
+                user_tg_id,
+            )
+            return False
+
         try:
             return await self.bot.ban_chat_member(
                 chat_id=chat_tg_id,
@@ -334,6 +397,8 @@ class BotMessageService:
         """
         Разбанивает пользователя в чате.
 
+        Проверяет право can_moderate перед применением.
+
         Args:
             chat_tg_id: Telegram ID чата
             user_tg_id: Telegram ID пользователя
@@ -341,6 +406,15 @@ class BotMessageService:
         Returns:
             True если разбан применен успешно
         """
+        can_moderate = await self.permission_service.can_moderate(chat_tgid=chat_tg_id)
+        if not can_moderate:
+            logger.warning(
+                "Bot cannot moderate in chat %s. Skipping unban for user %s.",
+                chat_tg_id,
+                user_tg_id,
+            )
+            return False
+
         try:
             return await self.bot.unban_chat_member(
                 chat_id=chat_tg_id,
@@ -363,6 +437,8 @@ class BotMessageService:
         """
         Размьютит пользователя в чате.
 
+        Проверяет право can_moderate перед применением.
+
         Args:
             chat_tg_id: Telegram ID чата
             user_tg_id: Telegram ID пользователя
@@ -370,6 +446,15 @@ class BotMessageService:
         Returns:
             True если размьют применен успешно
         """
+        can_moderate = await self.permission_service.can_moderate(chat_tgid=chat_tg_id)
+        if not can_moderate:
+            logger.warning(
+                "Bot cannot moderate in chat %s. Skipping unmute for user %s.",
+                chat_tg_id,
+                user_tg_id,
+            )
+            return False
+
         permissions = ChatPermissions(
             can_send_messages=True,
             can_send_media_messages=True,
@@ -394,3 +479,44 @@ class BotMessageService:
                 e,
             )
             return False
+
+    async def get_chat_invite_link(
+        self,
+        chat_tgid: ChatIdUnion,
+    ) -> Optional[str]:
+        """
+        Получает invite ссылку на чат.
+
+        Проверяет право can_invite_users перед получением ссылки.
+
+        Args:
+            chat_tgid: Telegram ID чата
+
+        Returns:
+            Invite ссылка или None при ошибке
+        """
+        can_invite = await self.permission_service.can_invite_users(chat_tgid=chat_tgid)
+        if not can_invite:
+            logger.warning(
+                "Bot cannot invite users in chat %s. Skipping invite link request.",
+                chat_tgid,
+            )
+            return None
+
+        try:
+            result = await self.bot.export_chat_invite_link(chat_id=chat_tgid)
+            # В aiogram 3.x метод возвращает ChatInviteLink объект с атрибутом invite_link
+            if hasattr(result, "invite_link"):
+                return result.invite_link
+            # Если вернулась строка напрямую (старые версии или другой формат)
+            if isinstance(result, str):
+                return result
+            # Fallback: пытаемся получить из атрибута
+            return getattr(result, "invite_link", None)
+        except Exception as e:
+            logger.error(
+                "Не удалось получить invite ссылку для чата %s: %s",
+                chat_tgid,
+                e,
+            )
+            return None
