@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats_kb import chats_menu_ikb
+from keyboards.inline.chats_kb import chats_management_ikb
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -26,5 +26,5 @@ async def add_chat_callback_handler(callback: CallbackQuery, state: FSMContext) 
 
     await callback.message.edit_text(
         text=Dialog.Chat.ADD_CHAT_INSTRUCTION,
-        reply_markup=chats_menu_ikb(),
+        reply_markup=chats_management_ikb(),
     )
