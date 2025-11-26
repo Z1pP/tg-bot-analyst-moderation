@@ -50,11 +50,11 @@ class SendMessageToChatUseCase:
             raise MessageSendError(str(e))
 
         try:
-            archive_chat = await self.chat_service.get_archive_for_chat(
+            archive_chat = await self.chat_service.get_chat_with_archive(
                 chat_tgid=dto.chat_tgid,
             )
             if archive_chat:
-                chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
+                chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
 
                 chat_id_str = str(dto.chat_tgid).replace("-100", "")
                 message_link = f"https://t.me/c/{chat_id_str}/{sent_message_id}"
