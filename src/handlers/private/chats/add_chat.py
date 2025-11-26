@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats_kb import chats_management_ikb
+from keyboards.inline.chats import chats_management_ikb
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)

@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery
 from constants import Dialog
 from constants.callback import CallbackData
 from container import container
-from keyboards.inline.chats_kb import chat_actions_ikb
+from keyboards.inline.chats import chat_actions_ikb
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from utils.rating_formatter import RatingFormatter
 from utils.send_message import safe_edit_message

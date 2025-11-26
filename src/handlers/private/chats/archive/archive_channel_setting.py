@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from constants import Dialog
 from constants.callback import CallbackData
 from container import container
-from keyboards.inline.chats_kb import archive_channel_setting_ikb, chats_management_ikb
+from keyboards.inline.chats import archive_channel_setting_ikb, chats_management_ikb
 from services import ChatService
 from utils.send_message import safe_edit_message
 

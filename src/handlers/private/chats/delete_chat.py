@@ -8,7 +8,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
-from keyboards.inline.chats_kb import (
+from keyboards.inline.chats import (
     chats_management_ikb,
     conf_remove_chat_ikb,
     remove_chat_ikb,

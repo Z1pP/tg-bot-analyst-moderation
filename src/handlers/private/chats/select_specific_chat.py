@@ -8,7 +8,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
-from keyboards.inline.chats_kb import chat_actions_ikb, tracked_chats_ikb
+from keyboards.inline.chats import chat_actions_ikb, tracked_chats_ikb
 from states import ChatStateManager, TemplateStateManager
 from usecases.chat import GetTrackedChatsUseCase
 from utils.exception_handler import handle_exception
@@ -92,7 +92,7 @@ async def process_template_chat_handler(
 
 
 @router.callback_query(F.data == CallbackData.Chat.SELECT_CHAT)
-async def get_list_tracked_chats_handler(
+async def show_tracked_chats_handler(
     callback: CallbackQuery,
     state: FSMContext,
 ) -> None:

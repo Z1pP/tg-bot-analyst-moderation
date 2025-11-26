@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats_kb import chat_actions_ikb
+from keyboards.inline.chats import chat_actions_ikb
 from states import ChatStateManager
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state

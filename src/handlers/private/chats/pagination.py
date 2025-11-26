@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
-from keyboards.inline.chats_kb import remove_chat_ikb, tracked_chats_ikb
+from keyboards.inline.chats import remove_chat_ikb, tracked_chats_ikb
 from models import ChatSession
 from usecases.chat import GetTrackedChatsUseCase
 from utils.pagination_handler import BasePaginationHandler

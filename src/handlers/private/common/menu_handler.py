@@ -8,7 +8,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from constants.i18n import DEFAULT_LANGUAGE
 from container import container
-from keyboards.inline.chats_kb import chats_management_ikb
+from keyboards.inline.chats import chats_management_ikb
 from keyboards.inline.menu import admin_menu_ikb
 from keyboards.inline.users import users_menu_ikb
 from services.user import UserService
