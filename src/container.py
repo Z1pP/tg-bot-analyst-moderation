@@ -63,7 +63,6 @@ from usecases.categories import (
 from usecases.chat import (
     GetAllChatsUseCase,
     GetChatsForUserActionUseCase,
-    GetOrCreateChatUseCase,
     GetTrackedChatsUseCase,
 )
 from usecases.chat_tracking import (
@@ -226,7 +225,6 @@ class ContainerSetup:
     def _register_chat_usecases(container: Container) -> None:
         """Регистрация use cases для чатов."""
         chat_usecases = [
-            GetOrCreateChatUseCase,
             GetAllChatsUseCase,
             GetTrackedChatsUseCase,
             GetChatsForUserActionUseCase,
