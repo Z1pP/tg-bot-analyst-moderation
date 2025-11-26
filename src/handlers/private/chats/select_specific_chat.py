@@ -46,7 +46,7 @@ async def chat_selected_handler(
             await state.update_data(chat_id=chat_id)
 
         await callback.message.edit_text(
-            text=Dialog.Chat.SELECT_ACTION,
+            text=Dialog.Chat.CHAT_MANAGEMENT,
             reply_markup=chat_actions_ikb(),
         )
 
@@ -91,8 +91,7 @@ async def process_template_chat_handler(
     await callback.answer()
 
 
-@router.callback_query(F.data == CallbackData.Chat.GET_STATISTICS)
-@router.callback_query(F.data == CallbackData.Chat.SELECT_ANOTHER_CHAT)
+@router.callback_query(F.data == CallbackData.Chat.SELECT_CHAT)
 async def get_list_tracked_chats_handler(
     callback: CallbackQuery,
     state: FSMContext,
