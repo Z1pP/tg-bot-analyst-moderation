@@ -314,18 +314,25 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
 
 def archive_channel_setting_ikb(
     archive_chat: Optional[ChatSession] = None,
+    invite_link: Optional[str] = None,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     if archive_chat:
+        # Используем invite ссылку, если она предоставлена, иначе fallback на прямой URL
+        if invite_link:
+            url = invite_link
+        else:
+            url = f"https://t.me/c/{archive_chat.chat_id}/1"
+
         builder.row(
             InlineKeyboardButton(
                 text=f"💬 {archive_chat.title[:15]}...",
-                url=f"https://t.me/{archive_chat.chat_id}",
+                url=url,
             ),
             InlineKeyboardButton(
                 text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_UNBIND,
-                callback_data=CallbackData.Chat.ARCHIVE_SETTING,
+                callback_data=CallbackData.Chat.ARCHIVE_BIND_INSTRUCTION,
             ),
             width=2,
         )
@@ -333,7 +340,7 @@ def archive_channel_setting_ikb(
         builder.row(
             InlineKeyboardButton(
                 text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_BIND,
-                callback_data=CallbackData.Chat.ARCHIVE_SETTING,
+                callback_data=CallbackData.Chat.ARCHIVE_BIND_INSTRUCTION,
             ),
         )
 
@@ -344,4 +351,15 @@ def archive_channel_setting_ikb(
         )
     )
 
+    return builder.as_markup()
+
+
+def archive_bind_instruction_ikb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text="⬅️ Вернуться",
+            callback_data=CallbackData.Chat.ARCHIVE_SETTING,
+        )
+    )
     return builder.as_markup()
