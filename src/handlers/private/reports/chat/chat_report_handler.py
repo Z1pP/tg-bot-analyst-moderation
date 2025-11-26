@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
     F.data == CallbackData.Chat.GET_STATISTICS,
     ChatStateManager.selecting_chat,
 )
-async def chat_report_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def get_chat_statistics_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     """Обработчик запроса на создание отчета по конкретному чату."""
     await callback.answer()
 
