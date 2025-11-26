@@ -13,6 +13,7 @@ from keyboards.inline.chats import (
     chats_management_ikb,
 )
 from services import ChatService
+from services.chat import ArchiveBindService
 from services.messaging import BotMessageService
 from services.permissions import BotPermissionService
 from states import ChatStateManager
@@ -117,13 +118,48 @@ async def archive_bind_instruction_handler(
     state: FSMContext,
 ) -> None:
     """Обработчик инструкции по привязке архивного канала."""
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=Dialog.Chat.ARCHIVE_BIND_INSTRUCTION,
-        reply_markup=archive_bind_instruction_ikb(),
-    )
+    chat_id = await state.get_value("chat_id")
+
+    if not chat_id:
+        logger.error("chat_id не найден в state")
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.ERROR_GET_CHAT_WITH_ARCHIVE,
+            reply_markup=chats_management_ikb(),
+        )
+        return
+
+    try:
+        # Генерируем hash для привязки
+        archive_bind_service: ArchiveBindService = container.resolve(ArchiveBindService)
+        bind_hash = archive_bind_service.generate_bind_hash(chat_id=chat_id)
+
+        # Формируем текст инструкции с hash
+        instruction_text = (
+            f"{Dialog.Chat.ARCHIVE_BIND_INSTRUCTION}\n\n"
+            f"🔑 <b>Ваш код привязки:</b>\n"
+            f"<code>{bind_hash}</code>\n\n"
+            f"Отправьте этот код в архивном чате для привязки."
+        )
+
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=instruction_text,
+            reply_markup=archive_bind_instruction_ikb(),
+        )
+    except Exception as e:
+        logger.error("Ошибка при генерации hash для привязки: %s", e)
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.ARCHIVE_BIND_INSTRUCTION,
+            reply_markup=archive_bind_instruction_ikb(),
+        )
 
 
 @router.callback_query(
