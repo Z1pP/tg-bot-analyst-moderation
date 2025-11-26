@@ -8,10 +8,14 @@ from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
-from keyboards.inline.chats import chat_actions_ikb, tracked_chats_ikb
+from keyboards.inline.chats import (
+    chat_actions_ikb,
+    chats_management_ikb,
+    tracked_chats_ikb,
+)
+from services.chat import ChatService
 from states import ChatStateManager, TemplateStateManager
 from usecases.chat import GetTrackedChatsUseCase
-from utils.exception_handler import handle_exception
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
@@ -27,35 +31,61 @@ async def chat_selected_handler(
     """
     Обработчик выбора чата из списка чатов.
     """
-    try:
-        # Проверяем, выбран ли "все чаты"
-        if callback.data == CallbackData.Chat.ALL_CHATS:
-            await log_and_set_state(
-                message=callback.message,
-                state=state,
-                new_state=ChatStateManager.selecting_all_chats,
-            )
-            await state.update_data(chat_id="all", chat_title="all")
-        else:
-            chat_id = int(callback.data.replace(CallbackData.Chat.PREFIX_CHAT, ""))
-            await log_and_set_state(
-                message=callback.message,
-                state=state,
-                new_state=ChatStateManager.selecting_chat,
-            )
-            await state.update_data(chat_id=chat_id)
+    await callback.answer()
 
-        await callback.message.edit_text(
-            text=Dialog.Chat.CHAT_MANAGEMENT,
-            reply_markup=chat_actions_ikb(),
+    chat_id = int(callback.data.replace(CallbackData.Chat.PREFIX_CHAT, ""))
+
+    chat_service: ChatService = container.resolve(ChatService)
+    chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
+
+    if not chat:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+            reply_markup=chats_management_ikb(),
         )
+        return
 
-        await callback.answer()
+    await state.update_data(chat_id=chat_id)
 
-    except Exception as e:
-        await handle_exception(
-            message=callback.message, exc=e, context="chat_selected_handler"
+    await callback.message.edit_text(
+        text=Dialog.Chat.CHAT_ACTIONS.format(title=chat.title),
+        reply_markup=chat_actions_ikb(),
+    )
+
+
+@router.callback_query(F.data == CallbackData.Chat.BACK_TO_CHAT_ACTIONS)
+async def back_to_chat_actions_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
+    """Обработчик возврата к меню чатов."""
+    await callback.answer()
+
+    chat_id = await state.get_value("chat_id")
+
+    chat_service: ChatService = container.resolve(ChatService)
+    chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
+
+    if not chat:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+            reply_markup=chats_management_ikb(),
         )
+        return
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.Chat.CHAT_ACTIONS.format(title=chat.title),
+        reply_markup=chat_actions_ikb(),
+    )
 
 
 @router.callback_query(
@@ -87,8 +117,6 @@ async def process_template_chat_handler(
         state=state,
         new_state=TemplateStateManager.process_template_title,
     )
-
-    await callback.answer()
 
 
 @router.callback_query(F.data == CallbackData.Chat.SELECT_CHAT)
