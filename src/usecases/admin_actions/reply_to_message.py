@@ -68,11 +68,11 @@ class ReplyToMessageUseCase:
 
         chat = None
         try:
-            archive_chats = await self.chat_service.get_archive_for_chat(
+            archive_chats = await self.chat_service.get_chat_with_archive(
                 chat_tgid=dto.chat_tgid,
             )
             if archive_chats:
-                chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
+                chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
 
                 chat_id_str = str(dto.chat_tgid).replace("-100", "")
                 message_link = f"https://t.me/c/{chat_id_str}/{sent_message_id}"
@@ -102,7 +102,7 @@ class ReplyToMessageUseCase:
         # Логируем действие после успешной отправки ответа
         if self._admin_action_log_service:
             if not chat:
-                chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
+                chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
             details = f"Чат: {chat.title if chat else dto.chat_tgid}"
             await self._admin_action_log_service.log_action(
                 admin_tg_id=dto.admin_tgid,
