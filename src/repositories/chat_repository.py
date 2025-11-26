@@ -132,3 +132,66 @@ class ChatRepository:
                     f"Error getting tracked chats for admin {admin_tg_id}: {e}"
                 )
                 return []
+
+    async def bind_archive_chat(
+        self,
+        work_chat_id: int,
+        archive_chat_tgid: str,
+        archive_chat_title: Optional[str] = None,
+    ) -> Optional[ChatSession]:
+        """
+        Привязывает архивный чат к рабочему.
+
+        Args:
+            work_chat_id: ID рабочего чата из БД
+            archive_chat_tgid: Telegram ID архивного чата
+            archive_chat_title: Название архивного чата (опционально)
+
+        Returns:
+            Обновленный рабочий чат или None если рабочий чат не найден
+        """
+        async with self._db.session() as session:
+            try:
+                # Получаем рабочий чат
+                work_chat = await session.get(ChatSession, work_chat_id)
+                if not work_chat:
+                    logger.error("Рабочий чат не найден: id=%s", work_chat_id)
+                    return None
+
+                # Получаем или создаем архивный чат
+                archive_chat = await self.get_chat_by_tgid(archive_chat_tgid)
+                if not archive_chat:
+                    # Создаем новый архивный чат
+                    if not archive_chat_title:
+                        archive_chat_title = f"Архивный чат {archive_chat_tgid}"
+                    archive_chat = await self.create_chat(
+                        chat_id=archive_chat_tgid, title=archive_chat_title
+                    )
+                    logger.info(
+                        "Создан новый архивный чат: chat_id=%s, title=%s",
+                        archive_chat_tgid,
+                        archive_chat_title,
+                    )
+
+                # Обновляем привязку
+                work_chat.archive_chat_id = archive_chat.chat_id
+                await session.commit()
+                await session.refresh(work_chat)
+
+                logger.info(
+                    "Архивный чат %s привязан к рабочему чату %s",
+                    archive_chat_tgid,
+                    work_chat_id,
+                )
+
+                return work_chat
+
+            except Exception as e:
+                logger.error(
+                    "Ошибка при привязке архивного чата: work_chat_id=%s, archive_chat_tgid=%s, error=%s",
+                    work_chat_id,
+                    archive_chat_tgid,
+                    e,
+                )
+                await session.rollback()
+                raise e
