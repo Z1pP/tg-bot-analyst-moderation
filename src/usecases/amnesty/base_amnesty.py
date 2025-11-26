@@ -47,11 +47,15 @@ class BaseAmnestyUseCase:
             chat_tgid=chat.tg_id,
         )
 
-        if not work_chat or not work_chat.archive_chat:
+        if not work_chat or not work_chat.archive_chat_id:
             raise ArchiveChatError(chat_title=chat.title)
 
-        # Возвращаем список из одного архивного чата для совместимости
-        return [work_chat.archive_chat]
+        # Загружаем архивный чат отдельно и возвращаем список для совместимости
+        archive_chat = await self.chat_service.get_chat(chat_tgid=work_chat.archive_chat_id)
+        if not archive_chat:
+            raise ArchiveChatError(chat_title=chat.title)
+
+        return [archive_chat]
 
     async def _send_report_to_archives(
         self, archive_chats: List[ChatSession], report_text: str

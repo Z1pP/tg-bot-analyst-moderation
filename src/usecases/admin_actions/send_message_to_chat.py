@@ -53,7 +53,8 @@ class SendMessageToChatUseCase:
             work_chat = await self.chat_service.get_chat_with_archive(
                 chat_tgid=dto.chat_tgid,
             )
-            if work_chat and work_chat.archive_chat:
+            archive_chat_id = work_chat.archive_chat_id if work_chat else None
+            if archive_chat_id:
                 chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
 
                 chat_id_str = str(dto.chat_tgid).replace("-100", "")
@@ -68,13 +69,13 @@ class SendMessageToChatUseCase:
 
                 try:
                     await self.bot_message_service.send_chat_message(
-                        chat_tgid=work_chat.archive_chat.chat_id,
+                        chat_tgid=archive_chat_id,
                         text=report_text,
                     )
                 except (TelegramBadRequest, TelegramForbiddenError) as e:
                     logger.warning(
                         "Не удалось отправить отчет в архивный чат %s: %s",
-                        work_chat.archive_chat.chat_id,
+                        archive_chat_id,
                         e,
                     )
         except Exception as e:

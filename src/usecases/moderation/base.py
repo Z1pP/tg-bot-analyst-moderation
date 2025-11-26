@@ -98,7 +98,7 @@ class ModerationUseCase:
             chat_tgid=dto.chat_tgid,
         )
 
-        if not work_chat or not work_chat.archive_chat:
+        if not work_chat or not work_chat.archive_chat_id:
             await self.bot_message_service.delete_message_from_chat(
                 chat_id=dto.chat_tgid,
                 message_id=dto.original_message_id,
@@ -130,8 +130,9 @@ class ModerationUseCase:
             chat_id=chat.id,
         )
 
-        # Создаем список из одного архивного чата для совместимости с ModerationContext
-        archive_chats = [work_chat.archive_chat]
+        # Загружаем архивный чат отдельно для ModerationContext
+        archive_chat = await self.chat_service.get_chat(chat_tgid=work_chat.archive_chat_id)
+        archive_chats = [archive_chat] if archive_chat else []
 
         return ModerationContext(
             dto=dto,

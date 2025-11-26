@@ -36,22 +36,23 @@ class DeleteMessageUseCase:
             chat_tgid=dto.chat_tgid,
         )
 
-        if work_chat and work_chat.archive_chat:
+        archive_chat_id = work_chat.archive_chat_id if work_chat else None
+        if archive_chat_id:
             try:
                 await self.bot_message_service.forward_message(
-                    chat_tgid=work_chat.archive_chat.chat_id,
+                    chat_tgid=archive_chat_id,
                     from_chat_tgid=dto.chat_tgid,
                     message_tgid=dto.message_id,
                 )
                 logger.debug(
                     "Сообщение %s переслано в архивный чат %s",
                     dto.message_id,
-                    work_chat.archive_chat.chat_id,
+                    archive_chat_id,
                 )
             except Exception as e:
                 logger.warning(
                     "Не удалось переслать сообщение в архивный чат %s: %s",
-                    work_chat.archive_chat.chat_id,
+                    archive_chat_id,
                     e,
                 )
 
@@ -76,7 +77,7 @@ class DeleteMessageUseCase:
             )
             raise MessageSendError(str(e))
 
-        if work_chat and work_chat.archive_chat:
+        if archive_chat_id:
             try:
                 chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
                 report_text = (
@@ -87,13 +88,13 @@ class DeleteMessageUseCase:
 
                 try:
                     await self.bot_message_service.send_chat_message(
-                        chat_tgid=work_chat.archive_chat.chat_id,
+                        chat_tgid=archive_chat_id,
                         text=report_text,
                     )
                 except (TelegramBadRequest, TelegramForbiddenError) as e:
                     logger.warning(
                         "Не удалось отправить отчет в архивный чат %s: %s",
-                        work_chat.archive_chat.chat_id,
+                        archive_chat_id,
                         e,
                     )
             except Exception as e:
