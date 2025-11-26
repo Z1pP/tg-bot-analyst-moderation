@@ -9,7 +9,7 @@ from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
 from keyboards.inline.chats_kb import (
-    chats_menu_ikb,
+    chats_management_ikb,
     conf_remove_chat_ikb,
     remove_chat_ikb,
 )
@@ -52,7 +52,7 @@ async def delete_chat_callback_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.Chat.ERROR_GET_CHATS,
-            reply_markup=chats_menu_ikb(),
+            reply_markup=chats_management_ikb(),
         )
         return
 
@@ -64,7 +64,7 @@ async def delete_chat_callback_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.Chat.NO_TRACKED_CHATS,
-            reply_markup=chats_menu_ikb(),
+            reply_markup=chats_management_ikb(),
         )
         return
 
@@ -155,7 +155,7 @@ async def confirmation_removing_chat_handler(
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
                 text=Dialog.Chat.ERROR_REMOVE_CHAT,
-                reply_markup=chats_menu_ikb(),
+                reply_markup=chats_management_ikb(),
             )
             return
 
@@ -185,7 +185,7 @@ async def confirmation_removing_chat_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=text,
-        reply_markup=chats_menu_ikb(),
+        reply_markup=chats_management_ikb(),
     )
 
     await log_and_set_state(
