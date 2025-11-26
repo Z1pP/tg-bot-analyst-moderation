@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    F.data == CallbackData.Chat.GET_REPORT,
+    F.data == CallbackData.Chat.GET_STATISTICS,
     ChatStateManager.selecting_chat,
 )
 async def chat_report_handler(callback: CallbackQuery, state: FSMContext) -> None:
