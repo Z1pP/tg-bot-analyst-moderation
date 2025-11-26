@@ -32,29 +32,28 @@ class DeleteMessageUseCase:
             dto.admin_tgid,
         )
 
-        archive_chats = await self.chat_service.get_chat_with_archive(
+        work_chat = await self.chat_service.get_chat_with_archive(
             chat_tgid=dto.chat_tgid,
         )
 
-        if archive_chats:
-            for archive_chat in archive_chats:
-                try:
-                    await self.bot_message_service.forward_message(
-                        chat_tgid=archive_chat.chat_id,
-                        from_chat_tgid=dto.chat_tgid,
-                        message_tgid=dto.message_id,
-                    )
-                    logger.debug(
-                        "Сообщение %s переслано в архивный чат %s",
-                        dto.message_id,
-                        archive_chat.chat_id,
-                    )
-                except Exception as e:
-                    logger.warning(
-                        "Не удалось переслать сообщение в архивный чат %s: %s",
-                        archive_chat.chat_id,
-                        e,
-                    )
+        if work_chat and work_chat.archive_chat:
+            try:
+                await self.bot_message_service.forward_message(
+                    chat_tgid=work_chat.archive_chat.chat_id,
+                    from_chat_tgid=dto.chat_tgid,
+                    message_tgid=dto.message_id,
+                )
+                logger.debug(
+                    "Сообщение %s переслано в архивный чат %s",
+                    dto.message_id,
+                    work_chat.archive_chat.chat_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Не удалось переслать сообщение в архивный чат %s: %s",
+                    work_chat.archive_chat.chat_id,
+                    e,
+                )
 
         try:
             is_deleted = await self.bot_message_service.delete_message_from_chat(
@@ -77,7 +76,7 @@ class DeleteMessageUseCase:
             )
             raise MessageSendError(str(e))
 
-        if archive_chats:
+        if work_chat and work_chat.archive_chat:
             try:
                 chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
                 report_text = (
@@ -86,18 +85,17 @@ class DeleteMessageUseCase:
                     f"Кто удалил: @{dto.admin_username}"
                 )
 
-                for archive_chat in archive_chats:
-                    try:
-                        await self.bot_message_service.send_chat_message(
-                            chat_tgid=archive_chat.chat_id,
-                            text=report_text,
-                        )
-                    except (TelegramBadRequest, TelegramForbiddenError) as e:
-                        logger.warning(
-                            "Не удалось отправить отчет в архивный чат %s: %s",
-                            archive_chat.chat_id,
-                            e,
-                        )
+                try:
+                    await self.bot_message_service.send_chat_message(
+                        chat_tgid=work_chat.archive_chat.chat_id,
+                        text=report_text,
+                    )
+                except (TelegramBadRequest, TelegramForbiddenError) as e:
+                    logger.warning(
+                        "Не удалось отправить отчет в архивный чат %s: %s",
+                        work_chat.archive_chat.chat_id,
+                        e,
+                    )
             except Exception as e:
                 logger.debug("Ошибка отправки отчета: %s", e)
 

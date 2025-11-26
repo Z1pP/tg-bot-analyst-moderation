@@ -68,10 +68,10 @@ class ReplyToMessageUseCase:
 
         chat = None
         try:
-            archive_chats = await self.chat_service.get_chat_with_archive(
+            work_chat = await self.chat_service.get_chat_with_archive(
                 chat_tgid=dto.chat_tgid,
             )
-            if archive_chats:
+            if work_chat and work_chat.archive_chat:
                 chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
 
                 chat_id_str = str(dto.chat_tgid).replace("-100", "")
@@ -84,18 +84,17 @@ class ReplyToMessageUseCase:
                     f"<a href='{message_link}'>Ссылка на сообщение</a>"
                 )
 
-                for archive_chat in archive_chats:
-                    try:
-                        await self.bot_message_service.send_chat_message(
-                            chat_tgid=archive_chat.chat_id,
-                            text=report_text,
-                        )
-                    except (TelegramBadRequest, TelegramForbiddenError) as e:
-                        logger.warning(
-                            "Не удалось отправить отчет в архивный чат %s: %s",
-                            archive_chat.chat_id,
-                            e,
-                        )
+                try:
+                    await self.bot_message_service.send_chat_message(
+                        chat_tgid=work_chat.archive_chat.chat_id,
+                        text=report_text,
+                    )
+                except (TelegramBadRequest, TelegramForbiddenError) as e:
+                    logger.warning(
+                        "Не удалось отправить отчет в архивный чат %s: %s",
+                        work_chat.archive_chat.chat_id,
+                        e,
+                    )
         except Exception as e:
             logger.debug("Архивные чаты не найдены или ошибка: %s", e)
 

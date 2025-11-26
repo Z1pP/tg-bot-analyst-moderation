@@ -94,11 +94,11 @@ class ModerationUseCase:
             )
             raise CannotPunishChatAdminError()
 
-        archive_chats = await self.chat_service.get_chat_with_archive(
+        work_chat = await self.chat_service.get_chat_with_archive(
             chat_tgid=dto.chat_tgid,
         )
 
-        if not archive_chats:
+        if not work_chat or not work_chat.archive_chat:
             await self.bot_message_service.delete_message_from_chat(
                 chat_id=dto.chat_tgid,
                 message_id=dto.original_message_id,
@@ -129,6 +129,9 @@ class ModerationUseCase:
             user_id=violator.id,
             chat_id=chat.id,
         )
+
+        # Создаем список из одного архивного чата для совместимости с ModerationContext
+        archive_chats = [work_chat.archive_chat]
 
         return ModerationContext(
             dto=dto,
