@@ -27,6 +27,7 @@ from repositories import (
 from repositories.release_note_repository import ReleaseNoteRepository
 from services import (
     AdminActionLogService,
+    ArchiveBindService,
     BotMessageService,
     BotPermissionService,
     ChatService,
@@ -174,6 +175,7 @@ class ContainerSetup:
         container.register(ICache, lambda: RedisCache(settings.REDIS_URL))
         container.register(UserService)
         container.register(ChatService)
+        container.register(ArchiveBindService)
         container.register(TemplateService)
         container.register(TemplateContentService)
         container.register(CategoryService)
