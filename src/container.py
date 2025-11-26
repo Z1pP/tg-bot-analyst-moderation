@@ -177,9 +177,9 @@ class ContainerSetup:
         container.register(TemplateService)
         container.register(TemplateContentService)
         container.register(CategoryService)
+        container.register(BotPermissionService)
         container.register(BotMessageService)
         container.register(PunishmentService)
-        container.register(BotPermissionService)
         container.register(AdminActionLogService)
         container.register(ReleaseNoteService)
 
