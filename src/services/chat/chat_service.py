@@ -61,15 +61,15 @@ class ChatService:
         chat_id: Optional[int] = None,
     ) -> Optional[ChatSession]:
         """Получает чат и его архивный чат если есть."""
-        chat = None
-
         if not chat_tgid and not chat_id:
             raise ValueError("Необходимо передать chat_tgid или chat_id")
 
+        # Всегда загружаем из репозитория с selectinload для archive_chat
+        # чтобы избежать проблем с detached объектами из кеша
         if chat_id:
             chat = await self._chat_repository.get_chat_by_id(chat_id=chat_id)
         else:
-            chat = await self.get_chat(chat_tgid=chat_tgid)
+            chat = await self._chat_repository.get_chat_by_tgid(chat_tgid)
 
         return chat or None
 
