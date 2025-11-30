@@ -173,11 +173,7 @@ class BotPermissionService:
         if isinstance(member, ChatMemberOwner):
             return True
         if isinstance(member, ChatMemberAdministrator):
-            return (
-                member.can_post_messages
-                if hasattr(member, "can_post_messages")
-                else True
-            )
+            return True
         return False
 
     async def is_administrator(
