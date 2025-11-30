@@ -5,7 +5,6 @@ from .dialogs import (
     BlockMenuDialogs,
     CalendarDialogs,
     ChatDialogs,
-    CommonDialogs,
     MenuDialogs,
     MessageManagerDialogs,
     ReleaseNotesDialogs,
@@ -35,9 +34,6 @@ class InlineButtons:
         # Templates
         SELECT_TEMPLATE = "🔖 Шаблоны"
         ADD_TEMPLATE = "➕ Добавить шаблон"
-        BIND_TEMPLATE = "🔗 Привязать"
-        SELECT_SCOPE = "🌐 Выбрать область применения"
-        CANCEL_ADD_TEMPLATE = "❌ Отмена"
 
         # Category
         SELECT_CATEGORY = "🗃️ Категории"
@@ -80,10 +76,8 @@ class InlineButtons:
         ADD_USER = "➕ Добавить"
         REMOVE_USER = "❌ Удалить"
         BACK_TO_USERS_MENU = "⬅️ Назад в меню пользователей"
-        BACK_TO_USERS_LIST = "⬅️ Назад к списку пользователей"
         BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
         CANCEL = "❌ Отмена"
-        HIDE = "🗑 Скрыть"
 
     class ChatButtons:
         """Кнопки для действий с чатами"""
@@ -105,8 +99,6 @@ class InlineButtons:
 
         ARCHIVE_CHANNEL_UNBIND = "🔄 Перепривязать"
         ARCHIVE_CHANNEL_BIND = "🔗 Привязать"
-
-        BACK_TO_CHATS_MENU = "⬅️ Назад в меню чатов"
 
         BACK_TO_SELECT_ACTION = "⬅️ Назад к выбору действия"
 
@@ -181,5 +173,3 @@ class Dialog:
     ReleaseNotes = ReleaseNotesDialogs
     # Roles
     Roles = RolesDialogs
-    # Common
-    Common = CommonDialogs
