@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.types import ChatIdUnion
@@ -25,7 +25,7 @@ class ModerationContext:
     violator: User
     admin: User
     chat: ChatSession
-    archive_chats: List[ChatSession]
+    archive_chat: Optional[ChatSession] = None
     message_deleted: bool = True
 
 
@@ -94,11 +94,11 @@ class ModerationUseCase:
             )
             raise CannotPunishChatAdminError()
 
-        archive_chats = await self.chat_service.get_archive_chats(
-            source_chat_tgid=dto.chat_tgid,
+        chat = await self.chat_service.get_chat_with_archive(
+            chat_tgid=dto.chat_tgid,
         )
 
-        if not archive_chats:
+        if not chat or not chat.archive_chat_id:
             await self.bot_message_service.delete_message_from_chat(
                 chat_id=dto.chat_tgid,
                 message_id=dto.original_message_id,
@@ -112,10 +112,6 @@ class ModerationUseCase:
         admin = await self.user_service.get_user(
             tg_id=dto.admin_tgid,
             username=dto.admin_username,
-        )
-        chat = await self.chat_service.get_chat(
-            chat_id=dto.chat_tgid,
-            title=dto.chat_title,
         )
 
         if self.is_bot_administrator(user=violator):
@@ -135,7 +131,7 @@ class ModerationUseCase:
             violator=violator,
             admin=admin,
             chat=chat,
-            archive_chats=archive_chats,
+            archive_chat=chat.archive_chat,
         )
 
     async def _finalize_moderation(
@@ -147,12 +143,11 @@ class ModerationUseCase:
     ) -> None:
         # Если вызов из админ-панели, не пересылаем сообщение и не удаляем
         if not context.dto.from_admin_panel:
-            for archive_chat in context.archive_chats:
-                await self.bot_message_service.forward_message(
-                    chat_tgid=archive_chat.chat_id,
-                    from_chat_tgid=context.dto.chat_tgid,
-                    message_tgid=context.dto.reply_message_id,
-                )
+            await self.bot_message_service.forward_message(
+                chat_tgid=context.archive_chat.chat_id,
+                from_chat_tgid=context.dto.chat_tgid,
+                message_tgid=context.dto.reply_message_id,
+            )
 
             try:
                 violator_msg_deleted = (
@@ -186,11 +181,10 @@ class ModerationUseCase:
             )
             context.message_deleted = False
 
-        for archive_chat in context.archive_chats:
-            await self.bot_message_service.send_chat_message(
-                chat_tgid=archive_chat.chat_id,
-                text=report_text,
-            )
+        await self.bot_message_service.send_chat_message(
+            chat_tgid=context.archive_chat.chat_id,
+            text=report_text,
+        )
 
         # Отправляем уведомление в чат только если не из админ-панели
         if reason_text:

@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from database.session import DatabaseContextManager
 from models.chat_session import ChatSession
@@ -13,32 +14,58 @@ class ChatRepository:
     def __init__(self, db_manager: DatabaseContextManager) -> None:
         self._db = db_manager
 
-    async def get_chat(self, chat_id: int) -> Optional[ChatSession]:
+    async def get_chat_by_id(self, chat_id: int) -> Optional[ChatSession]:
         """Получает чат по идентификатору."""
         async with self._db.session() as session:
             try:
-                chat = await session.get(ChatSession, chat_id)
+                chat = await session.scalar(
+                    select(ChatSession)
+                    .where(ChatSession.id == chat_id)
+                    .options(
+                        selectinload(ChatSession.archive_chat),
+                    )
+                )
                 if chat:
+                    # Явно загружаем archive_chat до выхода из сессии
+                    _ = chat.archive_chat
+                    # Отсоединяем объект от сессии, но сохраняем загруженные данные
+                    session.expunge(chat)
+                    if chat.archive_chat:
+                        session.expunge(chat.archive_chat)
                     logger.info(
-                        "Получен чат: chat_id=%s, title=%s", chat_id, chat.title
+                        "Получен чат: chat_id=%s, title=%s",
+                        chat.id,
+                        chat.title,
                     )
                 else:
-                    logger.info("Чат не найден: chat_id=%s", chat_id)
+                    logger.info("Чат не найден: id=%s", chat_id)
                 return chat
             except Exception as e:
                 logger.error("Произошла ошибка при получении чата: %s, %s", chat_id, e)
                 raise e
 
-    async def get_chat_by_chat_id(self, chat_tgid: str) -> Optional[ChatSession]:
+    async def get_chat_by_tgid(self, chat_tgid: str) -> Optional[ChatSession]:
         """Получает чат по Telegram chat_id."""
         async with self._db.session() as session:
             try:
                 chat = await session.scalar(
-                    select(ChatSession).where(ChatSession.chat_id == chat_tgid)
+                    select(ChatSession)
+                    .where(ChatSession.chat_id == chat_tgid)
+                    .options(
+                        selectinload(ChatSession.archive_chat),
+                    )
                 )
                 if chat:
+                    # Явно загружаем archive_chat до выхода из сессии
+                    _ = chat.archive_chat
+                    # Отсоединяем объект от сессии, но сохраняем загруженные данные
+                    session.expunge(chat)
+                    if chat.archive_chat:
+                        session.expunge(chat.archive_chat)
                     logger.info(
-                        "Получен чат: chat_id=%s, title=%s", chat.chat_id, chat.title
+                        "Получен чат: chat_id=%s, title=%s",
+                        chat.chat_id,
+                        chat.title,
                     )
                 else:
                     logger.info("Чат не найден: chat_id=%s", chat_tgid)
@@ -118,22 +145,84 @@ class ChatRepository:
                 )
                 return []
 
-    async def get_archive_chats(
+    async def bind_archive_chat(
         self,
-        source_chat_tgid: str,
-    ) -> Optional[List[ChatSession]]:
-        """Получает архивный чат по названию источника"""
+        work_chat_id: int,
+        archive_chat_tgid: str,
+        archive_chat_title: Optional[str] = None,
+    ) -> Optional[ChatSession]:
+        """
+        Привязывает архивный чат к рабочему.
+
+        Args:
+            work_chat_id: ID рабочего чата из БД
+            archive_chat_tgid: Telegram ID архивного чата
+            archive_chat_title: Название архивного чата (опционально)
+
+        Returns:
+            Обновленный рабочий чат или None если рабочий чат не найден
+        """
         async with self._db.session() as session:
             try:
-                query = select(ChatSession).where(
-                    ChatSession.archive_chat_id == source_chat_tgid
+                # Получаем рабочий чат с загрузкой archive_chat
+                work_chat = await session.scalar(
+                    select(ChatSession)
+                    .where(ChatSession.id == work_chat_id)
+                    .options(
+                        selectinload(ChatSession.archive_chat),
+                    )
+                )
+                if not work_chat:
+                    logger.error("Рабочий чат не найден: id=%s", work_chat_id)
+                    return None
+
+                # Получаем или создаем архивный чат
+                archive_chat = await self.get_chat_by_tgid(archive_chat_tgid)
+                if not archive_chat:
+                    # Создаем новый архивный чат
+                    if not archive_chat_title:
+                        archive_chat_title = f"Архивный чат {archive_chat_tgid}"
+                    archive_chat = await self.create_chat(
+                        chat_id=archive_chat_tgid, title=archive_chat_title
+                    )
+                    logger.info(
+                        "Создан новый архивный чат: chat_id=%s, title=%s",
+                        archive_chat_tgid,
+                        archive_chat_title,
+                    )
+
+                # Обновляем привязку
+                work_chat.archive_chat_id = archive_chat.chat_id
+                await session.commit()
+                # Перезагружаем с selectinload для archive_chat
+                work_chat = await session.scalar(
+                    select(ChatSession)
+                    .where(ChatSession.id == work_chat_id)
+                    .options(
+                        selectinload(ChatSession.archive_chat),
+                    )
+                )
+                # Явно загружаем archive_chat до выхода из сессии
+                _ = work_chat.archive_chat
+                # Отсоединяем объект от сессии, но сохраняем загруженные данные
+                session.expunge(work_chat)
+                if work_chat.archive_chat:
+                    session.expunge(work_chat.archive_chat)
+
+                logger.info(
+                    "Архивный чат %s привязан к рабочему чату %s",
+                    archive_chat_tgid,
+                    work_chat_id,
                 )
 
-                result = await session.execute(query)
-                chats = result.scalars().all()
+                return work_chat
 
-                logger.info("Получено %d архивных чатов", len(chats))
-                return chats
             except Exception as e:
-                logger.error("Произошла ошибка при получении архивных чатов: %s", e)
+                logger.error(
+                    "Ошибка при привязке архивного чата: work_chat_id=%s, archive_chat_tgid=%s, error=%s",
+                    work_chat_id,
+                    archive_chat_tgid,
+                    e,
+                )
+                await session.rollback()
                 raise e

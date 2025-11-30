@@ -11,7 +11,7 @@ from constants.punishment import PunishmentActions as Actions
 from container import container
 from dto import ModerationActionDTO
 from keyboards.inline.banhammer import back_to_block_menu_ikb, block_actions_ikb
-from keyboards.inline.chats_kb import tracked_chats_with_all_ikb
+from keyboards.inline.chats import tracked_chats_with_all_ikb
 from services import UserService
 from states.banhammer_states import BanHammerStates
 from usecases.chat import GetChatsForUserActionUseCase

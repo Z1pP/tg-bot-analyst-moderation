@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import Optional
 
 from constants.punishment import PunishmentText
 from dto import ModerationActionDTO
 from models import Punishment, User
-from models.chat_session import ChatSession
 from models.punishment_ladder import PunishmentLadder, PunishmentType
 from repositories import PunishmentLadderRepository, PunishmentRepository
 from repositories.user_chat_status_repository import UserChatStatusRepository
@@ -35,7 +34,9 @@ class PunishmentService:
 
     def generate_admin_answer(
         self,
-        archive_chats: List[ChatSession],
+        violator_username: str,
+        chat_title: str,
+        archive_title: str,
         punishment_type: PunishmentType,
     ) -> str:
         """
@@ -47,23 +48,15 @@ class PunishmentService:
         Returns:
             Форматированный текст
         """
-        chats_title = [chat.title for chat in archive_chats]
-        chats_title = "\n".join(chats_title)
 
         if punishment_type == PunishmentType.BAN:
-            text = (
-                f"✅ Пользователь забанен!\n Данные отобразятся в <b>{chats_title}</b>"
-            )
+            text = f"✅ Пользователь @{violator_username} забанен в чате <b>{chat_title}</b>!\n Данные отобразятся в <b>{archive_title}</b>"
             return text
         elif punishment_type == PunishmentType.MUTE:
-            text = (
-                f"✅ Пользователь замучен!\n Данные отобразятся в <b>{chats_title}</b>"
-            )
+            text = f"✅ Пользователь @{violator_username} замучен в чате <b>{chat_title}</b>!\n Данные отобразятся в <b>{archive_title}</b>"
             return text
 
-        text = (
-            f"✅ Пользователь предупрежден!\n Данные отобразятся в <b>{chats_title}</b>"
-        )
+        text = f"✅ Пользователь @{violator_username} предупрежден в чате <b>{chat_title}</b>!\n Данные отобразятся в <b>{archive_title}</b>"
 
         return text
 

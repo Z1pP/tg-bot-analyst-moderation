@@ -5,6 +5,7 @@ from .report import (
     order_details_kb_chat,
     order_details_kb_single_user,
 )
+from .roles import role_select_ikb
 from .time_period import (
     time_period_ikb_all_users,
     time_period_ikb_chat,
@@ -35,4 +36,5 @@ __all__ = [
     "time_period_ikb_all_users",
     "time_period_ikb_chat",
     "CalendarKeyboard",
+    "role_select_ikb",
 ]

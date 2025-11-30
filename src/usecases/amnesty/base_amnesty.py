@@ -43,14 +43,19 @@ class BaseAmnestyUseCase:
         if not can_moderate:
             raise BotInsufficientPermissionsError(chat_title=chat.title)
 
-        archive_chats = await self.chat_service.get_archive_chats(
-            source_chat_tgid=chat.tg_id,
+        work_chat = await self.chat_service.get_chat_with_archive(
+            chat_tgid=chat.tg_id,
         )
 
-        if not archive_chats:
+        if not work_chat or not work_chat.archive_chat_id:
             raise ArchiveChatError(chat_title=chat.title)
 
-        return archive_chats
+        # Загружаем архивный чат отдельно и возвращаем список для совместимости
+        archive_chat = await self.chat_service.get_chat(chat_tgid=work_chat.archive_chat_id)
+        if not archive_chat:
+            raise ArchiveChatError(chat_title=chat.title)
+
+        return [archive_chat]
 
     async def _send_report_to_archives(
         self, archive_chats: List[ChatSession], report_text: str

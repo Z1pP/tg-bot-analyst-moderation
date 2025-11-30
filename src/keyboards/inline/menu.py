@@ -3,7 +3,7 @@ from typing import Optional
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import RELEASE_NOTES_ADMIN_IDS, Dialog
+from constants import RELEASE_NOTES_ADMIN_IDS, Dialog, InlineButtons
 from constants.callback import CallbackData
 from constants.i18n import DEFAULT_LANGUAGE, get_text
 
@@ -35,7 +35,7 @@ def admin_menu_ikb(
             callback_data=CallbackData.Menu.USERS_MENU,
         ),
         InlineKeyboardButton(
-            text=Dialog.Chat.CHATS_MENU,
+            text=InlineButtons.ChatButtons.CHATS_MANAGEMENT,
             callback_data=CallbackData.Menu.CHATS_MENU,
         ),
         width=2,
@@ -62,8 +62,8 @@ def admin_menu_ikb(
                 callback_data=CallbackData.AdminLogs.MENU,
             ),
             InlineKeyboardButton(
-                text=Dialog.Roles.PERMISSIONS_MENU,
-                callback_data=CallbackData.Permissions.MENU,
+                text=Dialog.Roles.MENU,
+                callback_data=CallbackData.Role.INPUT_USER_DATA,
             ),
             width=2,
         )

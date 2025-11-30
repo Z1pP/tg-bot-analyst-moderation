@@ -26,21 +26,6 @@ async def warn_user_handler(message: types.Message) -> None:
 
     Команда должна быть ответом на сообщение нарушителя.
     Формат: /warn [причина]
-
-    Алгоритм:
-    1. Проверяет права бота и модератора
-    2. Получает текущее количество наказаний пользователя
-    3. Применяет наказание согласно PunishmentLadder
-    4. Сохраняет запись в БД
-    5. Пересылает сообщение в архивный чат
-    6. Удаляет сообщение нарушителя
-    7. Отправляет уведомление в чат
-
-    Args:
-        message: Сообщение с командой /warn
-
-    Raises:
-        ModerationError: При ошибках модерации (обрабатывается middleware)
     """
     dto = map_message_to_moderation_dto(message=message)
     usecase: GiveUserWarnUseCase = container.resolve(GiveUserWarnUseCase)
@@ -58,20 +43,6 @@ async def ban_user_handler(message: types.Message) -> None:
 
     Команда должна быть ответом на сообщение нарушителя.
     Формат: /ban [причина]
-
-    Алгоритм:
-    1. Проверяет права бота и модератора
-    2. Банит пользователя в Telegram
-    3. Обновляет статус в БД
-    4. Пересылает сообщение в архивный чат
-    5. Удаляет сообщение нарушителя
-    6. Отправляет уведомление в чат
-
-    Args:
-        message: Сообщение с командой /ban
-
-    Raises:
-        ModerationError: При ошибках модерации (обрабатывается middleware)
     """
     dto = map_message_to_moderation_dto(message=message)
     usecase: GiveUserBanUseCase = container.resolve(GiveUserBanUseCase)

@@ -58,7 +58,9 @@ async def admin_logs_handler(callback: types.CallbackQuery, state: FSMContext) -
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.AdminLogs.ERROR_GET_ADMINS,
-            reply_markup=admin_menu_ikb(admin_tg_id=callback.from_user.id),
+            reply_markup=admin_menu_ikb(
+                admin_tg_id=str(callback.from_user.id),
+            ),
         )
 
 

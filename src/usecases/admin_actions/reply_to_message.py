@@ -68,11 +68,12 @@ class ReplyToMessageUseCase:
 
         chat = None
         try:
-            archive_chats = await self.chat_service.get_archive_chats(
-                source_chat_tgid=dto.chat_tgid,
+            work_chat = await self.chat_service.get_chat_with_archive(
+                chat_tgid=dto.chat_tgid,
             )
-            if archive_chats:
-                chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
+            archive_chat_id = work_chat.archive_chat_id if work_chat else None
+            if archive_chat_id:
+                chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
 
                 chat_id_str = str(dto.chat_tgid).replace("-100", "")
                 message_link = f"https://t.me/c/{chat_id_str}/{sent_message_id}"
@@ -84,25 +85,24 @@ class ReplyToMessageUseCase:
                     f"<a href='{message_link}'>Ссылка на сообщение</a>"
                 )
 
-                for archive_chat in archive_chats:
-                    try:
-                        await self.bot_message_service.send_chat_message(
-                            chat_tgid=archive_chat.chat_id,
-                            text=report_text,
-                        )
-                    except (TelegramBadRequest, TelegramForbiddenError) as e:
-                        logger.warning(
-                            "Не удалось отправить отчет в архивный чат %s: %s",
-                            archive_chat.chat_id,
-                            e,
-                        )
+                try:
+                    await self.bot_message_service.send_chat_message(
+                        chat_tgid=archive_chat_id,
+                        text=report_text,
+                    )
+                except (TelegramBadRequest, TelegramForbiddenError) as e:
+                    logger.warning(
+                        "Не удалось отправить отчет в архивный чат %s: %s",
+                        archive_chat_id,
+                        e,
+                    )
         except Exception as e:
             logger.debug("Архивные чаты не найдены или ошибка: %s", e)
 
         # Логируем действие после успешной отправки ответа
         if self._admin_action_log_service:
             if not chat:
-                chat = await self.chat_service.get_chat(chat_id=dto.chat_tgid)
+                chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
             details = f"Чат: {chat.title if chat else dto.chat_tgid}"
             await self._admin_action_log_service.log_action(
                 admin_tg_id=dto.admin_tgid,

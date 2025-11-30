@@ -20,7 +20,7 @@ class MessageReply(BaseModel):
         nullable=False,
     )
     # Ссылка на сообщение на которое ответили
-    original_message_url: Mapped[int] = mapped_column(
+    original_message_url: Mapped[str] = mapped_column(
         String,
         nullable=False,
     )

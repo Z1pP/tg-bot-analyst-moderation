@@ -7,7 +7,7 @@ from constants import Dialog
 from container import container
 from dto.message_action import SendMessageDTO
 from exceptions.moderation import MessageSendError
-from keyboards.inline.chats_kb import select_chat_ikb
+from keyboards.inline.chats import select_chat_ikb
 from keyboards.inline.message_actions import cancel_send_message_ikb, send_message_ikb
 from states.message_management import MessageManagerState
 from usecases.admin_actions import SendMessageToChatUseCase

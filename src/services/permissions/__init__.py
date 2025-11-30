@@ -1,5 +1,6 @@
-from .bot_permission import BotPermissionService
+from .bot_permission import BotPermissionsCheck, BotPermissionService
 
 __all__ = [
     "BotPermissionService",
+    "BotPermissionsCheck",
 ]

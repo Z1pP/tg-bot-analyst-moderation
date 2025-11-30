@@ -5,7 +5,6 @@ from .dialogs import (
     BlockMenuDialogs,
     CalendarDialogs,
     ChatDialogs,
-    CommonDialogs,
     MenuDialogs,
     MessageManagerDialogs,
     ReleaseNotesDialogs,
@@ -35,9 +34,6 @@ class InlineButtons:
         # Templates
         SELECT_TEMPLATE = "🔖 Шаблоны"
         ADD_TEMPLATE = "➕ Добавить шаблон"
-        BIND_TEMPLATE = "🔗 Привязать"
-        SELECT_SCOPE = "🌐 Выбрать область применения"
-        CANCEL_ADD_TEMPLATE = "❌ Отмена"
 
         # Category
         SELECT_CATEGORY = "🗃️ Категории"
@@ -80,16 +76,31 @@ class InlineButtons:
         ADD_USER = "➕ Добавить"
         REMOVE_USER = "❌ Удалить"
         BACK_TO_USERS_MENU = "⬅️ Назад в меню пользователей"
-        BACK_TO_USERS_LIST = "⬅️ Назад к списку пользователей"
         BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
         CANCEL = "❌ Отмена"
-        HIDE = "🗑 Скрыть"
 
     class ChatButtons:
         """Кнопки для действий с чатами"""
 
-        BACK_TO_CHATS_MENU = "⬅️ Назад в меню чатов"
+        # Main menu
+        CHATS_MANAGEMENT = "📋 Упр. чатами"
+        # Chat management menu
+        SELECT_CHAT = "📋 Выбрать чат"
+        ADD = "➕ Добавить"
+        REMOVE = "❌ Удалить"
         BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
+        # List of chats
+        BACK_TO_CHATS_MANAGEMENT = "⬅️ Вернуться к упр. чатами"
+        # Actions with chat
+        GET_STATISTICS = "📊 Статистика"
+        GET_DAILY_RATING = "🏆 Рейтинг за сутки"
+        ARCHIVE_CHANNEL_SETTING = "⚙️ Настройка архив. канала"
+        BACK_TO_SELECTION_CHAT = "⬅️ Вернуться к выбору чата"
+
+        ARCHIVE_CHANNEL_UNBIND = "🔄 Перепривязать"
+        ARCHIVE_CHANNEL_BIND = "🔗 Привязать"
+
+        BACK_TO_SELECT_ACTION = "⬅️ Назад к выбору действия"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
@@ -125,6 +136,11 @@ class InlineButtons:
         BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
         BACK_TO_ADMIN_LOGS_MENU = "⬅️ Назад в меню логов"
 
+    class RoleButtons:
+        """Кнопки для действий с ролями"""
+
+        CANCEL = "❌ Отмена"
+
 
 class Dialog:
     # User Tracking
@@ -157,5 +173,3 @@ class Dialog:
     ReleaseNotes = ReleaseNotesDialogs
     # Roles
     Roles = RolesDialogs
-    # Common
-    Common = CommonDialogs

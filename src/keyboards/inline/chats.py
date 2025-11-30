@@ -1,9 +1,9 @@
-from typing import List
+from typing import List, Optional
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import Dialog, InlineButtons
+from constants import InlineButtons
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from dto import ChatDTO
@@ -64,8 +64,8 @@ def remove_chat_ikb(
     # Кнопка возврата в меню (в самом низу)
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
-            callback_data=CallbackData.Chat.CHATS_MENU,
+            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MANAGEMENT,
+            callback_data=CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT,
         )
     )
 
@@ -126,8 +126,8 @@ def tracked_chats_ikb(
     # Кнопка возврата в меню (в самом низу)
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
-            callback_data=CallbackData.Chat.CHATS_MENU,
+            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MANAGEMENT,
+            callback_data=CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT,
         )
     )
 
@@ -263,63 +263,103 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Chat.GET_REPORT,
-            callback_data=CallbackData.Chat.GET_REPORT,
-        )
-    )
-
-    builder.row(
+            text=InlineButtons.ChatButtons.GET_STATISTICS,
+            callback_data=CallbackData.Chat.GET_STATISTICS,
+        ),
         InlineKeyboardButton(
-            text=Dialog.Chat.DAILY_RATING,
+            text=InlineButtons.ChatButtons.GET_DAILY_RATING,
             callback_data=CallbackData.Chat.GET_DAILY_RATING,
-        )
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_SETTING,
+            callback_data=CallbackData.Chat.ARCHIVE_SETTING,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_SELECTION_CHAT,
+            callback_data=CallbackData.Chat.SELECT_CHAT,
+        ),
+        width=1,
     )
+
+    return builder.as_markup()
+
+
+def chats_management_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура меню чатов"""
+    builder = InlineKeyboardBuilder()
 
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Chat.SELECT_CHAT,
-            callback_data=CallbackData.Chat.SELECT_ANOTHER_CHAT,
-        )
+            text=InlineButtons.ChatButtons.SELECT_CHAT,
+            callback_data=CallbackData.Chat.SELECT_CHAT,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.ADD,
+            callback_data=CallbackData.Chat.ADD,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.REMOVE,
+            callback_data=CallbackData.Chat.REMOVE,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_MAIN_MENU,
+            callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
+        ),
     )
+
+    builder.adjust(1, 2, 1)
+
+    return builder.as_markup()
+
+
+def archive_channel_setting_ikb(
+    archive_chat: Optional[ChatSession] = None,
+    invite_link: Optional[str] = None,
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+
+    if archive_chat:
+        # Используем invite ссылку, если она предоставлена, иначе fallback на прямой URL
+        if invite_link:
+            url = invite_link
+        else:
+            url = f"https://t.me/c/{archive_chat.chat_id}/1"
+
+        builder.row(
+            InlineKeyboardButton(
+                text=f"💬 {archive_chat.title[:15]}...",
+                url=url,
+            ),
+            InlineKeyboardButton(
+                text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_UNBIND,
+                callback_data=CallbackData.Chat.ARCHIVE_BIND_INSTRUCTION,
+            ),
+            width=2,
+        )
+    else:
+        builder.row(
+            InlineKeyboardButton(
+                text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_BIND,
+                callback_data=CallbackData.Chat.ARCHIVE_BIND_INSTRUCTION,
+            ),
+        )
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MENU,
-            callback_data=CallbackData.Chat.CHATS_MENU,
+            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
 
     return builder.as_markup()
 
 
-def chats_menu_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура меню чатов"""
+def archive_bind_instruction_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Chat.GET_STATISTICS,
-            callback_data=CallbackData.Chat.GET_STATISTICS,
-        ),
-        InlineKeyboardButton(
-            text=Dialog.Chat.ADD_CHAT,
-            callback_data=CallbackData.Chat.ADD,
-        ),
-        width=2,
-    )
-
-    builder.row(
-        InlineKeyboardButton(
-            text=Dialog.Chat.REMOVE_CHAT,
-            callback_data=CallbackData.Chat.REMOVE,
+            text="⬅️ Вернуться",
+            callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         )
     )
-
-    builder.row(
-        InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_MAIN_MENU,
-            callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
-        )
-    )
-
     return builder.as_markup()

@@ -4,13 +4,14 @@ class ChatCallbackData:
     # Commands
     ADD = "add_chat"
     REMOVE = "remove_chat"
-    GET_REPORT = "get_chat_report"
-    GET_DAILY_RATING = "get_chat_daily_rating"
     GET_STATISTICS = "get_chat_statistics"
-    CHATS_MENU = "chats_menu"
-    BACK_TO_MAIN_MENU_FROM_CHATS = "back_to_main_menu_from_chats"
-    SELECT_ANOTHER_CHAT = "select_another_chat"
+    GET_DAILY_RATING = "get_chat_daily_rating"
+    SELECT_CHAT = "select_chat"
+    ARCHIVE_SETTING = "archive_setting"
+    ARCHIVE_BIND_INSTRUCTION = "archive_bind_instruction"
     BACK_TO_CHAT_ACTIONS = "back_to_chat_actions"
+    BACK_TO_CHATS_MANAGEMENT = "back_to_chats_management"
+    BACK_TO_MAIN_MENU_FROM_CHATS = "back_to_main_menu_from_chats"
     ALL_CHATS = "chat__all"
     CHATS_PAGE_INFO = "chats_page_info"
     REMOVE_CHATS_PAGE_INFO = "remove_chats_page_info"
@@ -78,14 +79,12 @@ class MenuCallbackData:
     LOCK_MENU = "lock_menu"
     ADMIN_LOGS = "admin_logs"
     MAIN_MENU = "main_menu"
-    RELEASE_NOTES = "release_notes"
 
 
 class AdminLogsCallbackData:
     """Класс для хранения callback данных логов администраторов"""
 
     # Commands
-    HIDE_LOGS = "hide_admin_logs"
     MENU = "admin_logs_menu"
     SELECT_ADMIN = "admin_logs_select_admin"
 
@@ -106,7 +105,6 @@ class ReleaseNotesCallbackData:
     BROADCAST = "broadcast_release_note"
     CANCEL_ADD = "cancel_add_release_note"
     CHANGE_TITLE_WHILE_ADDING = "change_title_while_adding_release_note"
-    SAVE_NOTE = "save_release_note"
 
     # Prefixes
     PREFIX_SELECT = "release_note__"
@@ -118,20 +116,20 @@ class ReleaseNotesCallbackData:
     PREFIX_SELECT_ADD_LANGUAGE = "select_add_language__"
 
 
-class PermissionsCallbackData:
-    """Класс для хранения callback данных управления доступом"""
+class RoleCallbackData:
+    """Класс для хранения callback данных ролей"""
 
     # Commands
-    MENU = "permissions_menu"
+    INPUT_USER_DATA = "input_user_data"
 
 
 class CallbackData:
     """Класс для хранения callback данных"""
 
-    Chat = ChatCallbackData()
-    Report = ReportCallbackData()
-    User = UserCallbackData()
-    Menu = MenuCallbackData()
-    AdminLogs = AdminLogsCallbackData()
-    ReleaseNotes = ReleaseNotesCallbackData()
-    Permissions = PermissionsCallbackData()
+    Chat = ChatCallbackData
+    Report = ReportCallbackData
+    User = UserCallbackData
+    Menu = MenuCallbackData
+    AdminLogs = AdminLogsCallbackData
+    ReleaseNotes = ReleaseNotesCallbackData
+    Role = RoleCallbackData

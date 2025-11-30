@@ -27,6 +27,7 @@ from repositories import (
 from repositories.release_note_repository import ReleaseNoteRepository
 from services import (
     AdminActionLogService,
+    ArchiveBindService,
     BotMessageService,
     BotPermissionService,
     ChatService,
@@ -63,7 +64,6 @@ from usecases.categories import (
 from usecases.chat import (
     GetAllChatsUseCase,
     GetChatsForUserActionUseCase,
-    GetOrCreateChatUseCase,
     GetTrackedChatsUseCase,
 )
 from usecases.chat_tracking import (
@@ -175,12 +175,13 @@ class ContainerSetup:
         container.register(ICache, lambda: RedisCache(settings.REDIS_URL))
         container.register(UserService)
         container.register(ChatService)
+        container.register(ArchiveBindService)
         container.register(TemplateService)
         container.register(TemplateContentService)
         container.register(CategoryService)
+        container.register(BotPermissionService)
         container.register(BotMessageService)
         container.register(PunishmentService)
-        container.register(BotPermissionService)
         container.register(AdminActionLogService)
         container.register(ReleaseNoteService)
 
@@ -226,7 +227,6 @@ class ContainerSetup:
     def _register_chat_usecases(container: Container) -> None:
         """Регистрация use cases для чатов."""
         chat_usecases = [
-            GetOrCreateChatUseCase,
             GetAllChatsUseCase,
             GetTrackedChatsUseCase,
             GetChatsForUserActionUseCase,

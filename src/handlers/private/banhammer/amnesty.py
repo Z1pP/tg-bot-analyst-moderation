@@ -14,7 +14,7 @@ from keyboards.inline.banhammer import (
     amnesty_actions_ikb,
     block_actions_ikb,
 )
-from keyboards.inline.chats_kb import tracked_chats_with_all_ikb
+from keyboards.inline.chats import tracked_chats_with_all_ikb
 from states import AmnestyStates, BanHammerStates
 from usecases.amnesty import (
     CancelLastWarnUseCase,

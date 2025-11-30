@@ -130,7 +130,9 @@ class GiveUserWarnUseCase(ModerationUseCase):
         )
 
         admin_answer_text = self.punishment_service.generate_admin_answer(
-            archive_chats=context.archive_chats,
+            violator_username=context.dto.violator_username,
+            chat_title=context.chat.title,
+            archive_title=context.archive_chat.title,
             punishment_type=punishment_ladder.punishment_type,
         )
 

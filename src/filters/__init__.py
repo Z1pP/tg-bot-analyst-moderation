@@ -4,10 +4,12 @@ from .admin_filter import (
     StaffOnlyInlineFilter,
     StaffOnlyReactionFilter,
 )
+from .archive_filter import ArchiveHashFilter
 from .group_filter import ChatTypeFilter, GroupTypeFilter
 
 __all__ = [
     "AdminOnlyFilter",
+    "ArchiveHashFilter",
     "StaffOnlyFilter",
     "ChatTypeFilter",
     "GroupTypeFilter",

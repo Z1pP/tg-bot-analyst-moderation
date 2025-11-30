@@ -11,7 +11,7 @@ from constants.period import TimePeriod
 from container import container
 from dto.report import ChatReportDTO
 from keyboards.inline import CalendarKeyboard
-from keyboards.inline.chats_kb import chat_actions_ikb
+from keyboards.inline.chats import chat_actions_ikb
 from keyboards.inline.report import order_details_kb_chat
 from keyboards.inline.time_period import time_period_ikb_chat
 from services.time_service import TimeZoneService
@@ -27,10 +27,12 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    F.data == CallbackData.Chat.GET_REPORT,
+    F.data == CallbackData.Chat.GET_STATISTICS,
     ChatStateManager.selecting_chat,
 )
-async def chat_report_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def get_chat_statistics_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     """Обработчик запроса на создание отчета по конкретному чату."""
     await callback.answer()
 

@@ -6,4 +6,3 @@ class MenuStates(StatesGroup):
     users_menu = State()
     chats_menu = State()
     templates_menu = State()
-    settings_menu = State()

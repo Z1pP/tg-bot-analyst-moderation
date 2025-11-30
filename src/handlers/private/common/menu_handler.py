@@ -8,7 +8,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from constants.i18n import DEFAULT_LANGUAGE
 from container import container
-from keyboards.inline.chats_kb import chats_menu_ikb
+from keyboards.inline.chats import chats_management_ikb
 from keyboards.inline.menu import admin_menu_ikb
 from keyboards.inline.users import users_menu_ikb
 from services.user import UserService
@@ -43,7 +43,10 @@ async def main_menu_callback_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=menu_text,
-        reply_markup=admin_menu_ikb(user_language, str(callback.from_user.id)),
+        reply_markup=admin_menu_ikb(
+            user_language=user_language,
+            admin_tg_id=str(callback.from_user.id),
+        ),
     )
 
     await log_and_set_state(callback.message, state, MenuStates.main_menu)
@@ -83,8 +86,8 @@ async def chats_menu_callback_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Chat.SELECT_ACTION,
-        reply_markup=chats_menu_ikb(),
+        text=Dialog.Chat.CHAT_MANAGEMENT,
+        reply_markup=chats_management_ikb(),
     )
 
     await log_and_set_state(

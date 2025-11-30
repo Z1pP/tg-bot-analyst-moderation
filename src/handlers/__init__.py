@@ -19,6 +19,10 @@ def registry_admin_routers(dispatcher: Dispatcher):
         ChatTypeFilter(chat_type=[ChatType.PRIVATE]),
         AdminOnlyFilter(),
     )
+    only_admin_router.callback_query.filter(
+        ChatTypeFilter(chat_type=[ChatType.PRIVATE]),
+        AdminOnlyFilter(),
+    )
 
     # Регистрируем антиспам middleware
     cache: ICache = container.resolve(ICache)

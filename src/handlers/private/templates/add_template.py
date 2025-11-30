@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from constants import Dialog
+from constants.callback import CallbackData
 from constants.pagination import CATEGORIES_PAGE_SIZE
 from container import container
 from keyboards.inline.categories import categories_select_only_ikb
@@ -259,3 +260,34 @@ async def next_categories_page_for_template_handler(
     except Exception as e:
         logger.error(f"Ошибка при переходе на следующую страницу категорий: {e}")
         await callback.answer(Dialog.Template.ERROR_NEXT_PAGE)
+
+
+@router.callback_query(
+    TemplateStateManager.process_template_chat,
+    F.data.startswith(CallbackData.Chat.PREFIX_TEMPLATE_SCOPE),
+)
+async def process_template_chat_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
+    """
+    Обработчик выбора чата из списка чатов.
+    """
+    await callback.answer()
+
+    chat_id = int(callback.data.replace(CallbackData.Chat.PREFIX_TEMPLATE_SCOPE, ""))
+
+    if chat_id == -1:
+        await state.update_data(chat_id=None)
+    else:
+        await state.update_data(chat_id=int(chat_id))
+
+    text = Dialog.Chat.ENTER_TEMPLATE_NAME
+
+    await callback.message.answer(text=text)
+
+    await log_and_set_state(
+        message=callback.message,
+        state=state,
+        new_state=TemplateStateManager.process_template_title,
+    )
