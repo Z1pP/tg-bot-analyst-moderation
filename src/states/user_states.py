@@ -25,4 +25,3 @@ class UserStateManager(StatesGroup):
     users_menu = State()
     listing_users = State()
     removing_user = State()
-    adding_user = State()
