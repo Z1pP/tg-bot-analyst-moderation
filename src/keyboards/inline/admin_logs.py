@@ -7,11 +7,9 @@ from constants import InlineButtons
 from constants.callback import CallbackData
 from constants.enums import AdminActionType
 from constants.pagination import DEFAULT_PAGE_SIZE
-from models import AdminActionLog
 
 
 def admin_logs_ikb(
-    logs: List[AdminActionLog],
     page: int = 1,
     total_count: int = 0,
     page_size: int = DEFAULT_PAGE_SIZE,
@@ -59,16 +57,7 @@ def admin_logs_ikb(
         if pagination_buttons:
             builder.row(*pagination_buttons)
 
-    # Кнопка "Выбрать администратора" (только если есть логи)
-    if logs:
-        builder.row(
-            InlineKeyboardButton(
-                text=InlineButtons.AdminLogsButtons.SELECT_ADMIN,
-                callback_data=CallbackData.AdminLogs.SELECT_ADMIN,
-            )
-        )
-
-    # Кнопка "Скрыть"
+    # Кнопка "Вернуться в меню логов"
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.AdminLogsButtons.BACK_TO_ADMIN_LOGS_MENU,
