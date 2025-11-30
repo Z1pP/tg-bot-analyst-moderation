@@ -112,30 +112,6 @@ class BotPermissionService:
             )
         return False
 
-    async def can_ban_users(self, chat_tgid: ChatIdUnion) -> bool:
-        """
-        Проверяет, может ли бот блокировать пользователей в чате.
-
-        Args:
-            chat_tgid: Telegram ID чата
-
-        Returns:
-            True если бот может блокировать пользователей
-        """
-        return await self.can_moderate(chat_tgid=chat_tgid)
-
-    async def can_mute_users(self, chat_tgid: ChatIdUnion) -> bool:
-        """
-        Проверяет, может ли бот мутить пользователей в чате.
-
-        Args:
-            chat_tgid: Telegram ID чата
-
-        Returns:
-            True если бот может мутить пользователей
-        """
-        return await self.can_moderate(chat_tgid=chat_tgid)
-
     async def can_delete_messages(self, chat_tgid: ChatIdUnion) -> bool:
         """
         Проверяет, может ли бот удалять сообщения в чате.
@@ -330,23 +306,3 @@ class BotPermissionService:
             missing_permissions=missing_permissions,
             has_all_permissions=len(missing_permissions) == 0,
         )
-
-    async def check_all_required_permissions(
-        self, chat_tgid: ChatIdUnion
-    ) -> BotPermissionsCheck:
-        """
-        Проверяет все обязательные права бота для полноценной работы.
-
-        Проверяемые права:
-        - can_restrict_members - для блокировки и мута пользователей
-        - can_invite_users - для получения пригласительных ссылок
-        - can_delete_messages - для удаления сообщений
-        - can_post_messages - для отправки сообщений в чат
-
-        Args:
-            chat_tgid: Telegram ID чата
-
-        Returns:
-            BotPermissionsCheck с информацией о недостающих правах
-        """
-        return await self.check_archive_permissions(chat_tgid=chat_tgid)
