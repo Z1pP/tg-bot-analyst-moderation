@@ -103,19 +103,6 @@ class AdminActionLogRepository:
                 )
                 raise
 
-    async def get_logs_count(self) -> int:
-        """Получает общее количество логов."""
-        async with self._db.session() as session:
-            try:
-                query = select(func.count(AdminActionLog.id))
-                count = await session.scalar(query)
-                return count or 0
-            except Exception as e:
-                logger.error(
-                    "Ошибка при получении количества логов: %s", e, exc_info=True
-                )
-                raise
-
     async def get_admins_with_logs(self) -> List[Tuple[int, str, str]]:
         """
         Получает список администраторов, у которых есть логи.
