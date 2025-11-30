@@ -25,7 +25,7 @@ class ModerationContext:
     violator: User
     admin: User
     chat: ChatSession
-    archive_chat: ChatSession
+    archive_chat: Optional[ChatSession] = None
     message_deleted: bool = True
 
 
@@ -94,11 +94,11 @@ class ModerationUseCase:
             )
             raise CannotPunishChatAdminError()
 
-        work_chat = await self.chat_service.get_chat_with_archive(
+        chat = await self.chat_service.get_chat_with_archive(
             chat_tgid=dto.chat_tgid,
         )
 
-        if not work_chat or not work_chat.archive_chat_id:
+        if not chat or not chat.archive_chat_id:
             await self.bot_message_service.delete_message_from_chat(
                 chat_id=dto.chat_tgid,
                 message_id=dto.original_message_id,
@@ -123,15 +123,15 @@ class ModerationUseCase:
 
         await self.user_chat_status_repository.get_or_create(
             user_id=violator.id,
-            chat_id=work_chat.chat_id,
+            chat_id=chat.id,
         )
 
         return ModerationContext(
             dto=dto,
             violator=violator,
             admin=admin,
-            chat=work_chat.chat,
-            archive_chat=work_chat.archive_chat,
+            chat=chat,
+            archive_chat=chat.archive_chat,
         )
 
     async def _finalize_moderation(
