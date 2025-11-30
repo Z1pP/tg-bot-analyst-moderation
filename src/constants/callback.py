@@ -79,14 +79,12 @@ class MenuCallbackData:
     LOCK_MENU = "lock_menu"
     ADMIN_LOGS = "admin_logs"
     MAIN_MENU = "main_menu"
-    RELEASE_NOTES = "release_notes"
 
 
 class AdminLogsCallbackData:
     """Класс для хранения callback данных логов администраторов"""
 
     # Commands
-    HIDE_LOGS = "hide_admin_logs"
     MENU = "admin_logs_menu"
     SELECT_ADMIN = "admin_logs_select_admin"
 
@@ -107,7 +105,6 @@ class ReleaseNotesCallbackData:
     BROADCAST = "broadcast_release_note"
     CANCEL_ADD = "cancel_add_release_note"
     CHANGE_TITLE_WHILE_ADDING = "change_title_while_adding_release_note"
-    SAVE_NOTE = "save_release_note"
 
     # Prefixes
     PREFIX_SELECT = "release_note__"
@@ -119,23 +116,11 @@ class ReleaseNotesCallbackData:
     PREFIX_SELECT_ADD_LANGUAGE = "select_add_language__"
 
 
-class PermissionsCallbackData:
-    """Класс для хранения callback данных управления доступом"""
-
-    # Commands
-    MENU = "permissions_menu"
-
-
 class RoleCallbackData:
     """Класс для хранения callback данных ролей"""
 
     # Commands
     INPUT_USER_DATA = "input_user_data"
-    SELECT_ROLE = "select_role"
-    ADD_ROLE = "add_role"
-    REMOVE_ROLE = "remove_role"
-    ROLES_MENU = "roles_menu"
-    BACK_TO_MAIN_MENU_FROM_ROLES = "back_to_main_menu_from_roles"
 
 
 class CallbackData:
@@ -147,5 +132,4 @@ class CallbackData:
     Menu = MenuCallbackData
     AdminLogs = AdminLogsCallbackData
     ReleaseNotes = ReleaseNotesCallbackData
-    Permissions = PermissionsCallbackData
     Role = RoleCallbackData
