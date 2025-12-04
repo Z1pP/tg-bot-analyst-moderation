@@ -12,6 +12,8 @@ from fastapi import FastAPI, Request
 from bot import configure_dispatcher
 from commands.start_commands import set_bot_commands
 from container import ContainerSetup
+from di import container
+from services.scheduler import DailyReportSchedulerService
 from utils.logger_config import setup_logger
 
 setup_logger(log_level=logging.INFO)
@@ -24,15 +26,21 @@ args = parser.parse_args()
 
 bot = None
 dp = None
+scheduler_service = None
 
 
 async def init_bot():
     """Инициализирует контейнер зависимостей и настраивает бота."""
-    global bot, dp
+    global bot, dp, scheduler_service
     logger.info("Инициализация контейнера...")
     ContainerSetup.setup()
     logger.info("Настройка и запуск бота...")
     bot, dp = await configure_dispatcher()
+
+    # Запускаем планировщик ежедневных отчетов
+    logger.info("Запуск планировщика ежедневных отчетов...")
+    scheduler_service = container.resolve(DailyReportSchedulerService)
+    scheduler_service.start_scheduler()
 
 
 @asynccontextmanager
@@ -46,6 +54,12 @@ async def lifespan(app: FastAPI):
         await bot.set_webhook(url)
 
     yield
+
+    # Останавливаем планировщик
+    global scheduler_service
+    if scheduler_service:
+        scheduler_service.stop_scheduler()
+        scheduler_service = None
 
     if bot and hasattr(bot, "session"):
         await bot.session.close()
@@ -106,7 +120,16 @@ async def run_webhook():
 
 async def run_polling():
     """Запускает бота в режиме long polling."""
+    global scheduler_service
+
     await init_bot()
+
+    # Убеждаемся, что планировщик запущен
+    if scheduler_service is None:
+        logger.warning("Планировщик не был инициализирован, запускаем...")
+        scheduler_service = container.resolve(DailyReportSchedulerService)
+        scheduler_service.start_scheduler()
+
     logger.info("Удаляем webhook...")
     await bot.delete_webhook(drop_pending_updates=True)
 
@@ -114,7 +137,13 @@ async def run_polling():
     await set_bot_commands(bot)
 
     logger.info("Запуск polling...")
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        # Останавливаем планировщик при завершении polling
+        if scheduler_service:
+            scheduler_service.stop_scheduler()
+            scheduler_service = None
 
 
 async def main():
@@ -128,6 +157,11 @@ async def main():
         logger.error("Критическая ошибка: %s", str(e), exc_info=True)
         sys.exit(1)
     finally:
+        global scheduler_service
+        if scheduler_service:
+            scheduler_service.stop_scheduler()
+            scheduler_service = None
+
         if bot and hasattr(bot, "session"):
             await bot.session.close()
 
