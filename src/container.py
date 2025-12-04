@@ -37,6 +37,7 @@ from services import (
 from services.caching import ICache, RedisCache
 from services.categories import CategoryService
 from services.release_note_service import ReleaseNoteService
+from services.scheduler import DailyReportSchedulerService
 from services.templates import (
     TemplateContentService,
     TemplateService,
@@ -87,6 +88,7 @@ from usecases.report import (
     GetChatBreaksDetailReportUseCase,
     GetReportOnSpecificChatUseCase,
     GetSingleUserReportUseCase,
+    SendDailyChatReportsUseCase,
 )
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from usecases.templates import (
@@ -184,6 +186,7 @@ class ContainerSetup:
         container.register(PunishmentService)
         container.register(AdminActionLogService)
         container.register(ReleaseNoteService)
+        container.register(DailyReportSchedulerService)
 
     @staticmethod
     def _register_usecases(container: Container) -> None:
@@ -272,6 +275,7 @@ class ContainerSetup:
             GetReportOnSpecificChatUseCase,
             GetChatBreaksDetailReportUseCase,
             GetDailyTopUsersUseCase,
+            SendDailyChatReportsUseCase,
         ]
 
         for usecase in report_usecases:
