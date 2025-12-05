@@ -32,7 +32,7 @@ class DailyReportSchedulerService:
         # Добавляем задачу на 22:10 каждый день
         self._scheduler.add_job(
             func=self._send_reports,
-            trigger=CronTrigger(hour=22, minute=10),
+            trigger=CronTrigger(hour=19, minute=10),
             id="daily_chat_reports",
             name="Ежедневная отправка отчетов по чатам",
             replace_existing=True,
