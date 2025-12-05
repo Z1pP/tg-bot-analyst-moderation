@@ -98,12 +98,7 @@ class ChatRepository:
                     .options(selectinload(ChatSession.archive_chat))
                 )
                 chats = result.scalars().all()
-                # Явно загружаем archive_chat для всех чатов до выхода из сессии
-                for chat in chats:
-                    _ = chat.archive_chat
-                    session.expunge(chat)
-                    if chat.archive_chat:
-                        session.expunge(chat.archive_chat)
+
                 logger.info("Получено %d чатов с архивными чатами", len(chats))
                 return chats
             except Exception as e:
