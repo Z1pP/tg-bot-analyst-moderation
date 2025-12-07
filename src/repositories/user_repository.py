@@ -127,7 +127,7 @@ class UserRepository:
                 # Получаем админа
                 admin_query = select(User).where(User.tg_id == admin_tg_id)
                 admin_result = await session.execute(admin_query)
-                admin = admin_result.scalar_one_or_none()
+                admin = admin_result.scalars().first()
 
                 if not admin:
                     logger.warning("Администратор с TG_ID:%s не найден", admin_tg_id)
