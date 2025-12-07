@@ -59,6 +59,10 @@ class SendDailyChatReportsUseCase:
         # 2. Определение временного периода
         start_date, end_date = TimePeriod.to_datetime(period)
 
+        adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
+            start_date, end_date
+        )
+
         # 3. Обработка каждого чата
         # Можно использовать asyncio.gather для обработки чатов параллельно,
         # но лучше последовательно, чтобы не спамить в API Telegram слишком быстро.
@@ -67,15 +71,15 @@ class SendDailyChatReportsUseCase:
                 chat_data = await self._fetch_chat_data(
                     chat=chat,
                     tracked_user_ids=tracked_user_ids,
-                    start_date=start_date,
-                    end_date=end_date,
+                    start_date=adjusted_start,
+                    end_date=adjusted_end,
                 )
 
                 report = self._generate_chat_report(
                     chat=chat,
                     data=chat_data,
-                    start_date=start_date,
-                    end_date=end_date,
+                    start_date=adjusted_start,
+                    end_date=adjusted_end,
                     tracked_user_ids=tracked_user_ids,
                 )
 
