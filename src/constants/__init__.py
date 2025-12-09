@@ -97,7 +97,7 @@ class InlineButtons:
         ARCHIVE_CHANNEL_SETTING = "⚙️ Настройка архив. канала"
         BACK_TO_SELECTION_CHAT = "⬅️ Вернуться к выбору чата"
 
-        ARCHIVE_CHANNEL_UNBIND = "🔄 Перепривязать"
+        ARCHIVE_CHANNEL_REBIND = "🔄 Перепривязать"
         ARCHIVE_CHANNEL_BIND = "🔗 Привязать"
 
         BACK_TO_SELECT_ACTION = "⬅️ Назад к выбору действия"

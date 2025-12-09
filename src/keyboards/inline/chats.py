@@ -331,7 +331,7 @@ def archive_channel_setting_ikb(
                 url=url,
             ),
             InlineKeyboardButton(
-                text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_UNBIND,
+                text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_REBIND,
                 callback_data=CallbackData.Chat.ARCHIVE_BIND_INSTRUCTION,
             ),
             width=2,
