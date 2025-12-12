@@ -10,6 +10,7 @@ from .punishment import Punishment
 from .punishment_ladder import PunishmentLadder
 from .reaction import MessageReaction
 from .release_note import ReleaseNote
+from .report_schedule import ReportSchedule
 from .user import User
 from .user_chat_status import UserChatStatus
 
@@ -30,4 +31,5 @@ __all__ = [
     "PunishmentLadder",
     "UserChatStatus",
     "ReleaseNote",
+    "ReportSchedule",
 ]
