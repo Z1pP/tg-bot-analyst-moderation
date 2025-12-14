@@ -9,9 +9,8 @@ from .base import BaseModel
 class ReportSchedule(BaseModel):
     __tablename__ = "report_schedules"
 
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     chat_id: Mapped[int] = mapped_column(
-        ForeignKey("chat_sessions.id", ondelete="CASCADE")
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"), unique=True
     )
     timezone: Mapped[str] = mapped_column(String(length=64))  # Europe/Moscow
     sent_time: Mapped[time] = mapped_column(Time)
@@ -23,7 +22,4 @@ class ReportSchedule(BaseModel):
         DateTime(timezone=True), nullable=True
     )
 
-    __table_args__ = (
-        Index("idx_schedule_due", "enabled", "next_run_at"),
-        Index("idx_schedule_user_chat", "user_id", "chat_id", unique=True),
-    )
+    __table_args__ = (Index("idx_schedule_due", "enabled", "next_run_at"),)
