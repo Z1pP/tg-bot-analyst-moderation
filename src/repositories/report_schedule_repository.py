@@ -125,30 +125,22 @@ class ReportScheduleRepository:
             # Fallback: попробовать через час, чтобы не зациклить
             return now_utc + timedelta(hours=1)
 
-    async def get_schedule(
-        self, user_id: int, chat_id: int
-    ) -> Optional[ReportSchedule]:
-        """Получает расписание для пользователя и чата."""
+    async def get_schedule(self, chat_id: int) -> Optional[ReportSchedule]:
+        """Получает расписание для чата."""
         async with self._db.session() as session:
             try:
                 result = await session.execute(
                     select(ReportSchedule).where(
-                        ReportSchedule.user_id == user_id,
                         ReportSchedule.chat_id == chat_id,
                     )
                 )
                 schedule = result.scalars().first()
                 if schedule:
-                    logger.info(
-                        "Получено расписание: user_id=%s, chat_id=%s",
-                        user_id,
-                        chat_id,
-                    )
+                    logger.info("Получено расписание: chat_id=%s", chat_id)
                 return schedule
             except Exception as e:
                 logger.error(
-                    "Ошибка при получении расписания user_id=%s, chat_id=%s: %s",
-                    user_id,
+                    "Ошибка при получении расписания chat_id=%s: %s",
                     chat_id,
                     e,
                 )
@@ -156,7 +148,6 @@ class ReportScheduleRepository:
 
     async def create_schedule(
         self,
-        user_id: int,
         chat_id: int,
         tz_name: str,
         sent_time: time,
@@ -187,7 +178,6 @@ class ReportScheduleRepository:
                 next_run_at = next_run_local.astimezone(timezone.utc)
 
                 schedule = ReportSchedule(
-                    user_id=user_id,
                     chat_id=chat_id,
                     timezone=tz_name,
                     sent_time=sent_time,
@@ -200,8 +190,7 @@ class ReportScheduleRepository:
                 await session.refresh(schedule)
 
                 logger.info(
-                    "Создано расписание: user_id=%s, chat_id=%s, time=%s",
-                    user_id,
+                    "Создано расписание: chat_id=%s, time=%s",
                     chat_id,
                     sent_time,
                 )
@@ -214,8 +203,7 @@ class ReportScheduleRepository:
                 raise
             except Exception as e:
                 logger.error(
-                    "Ошибка при создании расписания user_id=%s, chat_id=%s: %s",
-                    user_id,
+                    "Ошибка при создании расписания chat_id=%s: %s",
                     chat_id,
                     e,
                 )
