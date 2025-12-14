@@ -1,3 +1,4 @@
+from .archive_chat import ChatArchiveState
 from .banhammer_states import (
     AmnestyStates,
     BanHammerStates,
@@ -32,4 +33,5 @@ __all__ = [
     "MessageManagerState",
     "CategoryStateManager",
     "RoleState",
+    "ChatArchiveState",
 ]
