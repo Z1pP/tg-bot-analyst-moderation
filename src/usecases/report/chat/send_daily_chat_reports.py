@@ -43,22 +43,19 @@ class SendDailyChatReportsUseCase:
 
     async def execute(
         self,
-        user_id: int,
         chat_id: int,
         period: str,
     ) -> None:
         """
-        Генерирует и отправляет отчеты по конкретному чату для конкретного пользователя.
+        Генерирует и отправляет отчеты по конкретному чату в архивный чат.
 
         Args:
-            user_id: ID пользователя (админа), для которого генерируется отчет
             chat_id: ID чата, по которому генерируется отчет
             period: Период для отчета (по умолчанию "сегодня")
 
         """
         logger.info(
-            "Начало генерации ежедневного отчета: user_id=%d, chat_id=%d, period=%s",
-            user_id,
+            "Начало генерации ежедневного отчета: chat_id=%d, period=%s",
             chat_id,
             period,
         )
