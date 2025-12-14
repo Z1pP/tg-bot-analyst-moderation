@@ -8,7 +8,6 @@ from constants.callback import CallbackData
 from container import container
 from keyboards.inline.chats import cancel_archive_time_setting_ikb
 from services.report_schedule_service import ReportScheduleService
-from services.user import UserService
 from states import ChatArchiveState
 from utils.data_parser import parse_time
 from utils.send_message import safe_edit_message
@@ -73,40 +72,21 @@ async def time_input_handler(message: Message, state: FSMContext) -> None:
         return
 
     try:
-        # Получаем пользователя из БД
-        user_service: UserService = container.resolve(UserService)
-        user = await user_service.get_user(tg_id=str(message.from_user.id))
-
-        if not user:
-            logger.error("Пользователь не найден в БД: tg_id=%s", message.from_user.id)
-            text = "❌ Ошибка: пользователь не найден в системе."
-            if active_message_id:
-                await safe_edit_message(
-                    bot=message.bot,
-                    chat_id=message.chat.id,
-                    message_id=active_message_id,
-                    text=text,
-                    reply_markup=cancel_archive_time_setting_ikb(),
-                )
-            await message.delete()
-            return
-
         # Сохраняем или обновляем расписание
         schedule_service: ReportScheduleService = container.resolve(
             ReportScheduleService
         )
 
-        schedule = await schedule_service.get_schedule(user_id=user.id, chat_id=chat_id)
+        schedule = await schedule_service.get_schedule(chat_id=chat_id)
 
         if schedule:
             # Обновляем существующее расписание
             await schedule_service.update_sending_time(
-                user_id=user.id, chat_id=chat_id, new_time=parsed_time
+                chat_id=chat_id, new_time=parsed_time
             )
         else:
             # Создаем новое расписание
             await schedule_service.get_or_create_schedule(
-                user_id=user.id,
                 chat_id=chat_id,
                 sent_time=parsed_time,
                 enabled=True,
