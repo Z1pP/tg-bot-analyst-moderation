@@ -9,6 +9,8 @@ class ChatCallbackData:
     SELECT_CHAT = "select_chat"
     ARCHIVE_SETTING = "archive_setting"
     ARCHIVE_BIND_INSTRUCTION = "archive_bind_instruction"
+    ARCHIVE_TIME_SETTING = "archive_time_setting"
+    ARCHIVE_TOGGLE_SCHEDULE = "archive_toggle_schedule"
     BACK_TO_CHAT_ACTIONS = "back_to_chat_actions"
     BACK_TO_CHATS_MANAGEMENT = "back_to_chats_management"
     BACK_TO_MAIN_MENU_FROM_CHATS = "back_to_main_menu_from_chats"
