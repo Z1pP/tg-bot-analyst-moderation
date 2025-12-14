@@ -14,7 +14,6 @@ ContainerSetup.setup()
 @broker.task
 async def send_chat_report_task(
     schedule_id: int,
-    user_id: int,
     chat_id: int,
     period: str = TimePeriod.TODAY.value,
 ):
@@ -23,14 +22,12 @@ async def send_chat_report_task(
 
     Args:
         schedule_id: ID расписания (для логирования)
-        user_id: ID пользователя (админа)
         chat_id: ID чата
         period: Период для отчета
     """
     logger.info(
-        "Выполнение задачи отправки отчета: schedule_id=%s, user_id=%s, chat_id=%s, period=%s",
+        "Выполнение задачи отправки отчета: schedule_id=%s, chat_id=%s, period=%s",
         schedule_id,
-        user_id,
         chat_id,
         period,
     )
@@ -39,13 +36,12 @@ async def send_chat_report_task(
         schedule_service: ReportScheduleService = container.resolve(
             ReportScheduleService
         )
-        schedule = await schedule_service.get_schedule(user_id=user_id, chat_id=chat_id)
+        schedule = await schedule_service.get_schedule(chat_id=chat_id)
 
         if not schedule:
             logger.warning(
-                "Расписание не найдено для schedule_id=%s, user_id=%s, chat_id=%s. Пропускаем выполнение.",
+                "Расписание не найдено для schedule_id=%s, chat_id=%s. Пропускаем выполнение.",
                 schedule_id,
-                user_id,
                 chat_id,
             )
             return
@@ -60,9 +56,8 @@ async def send_chat_report_task(
 
     if not schedule.enabled:
         logger.info(
-            "Рассылка отключена для schedule_id=%s, user_id=%s, chat_id=%s. Пропускаем выполнение.",
+            "Рассылка отключена для schedule_id=%s, chat_id=%s. Пропускаем выполнение.",
             schedule_id,
-            user_id,
             chat_id,
         )
         return
@@ -71,7 +66,7 @@ async def send_chat_report_task(
         usecase: SendDailyChatReportsUseCase = container.resolve(
             SendDailyChatReportsUseCase
         )
-        await usecase.execute(user_id=user_id, chat_id=chat_id, period=period)
+        await usecase.execute(chat_id=chat_id, period=period)
         logger.info(
             "Задача отправки отчета выполнена успешно: schedule_id=%s", schedule_id
         )
