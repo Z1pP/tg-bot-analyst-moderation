@@ -17,7 +17,6 @@ from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
 from utils.formatter import format_seconds, format_selected_period
 
-# TypeVars для удобства
 T = TypeVar("T", ChatMessage, MessageReply, MessageReaction)
 
 logger = logging.getLogger(__name__)
@@ -42,73 +41,94 @@ class SendDailyChatReportsUseCase:
         self._reaction_repository = reaction_repository
         self._bot_message_service = bot_message_service
 
-    async def execute(self, period: str = TimePeriod.TODAY.value) -> None:
+    async def execute(
+        self,
+        user_id: int,
+        chat_id: int,
+        period: str,
+    ) -> None:
         """
-        Генерирует и отправляет отчеты по всем чатам с архивными чатами.
-        """
-        logger.info("Начало генерации ежедневных отчетов по чатам")
+        Генерирует и отправляет отчеты по конкретному чату для конкретного пользователя.
 
-        chats_with_archive = await self._get_chats_with_archive()
-        if not chats_with_archive:
-            logger.warning("Нет чатов с архивными чатами для отправки отчетов")
+        Args:
+            user_id: ID пользователя (админа), для которого генерируется отчет
+            chat_id: ID чата, по которому генерируется отчет
+            period: Период для отчета (по умолчанию "сегодня")
+
+        """
+        logger.info(
+            "Начало генерации ежедневного отчета: user_id=%d, chat_id=%d, period=%s",
+            user_id,
+            chat_id,
+            period,
+        )
+
+        # Получаем чат с архивом
+        chat = await self._chat_repository.get_chat_by_id(chat_id=chat_id)
+        if not chat:
+            logger.warning("Чат не найден: chat_id=%d", chat_id)
             return
 
-        # 1. Сбор всех отслеживаемых пользователей (оптимизация запросов)
-        tracked_user_ids = await self._get_all_tracked_user_ids(chats_with_archive)
+        if not chat.archive_chat_id:
+            logger.warning("Чат не имеет архива: chat_id=%d", chat_id)
+            return
 
-        # 2. Определение временного периода
+        # Сбор всех отслеживаемых пользователей
+        tracked_user_ids = await self._get_all_tracked_user_ids(chat=chat)
+
+        # Определение временного периода
         start_date, end_date = TimePeriod.to_datetime(period)
 
         adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
             start_date, end_date
         )
 
-        # 3. Обработка каждого чата
-        # Можно использовать asyncio.gather для обработки чатов параллельно,
-        # но лучше последовательно, чтобы не спамить в API Telegram слишком быстро.
-        for chat in chats_with_archive:
+        # Обработка чата
+        try:
+            chat_data = await self._fetch_chat_data(
+                chat=chat,
+                tracked_user_ids=tracked_user_ids,
+                start_date=adjusted_start,
+                end_date=adjusted_end,
+            )
+        except Exception as e:
+            logger.error(
+                "Ошибка при обработке чата %s: %s", chat.title, e, exc_info=True
+            )
+            return
+
+        report = self._generate_chat_report(
+            chat=chat,
+            data=chat_data,
+            start_date=adjusted_start,
+            end_date=adjusted_end,
+            tracked_user_ids=tracked_user_ids,
+        )
+
+        if report:
             try:
-                chat_data = await self._fetch_chat_data(
-                    chat=chat,
-                    tracked_user_ids=tracked_user_ids,
-                    start_date=adjusted_start,
-                    end_date=adjusted_end,
+                await self._bot_message_service.send_chat_message(
+                    chat_tgid=chat.archive_chat_id,
+                    text=report,
                 )
-
-                report = self._generate_chat_report(
-                    chat=chat,
-                    data=chat_data,
-                    start_date=adjusted_start,
-                    end_date=adjusted_end,
-                    tracked_user_ids=tracked_user_ids,
-                )
-
-                if report:
-                    await self._bot_message_service.send_chat_message(
-                        chat_tgid=chat.archive_chat_id,
-                        text=report,
-                    )
             except Exception as e:
                 logger.error(
-                    f"Ошибка при обработке чата {chat.title}: {e}", exc_info=True
+                    "Ошибка при отправке отчета в архивный чат %s: %s",
+                    chat.title,
+                    e,
+                    exc_info=True,
                 )
+            return
 
-    async def _get_chats_with_archive(self) -> List[ChatSession]:
-        chats = await self._chat_repository.get_chats_with_archive()
-        logger.info(f"Найдено {len(chats)} чатов с архивными чатами")
-        return chats
-
-    async def _get_all_tracked_user_ids(self, chats: List[ChatSession]) -> List[int]:
+    async def _get_all_tracked_user_ids(self, chat: ChatSession) -> List[int]:
         """Собирает ID всех отслеживаемых пользователей для списка чатов."""
         admins_set: Set[User] = set()
 
-        # Получаем админов для всех чатов
-        # (Здесь можно тоже распараллелить, если чатов много)
-        for chat in chats:
-            admins = await self._user_repository.get_admins_for_chat(
-                chat_tg_id=chat.chat_id
-            )
-            admins_set.update(admins)
+        # Получаем админов для чата
+        admins = await self._user_repository.get_admins_for_chat(
+            chat_tg_id=chat.chat_id
+        )
+        admins_set.update(admins)
 
         tracked_users_set: Set[User] = set()
         for admin in admins_set:
@@ -221,13 +241,13 @@ class SendDailyChatReportsUseCase:
         start_date: datetime,
         end_date: datetime,
     ) -> str:
-        # Используем defaultdict для упрощения группировки
+        # Группировка данных по пользователям
         users_data = defaultdict(
             lambda: {"messages": [], "replies": [], "reactions": []}
         )
         user_names: Dict[int, str] = {}
 
-        # Вспомогательная функция для извлечения имени
+        # Функция для извлечения имени пользователя
         def get_username(user_obj, user_id):
             if user_id in user_names:
                 return user_names[user_id]
@@ -239,13 +259,13 @@ class SendDailyChatReportsUseCase:
             user_names[user_id] = name
             return name
 
-        # 1. Группируем сообщения
+        # Группировка сообщений
         for msg in messages:
             uid = msg.user_id
             users_data[uid]["messages"].append(msg)
             get_username(msg.user, uid)
 
-        # 2. Группируем ответы
+        # Группировка ответов
         for reply in replies:
             uid = reply.reply_user_id
             users_data[uid]["replies"].append(reply)
@@ -254,19 +274,19 @@ class SendDailyChatReportsUseCase:
             if uid not in user_names and hasattr(reply, "user"):
                 get_username(reply.user, uid)
 
-        # 3. Группируем реакции
+        # Группировка реакций
         for reaction in reactions:
             uid = reaction.user_id
             users_data[uid]["reactions"].append(reaction)
             get_username(reaction.user, uid)
 
-        # Генерируем отчеты
+        # Генерация отчетов
         user_reports = []
         for user_id, stats in users_data.items():
             if not stats["messages"] and not stats["reactions"]:
                 continue
 
-            # Добавляем имя пользователя в статистику для генератора
+            # Добавление имени пользователя в статистику для генератора
             stats["username"] = user_names.get(user_id, f"user_{user_id}")
 
             user_report = self._generate_user_report(
@@ -375,7 +395,7 @@ class SendDailyChatReportsUseCase:
         breaks = BreakAnalysisService.calculate_breaks(
             messages=sorted_messages,
             reactions=reactions,
-            is_single_day=False,  # Или True, если отчет всегда за 1 день
+            is_single_day=True,
         )
 
         if breaks:
