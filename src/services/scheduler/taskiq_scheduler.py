@@ -27,7 +27,6 @@ class TaskiqSchedulerService:
                 .with_task_id(unique_task_id)
                 .kiq(
                     schedule_id=schedule.id,
-                    user_id=schedule.user_id,
                     chat_id=schedule.chat_id,
                     period=TimePeriod.TODAY.value,
                 )
