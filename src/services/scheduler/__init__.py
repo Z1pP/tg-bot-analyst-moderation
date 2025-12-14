@@ -1,3 +1,5 @@
-from .daily_report_scheduler import DailyReportSchedulerService
+from .taskiq_scheduler import TaskiqSchedulerService
 
-__all__ = ["DailyReportSchedulerService"]
+__all__ = [
+    "TaskiqSchedulerService",
+]
