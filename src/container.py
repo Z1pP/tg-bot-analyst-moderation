@@ -18,13 +18,14 @@ from repositories import (
     MessageTemplateRepository,
     PunishmentLadderRepository,
     PunishmentRepository,
+    ReleaseNoteRepository,
+    ReportScheduleRepository,
     TemplateCategoryRepository,
     TemplateMediaRepository,
     UserChatStatusRepository,
     UserRepository,
     UserTrackingRepository,
 )
-from repositories.release_note_repository import ReleaseNoteRepository
 from services import (
     AdminActionLogService,
     ArchiveBindService,
@@ -32,12 +33,13 @@ from services import (
     BotPermissionService,
     ChatService,
     PunishmentService,
+    ReportScheduleService,
     UserService,
 )
 from services.caching import ICache, RedisCache
 from services.categories import CategoryService
 from services.release_note_service import ReleaseNoteService
-from services.scheduler import DailyReportSchedulerService
+from services.scheduler import TaskiqSchedulerService
 from services.templates import (
     TemplateContentService,
     TemplateService,
@@ -166,6 +168,7 @@ class ContainerSetup:
             UserChatStatusRepository,
             AdminActionLogRepository,
             ReleaseNoteRepository,
+            ReportScheduleRepository,
         ]
 
         for repo in repositories:
@@ -186,7 +189,8 @@ class ContainerSetup:
         container.register(PunishmentService)
         container.register(AdminActionLogService)
         container.register(ReleaseNoteService)
-        container.register(DailyReportSchedulerService)
+        container.register(ReportScheduleService)
+        container.register(TaskiqSchedulerService)
 
     @staticmethod
     def _register_usecases(container: Container) -> None:
