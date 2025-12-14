@@ -18,7 +18,6 @@ from services.messaging import BotMessageService
 from services.permissions import BotPermissionService
 from services.report_schedule_service import ReportScheduleService
 from services.time_service import TimeZoneService
-from services.user import UserService
 from states import ChatStateManager
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
@@ -92,39 +91,33 @@ async def archive_channel_setting_handler(
             return
 
         # Получаем информацию о расписании рассылки
-        user_service: UserService = container.resolve(UserService)
         schedule_service: ReportScheduleService = container.resolve(
             ReportScheduleService
         )
 
-        user = await user_service.get_user(tg_id=str(callback.from_user.id))
         schedule_info = ""
         schedule_enabled = None
 
-        if user:
-            schedule = await schedule_service.get_schedule(
-                user_id=user.id, chat_id=chat_id
-            )
+        schedule = await schedule_service.get_schedule(chat_id=chat_id)
 
-            if schedule:
-                schedule_enabled = schedule.enabled
-                enabled_text = "✅ Да" if schedule.enabled else "❌ Нет"
-                schedule_info = f"📧 <b>Рассылка:</b> {enabled_text}\n"
+        if schedule:
+            schedule_enabled = schedule.enabled
+            enabled_text = "✅ Да" if schedule.enabled else "❌ Нет"
+            schedule_info = f"📧 <b>Рассылка:</b> {enabled_text}\n"
 
-                if schedule.enabled and schedule.next_run_at:
-                    # Конвертируем next_run_at в локальное время для отображения
-                    next_run_local = TimeZoneService.convert_to_local_time(
-                        schedule.next_run_at
-                    )
-                    next_run_str = next_run_local.strftime("%d.%m.%Y в %H:%M")
-                    schedule_info += f"⏰ <b>Следующая рассылка:</b> {next_run_str}"
-                elif schedule.enabled:
-                    schedule_info += "⏰ <b>Следующая рассылка:</b> не запланирована"
-            else:
-                schedule_info = (
-                    "📧 <b>Рассылка:</b> ❌ Нет\n"
-                    "⏰ <b>Следующая рассылка:</b> не настроена"
+            if schedule.enabled and schedule.next_run_at:
+                # Конвертируем next_run_at в локальное время для отображения
+                next_run_local = TimeZoneService.convert_to_local_time(
+                    schedule.next_run_at
                 )
+                next_run_str = next_run_local.strftime("%d.%m.%Y в %H:%M")
+                schedule_info += f"⏰ <b>Следующая рассылка:</b> {next_run_str}"
+            elif schedule.enabled:
+                schedule_info += "⏰ <b>Следующая рассылка:</b> не запланирована"
+        else:
+            schedule_info = (
+                "📧 <b>Рассылка:</b> ❌ Нет\n⏰ <b>Следующая рассылка:</b> не настроена"
+            )
 
         text = Dialog.Chat.ARCHIVE_CHANNEL_EXISTS.format(
             title=chat.title, schedule_info=schedule_info
@@ -177,20 +170,13 @@ async def archive_toggle_schedule_handler(
         return
 
     try:
-        # Получаем пользователя и расписание
-        user_service: UserService = container.resolve(UserService)
+        # Получаем расписание
         schedule_service: ReportScheduleService = container.resolve(
             ReportScheduleService
         )
         chat_service: ChatService = container.resolve(ChatService)
 
-        user = await user_service.get_user(tg_id=str(callback.from_user.id))
-        if not user:
-            logger.error("Пользователь не найден: tg_id=%s", callback.from_user.id)
-            await callback.answer("❌ Ошибка: пользователь не найден", show_alert=True)
-            return
-
-        schedule = await schedule_service.get_schedule(user_id=user.id, chat_id=chat_id)
+        schedule = await schedule_service.get_schedule(chat_id=chat_id)
 
         if not schedule:
             await callback.answer(
@@ -202,7 +188,7 @@ async def archive_toggle_schedule_handler(
         # Переключаем рассылку
         new_enabled = not schedule.enabled
         updated_schedule = await schedule_service.toggle_schedule(
-            user_id=user.id, chat_id=chat_id, enabled=new_enabled
+            chat_id=chat_id, enabled=new_enabled
         )
 
         if not updated_schedule:
