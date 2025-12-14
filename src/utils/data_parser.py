@@ -1,3 +1,4 @@
+from datetime import datetime, time
 from typing import Optional
 
 
@@ -30,3 +31,10 @@ def parse_message_link(text: str) -> tuple[str, int] | None:
         chat_id = f"@{chat_tgid}"
 
     return chat_id, message_id
+
+
+def parse_time(text: str) -> Optional[time]:
+    try:
+        return datetime.strptime(text, "%H:%M").time()
+    except ValueError:
+        return None
