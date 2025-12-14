@@ -19,6 +19,7 @@ dependencies = [
     "pytz>=2025.2",
     "redis[asyncio]>=6.4.0",
     "sqlalchemy[asyncio]>=2.0.40",
+    "taskiq-redis>=1.2.0",
     "uvicorn>=0.37.0",
 ]
 
