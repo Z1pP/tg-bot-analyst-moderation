@@ -102,7 +102,7 @@ async def archive_channel_setting_handler(
 
         if schedule:
             schedule_enabled = schedule.enabled
-            enabled_text = "✅ Да" if schedule.enabled else "❌ Нет"
+            enabled_text = "🟢 Включена" if schedule.enabled else "🔴 Выключена"
             schedule_info = f"📧 <b>Рассылка:</b> {enabled_text}\n"
 
             if schedule.enabled and schedule.next_run_at:
@@ -115,9 +115,7 @@ async def archive_channel_setting_handler(
             elif schedule.enabled:
                 schedule_info += "⏰ <b>Следующая рассылка:</b> не запланирована"
         else:
-            schedule_info = (
-                "📧 <b>Рассылка:</b> ❌ Нет\n⏰ <b>Следующая рассылка:</b> не настроена"
-            )
+            schedule_info = "📧 <b>Рассылка:</b> 🔴 Выключена\n⏰ <b>Следующая рассылка:</b> не настроена"
 
         text = Dialog.Chat.ARCHIVE_CHANNEL_EXISTS.format(
             title=chat.title, schedule_info=schedule_info
