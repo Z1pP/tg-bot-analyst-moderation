@@ -335,26 +335,31 @@ def archive_channel_setting_ikb(
                 text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_REBIND,
                 callback_data=CallbackData.Chat.ARCHIVE_BIND_INSTRUCTION,
             ),
-            InlineKeyboardButton(
-                text=InlineButtons.ChatButtons.ARCHIVE_TIME_SETTING,
-                callback_data=CallbackData.Chat.ARCHIVE_TIME_SETTING,
-            ),
-            width=2,
         )
 
-        # Добавляем кнопку переключения рассылки, если расписание существует
         if schedule_enabled is not None:
             toggle_text = (
                 InlineButtons.ChatButtons.ARCHIVE_SCHEDULE_DISABLE
                 if schedule_enabled
                 else InlineButtons.ChatButtons.ARCHIVE_SCHEDULE_ENABLE
             )
+
             builder.row(
                 InlineKeyboardButton(
                     text=toggle_text,
                     callback_data=CallbackData.Chat.ARCHIVE_TOGGLE_SCHEDULE,
-                )
+                ),
             )
+
+        builder.row(
+            InlineKeyboardButton(
+                text=InlineButtons.ChatButtons.ARCHIVE_TIME_SETTING,
+                callback_data=CallbackData.Chat.ARCHIVE_TIME_SETTING,
+            ),
+        )
+
+        builder.adjust(1, 2, 1)
+
     else:
         builder.row(
             InlineKeyboardButton(
