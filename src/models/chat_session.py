@@ -1,7 +1,10 @@
+from datetime import time
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import ForeignKey, Index, String
+from sqlalchemy import ForeignKey, Index, Integer, String, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from constants.work_time import END_TIME, START_TIME, TOLERANCE
 
 from .base import BaseModel
 
@@ -22,6 +25,7 @@ class ChatSession(BaseModel):
         unique=True,
         nullable=False,
     )
+
     title: Mapped[str] = mapped_column(
         String(),
         nullable=True,
@@ -32,6 +36,24 @@ class ChatSession(BaseModel):
         ForeignKey("chat_sessions.chat_id", ondelete="SET NULL"),
         nullable=True,
         doc="ID of the chat to which moderation reports are sent.",
+    )
+
+    start_time: Mapped[time] = mapped_column(
+        Time,
+        default=START_TIME,
+        doc="Start work time for report filtering. Default is global START_TIME.",
+    )
+
+    end_time: Mapped[time] = mapped_column(
+        Time,
+        default=END_TIME,
+        doc="End work time for report filtering. Default is global END_TIME.",
+    )
+
+    tolerance: Mapped[int] = mapped_column(
+        Integer,
+        default=TOLERANCE,
+        doc="Tolerance for report filtering. Default is global TOLERANCE.",
     )
 
     # Relationships
