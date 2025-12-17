@@ -402,3 +402,47 @@ def cancel_archive_time_setting_ikb() -> InlineKeyboardMarkup:
         )
     )
     return builder.as_markup()
+
+
+def work_hours_menu_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура меню выбора параметра для настройки времени сбора данных"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CHANGE_WORK_START,
+            callback_data=CallbackData.Chat.CHANGE_WORK_START,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CHANGE_WORK_END,
+            callback_data=CallbackData.Chat.CHANGE_WORK_END,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CHANGE_TOLERANCE,
+            callback_data=CallbackData.Chat.CHANGE_TOLERANCE,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CANCEL_WORK_HOURS,
+            callback_data=CallbackData.Chat.CANCEL_WORK_HOURS_SETTING,
+        ),
+    )
+
+    return builder.as_markup()
+
+
+def cancel_work_hours_setting_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура с кнопкой отмены для настройки времени сбора данных"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CANCEL_WORK_HOURS,
+            callback_data=CallbackData.Chat.CANCEL_WORK_HOURS_SETTING,
+        )
+    )
+    return builder.as_markup()
