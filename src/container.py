@@ -36,6 +36,7 @@ from services import (
     ReportScheduleService,
     UserService,
 )
+from services.analytics_buffer_service import AnalyticsBufferService
 from services.caching import ICache, RedisCache
 from services.categories import CategoryService
 from services.release_note_service import ReleaseNoteService
@@ -191,6 +192,9 @@ class ContainerSetup:
         container.register(ReleaseNoteService)
         container.register(ReportScheduleService)
         container.register(TaskiqSchedulerService)
+        container.register(
+            AnalyticsBufferService, lambda: AnalyticsBufferService(settings.REDIS_URL)
+        )
 
     @staticmethod
     def _register_usecases(container: Container) -> None:
