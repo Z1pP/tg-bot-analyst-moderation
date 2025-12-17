@@ -126,17 +126,6 @@ class GetChatReportUseCase:
             tracked_user_ids=tracked_users_ids,
         )
 
-        if not chat_data.messages and not chat_data.reactions:
-            return ReportResultDTO(
-                users_stats=[],
-                chat_title=chat.title or "",
-                start_date=dto.start_date,
-                end_date=dto.end_date,
-                is_single_day=False,
-                working_hours=0.0,
-                error_message=ReportDialogs.NO_DATA_FOR_REPORT,
-            )
-
         is_single_day = self._is_single_day_report(
             selected_period=dto.selected_period,
             start_date=dto.start_date,
