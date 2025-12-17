@@ -1,7 +1,7 @@
 from datetime import datetime, time, timedelta
 from typing import Optional, Tuple
 
-from constants.work_time import TOLERANCE, WORK_END, WORK_START
+from constants.work_time import END_TIME, START_TIME, TOLERANCE
 from models import ChatMessage, MessageReply
 
 from .time_service import TimeZoneService
@@ -41,11 +41,11 @@ class WorkTimeService:
         """
         # Вычисляем границы рабочего времени с учетом допуска
         start_with_tolerance = WorkTimeService._adjust_time_with_tolerance(
-            base_time=work_start or WORK_START,
+            base_time=work_start or START_TIME,
             delta=-(tolerance or TOLERANCE),
         )
         end_with_tolerance = WorkTimeService._adjust_time_with_tolerance(
-            base_time=work_end or WORK_END,
+            base_time=work_end or END_TIME,
             delta=tolerance or TOLERANCE,
         )
 
@@ -99,8 +99,8 @@ class WorkTimeService:
         Returns:
             Отфильтрованный список элементов, созданных в рабочее время
         """
-        start_work_time = cls._adjust_time_with_tolerance(WORK_START, -TOLERANCE)
-        end_work_time = cls._adjust_time_with_tolerance(WORK_END, TOLERANCE)
+        start_work_time = cls._adjust_time_with_tolerance(START_TIME, -TOLERANCE)
+        end_work_time = cls._adjust_time_with_tolerance(END_TIME, TOLERANCE)
 
         return [
             item
@@ -113,42 +113,58 @@ class WorkTimeService:
         cls,
         start_date: datetime,
         end_date: datetime,
+        *,
+        work_start: time,
+        work_end: time,
+        tolerance: int,
     ) -> Tuple[datetime, datetime]:
         """
-        Корректирует даты начала и конца в соответствии с рабочими часами.
+        Корректирует даты начала и конца в соответствии с рабочими часами и допустимым отклонением.
 
         Если время начала раньше рабочего времени (с учетом допуска),
         устанавливает его на начало рабочего времени.
         Если время окончания позже рабочего времени (с учетом допуска),
         устанавливает его на конец рабочего времени.
 
-        Args:
-            start_date: Дата и время начала
-            end_date: Дата и время окончания
-
-        Returns:
-            Кортеж из скорректированных дат начала и окончания
+            Args:
+                start_date: Дата и время начала
+                end_date: Дата и время окончания
+                work_start: Начало рабочего времени
+                work_end: Конец рабочего времени
+                tolerance: Допустимое отклонение в минутах
+            Returns:
+                Кортеж из скорректированных дат начала и окончания
         """
-        start_work_time = cls._adjust_time_with_tolerance(WORK_START, -TOLERANCE)
-        end_work_time = cls._adjust_time_with_tolerance(WORK_END, TOLERANCE)
+        start_work_time = cls._adjust_time_with_tolerance(
+            base_time=work_start,
+            delta=-tolerance,
+        )
+        end_work_time = cls._adjust_time_with_tolerance(
+            base_time=work_end,
+            delta=tolerance,
+        )
 
-        if start_date.time() < start_work_time:
-            start_date = start_date.replace(
-                hour=start_work_time.hour,
-                minute=start_work_time.minute,
-                second=start_work_time.second,
-            )
-        if end_date.time() > end_work_time:
-            end_date = end_date.replace(
-                hour=end_work_time.hour,
-                minute=end_work_time.minute,
-                second=end_work_time.second,
-            )
+        start_date = start_date.replace(
+            hour=start_work_time.hour,
+            minute=start_work_time.minute,
+            second=start_work_time.second,
+        )
+        end_date = end_date.replace(
+            hour=end_work_time.hour,
+            minute=end_work_time.minute,
+            second=end_work_time.second,
+        )
 
         return start_date, end_date
 
     @classmethod
-    def calculate_work_hours(cls, start_date: datetime, end_date: datetime) -> float:
+    def calculate_work_hours(
+        cls,
+        start_date: datetime,
+        end_date: datetime,
+        work_start: Optional[time] = None,
+        work_end: Optional[time] = None,
+    ) -> float:
         """
         Рассчитывает количество рабочих часов между двумя датами.
 
@@ -157,6 +173,8 @@ class WorkTimeService:
         Args:
             start_date: Начальная дата
             end_date: Конечная дата
+            work_start: Начало рабочего времени (по умолчанию START_TIME)
+            work_end: Конец рабочего времени (по умолчанию END_TIME)
 
         Returns:
             Количество рабочих часов, округленное до 2 знаков после запятой
@@ -171,9 +189,9 @@ class WorkTimeService:
         elif start_date.tzinfo is None and end_date.tzinfo is not None:
             start_date = start_date.replace(tzinfo=end_date.tzinfo)
 
-        # Используем точные границы рабочего времени без отклонения
-        work_start_time = WORK_START
-        work_end_time = WORK_END
+        # Используем переданные или глобальные границы рабочего времени
+        work_start_time = work_start or START_TIME
+        work_end_time = work_end or END_TIME
 
         # Рассчитываем количество рабочих часов в полном рабочем дне
         work_hours_per_day = (work_end_time.hour + work_end_time.minute / 60) - (
