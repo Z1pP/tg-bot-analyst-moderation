@@ -88,7 +88,7 @@ from usecases.report import (
     GetAllUsersReportUseCase,
     GetBreaksDetailReportUseCase,
     GetChatBreaksDetailReportUseCase,
-    GetReportOnSpecificChatUseCase,
+    GetChatReportUseCase,
     GetSingleUserReportUseCase,
     SendDailyChatReportsUseCase,
 )
@@ -276,7 +276,7 @@ class ContainerSetup:
             GetBreaksDetailReportUseCase,
             GetAllUsersReportUseCase,
             GetAllUsersBreaksDetailReportUseCase,
-            GetReportOnSpecificChatUseCase,
+            GetChatReportUseCase,
             GetChatBreaksDetailReportUseCase,
             GetDailyTopUsersUseCase,
             SendDailyChatReportsUseCase,
