@@ -271,6 +271,10 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.GET_DAILY_RATING,
         ),
         InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.REPORT_TIME_SETTING,
+            callback_data=CallbackData.Chat.REPORT_TIME_SETTING,
+        ),
+        InlineKeyboardButton(
             text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_SETTING,
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         ),
