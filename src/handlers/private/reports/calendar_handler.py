@@ -194,7 +194,7 @@ async def handle_confirm_action(
 
     # В зависимости от state вызываем нужную функцию генерации отчета
     if current_state == ChatStateManager.selecting_custom_period:
-        from .chat.chat_report_handler import generate_and_send_report
+        from .chat.chat_report_handler import _render_report_view
 
         chat_id = user_data.get("chat_id")
         if not chat_id:
@@ -205,13 +205,12 @@ async def handle_confirm_action(
 
         await callback.message.edit_text(text=Dialog.Calendar.GENERATING_REPORT)
 
-        await generate_and_send_report(
+        await _render_report_view(
             callback=callback,
             state=state,
+            chat_id=chat_id,
             start_date=cal_start,
             end_date=cal_end,
-            chat_id=chat_id,
-            admin_tg_id=callback.from_user.id,
         )
 
     elif current_state == SingleUserReportStates.selecting_custom_period:
