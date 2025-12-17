@@ -7,6 +7,7 @@ from aiogram.types import CallbackQuery
 
 from constants import Dialog
 from constants.callback import CallbackData
+from constants.period import TimePeriod
 from keyboards.inline import CalendarKeyboard
 from keyboards.inline.time_period import (
     time_period_ikb_all_users,
@@ -214,7 +215,7 @@ async def handle_confirm_action(
         )
 
     elif current_state == SingleUserReportStates.selecting_custom_period:
-        from .single_user.single_user_report_handler import generate_and_send_report
+        from .single_user.single_user_report_handler import _render_report_view
 
         user_id = user_data.get("user_id")
         if not user_id:
@@ -227,13 +228,13 @@ async def handle_confirm_action(
         # Редактируем сообщение с календарем
         await callback.message.edit_text(text=Dialog.Calendar.GENERATING_REPORT)
 
-        await generate_and_send_report(
+        await _render_report_view(
             callback=callback,
             state=state,
             user_id=user_id,
             start_date=cal_start,
             end_date=cal_end,
-            admin_tg_id=callback.from_user.id,
+            selected_period=TimePeriod.CUSTOM.value,
         )
 
     elif current_state == AllUsersReportStates.selecting_custom_period:
