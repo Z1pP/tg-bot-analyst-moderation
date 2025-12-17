@@ -14,12 +14,11 @@ from dto.report import AllUsersReportDTO
 from keyboards.inline import CalendarKeyboard, all_users_actions_ikb
 from keyboards.inline.report import order_details_kb_all_users
 from keyboards.inline.time_period import time_period_ikb_all_users
+from presenters import AllUsersReportPresenter
 from services.time_service import TimeZoneService
-from services.work_time_service import WorkTimeService
 from states import AllUsersReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.report import GetAllUsersReportUseCase
-from utils.exception_handler import handle_exception
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
@@ -139,7 +138,7 @@ async def process_period_selection_callback(
     start_date, end_date = TimePeriod.to_datetime(period_text)
 
     try:
-        await generate_and_send_report(
+        await _render_all_users_report(
             callback=callback,
             state=state,
             start_date=start_date,
@@ -162,15 +161,24 @@ async def process_period_selection_callback(
         return
 
 
-async def generate_and_send_report(
+async def _render_all_users_report(
     callback: CallbackQuery,
     state: FSMContext,
     start_date: datetime,
     end_date: datetime,
     selected_period: str | None = None,
-    admin_tg_id: int | None = None,
 ) -> None:
-    """Генерирует и отправляет отчет."""
+    """
+    Presentation Layer: форматирует и отправляет отчет пользователю.
+    Управляет FSM состоянием и клавиатурами.
+
+    Args:
+        callback: Callback query
+        state: FSM context
+        start_date: Начальная дата
+        end_date: Конечная дата
+        selected_period: Текстовый период (например, "today", "yesterday")
+    """
     try:
         logger.info(
             "Начало генерации отчета за период %s - %s",
@@ -178,23 +186,35 @@ async def generate_and_send_report(
             end_date,
         )
 
-        adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
-            start_date, end_date
-        )
-
         report_dto = AllUsersReportDTO(
-            user_tg_id=str(admin_tg_id or callback.from_user.id),
-            start_date=adjusted_start,
-            end_date=adjusted_end,
+            user_tg_id=str(callback.from_user.id),
+            start_date=start_date,
+            end_date=end_date,
             selected_period=selected_period,
         )
 
         usecase: GetAllUsersReportUseCase = container.resolve(GetAllUsersReportUseCase)
-        is_single_day = usecase.is_single_day_report(report_dto)
-        report_parts = await usecase.execute(report_dto)
+        result = await usecase.execute(report_dto)
+
+        logger.info("Отчет сгенерирован")
+
+        # Форматируем результат через Presenter
+        presenter = AllUsersReportPresenter()
+        report_parts = presenter.format_report(result)
+
+        if result.error_message:
+            # Если есть ошибка, presenter уже вернул её в report_parts
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=report_parts[0] if report_parts else result.error_message,
+                reply_markup=all_users_actions_ikb(),
+            )
+            return
 
         # Сохраняем report_dto для детализации (только для многодневных отчетов)
-        if not is_single_day:
+        if not result.is_single_day:
             await state.update_data(all_users_report_dto=report_dto)
 
         await log_and_set_state(
@@ -210,7 +230,7 @@ async def generate_and_send_report(
             text=full_report,
             parse_mode=ParseMode.HTML,
             reply_markup=order_details_kb_all_users(
-                show_details=not is_single_day,
+                show_details=not result.is_single_day,
             ),
         )
 
@@ -221,4 +241,10 @@ async def generate_and_send_report(
             e,
             exc_info=True,
         )
-        await handle_exception(callback.message, e, "generate_and_send_report")
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Report.ERROR_GENERATING_REPORT,
+            reply_markup=all_users_actions_ikb(),
+        )
