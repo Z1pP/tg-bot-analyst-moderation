@@ -238,17 +238,17 @@ async def handle_confirm_action(
         )
 
     elif current_state == AllUsersReportStates.selecting_custom_period:
-        from .all_users.all_users_report_handler import generate_and_send_report
+        from .all_users.all_users_report_handler import _render_all_users_report
 
         # Редактируем сообщение с календарем
         await callback.message.edit_text(text=Dialog.Calendar.GENERATING_REPORT)
 
-        await generate_and_send_report(
+        await _render_all_users_report(
             callback=callback,
             state=state,
             start_date=cal_start,
             end_date=cal_end,
-            admin_tg_id=callback.from_user.id,
+            selected_period=TimePeriod.CUSTOM.value,
         )
 
 
