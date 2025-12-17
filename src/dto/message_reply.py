@@ -15,6 +15,7 @@ class CreateMessageReplyDTO:
     original_message_date: datetime
     reply_message_date: datetime
     response_time_seconds: int
+    reply_message_id_str: str = ""  # Telegram message_id (строка) для буферизации
 
 
 @dataclass
