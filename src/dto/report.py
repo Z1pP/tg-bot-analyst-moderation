@@ -90,6 +90,43 @@ class UserStatsDTO:
 
 
 @dataclass(frozen=True)
+class SingleUserDayStats:
+    """Статистика пользователя за один день"""
+
+    first_message_time: Optional[datetime]
+    first_reaction_time: Optional[datetime]
+    avg_messages_per_hour: float
+    total_messages: int
+
+
+@dataclass(frozen=True)
+class SingleUserMultiDayStats:
+    """Статистика пользователя за несколько дней"""
+
+    avg_first_message_time: Optional[str]  # "HH:MM"
+    avg_first_reaction_time: Optional[str]
+    avg_messages_per_hour: float
+    avg_messages_per_day: float
+    total_messages: int
+
+
+@dataclass(frozen=True)
+class SingleUserReportResultDTO:
+    """Результат UseCase с сырыми данными отчета по пользователю"""
+
+    username: str
+    user_id: int
+    start_date: datetime
+    end_date: datetime
+    is_single_day: bool
+    day_stats: Optional[SingleUserDayStats]
+    multi_day_stats: Optional[SingleUserMultiDayStats]
+    replies_stats: RepliesStats
+    breaks: List[str]  # уже отформатированные из BreakAnalysisService
+    error_message: Optional[str] = None
+
+
+@dataclass(frozen=True)
 class ReportResultDTO:
     """Результат UseCase с сырыми данными отчета"""
 
