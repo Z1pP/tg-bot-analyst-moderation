@@ -77,7 +77,11 @@ class SendDailyChatReportsUseCase:
         start_date, end_date = TimePeriod.to_datetime(period)
 
         adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
-            start_date, end_date
+            start_date,
+            end_date,
+            work_start=chat.start_time,
+            work_end=chat.end_time,
+            tolerance=chat.tolerance,
         )
 
         # Обработка чата
@@ -225,6 +229,7 @@ class SendDailyChatReportsUseCase:
                 reactions=reactions,
                 start_date=start_date,
                 end_date=end_date,
+                chat=chat,
             )
             report_parts.append(stats)
 
@@ -237,6 +242,7 @@ class SendDailyChatReportsUseCase:
         reactions: List[MessageReaction],
         start_date: datetime,
         end_date: datetime,
+        chat: ChatSession,
     ) -> str:
         # Группировка данных по пользователям
         users_data = defaultdict(
@@ -290,6 +296,7 @@ class SendDailyChatReportsUseCase:
                 data=stats,
                 start_date=start_date,
                 end_date=end_date,
+                chat=chat,
             )
             user_reports.append(user_report)
 
@@ -299,7 +306,7 @@ class SendDailyChatReportsUseCase:
         return "\n\n".join(user_reports)
 
     def _generate_user_report(
-        self, data: dict, start_date: datetime, end_date: datetime
+        self, data: dict, start_date: datetime, end_date: datetime, chat: ChatSession
     ) -> str:
         username = data.get("username")
         messages = data.get("messages")
@@ -310,7 +317,9 @@ class SendDailyChatReportsUseCase:
 
         # Основная статистика
         parts.append(
-            self._generate_single_day_stats(messages, reactions, start_date, end_date)
+            self._generate_single_day_stats(
+                messages, reactions, start_date, end_date, chat
+            )
         )
 
         # Статистика ответов
@@ -327,6 +336,7 @@ class SendDailyChatReportsUseCase:
         reactions: List[MessageReaction],
         start_date: datetime,
         end_date: datetime,
+        chat: ChatSession,
     ) -> str:
         stats = []
 
@@ -346,7 +356,10 @@ class SendDailyChatReportsUseCase:
         msg_count = len(messages)
         # Вычисляем рабочие часы один раз
         working_hours = WorkTimeService.calculate_work_hours(
-            start_date=start_date, end_date=end_date
+            start_date=start_date,
+            end_date=end_date,
+            work_start=chat.start_time,
+            work_end=chat.end_time,
         )
         avg_per_hour = round(msg_count / working_hours, 2) if working_hours > 0 else 0
 
