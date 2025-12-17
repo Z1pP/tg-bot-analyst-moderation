@@ -1,4 +1,5 @@
 import logging
+from datetime import time
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -241,6 +242,61 @@ class ChatRepository:
                     "Ошибка при привязке архивного чата: work_chat_id=%s, archive_chat_tgid=%s, error=%s",
                     work_chat_id,
                     archive_chat_tgid,
+                    e,
+                )
+                await session.rollback()
+                raise e
+
+    async def update_work_hours(
+        self,
+        chat_id: int,
+        start_time: Optional[time] = None,
+        end_time: Optional[time] = None,
+        tolerance: Optional[int] = None,
+    ) -> Optional[ChatSession]:
+        """
+        Обновляет рабочие часы чата для фильтрации данных в отчетах.
+
+        Args:
+            chat_id: ID чата из БД
+            start_time: Время начала рабочего дня (опционально)
+            end_time: Время конца рабочего дня (опционально)
+            tolerance: Допустимое отклонение в минутах (опционально)
+
+        Returns:
+            Обновленный чат или None если чат не найден
+        """
+        async with self._db.session() as session:
+            try:
+                chat = await session.get(ChatSession, chat_id)
+                if not chat:
+                    logger.error(
+                        "Чат не найден для обновления рабочих часов: chat_id=%s",
+                        chat_id,
+                    )
+                    return None
+
+                if start_time is not None:
+                    chat.start_time = start_time
+                if end_time is not None:
+                    chat.end_time = end_time
+                if tolerance is not None:
+                    chat.tolerance = tolerance
+
+                await session.commit()
+                await session.refresh(chat)
+                logger.info(
+                    "Обновлены рабочие часы чата: chat_id=%s, start_time=%s, end_time=%s, tolerance=%s",
+                    chat_id,
+                    start_time,
+                    end_time,
+                    tolerance,
+                )
+                return chat
+            except Exception as e:
+                logger.error(
+                    "Ошибка при обновлении рабочих часов чата: chat_id=%s, %s",
+                    chat_id,
                     e,
                 )
                 await session.rollback()
