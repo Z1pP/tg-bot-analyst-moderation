@@ -17,6 +17,7 @@ from .user_states import (
     UsernameStates,
     UserStateManager,
 )
+from .work_hours import WorkHoursState
 
 __all__ = [
     "ChatStateManager",
@@ -34,4 +35,5 @@ __all__ = [
     "CategoryStateManager",
     "RoleState",
     "ChatArchiveState",
+    "WorkHoursState",
 ]
