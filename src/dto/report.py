@@ -127,6 +127,29 @@ class SingleUserReportResultDTO:
 
 
 @dataclass(frozen=True)
+class AllUsersUserStatsResult:
+    """Статистика одного пользователя в отчете по всем пользователям"""
+
+    user_id: int
+    username: str
+    day_stats: Optional[SingleUserDayStats]  # переиспользуем существующий
+    multi_day_stats: Optional[SingleUserMultiDayStats]  # переиспользуем существующий
+    replies_stats: RepliesStats
+    breaks: List[str]  # уже отформатированные из BreakAnalysisService
+
+
+@dataclass(frozen=True)
+class AllUsersReportResultDTO:
+    """Результат UseCase с сырыми данными отчета по всем пользователям"""
+
+    start_date: datetime
+    end_date: datetime
+    is_single_day: bool
+    users_stats: List[AllUsersUserStatsResult]
+    error_message: Optional[str] = None
+
+
+@dataclass(frozen=True)
 class ReportResultDTO:
     """Результат UseCase с сырыми данными отчета"""
 
