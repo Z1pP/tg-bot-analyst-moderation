@@ -63,7 +63,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql  
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     logging:
       driver: "json-file"
       options:
@@ -92,6 +92,79 @@ services:
     container_name: cloudflared_tunnel
     restart: unless-stopped
     command: tunnel --url http://bot:8000 --metrics 0.0.0.0:4040
+    networks:
+      - botnet
+
+  scheduler:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: python src/taskiq_scheduler_entrypoint.py
+    env_file:
+      - .env
+    environment:
+      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
+      - DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/dev_analytics_bot
+      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
+      - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
+      - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - botnet
+
+  analytics_scheduler:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: python src/analytics_scheduler_entrypoint.py
+    env_file:
+      - .env
+    environment:
+      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
+      - DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/dev_analytics_bot
+      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
+      - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
+      - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - botnet
+
+  worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: taskiq worker scheduler.taskiq:broker tasks.report_tasks tasks.analytics_tasks
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app/src
+      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
+      - DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/dev_analytics_bot
+      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
+      - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
+      - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./logs:/app/logs
     networks:
       - botnet
 

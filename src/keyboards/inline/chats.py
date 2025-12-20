@@ -271,6 +271,10 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.GET_DAILY_RATING,
         ),
         InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.REPORT_TIME_SETTING,
+            callback_data=CallbackData.Chat.REPORT_TIME_SETTING,
+        ),
+        InlineKeyboardButton(
             text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_SETTING,
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         ),
@@ -315,6 +319,7 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
 def archive_channel_setting_ikb(
     archive_chat: Optional[ChatSession] = None,
     invite_link: Optional[str] = None,
+    schedule_enabled: Optional[bool] = None,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
@@ -331,11 +336,34 @@ def archive_channel_setting_ikb(
                 url=url,
             ),
             InlineKeyboardButton(
-                text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_UNBIND,
+                text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_REBIND,
                 callback_data=CallbackData.Chat.ARCHIVE_BIND_INSTRUCTION,
             ),
-            width=2,
         )
+
+        if schedule_enabled is not None:
+            toggle_text = (
+                InlineButtons.ChatButtons.ARCHIVE_SCHEDULE_DISABLE
+                if schedule_enabled
+                else InlineButtons.ChatButtons.ARCHIVE_SCHEDULE_ENABLE
+            )
+
+            builder.row(
+                InlineKeyboardButton(
+                    text=toggle_text,
+                    callback_data=CallbackData.Chat.ARCHIVE_TOGGLE_SCHEDULE,
+                ),
+            )
+
+        builder.row(
+            InlineKeyboardButton(
+                text=InlineButtons.ChatButtons.ARCHIVE_TIME_SETTING,
+                callback_data=CallbackData.Chat.ARCHIVE_TIME_SETTING,
+            ),
+        )
+
+        builder.adjust(1, 2, 1)
+
     else:
         builder.row(
             InlineKeyboardButton(
@@ -358,8 +386,63 @@ def archive_bind_instruction_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text="⬅️ Вернуться",
+            text=InlineButtons.ChatButtons.BACK_TO_ARCHIVE_SETTING,
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
+        )
+    )
+    return builder.as_markup()
+
+
+def cancel_archive_time_setting_ikb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_ARCHIVE_SETTING,
+            callback_data=CallbackData.Chat.ARCHIVE_SETTING,
+        )
+    )
+    return builder.as_markup()
+
+
+def work_hours_menu_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура меню выбора параметра для настройки времени сбора данных"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CHANGE_WORK_START,
+            callback_data=CallbackData.Chat.CHANGE_WORK_START,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CHANGE_WORK_END,
+            callback_data=CallbackData.Chat.CHANGE_WORK_END,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CHANGE_TOLERANCE,
+            callback_data=CallbackData.Chat.CHANGE_TOLERANCE,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CANCEL_WORK_HOURS,
+            callback_data=CallbackData.Chat.CANCEL_WORK_HOURS_SETTING,
+        ),
+    )
+
+    return builder.as_markup()
+
+
+def cancel_work_hours_setting_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура с кнопкой отмены для настройки времени сбора данных"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CANCEL_WORK_HOURS,
+            callback_data=CallbackData.Chat.CANCEL_WORK_HOURS_SETTING,
         )
     )
     return builder.as_markup()

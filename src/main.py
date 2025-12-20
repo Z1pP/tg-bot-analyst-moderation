@@ -106,7 +106,9 @@ async def run_webhook():
 
 async def run_polling():
     """Запускает бота в режиме long polling."""
+
     await init_bot()
+
     logger.info("Удаляем webhook...")
     await bot.delete_webhook(drop_pending_updates=True)
 
@@ -114,6 +116,7 @@ async def run_polling():
     await set_bot_commands(bot)
 
     logger.info("Запуск polling...")
+
     await dp.start_polling(bot)
 
 

@@ -1,3 +1,4 @@
+from .archive_chat import ChatArchiveState
 from .banhammer_states import (
     AmnestyStates,
     BanHammerStates,
@@ -16,6 +17,7 @@ from .user_states import (
     UsernameStates,
     UserStateManager,
 )
+from .work_hours import WorkHoursState
 
 __all__ = [
     "ChatStateManager",
@@ -32,4 +34,6 @@ __all__ = [
     "MessageManagerState",
     "CategoryStateManager",
     "RoleState",
+    "ChatArchiveState",
+    "WorkHoursState",
 ]

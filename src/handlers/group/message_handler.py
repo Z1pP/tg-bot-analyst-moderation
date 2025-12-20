@@ -83,10 +83,11 @@ async def process_reply_message(
         original_message_url = f"https://t.me/c/{chat.chat_id.lstrip('-')}/{message.reply_to_message.message_id}"
 
         # DTO для связи reply с оригинальным сообщением
+        # Используем message_id (Telegram string) вместо DB id, так как сообщение еще не сохранено
         reply_dto = CreateMessageReplyDTO(
             chat_id=chat.id,
             original_message_url=original_message_url,
-            reply_message_id=saved_message.id,
+            reply_message_id=0,  # Временное значение, будет заменено в воркере по message_id
             reply_user_id=sender.id,
             original_message_date=message_date,
             reply_message_date=reply_to_message_date,
@@ -94,6 +95,8 @@ async def process_reply_message(
                 message_date - reply_to_message_date
             ).total_seconds(),
         )
+        # Сохраняем message_id для использования в воркере
+        reply_dto.reply_message_id_str = str(message.message_id)
 
         # Сохраняем связь в MessageReply
         reply_usecase: SaveReplyMessageUseCase = container.resolve(

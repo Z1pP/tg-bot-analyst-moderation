@@ -1,4 +1,4 @@
-
+from .amnesty import AmnestyUserDTO, CancelWarnResultDTO
 from .category_dto import CategoryDTO, CreateCategoryDTO, UpdateCategoryDTO
 from .chat_dto import ChatDTO, DbChatDTO, UserChatsDTO
 from .daily_activity import (
@@ -20,11 +20,9 @@ from .report import (
 )
 from .template_dto import TemplateDTO, TemplateSearchResultDTO, UpdateTemplateTitleDTO
 from .user import CreateUserDTO, DbUserDTO, UpdateUserDTO, UserDTO
-from .amnesty import AmnestyUserDTO, CancelWarnResultDTO
 from .user_tracking import RemoveUserTrackingDTO, UserTrackingDTO
 
 __all__ = [
-
     # Category
     "CategoryDTO",
     "CreateCategoryDTO",
@@ -51,6 +49,7 @@ __all__ = [
     # Report
     "AVGReportDTO",
     "AllUsersReportDTO",
+    "ChatReportDTO",
     "ChatReportDTO",
     "DailyReportDTO",
     "SingleUserReportDTO",

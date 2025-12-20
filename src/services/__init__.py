@@ -3,6 +3,7 @@ from .chat import ArchiveBindService, ChatService
 from .messaging import BotMessageService
 from .permissions import BotPermissionService
 from .punishment_service import PunishmentService
+from .report_schedule_service import ReportScheduleService
 from .user import UserService
 
 __all__ = [
@@ -13,4 +14,5 @@ __all__ = [
     "UserService",
     "PunishmentService",
     "BotPermissionService",
+    "ReportScheduleService",
 ]

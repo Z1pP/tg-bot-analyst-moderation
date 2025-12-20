@@ -3,9 +3,11 @@ from datetime import datetime
 from typing import List
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import joinedload
 
 from database.session import DatabaseContextManager
+from dto.buffer import BufferedMessageDTO
 from dto.daily_activity import UserDailyActivityDTO
 from dto.message import CreateMessageDTO
 from models import ChatMessage, User
@@ -209,3 +211,62 @@ class MessageRepository:
             except Exception as e:
                 logger.error(f"Error getting messages by chats: {e}")
                 return []
+
+    async def bulk_create_messages(self, dtos: List[BufferedMessageDTO]) -> int:
+        """
+        Массовое создание сообщений с защитой от дубликатов.
+
+        Args:
+            dtos: Список DTO для создания сообщений
+
+        Returns:
+            Количество успешно вставленных записей
+        """
+        if not dtos:
+            return 0
+
+        async with self._db.session() as session:
+            try:
+                # Подготавливаем данные для bulk insert
+                mappings = [
+                    {
+                        "chat_id": dto.chat_id,
+                        "user_id": dto.user_id,
+                        "message_id": dto.message_id,
+                        "message_type": dto.message_type,
+                        "content_type": dto.content_type,
+                        "text": dto.text,
+                        "created_at": dto.created_at,
+                    }
+                    for dto in dtos
+                ]
+
+                # Используем PostgreSQL INSERT ... ON CONFLICT DO NOTHING
+                stmt = (
+                    insert(ChatMessage.__table__)
+                    .values(mappings)
+                    .on_conflict_do_nothing()
+                )
+
+                result = await session.execute(stmt)
+                await session.commit()
+
+                # Подсчитываем количество вставленных записей
+                # PostgreSQL возвращает количество затронутых строк
+                inserted_count = (
+                    result.rowcount if hasattr(result, "rowcount") else len(dtos)
+                )
+
+                logger.info(
+                    "Массово создано сообщений: %d из %d",
+                    inserted_count,
+                    len(dtos),
+                )
+                return inserted_count
+            except Exception as e:
+                logger.error(
+                    "Ошибка при массовом создании сообщений: %s", e, exc_info=True
+                )
+                await session.rollback()
+                # При ошибке возвращаем 0, данные останутся в Redis для повторной попытки
+                return 0

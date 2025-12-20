@@ -14,11 +14,10 @@ from keyboards.inline import CalendarKeyboard
 from keyboards.inline.chats import chat_actions_ikb
 from keyboards.inline.report import order_details_kb_chat
 from keyboards.inline.time_period import time_period_ikb_chat
+from presenters import ReportPresenter
 from services.time_service import TimeZoneService
-from services.work_time_service import WorkTimeService
 from states import ChatStateManager
-from usecases.report import GetReportOnSpecificChatUseCase
-from usecases.user_tracking import GetListTrackedUsersUseCase
+from usecases.report import GetChatReportUseCase
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
@@ -36,42 +35,7 @@ async def get_chat_statistics_handler(
     """Обработчик запроса на создание отчета по конкретному чату."""
     await callback.answer()
 
-    try:
-        tracked_users_usecase: GetListTrackedUsersUseCase = container.resolve(
-            GetListTrackedUsersUseCase
-        )
-        tracked_users = await tracked_users_usecase.execute(
-            admin_tgid=str(callback.from_user.id)
-        )
-    except Exception as e:
-        logger.error(
-            "Ошибка при получении списка отслеживаемых пользователей: %s",
-            e,
-            exc_info=True,
-        )
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.Report.ERROR_GET_TRACKED_USERS,
-            reply_markup=chat_actions_ikb(),
-        )
-        return
-
-    if not tracked_users:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.Report.NO_TRACKED_USERS,
-            reply_markup=chat_actions_ikb(),
-        )
-        logger.warning(
-            "Админ %s пытается получить отчет без отслеживаемых пользователей",
-            callback.from_user.username,
-        )
-        return
-
+    # Проверка tracked_users перенесена в UseCase
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
@@ -133,62 +97,48 @@ async def process_period_selection_callback(
         )
         return
 
-    start_date, end_date = TimePeriod.to_datetime(period=period_text)
-    logger.info(
-        "Генерация отчета по чату %s за период: %s - %s",
-        chat_id,
-        start_date,
-        end_date,
-    )
-
-    await generate_and_send_report(
-        callback,
-        state,
-        start_date,
-        end_date,
-        chat_id,
-        selected_period=period_text,
+    await _render_report_view(
+        callback=callback,
+        state=state,
+        chat_id=chat_id,
+        period_text=period_text,
     )
 
 
-async def generate_and_send_report(
+async def _render_report_view(
     callback: CallbackQuery,
     state: FSMContext,
-    start_date: datetime,
-    end_date: datetime,
     chat_id: int,
-    selected_period: str | None = None,
-    admin_tg_id: int | None = None,
+    period_text: str | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
 ) -> None:
-    """Генерирует и отправляет отчет по чату."""
+    """
+    Presentation Layer: форматирует и отправляет отчет пользователю.
+    Управляет FSM состоянием и клавиатурами.
 
-    user_id = admin_tg_id or callback.from_user.id
-
-    logger.info(
-        "Начало генерации отчета по чату %s за период %s - %s",
-        chat_id,
-        start_date,
-        end_date,
-    )
-
-    adjusted_start, adjusted_end = WorkTimeService.adjust_dates_to_work_hours(
-        start_date, end_date
-    )
+    Args:
+        callback: Callback query
+        state: FSM context
+        chat_id: ID чата
+        period_text: Текстовый период (например, "today", "yesterday")
+        start_date: Начальная дата для кастомного периода (из календаря)
+        end_date: Конечная дата для кастомного периода (из календаря)
+    """
+    # Для кастомных дат из календаря используем специальный период
+    selected_period = period_text or TimePeriod.CUSTOM.value
 
     report_dto = ChatReportDTO(
         chat_id=chat_id,
-        admin_tg_id=str(user_id),
-        start_date=adjusted_start,
-        end_date=adjusted_end,
+        admin_tg_id=str(callback.from_user.id),
         selected_period=selected_period,
+        start_date=start_date,
+        end_date=end_date,
     )
 
     try:
-        usecase: GetReportOnSpecificChatUseCase = container.resolve(
-            GetReportOnSpecificChatUseCase
-        )
-        is_single_day = usecase.is_single_day_report(report_dto)
-        report_parts = await usecase.execute(dto=report_dto)
+        usecase: GetChatReportUseCase = container.resolve(GetChatReportUseCase)
+        result = await usecase.execute(dto=report_dto)
     except Exception as e:
         logger.error(
             "Ошибка при генерации отчета по чату %s: %s",
@@ -205,19 +155,28 @@ async def generate_and_send_report(
         )
         return
 
-    logger.info(
-        "Отчет по чату %s сгенерирован, частей: %s",
-        chat_id,
-        len(report_parts),
-    )
+    # Форматируем результат через Presenter
+    presenter = ReportPresenter()
+    report_parts = presenter.format_report(result)
+
+    if result.error_message:
+        # Если есть ошибка, presenter уже вернул её в report_parts
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=report_parts[0] if report_parts else result.error_message,
+            reply_markup=chat_actions_ikb(),
+        )
+        return
 
     # Сохраняем report_dto для детализации (только для многодневных отчетов)
-    if not is_single_day:
+    if not result.is_single_day:
         await state.update_data(chat_report_dto=report_dto)
 
     # Объединяем все части отчета в один текст
     full_report = "\n\n".join(report_parts)
-    if not is_single_day:
+    if not result.is_single_day:
         full_report = f"{full_report}{Dialog.Report.CONTINUE_SELECT_PERIOD}"
 
     await safe_edit_message(
@@ -225,7 +184,7 @@ async def generate_and_send_report(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=full_report,
-        reply_markup=order_details_kb_chat(show_details=not is_single_day),
+        reply_markup=order_details_kb_chat(show_details=not result.is_single_day),
     )
 
     await log_and_set_state(

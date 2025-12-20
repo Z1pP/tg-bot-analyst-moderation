@@ -16,6 +16,8 @@ from services import ChatService
 from services.chat import ArchiveBindService
 from services.messaging import BotMessageService
 from services.permissions import BotPermissionService
+from services.report_schedule_service import ReportScheduleService
+from services.time_service import TimeZoneService
 from states import ChatStateManager
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
@@ -83,11 +85,41 @@ async def archive_channel_setting_handler(
                 reply_markup=archive_channel_setting_ikb(
                     archive_chat=chat.archive_chat or None,
                     invite_link=None,
+                    schedule_enabled=None,
                 ),
             )
             return
 
-        text = Dialog.Chat.ARCHIVE_CHANNEL_EXISTS.format(title=chat.title)
+        # Получаем информацию о расписании рассылки
+        schedule_service: ReportScheduleService = container.resolve(
+            ReportScheduleService
+        )
+
+        schedule_info = ""
+        schedule_enabled = None
+
+        schedule = await schedule_service.get_schedule(chat_id=chat_id)
+
+        if schedule:
+            schedule_enabled = schedule.enabled
+            enabled_text = "🟢 Включена" if schedule.enabled else "🔴 Выключена"
+            schedule_info = f"📧 <b>Рассылка:</b> {enabled_text}\n"
+
+            if schedule.enabled and schedule.next_run_at:
+                # Конвертируем next_run_at в локальное время для отображения
+                next_run_local = TimeZoneService.convert_to_local_time(
+                    schedule.next_run_at
+                )
+                next_run_str = next_run_local.strftime("%d.%m.%Y в %H:%M")
+                schedule_info += f"⏰ <b>Следующая рассылка:</b> {next_run_str}"
+            elif schedule.enabled:
+                schedule_info += "⏰ <b>Следующая рассылка:</b> не запланирована"
+        else:
+            schedule_info = "📧 <b>Рассылка:</b> 🔴 Выключена\n⏰ <b>Следующая рассылка:</b> не настроена"
+
+        text = Dialog.Chat.ARCHIVE_CHANNEL_EXISTS.format(
+            title=chat.title, schedule_info=schedule_info
+        )
 
         # Получаем invite ссылку через API только если все права есть
         bot_message_service: BotMessageService = container.resolve(BotMessageService)
@@ -97,6 +129,7 @@ async def archive_channel_setting_handler(
     else:
         text = Dialog.Chat.ARCHIVE_CHANNEL_MISSING.format(title=chat.title)
         invite_link = None
+        schedule_enabled = None
 
     await safe_edit_message(
         bot=callback.bot,
@@ -106,8 +139,108 @@ async def archive_channel_setting_handler(
         reply_markup=archive_channel_setting_ikb(
             archive_chat=chat.archive_chat or None,
             invite_link=invite_link,
+            schedule_enabled=schedule_enabled,
         ),
     )
+
+
+@router.callback_query(
+    F.data == CallbackData.Chat.ARCHIVE_TOGGLE_SCHEDULE,
+)
+async def archive_toggle_schedule_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
+    """Обработчик переключения рассылки."""
+    await callback.answer()
+
+    chat_id = await state.get_value("chat_id")
+
+    if not chat_id:
+        logger.error("chat_id не найден в state")
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.ERROR_GET_CHAT_WITH_ARCHIVE,
+            reply_markup=chats_management_ikb(),
+        )
+        return
+
+    try:
+        # Получаем расписание
+        schedule_service: ReportScheduleService = container.resolve(
+            ReportScheduleService
+        )
+        chat_service: ChatService = container.resolve(ChatService)
+
+        schedule = await schedule_service.get_schedule(chat_id=chat_id)
+
+        if not schedule:
+            await callback.answer(
+                "❌ Расписание не найдено. Сначала настройте время отправки.",
+                show_alert=True,
+            )
+            return
+
+        # Переключаем рассылку
+        new_enabled = not schedule.enabled
+        updated_schedule = await schedule_service.toggle_schedule(
+            chat_id=chat_id, enabled=new_enabled
+        )
+
+        if not updated_schedule:
+            await callback.answer(
+                "❌ Ошибка при обновлении расписания", show_alert=True
+            )
+            return
+
+        # Обновляем сообщение с новой информацией
+        chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
+        if not chat or not chat.archive_chat:
+            await callback.answer("❌ Чат не найден", show_alert=True)
+            return
+
+        # Формируем информацию о расписании
+        schedule_info = ""
+        schedule_enabled = updated_schedule.enabled
+        enabled_text = "✅ Да" if schedule_enabled else "❌ Нет"
+        schedule_info = f"📧 <b>Рассылка:</b> {enabled_text}\n"
+
+        if schedule_enabled and updated_schedule.next_run_at:
+            next_run_local = TimeZoneService.convert_to_local_time(
+                updated_schedule.next_run_at
+            )
+            next_run_str = next_run_local.strftime("%d.%m.%Y в %H:%M")
+            schedule_info += f"⏰ <b>Следующая рассылка:</b> {next_run_str}"
+        elif schedule_enabled:
+            schedule_info += "⏰ <b>Следующая рассылка:</b> не запланирована"
+
+        text = Dialog.Chat.ARCHIVE_CHANNEL_EXISTS.format(
+            title=chat.title, schedule_info=schedule_info
+        )
+
+        # Получаем invite ссылку
+        bot_message_service: BotMessageService = container.resolve(BotMessageService)
+        invite_link = await bot_message_service.get_chat_invite_link(
+            chat_tgid=chat.archive_chat.chat_id
+        )
+
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
+            reply_markup=archive_channel_setting_ikb(
+                archive_chat=chat.archive_chat or None,
+                invite_link=invite_link,
+                schedule_enabled=schedule_enabled,
+            ),
+        )
+
+    except Exception as e:
+        logger.error("Ошибка при переключении рассылки: %s", e, exc_info=True)
+        await callback.answer("❌ Произошла ошибка", show_alert=True)
 
 
 @router.callback_query(
@@ -203,7 +336,11 @@ async def archive_back_to_chat_actions_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Chat.CHAT_ACTIONS.format(title=chat.title),
+        text=Dialog.Chat.CHAT_ACTIONS.format(
+            title=chat.title,
+            start_time=chat.start_time.strftime("%H:%M"),
+            end_time=chat.end_time.strftime("%H:%M"),
+        ),
         reply_markup=chat_actions_ikb(),
     )
 

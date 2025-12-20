@@ -96,10 +96,17 @@ class InlineButtons:
         GET_DAILY_RATING = "🏆 Рейтинг за сутки"
         ARCHIVE_CHANNEL_SETTING = "⚙️ Настройка архив. канала"
         BACK_TO_SELECTION_CHAT = "⬅️ Вернуться к выбору чата"
-
-        ARCHIVE_CHANNEL_UNBIND = "🔄 Перепривязать"
+        REPORT_TIME_SETTING = "⏰ Настройка времени отчета"
+        CHANGE_WORK_START = "🕐 Изменить начало"
+        CHANGE_WORK_END = "🕐 Изменить конец"
+        CHANGE_TOLERANCE = "⏱ Изменить отклонение"
+        CANCEL_WORK_HOURS = "❌ Отмена"
+        ARCHIVE_CHANNEL_REBIND = "🔄 Перепривязать"
         ARCHIVE_CHANNEL_BIND = "🔗 Привязать"
-
+        ARCHIVE_TIME_SETTING = "🕓 Настройка времени отправки отчёта"
+        ARCHIVE_SCHEDULE_ENABLE = "✅ Включить рассылку"
+        ARCHIVE_SCHEDULE_DISABLE = "🛑 Отключить рассылку"
+        BACK_TO_ARCHIVE_SETTING = "⬅️ Вернуться"
         BACK_TO_SELECT_ACTION = "⬅️ Назад к выбору действия"
 
     class BlockButtons:

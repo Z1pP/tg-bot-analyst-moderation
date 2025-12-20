@@ -113,7 +113,6 @@ async def admin_logs_select_handler(
             await callback.message.edit_text(
                 f"{header_text}\n{Dialog.AdminLogs.NO_LOGS}",
                 reply_markup=admin_logs_ikb(
-                    logs=logs,
                     page=1,
                     total_count=total_count,
                     page_size=DEFAULT_PAGE_SIZE,
@@ -144,7 +143,6 @@ async def admin_logs_select_handler(
         await callback.message.edit_text(
             text,
             reply_markup=admin_logs_ikb(
-                logs=logs,
                 page=1,
                 total_count=total_count,
                 page_size=DEFAULT_PAGE_SIZE,

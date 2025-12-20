@@ -1,3 +1,4 @@
+from datetime import datetime, time
 from typing import Optional
 
 
@@ -30,3 +31,32 @@ def parse_message_link(text: str) -> tuple[str, int] | None:
         chat_id = f"@{chat_tgid}"
 
     return chat_id, message_id
+
+
+def parse_time(text: str) -> Optional[time]:
+    try:
+        return datetime.strptime(text, "%H:%M").time()
+    except ValueError:
+        return None
+
+
+def parse_tolerance(text: str) -> Optional[int]:
+    """
+    Парсит отклонение в минутах из строки.
+
+    Args:
+        text: Строка с числом (минуты)
+
+    Returns:
+        Положительное целое число или None при ошибке
+    """
+    if not text or not text.strip():
+        return None
+
+    try:
+        value = int(text.strip())
+        if value > 0:
+            return value
+        return None
+    except ValueError:
+        return None
