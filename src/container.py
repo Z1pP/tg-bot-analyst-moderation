@@ -36,6 +36,8 @@ from services import (
     ReportScheduleService,
     UserService,
 )
+from services.chat.summarize import IAIService
+from services.chat.summarize.open_router_service import OpenRouterService
 from services.analytics_buffer_service import AnalyticsBufferService
 from services.caching import ICache, RedisCache
 from services.categories import CategoryService
@@ -94,6 +96,7 @@ from usecases.report import (
     SendDailyChatReportsUseCase,
 )
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
+from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
 from usecases.templates import (
     DeleteTemplateUseCase,
     GetTemplateAndIncreaseUsageUseCase,
@@ -179,6 +182,12 @@ class ContainerSetup:
     def _register_services(container: Container) -> None:
         """Регистрация сервисов."""
         container.register(ICache, lambda: RedisCache(settings.REDIS_URL))
+        container.register(
+            IAIService,
+            lambda: OpenRouterService(
+                api_key=settings.OPEN_ROUTER_TOKEN, model_name=settings.OPEN_ROUTER_MODEL
+            ),
+        )
         container.register(UserService)
         container.register(ChatService)
         container.register(ArchiveBindService)
@@ -203,10 +212,16 @@ class ContainerSetup:
         ContainerSetup._register_chat_usecases(container)
         ContainerSetup._register_message_usecases(container)
         ContainerSetup._register_report_usecases(container)
+        ContainerSetup._register_summarize_usecases(container)
         ContainerSetup._register_tracking_usecases(container)
         ContainerSetup._register_template_usecases(container)
         ContainerSetup._register_reaction_usecases(container)
         ContainerSetup._register_moderation_usecases(container)
+
+    @staticmethod
+    def _register_summarize_usecases(container: Container) -> None:
+        """Регистрация use cases для суммаризации."""
+        container.register(GetChatSummaryUseCase)
 
     @staticmethod
     def _register_reaction_usecases(container: Container) -> None:
