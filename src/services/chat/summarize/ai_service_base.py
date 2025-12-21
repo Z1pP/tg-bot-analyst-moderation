@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from constants.enums import SummaryType
+
 
 class IAIService(ABC):
     """Absrtract class for summarize chat messages"""
@@ -8,5 +10,7 @@ class IAIService(ABC):
         self._model_name = model_name
 
     @abstractmethod
-    async def summarize_text(self, text: str, msg_count: int) -> str:
+    async def summarize_text(
+        self, text: str, msg_count: int, summary_type: SummaryType
+    ) -> str:
         pass
