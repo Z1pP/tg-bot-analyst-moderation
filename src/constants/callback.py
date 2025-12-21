@@ -28,6 +28,7 @@ class ChatCallbackData:
 
     # Prefixes
     PREFIX_CHAT = "chat__"
+    PREFIX_CHAT_SUMMARY_TYPE = "chat_summary_type__"
     PREFIX_UNTRACK_CHAT = "untrack_chat__"
     PREFIX_CONFIRM_REMOVE_CHAT = "conf_remove_chat__"
     PREFIX_TEMPLATE_SCOPE = "template_scope__"
