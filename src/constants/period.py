@@ -81,3 +81,26 @@ class TimePeriod(Enum):
 
         else:
             raise ValueError(f"Неизвестный период: {period}")
+
+
+class SummaryTimePeriod(Enum):
+    """
+    Перечисления для указания выбора периода создания сводки 📝
+    """
+
+    LAST_24_HOURS = "📅 За последние 24 часа"
+
+    @classmethod
+    def to_datetime(cls, period: str) -> Tuple[datetime, datetime]:
+        """
+        Преобразует строковое представление периода в пару дат (начало, конец).
+        """
+        now = TimeZoneService.now()
+
+        if period == cls.LAST_24_HOURS.value:
+            # Последние 24 часа от текущего момента
+            start_of_24h = now - timedelta(hours=24)
+            return start_of_24h, now
+
+        else:
+            raise ValueError(f"Неизвестный период сводки: {period}")

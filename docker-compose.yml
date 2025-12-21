@@ -35,6 +35,8 @@ services:
       - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
       - BOT_TOKEN=${BOT_TOKEN}
       - REDIS_URL=redis://redis:6379/0 
+      - OPEN_ROUTER_TOKEN=${OPEN_ROUTER_TOKEN}
+      - OPEN_ROUTER_MODEL=${OPEN_ROUTER_MODEL}
     volumes:
       - ./logs:/app/logs
     networks:

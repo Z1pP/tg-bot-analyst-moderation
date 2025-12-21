@@ -271,6 +271,10 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.GET_DAILY_RATING,
         ),
         InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.GET_SUMMARY_24H,
+            callback_data=CallbackData.Chat.GET_CHAT_SUMMARY_24H,
+        ),
+        InlineKeyboardButton(
             text=InlineButtons.ChatButtons.REPORT_TIME_SETTING,
             callback_data=CallbackData.Chat.REPORT_TIME_SETTING,
         ),
@@ -312,6 +316,31 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
     )
 
     builder.adjust(1, 2, 1)
+
+    return builder.as_markup()
+
+
+def summary_type_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура выбора типа сводки"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.SUMMARY_SHORT,
+            callback_data=f"{CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE}short",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.SUMMARY_FULL,
+            callback_data=f"{CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE}full",
+        ),
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+        )
+    )
 
     return builder.as_markup()
 

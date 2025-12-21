@@ -34,6 +34,11 @@ class Settings(BaseSettings):
         "Europe/Moscow", alias="TIMEZONE", description="Default timezone "
     )
     REDIS_URL: str = Field(alias="REDIS_URL")
+    OPEN_ROUTER_TOKEN: str = Field(alias="OPEN_ROUTER_TOKEN")
+    OPEN_ROUTER_MODEL: str = Field(
+        "mistralai/devstral-2512:free",
+        alias="OPEN_ROUTER_MODEL",
+    )
 
     @property
     def ALEMBIC_DB_URL(self) -> str:

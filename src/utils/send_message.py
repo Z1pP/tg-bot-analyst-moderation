@@ -79,3 +79,52 @@ async def safe_edit_message_reply_markup(
                 "Ошибка при редактировании клавиатуры сообщения: %s", e, exc_info=True
             )
         return False
+
+
+async def send_split_html_message(
+    bot: Bot,
+    chat_id: int,
+    text: str,
+    limit: int = 4096,
+) -> list[int]:
+    """
+    Разбивает длинный HTML текст на части и отправляет их.
+    Старается разбивать по переходам строк.
+    Возвращает список ID отправленных сообщений.
+    """
+    if len(text) <= limit:
+        msg = await bot.send_message(
+            chat_id=chat_id, text=text, parse_mode=ParseMode.HTML
+        )
+        return [msg.message_id]
+
+    message_ids = []
+    while text:
+        if len(text) <= limit:
+            chunk = text
+            text = ""
+        else:
+            # Ищем последний перенос строки в пределах лимита
+            chunk = text[:limit]
+            last_newline = chunk.rfind("\n")
+            if last_newline != -1 and last_newline > limit // 2:
+                chunk = text[:last_newline]
+                text = text[last_newline + 1 :]
+            else:
+                text = text[limit:]
+
+        try:
+            msg = await bot.send_message(
+                chat_id=chat_id, text=chunk, parse_mode=ParseMode.HTML
+            )
+            message_ids.append(msg.message_id)
+        except Exception as e:
+            logger.error(f"Ошибка при отправке части сообщения: {e}")
+            # Пытаемся отправить без HTML, если ошибка в тегах
+            try:
+                msg = await bot.send_message(chat_id=chat_id, text=chunk)
+                message_ids.append(msg.message_id)
+            except Exception as e2:
+                logger.error(f"Критическая ошибка при отправке части сообщения: {e2}")
+
+    return message_ids
