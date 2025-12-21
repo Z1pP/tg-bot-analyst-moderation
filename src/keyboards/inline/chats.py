@@ -320,6 +320,31 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def summary_type_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура выбора типа сводки"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.SUMMARY_SHORT,
+            callback_data=f"{CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE}short",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.SUMMARY_FULL,
+            callback_data=f"{CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE}full",
+        ),
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+        )
+    )
+
+    return builder.as_markup()
+
+
 def archive_channel_setting_ikb(
     archive_chat: Optional[ChatSession] = None,
     invite_link: Optional[str] = None,
