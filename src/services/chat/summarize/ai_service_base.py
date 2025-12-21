@@ -8,5 +8,5 @@ class IAIService(ABC):
         self._model_name = model_name
 
     @abstractmethod
-    async def summarize_text(self, text: str) -> str:
+    async def summarize_text(self, text: str, msg_count: int) -> str:
         pass
