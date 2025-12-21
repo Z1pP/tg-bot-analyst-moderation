@@ -19,6 +19,31 @@ class MessageRepository:
     def __init__(self, db_manager: DatabaseContextManager) -> None:
         self._db = db_manager
 
+    async def get_messages_for_summary(self, chat_id: int, limit: int):
+        """
+        Выбирает только текст и имя пользователя.
+        Игнорирует системные сообщения и медиа.
+        """
+        async with self._db.session() as session:
+            query = (
+                select(
+                    ChatMessage.text,
+                    User.username,
+                )
+                .join(User, ChatMessage.user_id == User.id)
+                .where(
+                    ChatMessage.chat_id == chat_id,
+                    ChatMessage.content_type == "text",
+                    ChatMessage.text.is_not(None),
+                )
+                .order_by(ChatMessage.created_at.desc())
+                .limit(limit)
+            )
+
+            result = await session.execute(query)
+            # Возвращаем список кортежей (text, username) в хронологическом порядке
+            return list(reversed(result.all()))
+
     async def create_new_message(self, dto: CreateMessageDTO) -> ChatMessage:
         async with self._db.session() as session:
             try:
