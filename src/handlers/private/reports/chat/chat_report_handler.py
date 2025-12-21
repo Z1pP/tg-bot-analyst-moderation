@@ -7,19 +7,20 @@ from aiogram.types import CallbackQuery
 
 from constants import Dialog
 from constants.callback import CallbackData
-from constants.period import TimePeriod
+from constants.period import SummaryTimePeriod, TimePeriod
 from container import container
 from dto.report import ChatReportDTO
 from keyboards.inline import CalendarKeyboard
 from keyboards.inline.chats import chat_actions_ikb
-from keyboards.inline.report import order_details_kb_chat
+from keyboards.inline.report import hide_details_ikb, order_details_kb_chat
 from keyboards.inline.time_period import time_period_ikb_chat
 from presenters import ReportPresenter
+from services.chat import ChatService
 from services.time_service import TimeZoneService
 from states import ChatStateManager
 from usecases.report import GetChatReportUseCase
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_message, send_html_message_with_kb
 from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
@@ -53,13 +54,13 @@ async def get_chat_statistics_handler(
 
 
 @router.callback_query(
-    F.data == CallbackData.Chat.GET_CHAT_SUMMARY,
+    F.data == CallbackData.Chat.GET_CHAT_SUMMARY_24H,
     ChatStateManager.selecting_chat,
 )
 async def process_get_chat_summary_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
-    """Обработчик запроса на генерацию ИИ-сводки по чату."""
+    """Обработчик запроса на генерацию ИИ-сводки по чату за последние 24 часа."""
     await callback.answer()
 
     data = await state.get_data()
@@ -76,7 +77,11 @@ async def process_get_chat_summary_handler(
         )
         return
 
-    # 1. Показываем статус выполнения
+    # Получаем информацию о чате для возврата к dashboard
+    chat_service: ChatService = container.resolve(ChatService)
+    chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
+
+    # 1. Показываем статус выполнения в текущем сообщении
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
@@ -85,18 +90,55 @@ async def process_get_chat_summary_handler(
     )
 
     try:
-        # 2. Вызываем UseCase
-        usecase: GetChatSummaryUseCase = container.resolve(GetChatSummaryUseCase)
-        summary = await usecase.execute(user_id=user_id, chat_id=chat_id)
-
-        # 3. Обновляем сообщение результатом
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=summary,
-            reply_markup=chat_actions_ikb(),
+        # 2. Подготовка дат для 24ч
+        start_date, end_date = SummaryTimePeriod.to_datetime(
+            SummaryTimePeriod.LAST_24_HOURS.value
         )
+
+        # 3. Вызываем UseCase
+        usecase: GetChatSummaryUseCase = container.resolve(GetChatSummaryUseCase)
+        summary = await usecase.execute(
+            user_id=user_id,
+            chat_id=chat_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        # 4. Отправляем ОТДЕЛЬНОЕ сообщение с результатом и кнопкой "Скрыть"
+        sent_message = await send_html_message_with_kb(
+            message=callback.message,
+            text=summary,
+        )
+
+        # Добавляем кнопку "Скрыть" (удаляет это сообщение)
+        await callback.bot.edit_message_reply_markup(
+            chat_id=callback.message.chat.id,
+            message_id=sent_message.message_id,
+            reply_markup=hide_details_ikb([sent_message.message_id]),
+        )
+
+        # 5. Возвращаем исходное сообщение к виду Dashboard
+        if chat:
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=Dialog.Chat.CHAT_ACTIONS.format(
+                    title=chat.title,
+                    start_time=chat.start_time.strftime("%H:%M"),
+                    end_time=chat.end_time.strftime("%H:%M"),
+                ),
+                reply_markup=chat_actions_ikb(),
+            )
+        else:
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="✅ Сводка готова! Она отправлена отдельным сообщением.",
+                reply_markup=chat_actions_ikb(),
+            )
+
     except Exception as e:
         logger.error(
             f"Ошибка при генерации сводки для чата {chat_id}: {e}", exc_info=True
