@@ -6,6 +6,7 @@ class ChatCallbackData:
     REMOVE = "remove_chat"
     GET_STATISTICS = "get_chat_statistics"
     GET_DAILY_RATING = "get_chat_daily_rating"
+    GET_CHAT_SUMMARY = "get_chat_summary"
     SELECT_CHAT = "select_chat"
     REPORT_TIME_SETTING = "report_time_setting"
     WORK_HOURS_MENU = "work_hours_menu"
