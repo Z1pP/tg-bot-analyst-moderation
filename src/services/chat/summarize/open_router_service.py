@@ -15,7 +15,7 @@ SYSTEM_CONTENT = (
 )
 USER_CONTENT = (
     "Сделай резюме обсуждения. В начале ответа обязательно добавь заголовок: "
-    "'<b>📊 Сводка за последние 1000 сообщений</b>'\n\n{text}"
+    "'<b>📊 Сводка за последние {msg_count} сообщений</b>'\n\n{text}"
 )
 
 
@@ -24,14 +24,19 @@ class OpenRouterService(IAIService):
         super().__init__(model_name)
         self._api_key = api_key
 
-    async def summarize_text(self, text: str) -> str:
+    async def summarize_text(self, text: str, msg_count: int) -> str:
         async with OpenRouter(api_key=self._api_key) as client:
             try:
                 response = await client.chat.send_async(
                     model=self._model_name,
                     messages=[
                         {"role": "system", "content": SYSTEM_CONTENT},
-                        {"role": "user", "content": USER_CONTENT.format(text=text)},
+                        {
+                            "role": "user",
+                            "content": USER_CONTENT.format(
+                                text=text, msg_count=msg_count
+                            ),
+                        },
                     ],
                 )
 
