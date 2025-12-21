@@ -18,6 +18,7 @@ from presenters import ReportPresenter
 from services.time_service import TimeZoneService
 from states import ChatStateManager
 from usecases.report import GetChatReportUseCase
+from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
@@ -49,6 +50,64 @@ async def get_chat_statistics_handler(
         state=state,
         new_state=ChatStateManager.selecting_period,
     )
+
+
+@router.callback_query(
+    F.data == CallbackData.Chat.GET_CHAT_SUMMARY,
+    ChatStateManager.selecting_chat,
+)
+async def process_get_chat_summary_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик запроса на генерацию ИИ-сводки по чату."""
+    await callback.answer()
+
+    data = await state.get_data()
+    chat_id = data.get("chat_id")
+    user_id = callback.from_user.id
+
+    if not chat_id:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+            reply_markup=chat_actions_ikb(),
+        )
+        return
+
+    # 1. Показываем статус выполнения
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text="⏳ <b>Сводка на этапе выполнения</b>\nПожалуйста, подождите, это может занять до 30 секунд...",
+    )
+
+    try:
+        # 2. Вызываем UseCase
+        usecase: GetChatSummaryUseCase = container.resolve(GetChatSummaryUseCase)
+        summary = await usecase.execute(user_id=user_id, chat_id=chat_id)
+
+        # 3. Обновляем сообщение результатом
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=summary,
+            reply_markup=chat_actions_ikb(),
+        )
+    except Exception as e:
+        logger.error(
+            f"Ошибка при генерации сводки для чата {chat_id}: {e}", exc_info=True
+        )
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="❌ Произошла ошибка при генерации сводки. Попробуйте позже.",
+            reply_markup=chat_actions_ikb(),
+        )
 
 
 @router.callback_query(
