@@ -19,7 +19,13 @@ class MessageRepository:
     def __init__(self, db_manager: DatabaseContextManager) -> None:
         self._db = db_manager
 
-    async def get_messages_for_summary(self, chat_id: int, limit: int):
+    async def get_messages_for_summary(
+        self,
+        chat_id: int,
+        limit: int,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ):
         """
         Выбирает только текст и имя пользователя.
         Игнорирует системные сообщения и медиа.
@@ -36,9 +42,14 @@ class MessageRepository:
                     ChatMessage.content_type == "text",
                     ChatMessage.text.is_not(None),
                 )
-                .order_by(ChatMessage.created_at.desc())
-                .limit(limit)
             )
+
+            if start_date and end_date:
+                query = query.where(
+                    ChatMessage.created_at.between(start_date, end_date)
+                )
+
+            query = query.order_by(ChatMessage.created_at.desc()).limit(limit)
 
             result = await session.execute(query)
             # Возвращаем список кортежей (text, username) в хронологическом порядке
