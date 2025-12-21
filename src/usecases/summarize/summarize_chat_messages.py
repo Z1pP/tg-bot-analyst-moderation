@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from constants.enums import SummaryType
 from repositories import MessageRepository
 from services.chat.summarize import IAIService
 from utils.text_preprocessor import format_messages_for_llm
@@ -16,8 +17,8 @@ class GetChatSummaryUseCase:
 
     async def execute(
         self,
-        user_id: int,
         chat_id: int,
+        summary_type: SummaryType,
         msg_limit: int = 1000,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
@@ -38,7 +39,7 @@ class GetChatSummaryUseCase:
             return "Нет сообщений для сводки."
 
         summary = await self._ai_service.summarize_text(
-            text=formatted_text, msg_count=real_count
+            text=formatted_text, msg_count=real_count, summary_type=summary_type
         )
 
         return summary
