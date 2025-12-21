@@ -21,7 +21,10 @@ from services.time_service import TimeZoneService
 from states import ChatStateManager
 from usecases.report import GetChatReportUseCase
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
-from utils.send_message import safe_edit_message, send_html_message_with_kb
+from utils.send_message import (
+    safe_edit_message,
+    send_split_html_message,
+)
 from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
@@ -90,7 +93,6 @@ async def process_summary_type_selection_handler(
 
     data = await state.get_data()
     chat_id = data.get("chat_id")
-    user_id = callback.from_user.id
 
     if not chat_id:
         await safe_edit_message(
@@ -130,17 +132,20 @@ async def process_summary_type_selection_handler(
         )
 
         # 4. Отправляем ОТДЕЛЬНОЕ сообщение с результатом и кнопкой "Скрыть"
-        sent_message = await send_html_message_with_kb(
-            message=callback.message,
+        message_ids = await send_split_html_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
             text=summary,
         )
 
-        # Добавляем кнопку "Скрыть" (удаляет это сообщение)
-        await callback.bot.edit_message_reply_markup(
-            chat_id=callback.message.chat.id,
-            message_id=sent_message.message_id,
-            reply_markup=hide_details_ikb([sent_message.message_id]),
-        )
+        # Добавляем кнопку "Скрыть" (удаляет все сообщения этой последовательности)
+        # Прикрепляем её к последнему сообщению
+        if message_ids:
+            await callback.bot.edit_message_reply_markup(
+                chat_id=callback.message.chat.id,
+                message_id=message_ids[-1],
+                reply_markup=hide_details_ikb(message_ids),
+            )
 
         # 5. Возвращаем исходное сообщение к виду Dashboard
         if chat:
