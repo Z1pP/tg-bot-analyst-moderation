@@ -7,11 +7,12 @@ from aiogram.types import CallbackQuery
 
 from constants import Dialog
 from constants.callback import CallbackData
+from constants.enums import SummaryType
 from constants.period import SummaryTimePeriod, TimePeriod
 from container import container
 from dto.report import ChatReportDTO
 from keyboards.inline import CalendarKeyboard
-from keyboards.inline.chats import chat_actions_ikb
+from keyboards.inline.chats import chat_actions_ikb, summary_type_ikb
 from keyboards.inline.report import hide_details_ikb, order_details_kb_chat
 from keyboards.inline.time_period import time_period_ikb_chat
 from presenters import ReportPresenter
@@ -60,8 +61,32 @@ async def get_chat_statistics_handler(
 async def process_get_chat_summary_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
-    """Обработчик запроса на генерацию ИИ-сводки по чату за последние 24 часа."""
+    """Обработчик запроса на выбор типа ИИ-сводки по чату за последние 24 часа."""
     await callback.answer()
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text="Выберите тип сводки:",
+        reply_markup=summary_type_ikb(),
+    )
+
+
+@router.callback_query(
+    F.data.startswith(CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE),
+    ChatStateManager.selecting_chat,
+)
+async def process_summary_type_selection_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик выбора типа сводки и её генерации."""
+    await callback.answer()
+
+    summary_type_str = callback.data.replace(
+        CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE, ""
+    )
+    summary_type = SummaryType(summary_type_str)
 
     data = await state.get_data()
     chat_id = data.get("chat_id")
@@ -100,6 +125,7 @@ async def process_get_chat_summary_handler(
         summary = await usecase.execute(
             user_id=user_id,
             chat_id=chat_id,
+            summary_type=summary_type,
             start_date=start_date,
             end_date=end_date,
         )
