@@ -123,7 +123,6 @@ async def process_summary_type_selection_handler(
         # 3. Вызываем UseCase
         usecase: GetChatSummaryUseCase = container.resolve(GetChatSummaryUseCase)
         summary = await usecase.execute(
-            user_id=user_id,
             chat_id=chat_id,
             summary_type=summary_type,
             start_date=start_date,
