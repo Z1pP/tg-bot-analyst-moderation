@@ -94,6 +94,7 @@ class InlineButtons:
         # Actions with chat
         GET_STATISTICS = "📊 Статистика"
         GET_DAILY_RATING = "🏆 Рейтинг за сутки"
+        GET_SUMMARY = "📝 Получить сводку"
         ARCHIVE_CHANNEL_SETTING = "⚙️ Настройка архив. канала"
         BACK_TO_SELECTION_CHAT = "⬅️ Вернуться к выбору чата"
         REPORT_TIME_SETTING = "⏰ Настройка времени отчета"
