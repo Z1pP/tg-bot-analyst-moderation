@@ -1,46 +1,51 @@
 version: '3.8'
 
+# 1. Шаблон общих настроек (сборка, рестарт, сеть, логи)
+x-common-setup: &common-setup
+  build: .
+  restart: unless-stopped
+  env_file: .env
+  networks:
+    - botnet
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+# 2. Шаблон переменных окружения для подключения к БД и Redis внутри сети Docker
+x-db-env: &db-env
+  # Эти значения переопределяют то, что в .env, так как внутри Docker хосты называются 'db' и 'redis'
+  DEV_DATABASE_URL: postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
+  DEV_DB_URL_FOR_ALEMBIC: postgresql://postgres:12345@db:5432/dev_analytics_bot
+  PROD_DATABASE_URL: postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
+  PROD_DB_URL_FOR_ALEMBIC: postgresql://postgres:12345@db:5432/prod_analytics_bot
+  REDIS_URL: redis://redis:6379/0
+  PYTHONPATH: /app/src
+
 services:
   bot:
-    build: .
-    restart: unless-stopped
+    <<: *common-setup
     ports:
       - "8000:8000"
     depends_on:
-      db:
-        condition: service_healthy 
-      redis:
-        condition: service_started
-      tunnel:
-        condition: service_started
-    command: >
-      bash -c "
-        echo '⏳ Ждём URL от cloudflared...';
-        until curl -s http://tunnel:4040/metrics | grep -q 'cloudflared_tunnel_user_hostnames_counts'; do 
-          echo '⏳ Ожидание туннеля...';
-          sleep 2;
-        done;
-        sleep 3;
-        export PUBLIC_URL=$$(curl -s http://tunnel:4040/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
-        echo '🌐 Найден публичный URL:' $$PUBLIC_URL;
-        python src/main.py --webhook-url $$PUBLIC_URL
-      "
-    env_file:
-    - .env
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      tunnel: { condition: service_started }
     environment:
-      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
-      - DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/dev_analytics_bot
-      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
-      - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
-      - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
-      - BOT_TOKEN=${BOT_TOKEN}
-      - REDIS_URL=redis://redis:6379/0 
-      - OPEN_ROUTER_TOKEN=${OPEN_ROUTER_TOKEN}
-      - OPEN_ROUTER_MODEL=${OPEN_ROUTER_MODEL}
+      <<: *db-env
     volumes:
       - ./logs:/app/logs
-    networks:
-      - botnet
+    command: >
+      bash -c "
+        echo '⏳ Waiting for Cloudflare Tunnel...';
+        until curl -s http://tunnel:4040/metrics | grep -q 'cloudflared_tunnel_user_hostnames_counts'; do 
+          sleep 2;
+        done;
+        PUBLIC_URL=\$$(curl -s http://tunnel:4040/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
+        echo '🌐 Public URL: ' \$$PUBLIC_URL;
+        python src/main.py --webhook-url \$$PUBLIC_URL
+      "
 
   db:
     image: postgres:14
@@ -50,12 +55,6 @@ services:
       POSTGRES_PASSWORD: 12345
       POSTGRES_DB: dev_analytics_bot
       TZ: Europe/Moscow
-      PGTZ: Europe/Moscow
-      POSTGRES_INITDB_ARGS: >-
-        --encoding=UTF8
-        --lc-collate=C.UTF-8  # Лучше использовать C.UTF-8 вместо ru_RU.UTF-8
-        --lc-ctype=C.UTF-8
-        --data-checksums
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -63,112 +62,58 @@ services:
       retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql  
     ports:
       - "127.0.0.1:5434:5432"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
     networks:
       - botnet
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+    restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
+    volumes:
+      - redis_data:/data
     networks:
       - botnet
 
   tunnel:
     image: cloudflare/cloudflared:latest
-    container_name: cloudflared_tunnel
     restart: unless-stopped
     command: tunnel --url http://bot:8000 --metrics 0.0.0.0:4040
     networks:
       - botnet
 
   scheduler:
-    build: .
-    restart: unless-stopped
+    <<: *common-setup
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    command: python src/taskiq_scheduler_entrypoint.py
-    env_file:
-      - .env
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
     environment:
-      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
-      - DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/dev_analytics_bot
-      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
-      - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
-      - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
-      - BOT_TOKEN=${BOT_TOKEN}
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - botnet
+      <<: *db-env
+    command: python src/taskiq_scheduler_entrypoint.py
 
   analytics_scheduler:
-    build: .
-    restart: unless-stopped
+    <<: *common-setup
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    command: python src/analytics_scheduler_entrypoint.py
-    env_file:
-      - .env
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
     environment:
-      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
-      - DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/dev_analytics_bot
-      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
-      - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
-      - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
-      - BOT_TOKEN=${BOT_TOKEN}
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - botnet
+      <<: *db-env
+    command: python src/analytics_scheduler_entrypoint.py
 
   worker:
-    build: .
-    restart: unless-stopped
+    <<: *common-setup
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    command: taskiq worker scheduler.taskiq:broker tasks.report_tasks tasks.analytics_tasks
-    env_file:
-      - .env
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
     environment:
-      - PYTHONPATH=/app/src
-      - DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
-      - DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/dev_analytics_bot
-      - PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
-      - PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@db:5432/prod_analytics_bot
-      - IS_DEVELOPMENT=${IS_DEVELOPMENT:-True}
-      - BOT_TOKEN=${BOT_TOKEN}
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - ./logs:/app/logs
-    networks:
-      - botnet
+      <<: *db-env
+    command: taskiq worker scheduler.taskiq:broker tasks.report_tasks tasks.analytics_tasks
 
 networks:
   botnet:
