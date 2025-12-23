@@ -9,7 +9,6 @@ from sqlalchemy.orm import joinedload
 from database.session import DatabaseContextManager
 from dto.buffer import BufferedMessageDTO
 from dto.daily_activity import UserDailyActivityDTO
-from dto.message import CreateMessageDTO
 from models import ChatMessage, User
 
 logger = logging.getLogger(__name__)
@@ -54,32 +53,6 @@ class MessageRepository:
             result = await session.execute(query)
             # Возвращаем список кортежей (text, username) в хронологическом порядке
             return list(reversed(result.all()))
-
-    async def create_new_message(self, dto: CreateMessageDTO) -> ChatMessage:
-        async with self._db.session() as session:
-            try:
-                new_message = ChatMessage(
-                    user_id=dto.user_id,
-                    chat_id=dto.chat_id,
-                    message_id=dto.message_id,
-                    message_type=dto.message_type,
-                    content_type=dto.content_type,
-                    text=dto.text,
-                )
-                session.add(new_message)
-                await session.commit()
-                await session.refresh(new_message)
-                logger.info(
-                    "Создано новое сообщение: user_id=%s, chat_id=%s, message_id=%s",
-                    dto.user_id,
-                    dto.chat_id,
-                    dto.message_id,
-                )
-                return new_message
-            except Exception as e:
-                logger.error("Ошибка при создании сообщения: %s", e)
-                await session.rollback()
-                raise e
 
     async def get_messages_by_period_date(
         self,
