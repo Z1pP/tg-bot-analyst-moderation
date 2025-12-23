@@ -249,11 +249,6 @@ class GetChatReportUseCase:
             return TimeZoneService.convert_to_local_time(dt=item.created_at)
         return item.created_at if hasattr(item, "created_at") else datetime.now()
 
-    async def _transform_period_to_dates(
-        self, period: str
-    ) -> tuple[datetime, datetime]:
-        return TimePeriod.to_datetime(period=period)
-
     async def _get_currect_dates(
         self, period: str, chat: ChatSession
     ) -> tuple[datetime, datetime]:
@@ -509,12 +504,6 @@ class GetChatReportUseCase:
         if selected_period in [TimePeriod.TODAY.value, TimePeriod.YESTERDAY.value]:
             return True
         return (end_date.date() - start_date.date()).days < 1
-
-    def is_single_day_report(self, report_dto: ChatReportDTO) -> bool:
-        # Публичный метод-обертка для использования извне, если нужно
-        return self._is_single_day_report(
-            report_dto.selected_period, report_dto.start_date, report_dto.end_date
-        )
 
     async def _log_admin_action(self, dto: ChatReportDTO, chat: ChatSession):
         period = format_selected_period(
