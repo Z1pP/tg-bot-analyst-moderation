@@ -124,24 +124,6 @@ class BaseReportUseCase(ABC):
         days = max(1, (end_date.date() - start_date.date()).days)
         return round(messages_count / days, 2)
 
-    def get_time_first_message(self, messages: List[ChatMessage]) -> str:
-        """Возвращает время первого сообщения."""
-        return self._get_time_first_item(messages)
-
-    def get_time_first_reaction(self, reactions: List[MessageReaction]) -> str:
-        """Возвращает время первой реакции."""
-        return self._get_time_first_item(reactions)
-
-    def _get_time_first_item(
-        self, items: List[Union[ChatMessage, MessageReaction]]
-    ) -> str:
-        """Возвращает время первого элемента."""
-        return (
-            min(items, key=lambda x: x.created_at).created_at.strftime("%H:%M")
-            if items
-            else ""
-        )
-
     def get_avg_time_first_messages(self, messages: List[ChatMessage]) -> str:
         """Возвращает среднее время первых сообщений на каждый день"""
         return self._get_avg_time_first_items(items=messages)
