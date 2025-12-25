@@ -180,8 +180,9 @@ alembic/script.py.mako
 
 logs/
 
-# Amazon Q
+# AI Providers
 .amazonq/
+.gemini/
 
 docs/
 secrets/
