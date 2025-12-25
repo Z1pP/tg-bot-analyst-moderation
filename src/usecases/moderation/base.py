@@ -88,10 +88,10 @@ class ModerationUseCase:
             tg_id=dto.violator_tgid,
             chat_tg_id=dto.chat_tgid,
         ):
-            await self.bot_message_service.delete_message_from_chat(
-                chat_id=dto.chat_tgid,
-                message_id=dto.original_message_id,
-            )
+            # await self.bot_message_service.delete_message_from_chat(
+            #     chat_id=dto.chat_tgid,
+            #     message_id=dto.original_message_id,
+            # )
             raise CannotPunishChatAdminError()
 
         chat = await self.chat_service.get_chat_with_archive(
@@ -99,10 +99,10 @@ class ModerationUseCase:
         )
 
         if not chat or not chat.archive_chat_id:
-            await self.bot_message_service.delete_message_from_chat(
-                chat_id=dto.chat_tgid,
-                message_id=dto.original_message_id,
-            )
+            # await self.bot_message_service.delete_message_from_chat(
+            #     chat_id=dto.chat_tgid,
+            #     message_id=dto.original_message_id,
+            # )
             raise ArchiveChatError(chat_title=dto.chat_title)
 
         violator = await self.user_service.get_user(
@@ -115,10 +115,10 @@ class ModerationUseCase:
         )
 
         if self.is_bot_administrator(user=violator):
-            await self.bot_message_service.delete_message_from_chat(
-                chat_id=dto.chat_tgid,
-                message_id=dto.original_message_id,
-            )
+            # await self.bot_message_service.delete_message_from_chat(
+            #     chat_id=dto.chat_tgid,
+            #     message_id=dto.original_message_id,
+            # )
             raise CannotPunishBotAdminError()
 
         await self.user_chat_status_repository.get_or_create(
@@ -167,11 +167,11 @@ class ModerationUseCase:
             if not violator_msg_deleted:
                 report_text = report_text.replace("удалено", "не удалено (старше 48ч)")
 
-            await self.bot_message_service.delete_message_from_chat(
-                chat_id=context.dto.chat_tgid,
-                message_id=context.dto.original_message_id,
-                message_date=context.dto.original_message_date,
-            )
+            # await self.bot_message_service.delete_message_from_chat(
+            #     chat_id=context.dto.chat_tgid,
+            #     message_id=context.dto.original_message_id,
+            #     message_date=context.dto.original_message_date,
+            # )
 
             context.message_deleted = violator_msg_deleted
         else:
