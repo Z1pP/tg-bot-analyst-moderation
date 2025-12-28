@@ -25,7 +25,7 @@ from repositories import (
     MessageRepository,
     UserRepository,
 )
-from services import AdminActionLogService
+from services import AdminActionLogService, BotPermissionService
 from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
@@ -41,6 +41,12 @@ class ChatData:
     messages: List[ChatMessage]
     reactions: List[MessageReaction]
     replies: List[MessageReply]
+
+
+@dataclass
+class UserActivity:
+    total_users: int
+    active_users: int
 
 
 class GetChatReportUseCase:
@@ -62,6 +68,7 @@ class GetChatReportUseCase:
         message_repository: MessageRepository,
         reaction_repository: MessageReactionRepository,
         msg_reply_repository: MessageReplyRepository,
+        bot_permission_service: BotPermissionService = None,
         admin_action_log_service: AdminActionLogService = None,
     ) -> None:
         self._chat_repository = chat_repository
@@ -69,6 +76,7 @@ class GetChatReportUseCase:
         self._message_repository = message_repository
         self._reaction_repository = reaction_repository
         self._msg_reply_repository = msg_reply_repository
+        self._bot_permission_service = bot_permission_service
         self._admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: ChatReportDTO) -> ReportResultDTO:
@@ -86,6 +94,8 @@ class GetChatReportUseCase:
                 working_hours=0.0,
                 error_message=ReportDialogs.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
             )
+
+        dto.chat_tgid = chat.chat_id
 
         tracked_users_ids = await self._get_tracked_users_ids(
             admin_tg_id=dto.admin_tg_id
@@ -147,6 +157,8 @@ class GetChatReportUseCase:
             working_hours=working_hours,
         )
 
+        user_activity = await self._get_chat_activity_info(dto=dto)
+
         # Логирование действия администратора
         await self._log_admin_action(dto, chat)
 
@@ -157,7 +169,28 @@ class GetChatReportUseCase:
             end_date=dto.end_date,
             is_single_day=is_single_day,
             working_hours=working_hours,
+            active_users=(
+                user_activity.active_users,
+                user_activity.total_users,
+            ),
         )
+
+    async def _get_chat_activity_info(self, dto: ChatReportDTO) -> UserActivity:
+        """
+        Получает общее количество активных пользователей
+        и количество участников в чате.
+        """
+        activity_users = await self._user_repository.total_active_users(
+            chat_id=dto.chat_id,
+            start_date=dto.start_date,
+            end_date=dto.end_date,
+        )
+
+        total_users = await self._bot_permission_service.get_total_members(
+            chat_tgid=dto.chat_tgid
+        )
+
+        return UserActivity(total_users=total_users, active_users=activity_users)
 
     async def _get_tracked_users_ids(self, admin_tg_id: str) -> list[int]:
         tracked_users = await self._user_repository.get_tracked_users_for_admin(
