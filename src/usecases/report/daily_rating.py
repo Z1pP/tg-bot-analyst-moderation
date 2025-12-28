@@ -1,70 +1,129 @@
+from dataclasses import dataclass
 from datetime import datetime
 
 from dto.daily_activity import ChatDailyStatsDTO
-from repositories import ChatRepository, MessageRepository
+from repositories import ChatRepository, MessageRepository, UserRepository
 from repositories.reaction_repository import MessageReactionRepository
+from services import BotPermissionService
+
+
+@dataclass
+class UserActivity:
+    total_users: int
+    active_users: int
 
 
 class GetDailyTopUsersUseCase:
     def __init__(
         self,
+        user_repository: UserRepository,
         message_repository: MessageRepository,
         chat_repository: ChatRepository,
         reaction_repository: MessageReactionRepository,
+        bot_permission_service: BotPermissionService,
     ):
-        self.message_repository = message_repository
-        self.chat_repository = chat_repository
-        self.reaction_repository = reaction_repository
+        self._user_repository = user_repository
+        self._message_repository = message_repository
+        self._chat_repository = chat_repository
+        self._reaction_repository = reaction_repository
+        self._bot_permission_service = bot_permission_service
 
-    async def execute(self, chat_id: int, date: datetime) -> ChatDailyStatsDTO:
+    async def execute(
+        self,
+        chat_id: int,
+        date: datetime | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> ChatDailyStatsDTO:
         """
-        Получает топ активных пользователей за день в чате.
+        Получает топ активных пользователей за период в чате.
 
         Args:
             chat_id: ID чата
-            date: Дата для анализа
+            date: Конкретная дата (если указана, анализируется за этот день)
+            start_date: Начало периода
+            end_date: Конец периода
 
         Returns:
             ChatDailyStatsDTO с топом пользователей и общей статистикой
         """
+        if date and not (start_date and end_date):
+            start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = date.replace(hour=23, minute=59, second=59, microsecond=999999)
+
         # Получаем информацию о чате
-        chat = await self.chat_repository.get_chat_by_id(chat_id)
+        chat = await self._chat_repository.get_chat_by_id(chat_id)
         chat_title = chat.title if chat else "Неизвестный чат"
 
         # Получаем топ пользователей
-        top_users = await self.message_repository.get_daily_top_users(
+        top_users = await self._message_repository.get_daily_top_users(
             chat_id=chat_id,
-            date=date,
+            start_date=start_date,
+            end_date=end_date,
             limit=10,
         )
 
         # Получаем топ по реакциям
-        top_reactors = await self.reaction_repository.get_daily_top_reactors(
+        top_reactors = await self._reaction_repository.get_daily_top_reactors(
             chat_id=chat_id,
-            date=date,
+            start_date=start_date,
+            end_date=end_date,
             limit=10,
         )
 
         # Получаем популярные реакции
-        popular_reactions = await self.reaction_repository.get_daily_popular_reactions(
+        popular_reactions = await self._reaction_repository.get_daily_popular_reactions(
             chat_id=chat_id,
-            date=date,
-            limit=3,
+            start_date=start_date,
+            end_date=end_date,
+            limit=10,
+        )
+
+        # Получаем информацию об активности (активные / всего участников)
+        activity_info = await self._get_chat_activity_info(
+            chat_tgid=chat.chat_id if chat else str(chat_id),
+            chat_db_id=chat_id,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         # Подсчитываем общую статистику
         total_messages = sum(user.message_count for user in top_users)
         total_reactions = sum(user.reaction_count for user in top_reactors)
-        active_users_count = len(top_users)
 
         return ChatDailyStatsDTO(
             chat_id=chat_id,
             chat_title=chat_title,
-            date=date,
+            start_date=start_date,
+            end_date=end_date,
             top_users=top_users,
             top_reactors=top_reactors,
             popular_reactions=popular_reactions,
             total_messages=total_messages,
             total_reactions=total_reactions,
-            active_users_count=active_users_count,
+            active_users_count=activity_info.active_users,
+            total_users_count=activity_info.total_users,
         )
+
+    async def _get_chat_activity_info(
+        self,
+        chat_tgid: str,
+        chat_db_id: int,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> UserActivity:
+        """
+        Получает общее количество активных пользователей
+        и количество участников в чате.
+        """
+        activity_users = await self._user_repository.total_active_users(
+            chat_id=chat_db_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        total_users = await self._bot_permission_service.get_total_members(
+            chat_tgid=chat_tgid
+        )
+
+        return UserActivity(total_users=total_users, active_users=activity_users)
