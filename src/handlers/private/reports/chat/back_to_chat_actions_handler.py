@@ -9,7 +9,7 @@ from constants.callback import CallbackData
 from di import container
 from keyboards.inline.chats import chat_actions_ikb
 from services.chat import ChatService
-from states import ChatStateManager
+from states import ChatStateManager, RatingStateManager
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
@@ -20,6 +20,14 @@ logger = logging.getLogger(__name__)
 @router.callback_query(
     F.data == CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
     ChatStateManager.selecting_period,
+)
+@router.callback_query(
+    F.data == CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+    RatingStateManager.selecting_period,
+)
+@router.callback_query(
+    F.data == CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+    RatingStateManager.selecting_custom_period,
 )
 async def back_to_chat_actions_handler(
     callback: CallbackQuery,
