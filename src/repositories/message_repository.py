@@ -137,17 +137,28 @@ class MessageRepository:
                 return []
 
     async def get_daily_top_users(
-        self, chat_id: int, date: datetime, limit: int = 10
+        self,
+        chat_id: int,
+        date: datetime | None = None,
+        limit: int = 10,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> List[UserDailyActivityDTO]:
         """
-        Получает топ активных пользователей за день в чате.
+        Получает топ активных пользователей за период в чате.
         """
         async with self._db.session() as session:
             try:
-                start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-                end_date = date.replace(
-                    hour=23, minute=59, second=59, microsecond=999999
-                )
+                if date and not (start_date and end_date):
+                    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    end_date = date.replace(
+                        hour=23, minute=59, second=59, microsecond=999999
+                    )
+
+                if not start_date or not end_date:
+                    raise ValueError(
+                        "Необходимо указать дату или период (start_date и end_date)"
+                    )
 
                 query = (
                     select(
@@ -180,18 +191,20 @@ class MessageRepository:
                     )
 
                 logger.info(
-                    "Получен топ-%d пользователей для chat_id=%s за %s",
+                    "Получен топ-%d пользователей для chat_id=%s за период %s - %s",
                     len(top_users),
                     chat_id,
-                    date.strftime("%Y-%m-%d"),
+                    start_date.strftime("%Y-%m-%d"),
+                    end_date.strftime("%Y-%m-%d"),
                 )
                 return top_users
 
             except Exception as e:
                 logger.error(
-                    "Ошибка при получении топа пользователей: chat_id=%s, дата=%s, %s",
+                    "Ошибка при получении топа пользователей: chat_id=%s, период=%s-%s, %s",
                     chat_id,
-                    date.strftime("%Y-%m-%d"),
+                    start_date.strftime("%Y-%m-%d") if start_date else "None",
+                    end_date.strftime("%Y-%m-%d") if end_date else "None",
                     e,
                 )
                 return []
