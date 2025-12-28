@@ -111,17 +111,28 @@ class MessageReactionRepository:
                 raise e
 
     async def get_daily_top_reactors(
-        self, chat_id: int, date: datetime, limit: int = 10
+        self,
+        chat_id: int,
+        date: datetime | None = None,
+        limit: int = 10,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> List[UserReactionActivityDTO]:
         """
-        Получает топ пользователей по количеству реакций за день.
+        Получает топ пользователей по количеству реакций за период.
         """
         async with self._db.session() as session:
             try:
-                start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-                end_date = date.replace(
-                    hour=23, minute=59, second=59, microsecond=999999
-                )
+                if date and not (start_date and end_date):
+                    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    end_date = date.replace(
+                        hour=23, minute=59, second=59, microsecond=999999
+                    )
+
+                if not start_date or not end_date:
+                    raise ValueError(
+                        "Необходимо указать дату или период (start_date и end_date)"
+                    )
 
                 query = (
                     select(
@@ -154,28 +165,47 @@ class MessageReactionRepository:
                     )
 
                 logger.info(
-                    f"Получен топ-{len(top_reactors)} по реакциям для chat_id={chat_id} за {date.strftime('%Y-%m-%d')}"
+                    "Получен топ-%d по реакциям для chat_id=%s за период %s - %s",
+                    len(top_reactors),
+                    chat_id,
+                    start_date.strftime("%Y-%m-%d"),
+                    end_date.strftime("%Y-%m-%d"),
                 )
                 return top_reactors
 
             except Exception as e:
                 logger.error(
-                    f"Ошибка при получении топа по реакциям: chat_id={chat_id}, дата={date.strftime('%Y-%m-%d')}, {e}"
+                    "Ошибка при получении топа по реакциям: chat_id=%s, период=%s-%s, %s",
+                    chat_id,
+                    start_date.strftime("%Y-%m-%d") if start_date else "None",
+                    end_date.strftime("%Y-%m-%d") if end_date else "None",
+                    e,
                 )
                 return []
 
     async def get_daily_popular_reactions(
-        self, chat_id: int, date: datetime, limit: int = 3
+        self,
+        chat_id: int,
+        date: datetime | None = None,
+        limit: int = 3,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> List[PopularReactionDTO]:
         """
-        Получает самые популярные реакции за день.
+        Получает самые популярные реакции за период.
         """
         async with self._db.session() as session:
             try:
-                start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-                end_date = date.replace(
-                    hour=23, minute=59, second=59, microsecond=999999
-                )
+                if date and not (start_date and end_date):
+                    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    end_date = date.replace(
+                        hour=23, minute=59, second=59, microsecond=999999
+                    )
+
+                if not start_date or not end_date:
+                    raise ValueError(
+                        "Необходимо указать дату или период (start_date и end_date)"
+                    )
 
                 query = (
                     select(
@@ -202,13 +232,21 @@ class MessageReactionRepository:
                     )
 
                 logger.info(
-                    f"Получено {len(popular_reactions)} популярных реакций для chat_id={chat_id} за {date.strftime('%Y-%m-%d')}"
+                    "Получено %d популярных реакций для chat_id=%s за период %s - %s",
+                    len(popular_reactions),
+                    chat_id,
+                    start_date.strftime("%Y-%m-%d"),
+                    end_date.strftime("%Y-%m-%d"),
                 )
                 return popular_reactions
 
             except Exception as e:
                 logger.error(
-                    f"Ошибка при получении популярных реакций: chat_id={chat_id}, дата={date.strftime('%Y-%m-%d')}, {e}"
+                    "Ошибка при получении популярных реакций: chat_id=%s, период=%s-%s, %s",
+                    chat_id,
+                    start_date.strftime("%Y-%m-%d") if start_date else "None",
+                    end_date.strftime("%Y-%m-%d") if end_date else "None",
+                    e,
                 )
                 return []
 
