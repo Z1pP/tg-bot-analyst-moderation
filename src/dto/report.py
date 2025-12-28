@@ -159,5 +159,4 @@ class ReportResultDTO:
     end_date: datetime
     is_single_day: bool
     working_hours: float
-    active_users: Optional[tuple[int, int]] = None
     error_message: Optional[str] = None
