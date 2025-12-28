@@ -8,7 +8,6 @@ from sqlalchemy.orm import joinedload
 
 from database.session import DatabaseContextManager
 from dto.buffer import BufferedMessageReplyDTO
-from dto.message_reply import CreateMessageReplyDTO
 from models import ChatMessage, MessageReply
 
 logger = logging.getLogger(__name__)
@@ -56,31 +55,6 @@ class MessageReplyRepository:
                     e,
                 )
                 return []
-
-    async def create_reply_message(self, dto: CreateMessageReplyDTO) -> MessageReply:
-        async with self._db.session() as session:
-            try:
-                new_reply = MessageReply(
-                    chat_id=dto.chat_id,
-                    original_message_url=dto.original_message_url,
-                    reply_message_id=dto.reply_message_id,
-                    reply_user_id=dto.reply_user_id,
-                    response_time_seconds=dto.response_time_seconds,
-                )
-                session.add(new_reply)
-                await session.commit()
-                await session.refresh(new_reply)
-                logger.info(
-                    "Создан новый ответ: chat_id=%s, reply_user_id=%s, response_time=%s сек.",
-                    dto.chat_id,
-                    dto.reply_user_id,
-                    dto.response_time_seconds,
-                )
-                return new_reply
-            except Exception as e:
-                logger.error("Ошибка при создании ответа: %s", e)
-                await session.rollback()
-                raise e
 
     async def get_replies_by_chat_id_and_period(
         self,
@@ -170,7 +144,7 @@ class MessageReplyRepository:
                         message_lookup[key] = []
 
                 # Ищем ChatMessage по message_id и chat_id для получения DB id
-                for (chat_id, message_id_str), dto_list in message_lookup.items():
+                for (chat_id, message_id_str), _ in message_lookup.items():
                     query = select(ChatMessage).where(
                         ChatMessage.chat_id == chat_id,
                         ChatMessage.message_id == message_id_str,

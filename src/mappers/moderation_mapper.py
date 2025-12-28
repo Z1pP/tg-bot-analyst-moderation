@@ -1,55 +1,13 @@
-import logging
 from typing import Optional
 
-from aiogram import F, Router, types
-from aiogram.filters import Command
+from aiogram.types import Message
 
 from constants.punishment import PunishmentActions as Actions
-from container import container
 from dto import ModerationActionDTO
-from filters.admin_filter import StaffOnlyFilter
 from services.time_service import TimeZoneService
-from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
-
-router = Router(name=__name__)
-logger = logging.getLogger(__name__)
 
 
-@router.message(
-    Command("warn"),
-    StaffOnlyFilter(),
-    F.reply_to_message,
-)
-async def warn_user_handler(message: types.Message) -> None:
-    """
-    Обрабатывает команду /warn для выдачи предупреждения пользователю.
-
-    Команда должна быть ответом на сообщение нарушителя.
-    Формат: /warn [причина]
-    """
-    dto = map_message_to_moderation_dto(message=message)
-    usecase: GiveUserWarnUseCase = container.resolve(GiveUserWarnUseCase)
-    await usecase.execute(dto=dto)
-
-
-@router.message(
-    Command("ban"),
-    StaffOnlyFilter(),
-    F.reply_to_message,
-)
-async def ban_user_handler(message: types.Message) -> None:
-    """
-    Обрабатывает команду /ban для бессрочной блокировки пользователя.
-
-    Команда должна быть ответом на сообщение нарушителя.
-    Формат: /ban [причина]
-    """
-    dto = map_message_to_moderation_dto(message=message)
-    usecase: GiveUserBanUseCase = container.resolve(GiveUserBanUseCase)
-    await usecase.execute(dto=dto)
-
-
-def extract_reason_from_message(message: types.Message) -> Optional[str]:
+def extract_reason_from_message(message: Message) -> Optional[str]:
     """
     Извлекает причину наказания из текста команды.
 
@@ -66,7 +24,7 @@ def extract_reason_from_message(message: types.Message) -> Optional[str]:
     return parts[1] if len(parts) > 1 else None
 
 
-def map_message_to_moderation_dto(message: types.Message) -> ModerationActionDTO:
+def map_message_to_moderation_dto(message: Message) -> ModerationActionDTO:
     """
     Преобразует Telegram сообщение в DTO для модерации.
 

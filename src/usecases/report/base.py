@@ -11,6 +11,7 @@ from repositories import (
     MessageReactionRepository,
     MessageReplyRepository,
     MessageRepository,
+    PunishmentRepository,
     UserRepository,
 )
 from services.time_service import TimeZoneService
@@ -31,12 +32,14 @@ class BaseReportUseCase(ABC):
         user_repository: UserRepository,
         reaction_repository: MessageReactionRepository,
         chat_repository: ChatRepository,
+        punishment_repository: PunishmentRepository = None,
     ):
         self._msg_reply_repository = msg_reply_repository
         self._user_repository = user_repository
         self._message_repository = message_repository
         self._reaction_repository = reaction_repository
         self._chat_repository = chat_repository
+        self._punishment_repository = punishment_repository
 
     @abstractmethod
     async def execute(self, dto) -> List[str]:
@@ -123,24 +126,6 @@ class BaseReportUseCase(ABC):
         """Расчитывет среднее количество сообщений в день"""
         days = max(1, (end_date.date() - start_date.date()).days)
         return round(messages_count / days, 2)
-
-    def get_time_first_message(self, messages: List[ChatMessage]) -> str:
-        """Возвращает время первого сообщения."""
-        return self._get_time_first_item(messages)
-
-    def get_time_first_reaction(self, reactions: List[MessageReaction]) -> str:
-        """Возвращает время первой реакции."""
-        return self._get_time_first_item(reactions)
-
-    def _get_time_first_item(
-        self, items: List[Union[ChatMessage, MessageReaction]]
-    ) -> str:
-        """Возвращает время первого элемента."""
-        return (
-            min(items, key=lambda x: x.created_at).created_at.strftime("%H:%M")
-            if items
-            else ""
-        )
 
     def get_avg_time_first_messages(self, messages: List[ChatMessage]) -> str:
         """Возвращает среднее время первых сообщений на каждый день"""

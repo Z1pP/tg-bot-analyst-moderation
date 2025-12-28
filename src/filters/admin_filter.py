@@ -83,7 +83,11 @@ class AdminOnlyFilter(BaseUserFilter):
             return False
 
         user = await self.get_user(tg_id=tg_id, current_username=current_username)
-        return user is not None and user.role == UserRole.ADMIN
+
+        if user and user.role == UserRole.ADMIN:
+            return True
+
+        await event.answer("⛔ У Вас нет доступа к сервисам Analyst AI")
 
 
 class StaffOnlyFilter(BaseUserFilter):

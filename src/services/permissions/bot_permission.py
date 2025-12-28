@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
@@ -14,6 +15,8 @@ from aiogram.types import (
 )
 
 from services.time_service import TimeZoneService
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -36,14 +39,27 @@ class BotPermissionsCheck:
 class BotPermissionService:
     """
     Сервис для проверки прав бота и пользователей в чатах.
-
-    Отвечает за:
-    - Проверку прав бота на модерацию
-    - Проверку статуса администратора пользователя
     """
 
     def __init__(self, bot: Bot):
         self.bot = bot
+
+    async def get_total_members(
+        self,
+        chat_tgid: ChatIdUnion,
+    ) -> int:
+        """Получает общее количество участников чата."""
+        try:
+            total = await self.bot.get_chat_member_count(chat_id=chat_tgid)
+            return total
+        except TelegramAPIError as e:
+            logger.error(
+                "Ошибка при получении количества участников чата %s: %s",
+                chat_tgid,
+                e,
+                exc_info=True,
+            )
+            return 0
 
     async def get_chat_member_status(
         self, user_tgid: int, chat_tgid: ChatIdUnion
@@ -55,7 +71,13 @@ class BotPermissionService:
             member = await self.bot.get_chat_member(
                 chat_id=chat_tgid, user_id=user_tgid
             )
-        except TelegramAPIError:
+        except TelegramAPIError as e:
+            logger.warning(
+                "Не удалось получить статус участника %s в чате %s: %s",
+                user_tgid,
+                chat_tgid,
+                e,
+            )
             return status
 
         if isinstance(member, ChatMemberBanned):
@@ -68,189 +90,84 @@ class BotPermissionService:
             status.muted_until = TimeZoneService.convert_to_local_time(
                 member.until_date
             )
-        else:
-            status.is_banned = False
-            status.is_muted = False
-
         return status
 
-    async def get_bot_member(self, chat_tgid: ChatIdUnion) -> ResultChatMemberUnion:
-        """
-        Получает информацию о боте как участнике чата.
-
-        Args:
-            chat_tgid: Telegram ID чата
-
-        Returns:
-            Информация о члене чата (боте)
-        """
-        return await self.bot.get_chat_member(chat_id=chat_tgid, user_id=self.bot.id)
+    async def get_bot_member(
+        self, chat_tgid: ChatIdUnion
+    ) -> Optional[ResultChatMemberUnion]:
+        """Получает информацию о боте как участнике чата."""
+        try:
+            return await self.bot.get_chat_member(
+                chat_id=chat_tgid, user_id=self.bot.id
+            )
+        except TelegramAPIError as e:
+            logger.error(
+                "Ошибка при получении статуса бота в чате %s: %s", chat_tgid, e
+            )
+            return None
 
     async def can_moderate(self, chat_tgid: ChatIdUnion) -> bool:
-        """
-        Проверяет, может ли бот модерировать чат (блокировать и мутить пользователей).
-
-        Бот может модерировать, если он:
-        - Является администратором или владельцем
-        - Имеет право can_restrict_members
-
-        Args:
-            chat_tgid: Telegram ID чата
-
-        Returns:
-            True если бот может модерировать (блокировать и мутить)
-        """
+        """Проверяет право бота на модерацию."""
         member = await self.get_bot_member(chat_tgid=chat_tgid)
+        if not member:
+            return False
 
         if isinstance(member, ChatMemberOwner):
             return True
         if isinstance(member, ChatMemberAdministrator):
-            return (
-                member.can_restrict_members
-                if hasattr(member, "can_restrict_members")
-                else False
-            )
-        return False
-
-    async def can_delete_messages(self, chat_tgid: ChatIdUnion) -> bool:
-        """
-        Проверяет, может ли бот удалять сообщения в чате.
-
-        Args:
-            chat_tgid: Telegram ID чата
-
-        Returns:
-            True если бот может удалять сообщения
-        """
-        member = await self.get_bot_member(chat_tgid=chat_tgid)
-
-        if isinstance(member, ChatMemberOwner):
-            return True
-        if isinstance(member, ChatMemberAdministrator):
-            return (
-                member.can_delete_messages
-                if hasattr(member, "can_delete_messages")
-                else False
-            )
-        return False
-
-    async def can_post_messages(self, chat_tgid: ChatIdUnion) -> bool:
-        """
-        Проверяет, может ли бот отправлять сообщения в чате.
-
-        Args:
-            chat_tgid: Telegram ID чата
-
-        Returns:
-            True если бот может отправлять сообщения
-        """
-        member = await self.get_bot_member(chat_tgid=chat_tgid)
-
-        if isinstance(member, ChatMemberOwner):
-            return True
-        if isinstance(member, ChatMemberAdministrator):
-            return True
+            return getattr(member, "can_restrict_members", False)
         return False
 
     async def is_administrator(
         self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
     ) -> bool:
-        """
-        Проверяет, является ли пользователь администратором чата.
-
-        Args:
-            tg_id: Telegram ID пользователя
-            chat_tg_id: Telegram ID чата
-
-        Returns:
-            True если пользователь - администратор или владелец
-        """
-        member = await self.bot.get_chat_member(chat_id=chat_tg_id, user_id=tg_id)
-        return isinstance(member, (ChatMemberOwner, ChatMemberAdministrator))
+        """Проверяет, является ли пользователь администратором."""
+        try:
+            member = await self.bot.get_chat_member(
+                chat_id=chat_tg_id, user_id=int(tg_id)
+            )
+            return isinstance(member, (ChatMemberOwner, ChatMemberAdministrator))
+        except TelegramAPIError as e:
+            logger.error(
+                "Ошибка проверки админ-прав для %s в чате %s: %s", tg_id, chat_tg_id, e
+            )
+            return False
 
     async def is_member_banned(
         self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
     ) -> bool:
-        """
-        Проверяет, заблокирован ли пользователь в чате.
-
-        Args:
-            tg_id: Telegram ID пользователя
-            chat_tg_id: Telegram ID чата
-
-        Returns:
-            True если пользователь заблокирован
-        """
-        member = await self.bot.get_chat_member(chat_id=chat_tg_id, user_id=int(tg_id))
-        return isinstance(member, ChatMemberBanned)
-
-    async def is_member_muted(
-        self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
-    ) -> bool:
-        """
-        Проверяет, замучен ли пользователь в чате.
-
-        Args:
-            tg_id: Telegram ID пользователя
-            chat_tg_id: Telegram ID чата
-
-        Returns:
-            True если пользователь ограничен в правах (мут)
-        """
-        member = await self.bot.get_chat_member(chat_id=chat_tg_id, user_id=int(tg_id))
-        return isinstance(member, ChatMemberRestricted) and not member.can_send_messages
-
-    async def can_invite_users(self, chat_tgid: ChatIdUnion) -> bool:
-        """
-        Проверяет, может ли бот создавать пригласительные ссылки в чате.
-
-        Args:
-            chat_tgid: Telegram ID чата
-
-        Returns:
-            True если бот может создавать invite ссылки
-        """
-        member = await self.get_bot_member(chat_tgid=chat_tgid)
-
-        if isinstance(member, ChatMemberOwner):
-            return True
-        if isinstance(member, ChatMemberAdministrator):
-            return (
-                member.can_invite_users
-                if hasattr(member, "can_invite_users")
-                else False
+        """Проверяет бан пользователя."""
+        try:
+            member = await self.bot.get_chat_member(
+                chat_id=chat_tg_id, user_id=int(tg_id)
             )
-        return False
+            return isinstance(member, ChatMemberBanned)
+        except TelegramAPIError as e:
+            logger.error(
+                "Ошибка проверки бана для %s в чате %s: %s", tg_id, chat_tg_id, e
+            )
+            return False
 
     async def check_archive_permissions(
         self, chat_tgid: ChatIdUnion
     ) -> BotPermissionsCheck:
-        """
-        Проверяет все необходимые права бота для работы с архивным чатом.
-
-        Проверяемые права:
-        - can_restrict_members - для блокировки и мута пользователей
-        - can_invite_users - для получения invite ссылки
-        - can_delete_messages - для удаления сообщений
-        - can_post_messages - для отправки отчетов в архив (только для каналов)
-
-        Args:
-            chat_tgid: Telegram ID чата
-
-        Returns:
-            BotPermissionsCheck с информацией о недостающих правах
-        """
+        """Проверяет все необходимые права бота."""
         member = await self.get_bot_member(chat_tgid=chat_tgid)
 
-        # Определяем тип чата для корректной проверки can_post_messages
+        if not member:
+            return BotPermissionsCheck(
+                False, ["Не удалось получить статус бота"], False
+            )
+
         try:
             chat = await self.bot.get_chat(chat_id=chat_tgid)
             is_channel = chat.type == "channel"
-        except TelegramAPIError:
-            # Если не удалось получить информацию о чате, считаем что это группа
+        except TelegramAPIError as e:
+            logger.warning(
+                "Не удалось получить тип чата %s, считаем группой: %s", chat_tgid, e
+            )
             is_channel = False
 
-        # Маппинг прав на читаемые названия
         permission_names = {
             "can_restrict_members": "Блокировка и мут пользователей",
             "can_invite_users": "Создание пригласительных ссылок",
@@ -261,45 +178,20 @@ class BotPermissionService:
         is_admin = isinstance(member, (ChatMemberOwner, ChatMemberAdministrator))
         missing_permissions = []
 
-        # Для владельца все права доступны
         if isinstance(member, ChatMemberOwner):
-            return BotPermissionsCheck(
-                is_admin=True,
-                missing_permissions=[],
-                has_all_permissions=True,
-            )
+            return BotPermissionsCheck(True, [], True)
 
-        # Для администратора проверяем каждое право
         if isinstance(member, ChatMemberAdministrator):
-            # Проверка can_restrict_members (блокировка и мут)
-            if not (
-                hasattr(member, "can_restrict_members") and member.can_restrict_members
-            ):
-                missing_permissions.append(permission_names["can_restrict_members"])
+            # Проверяем атрибуты динамически, так как они могут отсутствовать в разных версиях API/типах чата
+            for attr, name in permission_names.items():
+                if attr == "can_post_messages" and not is_channel:
+                    continue
+                if not getattr(member, attr, False):
+                    missing_permissions.append(name)
 
-            # Проверка can_invite_users
-            if not (hasattr(member, "can_invite_users") and member.can_invite_users):
-                missing_permissions.append(permission_names["can_invite_users"])
-
-            # Проверка can_delete_messages
-            if not (
-                hasattr(member, "can_delete_messages") and member.can_delete_messages
-            ):
-                missing_permissions.append(permission_names["can_delete_messages"])
-
-            # Проверка can_post_messages
-            # Для каналов проверяем can_post_messages (право публиковать от имени канала)
-            # Для групп (supergroup) это право не применимо - бот-админ может отправлять сообщения
-            if is_channel:
-                if not (
-                    hasattr(member, "can_post_messages") and member.can_post_messages
-                ):
-                    missing_permissions.append(permission_names["can_post_messages"])
-            # Для групп не проверяем can_post_messages - бот-админ может отправлять сообщения
-
-        # Если бот не администратор, все права отсутствуют
         if not is_admin:
             missing_permissions = list(permission_names.values())
+            logger.info("Бот не является администратором в чате %s", chat_tgid)
 
         return BotPermissionsCheck(
             is_admin=is_admin,

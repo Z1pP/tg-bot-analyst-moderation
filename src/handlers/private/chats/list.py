@@ -7,7 +7,11 @@ from aiogram.types import CallbackQuery
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from container import container
-from keyboards.inline.chats import chat_actions_ikb, tracked_chats_ikb
+from keyboards.inline.chats import (
+    chat_actions_ikb,
+    chats_management_ikb,
+    tracked_chats_ikb,
+)
 from states import ChatStateManager
 from usecases.chat import GetTrackedChatsUseCase
 from utils.send_message import safe_edit_message
@@ -47,7 +51,7 @@ async def show_tracked_chats_handler(
             message_id=callback.message.message_id,
             text="❗Чтобы получать отчёты по чату, необходимо добавить чат "
             "в отслеживаемые, а также пользователей для сбора статистики",
-            reply_markup=chat_actions_ikb(),
+            reply_markup=chats_management_ikb(),
         )
         return
 

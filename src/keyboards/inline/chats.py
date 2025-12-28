@@ -292,6 +292,20 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def rating_report_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура для отчета по рейтингу"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.RatingButtons.BACK_TO_PERIOD,
+            callback_data=CallbackData.Chat.GET_DAILY_RATING,
+        )
+    )
+
+    return builder.as_markup()
+
+
 def chats_management_ikb() -> InlineKeyboardMarkup:
     """Клавиатура меню чатов"""
     builder = InlineKeyboardBuilder()

@@ -89,25 +89,6 @@ class ChatRepository:
                 logger.error("Произошла ошибка при получении всех чатов: %s", e)
                 raise e
 
-    async def get_chats_with_archive(self) -> List[ChatSession]:
-        """Получает список чатов, у которых есть архивные чаты."""
-        async with self._db.session() as session:
-            try:
-                result = await session.execute(
-                    select(ChatSession)
-                    .where(ChatSession.archive_chat_id.isnot(None))
-                    .options(selectinload(ChatSession.archive_chat))
-                )
-                chats = result.scalars().all()
-
-                logger.info("Получено %d чатов с архивными чатами", len(chats))
-                return chats
-            except Exception as e:
-                logger.error(
-                    "Произошла ошибка при получении чатов с архивными чатами: %s", e
-                )
-                raise e
-
     async def create_chat(self, chat_id: str, title: str) -> ChatSession:
         """Создает новый чат."""
         async with self._db.session() as session:

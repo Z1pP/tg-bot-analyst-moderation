@@ -25,7 +25,7 @@ from repositories import (
     MessageRepository,
     UserRepository,
 )
-from services import AdminActionLogService
+from services import AdminActionLogService, BotPermissionService
 from services.break_analysis_service import BreakAnalysisService
 from services.time_service import TimeZoneService
 from services.work_time_service import WorkTimeService
@@ -62,6 +62,7 @@ class GetChatReportUseCase:
         message_repository: MessageRepository,
         reaction_repository: MessageReactionRepository,
         msg_reply_repository: MessageReplyRepository,
+        bot_permission_service: BotPermissionService = None,
         admin_action_log_service: AdminActionLogService = None,
     ) -> None:
         self._chat_repository = chat_repository
@@ -69,6 +70,7 @@ class GetChatReportUseCase:
         self._message_repository = message_repository
         self._reaction_repository = reaction_repository
         self._msg_reply_repository = msg_reply_repository
+        self._bot_permission_service = bot_permission_service
         self._admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: ChatReportDTO) -> ReportResultDTO:
@@ -86,6 +88,8 @@ class GetChatReportUseCase:
                 working_hours=0.0,
                 error_message=ReportDialogs.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
             )
+
+        dto.chat_tgid = chat.chat_id
 
         tracked_users_ids = await self._get_tracked_users_ids(
             admin_tg_id=dto.admin_tg_id
@@ -248,11 +252,6 @@ class GetChatReportUseCase:
         if hasattr(item, "created_at"):
             return TimeZoneService.convert_to_local_time(dt=item.created_at)
         return item.created_at if hasattr(item, "created_at") else datetime.now()
-
-    async def _transform_period_to_dates(
-        self, period: str
-    ) -> tuple[datetime, datetime]:
-        return TimePeriod.to_datetime(period=period)
 
     async def _get_currect_dates(
         self, period: str, chat: ChatSession
@@ -509,12 +508,6 @@ class GetChatReportUseCase:
         if selected_period in [TimePeriod.TODAY.value, TimePeriod.YESTERDAY.value]:
             return True
         return (end_date.date() - start_date.date()).days < 1
-
-    def is_single_day_report(self, report_dto: ChatReportDTO) -> bool:
-        # Публичный метод-обертка для использования извне, если нужно
-        return self._is_single_day_report(
-            report_dto.selected_period, report_dto.start_date, report_dto.end_date
-        )
 
     async def _log_admin_action(self, dto: ChatReportDTO, chat: ChatSession):
         period = format_selected_period(

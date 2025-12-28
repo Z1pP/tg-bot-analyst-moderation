@@ -64,13 +64,3 @@ class UnbanFailedError(AmnestyError):
         if self.reason:
             return f"{base_msg} Причина: {self.reason}"
         return base_msg
-
-
-class NoPunishmentError(AmnestyError):
-    """Нет наказаний для пользователя."""
-
-    def __init__(self, username: str) -> None:
-        self.username = username
-
-    def get_user_message(self) -> str:
-        return f"❌ Нет наказаний для пользователя @{self.username}."

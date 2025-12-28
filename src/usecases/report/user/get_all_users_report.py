@@ -20,6 +20,7 @@ from repositories import (
     MessageReactionRepository,
     MessageReplyRepository,
     MessageRepository,
+    PunishmentRepository,
     UserRepository,
 )
 from services import AdminActionLogService
@@ -39,6 +40,7 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
         user_repository: UserRepository,
         reaction_repository: MessageReactionRepository,
         chat_repository: ChatRepository,
+        punishment_repository: PunishmentRepository,
         admin_action_log_service: AdminActionLogService = None,
     ):
         super().__init__(
@@ -47,6 +49,7 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             user_repository,
             reaction_repository,
             chat_repository,
+            punishment_repository,
         )
         self._admin_action_log_service = admin_action_log_service
 
@@ -90,9 +93,29 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
         # - get_reactions_by_user_and_period
         # Необходимо оптимизировать через batch-запросы для всех пользователей сразу
         users_stats = []
+
+        # Получаем статистику наказаний для всех пользователей за период
+        user_ids = [user.id for user in users]
+        all_punishment_stats = (
+            await self._punishment_repository.get_punishment_counts_by_moderators(
+                moderator_ids=user_ids,
+                start_date=adjusted_start,
+                end_date=adjusted_end,
+            )
+        )
+
         for user in users:
             user_data = await self._get_user_data(user, adjusted_start, adjusted_end)
-            if not user_data["messages"] and not user_data["reactions"]:
+            punishment_stats = all_punishment_stats.get(
+                user.id, {"warns": 0, "bans": 0}
+            )
+
+            if (
+                not user_data["messages"]
+                and not user_data["reactions"]
+                and punishment_stats["warns"] == 0
+                and punishment_stats["bans"] == 0
+            ):
                 continue
 
             user_stats = self._calculate_user_stats(
@@ -103,6 +126,8 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
                 start_date=adjusted_start,
                 end_date=adjusted_end,
                 is_single_day=is_single_day,
+                warns_count=punishment_stats["warns"],
+                bans_count=punishment_stats["bans"],
             )
             users_stats.append(user_stats)
 
@@ -163,17 +188,29 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
         start_date: datetime,
         end_date: datetime,
         is_single_day: bool,
+        warns_count: int = 0,
+        bans_count: int = 0,
     ) -> AllUsersUserStatsResult:
         """Рассчитывает статистику для одного пользователя."""
         if is_single_day:
             day_stats = self._calculate_day_stats(
-                messages, reactions, start_date, end_date
+                messages,
+                reactions,
+                start_date,
+                end_date,
+                warns_count=warns_count,
+                bans_count=bans_count,
             )
             multi_day_stats = None
         else:
             day_stats = None
             multi_day_stats = self._calculate_multi_day_stats(
-                messages, reactions, start_date, end_date
+                messages,
+                reactions,
+                start_date,
+                end_date,
+                warns_count=warns_count,
+                bans_count=bans_count,
             )
 
         replies_stats = self._calculate_replies_stats(replies)
@@ -194,9 +231,11 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
         reactions: List[MessageReaction],
         start_date: datetime,
         end_date: datetime,
+        warns_count: int = 0,
+        bans_count: int = 0,
     ) -> Optional[SingleUserDayStats]:
         """Рассчитывает статистику за один день."""
-        if not messages and not reactions:
+        if not messages and not reactions and warns_count == 0 and bans_count == 0:
             return None
 
         first_message_time = None
@@ -219,6 +258,8 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             first_reaction_time=first_reaction_time,
             avg_messages_per_hour=avg_messages_per_hour,
             total_messages=msg_count,
+            warns_count=warns_count,
+            bans_count=bans_count,
         )
 
     def _calculate_multi_day_stats(
@@ -227,9 +268,11 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
         reactions: List[MessageReaction],
         start_date: datetime,
         end_date: datetime,
+        warns_count: int = 0,
+        bans_count: int = 0,
     ) -> Optional[SingleUserMultiDayStats]:
         """Рассчитывает статистику за несколько дней."""
-        if not messages and not reactions:
+        if not messages and not reactions and warns_count == 0 and bans_count == 0:
             return None
 
         avg_first_message_time = self.get_avg_time_first_messages(messages)
@@ -249,6 +292,8 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             avg_messages_per_hour=avg_messages_per_hour,
             avg_messages_per_day=avg_messages_per_day,
             total_messages=msg_count,
+            warns_count=warns_count,
+            bans_count=bans_count,
         )
 
     def _calculate_replies_stats(self, replies: List[MessageReply]) -> RepliesStats:

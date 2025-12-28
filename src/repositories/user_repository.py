@@ -1,11 +1,19 @@
 import logging
+from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, func, select
 
 from constants.enums import UserRole
 from database.session import DatabaseContextManager
-from models import AdminChatAccess, ChatSession, User, admin_user_tracking
+from models import (
+    AdminChatAccess,
+    ChatMessage,
+    ChatSession,
+    MessageReaction,
+    User,
+    admin_user_tracking,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +21,44 @@ logger = logging.getLogger(__name__)
 class UserRepository:
     def __init__(self, db_manager: DatabaseContextManager) -> None:
         self._db = db_manager
+
+    async def total_active_users(
+        self,
+        chat_id: int,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> int:
+        """Получает общее количество активных пользователей в чате."""
+
+        async with self._db.session() as session:
+            try:
+                msg_users = select(ChatMessage.user_id).where(
+                    and_(
+                        ChatMessage.chat_id == chat_id,
+                        ChatMessage.created_at.between(start_date, end_date),
+                    )
+                )
+
+                react_users = select(MessageReaction.user_id).where(
+                    and_(
+                        MessageReaction.created_at.between(start_date, end_date),
+                        MessageReaction.chat_id == chat_id,
+                    )
+                )
+
+                active_users_union = msg_users.union(react_users).subquery()
+
+                stmt = select(func.count()).select_from(active_users_union)
+
+                count = await session.scalar(stmt)
+
+                logger.info("Общее количество активных пользователей: %s", count)
+                return count
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении общего количества активных пользователей: %s",
+                    e,
+                )
 
     async def update_user(self, user_id: int, username: str) -> Optional[User]:
         """Обновляет username пользователя."""

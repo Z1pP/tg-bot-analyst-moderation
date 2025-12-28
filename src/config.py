@@ -1,72 +1,51 @@
 from pathlib import Path
 
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic import computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 ENV_FILE = BASE_DIR / ".env"
 
 
-class AlembicConfig(BaseSettings):
-    DEV_DB_URL_FOR_ALEMBIC: str = Field(alias="DEV_DB_URL_FOR_ALEMBIC")
-    PROD_DB_URL_FOR_ALEMBIC: str = Field(alias="PROD_DB_URL_FOR_ALEMBIC")
-
-    class Config:
-        env_file = ENV_FILE
-        env_file_encoding = "utf-8"
-        extra = "ignore"
-
-
-class DataBaseConfig(BaseSettings):
-    DEV_DATABASE_URL: str = Field(alias="DEV_DATABASE_URL")
-    PROD_DATABASE_URL: str = Field(alias="PROD_DATABASE_URL")
-
-    class Config:
-        env_file = ENV_FILE
-        env_file_encoding = "utf-8"
-        extra = "ignore"
-
-
 class Settings(BaseSettings):
-    BOT_TOKEN: str = Field(alias="BOT_TOKEN")
-    IS_DEVELOPMENT: bool = Field(False, alias="IS_DEVELOPMENT")
-    TIMEZONE: str = Field(
-        "Europe/Moscow", alias="TIMEZONE", description="Default timezone "
-    )
-    REDIS_URL: str = Field(alias="REDIS_URL")
-    OPEN_ROUTER_TOKEN: str = Field(alias="OPEN_ROUTER_TOKEN")
-    OPEN_ROUTER_MODEL: str = Field(
-        "mistralai/devstral-2512:free",
-        alias="OPEN_ROUTER_MODEL",
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore"
     )
 
-    @property
-    def ALEMBIC_DB_URL(self) -> str:
-        """Получает URL для Alembic в зависимости от режима."""
-        alembic_config = AlembicConfig()
-        return (
-            alembic_config.DEV_DB_URL_FOR_ALEMBIC
-            if self.IS_DEVELOPMENT
-            else alembic_config.PROD_DB_URL_FOR_ALEMBIC
-        )
+    # Общие настройки
+    BOT_TOKEN: str
+    IS_DEVELOPMENT: bool = False
+    TIMEZONE: str = "Europe/Moscow"
+    REDIS_URL: str
 
+    # Настройки нейросети
+    OPEN_ROUTER_TOKEN: str
+    OPEN_ROUTER_MODEL: str = "mistralai/devstral-2512:free"
+
+    # Базы данных
+    DEV_DATABASE_URL: str
+    PROD_DATABASE_URL: str
+    DEV_DB_URL_FOR_ALEMBIC: str
+    PROD_DB_URL_FOR_ALEMBIC: str
+
+    @computed_field
     @property
     def DATABASE_URL(self) -> str:
-        """Получает URL базы данных в зависимости от режима."""
-        db_config = DataBaseConfig()
-        return (
-            db_config.DEV_DATABASE_URL
-            if self.IS_DEVELOPMENT
-            else db_config.PROD_DATABASE_URL
-        )
+        """Автоматический выбор URL базы данных."""
+        return self.DEV_DATABASE_URL if self.IS_DEVELOPMENT else self.PROD_DATABASE_URL
 
-    class Config:
-        env_file = ENV_FILE
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+    @computed_field
+    @property
+    def ALEMBIC_DB_URL(self) -> str:
+        """Автоматический выбор URL для Alembic."""
+        return (
+            self.DEV_DB_URL_FOR_ALEMBIC
+            if self.IS_DEVELOPMENT
+            else self.PROD_DB_URL_FOR_ALEMBIC
+        )
 
 
 try:
     settings = Settings()
 except Exception as e:
-    raise RuntimeError(f"Ошибка загрузки конфигурации: {e}") from e
+    raise RuntimeError(f"Ошибка загрузки конфигурации:\n{e}") from e

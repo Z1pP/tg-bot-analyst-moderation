@@ -9,10 +9,10 @@ from .query_handler import router as inline_query_router
 from .reactions import router as reactions_router
 
 router = Router(name="group_router")
+router.include_router(moderation_router)
 router.include_router(archive_bind_router)
 router.include_router(new_members_router)
 router.include_router(inline_query_router)
 router.include_router(chat_tracking_router)
-router.include_router(moderation_router)
 router.include_router(message_router)
 router.include_router(reactions_router)

@@ -7,6 +7,7 @@ from .dialogs import (
     ChatDialogs,
     MenuDialogs,
     MessageManagerDialogs,
+    RatingDialogs,
     ReleaseNotesDialogs,
     ReportDialogs,
     RolesDialogs,
@@ -93,7 +94,7 @@ class InlineButtons:
         BACK_TO_CHATS_MANAGEMENT = "⬅️ Вернуться к упр. чатами"
         # Actions with chat
         GET_STATISTICS = "📊 Статистика"
-        GET_DAILY_RATING = "🏆 Рейтинг за сутки"
+        GET_DAILY_RATING = "🏆 Рейтинг активности"
         GET_SUMMARY = "📝 Получить сводку"
         GET_SUMMARY_24H = "📝 Сводка за 24ч"
         SUMMARY_SHORT = "Краткая"
@@ -152,6 +153,12 @@ class InlineButtons:
 
         CANCEL = "❌ Отмена"
 
+    class RatingButtons:
+        """Кнопки для действий с рейтингом"""
+
+        BACK_TO_PERIOD = "⬅️ Назад к выбору периода"
+        BACK_TO_DASHBOARD = "⬅️ Назад к действиям"
+
 
 class Dialog:
     # User Tracking
@@ -184,3 +191,5 @@ class Dialog:
     ReleaseNotes = ReleaseNotesDialogs
     # Roles
     Roles = RolesDialogs
+    # Chat rating
+    Rating = RatingDialogs

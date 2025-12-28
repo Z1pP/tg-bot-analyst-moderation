@@ -29,10 +29,13 @@ class PopularReactionDTO:
 class ChatDailyStatsDTO:
     chat_id: int
     chat_title: str
-    date: datetime
+
     top_users: list[UserDailyActivityDTO]
     top_reactors: list[UserReactionActivityDTO]
     popular_reactions: list[PopularReactionDTO]
     total_messages: int
     total_reactions: int
     active_users_count: int
+    start_date: datetime
+    end_date: datetime | None = None
+    total_users_count: int = 0

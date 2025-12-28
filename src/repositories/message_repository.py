@@ -9,7 +9,6 @@ from sqlalchemy.orm import joinedload
 from database.session import DatabaseContextManager
 from dto.buffer import BufferedMessageDTO
 from dto.daily_activity import UserDailyActivityDTO
-from dto.message import CreateMessageDTO
 from models import ChatMessage, User
 
 logger = logging.getLogger(__name__)
@@ -54,32 +53,6 @@ class MessageRepository:
             result = await session.execute(query)
             # Возвращаем список кортежей (text, username) в хронологическом порядке
             return list(reversed(result.all()))
-
-    async def create_new_message(self, dto: CreateMessageDTO) -> ChatMessage:
-        async with self._db.session() as session:
-            try:
-                new_message = ChatMessage(
-                    user_id=dto.user_id,
-                    chat_id=dto.chat_id,
-                    message_id=dto.message_id,
-                    message_type=dto.message_type,
-                    content_type=dto.content_type,
-                    text=dto.text,
-                )
-                session.add(new_message)
-                await session.commit()
-                await session.refresh(new_message)
-                logger.info(
-                    "Создано новое сообщение: user_id=%s, chat_id=%s, message_id=%s",
-                    dto.user_id,
-                    dto.chat_id,
-                    dto.message_id,
-                )
-                return new_message
-            except Exception as e:
-                logger.error("Ошибка при создании сообщения: %s", e)
-                await session.rollback()
-                raise e
 
     async def get_messages_by_period_date(
         self,
@@ -164,17 +137,28 @@ class MessageRepository:
                 return []
 
     async def get_daily_top_users(
-        self, chat_id: int, date: datetime, limit: int = 10
+        self,
+        chat_id: int,
+        date: datetime | None = None,
+        limit: int = 10,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> List[UserDailyActivityDTO]:
         """
-        Получает топ активных пользователей за день в чате.
+        Получает топ активных пользователей за период в чате.
         """
         async with self._db.session() as session:
             try:
-                start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-                end_date = date.replace(
-                    hour=23, minute=59, second=59, microsecond=999999
-                )
+                if date and not (start_date and end_date):
+                    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+                    end_date = date.replace(
+                        hour=23, minute=59, second=59, microsecond=999999
+                    )
+
+                if not start_date or not end_date:
+                    raise ValueError(
+                        "Необходимо указать дату или период (start_date и end_date)"
+                    )
 
                 query = (
                     select(
@@ -207,18 +191,20 @@ class MessageRepository:
                     )
 
                 logger.info(
-                    "Получен топ-%d пользователей для chat_id=%s за %s",
+                    "Получен топ-%d пользователей для chat_id=%s за период %s - %s",
                     len(top_users),
                     chat_id,
-                    date.strftime("%Y-%m-%d"),
+                    start_date.strftime("%Y-%m-%d"),
+                    end_date.strftime("%Y-%m-%d"),
                 )
                 return top_users
 
             except Exception as e:
                 logger.error(
-                    "Ошибка при получении топа пользователей: chat_id=%s, дата=%s, %s",
+                    "Ошибка при получении топа пользователей: chat_id=%s, период=%s-%s, %s",
                     chat_id,
-                    date.strftime("%Y-%m-%d"),
+                    start_date.strftime("%Y-%m-%d") if start_date else "None",
+                    end_date.strftime("%Y-%m-%d") if end_date else "None",
                     e,
                 )
                 return []
