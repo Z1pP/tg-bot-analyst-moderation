@@ -43,12 +43,6 @@ class ChatData:
     replies: List[MessageReply]
 
 
-@dataclass
-class UserActivity:
-    total_users: int
-    active_users: int
-
-
 class GetChatReportUseCase:
     """Usecase for generation chat report"""
 
@@ -157,8 +151,6 @@ class GetChatReportUseCase:
             working_hours=working_hours,
         )
 
-        user_activity = await self._get_chat_activity_info(dto=dto)
-
         # Логирование действия администратора
         await self._log_admin_action(dto, chat)
 
@@ -169,28 +161,7 @@ class GetChatReportUseCase:
             end_date=dto.end_date,
             is_single_day=is_single_day,
             working_hours=working_hours,
-            active_users=(
-                user_activity.active_users,
-                user_activity.total_users,
-            ),
         )
-
-    async def _get_chat_activity_info(self, dto: ChatReportDTO) -> UserActivity:
-        """
-        Получает общее количество активных пользователей
-        и количество участников в чате.
-        """
-        activity_users = await self._user_repository.total_active_users(
-            chat_id=dto.chat_id,
-            start_date=dto.start_date,
-            end_date=dto.end_date,
-        )
-
-        total_users = await self._bot_permission_service.get_total_members(
-            chat_tgid=dto.chat_tgid
-        )
-
-        return UserActivity(total_users=total_users, active_users=activity_users)
 
     async def _get_tracked_users_ids(self, admin_tg_id: str) -> list[int]:
         tracked_users = await self._user_repository.get_tracked_users_for_admin(
