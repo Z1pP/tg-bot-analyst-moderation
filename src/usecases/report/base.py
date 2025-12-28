@@ -11,6 +11,7 @@ from repositories import (
     MessageReactionRepository,
     MessageReplyRepository,
     MessageRepository,
+    PunishmentRepository,
     UserRepository,
 )
 from services.time_service import TimeZoneService
@@ -31,12 +32,14 @@ class BaseReportUseCase(ABC):
         user_repository: UserRepository,
         reaction_repository: MessageReactionRepository,
         chat_repository: ChatRepository,
+        punishment_repository: PunishmentRepository = None,
     ):
         self._msg_reply_repository = msg_reply_repository
         self._user_repository = user_repository
         self._message_repository = message_repository
         self._reaction_repository = reaction_repository
         self._chat_repository = chat_repository
+        self._punishment_repository = punishment_repository
 
     @abstractmethod
     async def execute(self, dto) -> List[str]:
