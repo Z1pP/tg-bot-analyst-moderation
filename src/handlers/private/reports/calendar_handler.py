@@ -15,7 +15,12 @@ from keyboards.inline.time_period import (
     time_period_ikb_single_user,
 )
 from services.time_service import TimeZoneService
-from states import AllUsersReportStates, ChatStateManager, SingleUserReportStates
+from states import (
+    AllUsersReportStates,
+    ChatStateManager,
+    RatingStateManager,
+    SingleUserReportStates,
+)
 from utils.exception_handler import handle_exception
 
 router = Router()
@@ -73,6 +78,10 @@ def _create_calendar_by_state(
             year=year, month=month, start_date=start_date, end_date=end_date
         )
     elif current_state == ChatStateManager.selecting_custom_period:
+        return CalendarKeyboard.create_calendar_chat(
+            year=year, month=month, start_date=start_date, end_date=end_date
+        )
+    elif current_state == RatingStateManager.selecting_custom_period:
         return CalendarKeyboard.create_calendar_chat(
             year=year, month=month, start_date=start_date, end_date=end_date
         )
@@ -152,6 +161,11 @@ async def handle_reset(callback: CallbackQuery, state: FSMContext) -> None:
             year=now.year,
             month=now.month,
         )
+    elif current_state == RatingStateManager.selecting_custom_period:
+        calendar_kb = CalendarKeyboard.create_calendar_chat(
+            year=now.year,
+            month=now.month,
+        )
 
     await callback.message.edit_text(
         text=Dialog.Calendar.SELECT_START_DATE,
@@ -170,6 +184,8 @@ async def handle_cancel(callback: CallbackQuery, state: FSMContext) -> None:
     elif current_state == AllUsersReportStates.selecting_custom_period:
         keyboard = time_period_ikb_all_users()
     elif current_state == ChatStateManager.selecting_custom_period:
+        keyboard = time_period_ikb_chat()
+    elif current_state == RatingStateManager.selecting_custom_period:
         keyboard = time_period_ikb_chat()
 
     await callback.message.edit_text(
@@ -207,6 +223,22 @@ async def handle_confirm_action(
         await callback.message.edit_text(text=Dialog.Calendar.GENERATING_REPORT)
 
         await _render_report_view(
+            callback=callback,
+            state=state,
+            chat_id=chat_id,
+            start_date=cal_start,
+            end_date=cal_end,
+        )
+
+    elif current_state == RatingStateManager.selecting_custom_period:
+        from ..chats.rating.rating import _render_rating_view
+
+        chat_id = user_data.get("chat_id")
+        if not chat_id:
+            await callback.answer(Dialog.Chat.CHAT_NOT_SELECTED, show_alert=True)
+            return
+
+        await _render_rating_view(
             callback=callback,
             state=state,
             chat_id=chat_id,
