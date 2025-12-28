@@ -37,6 +37,13 @@ class ReportPresenter:
             f"<b>📈 Отчёт: «{result.chat_title}» за {period_prefix}{period_str}</b>\n\n"
         )
 
+        if (
+            result.active_users
+            and result.active_users[0] > 0
+            and result.active_users[1] > 0
+        ):
+            header += f"Активных пользователей {result.active_users[0]} из {result.active_users[1]}\n\n"
+
         if not result.users_stats:
             return [f"{header}⚠️ Нет активности за указанный период"]
 
