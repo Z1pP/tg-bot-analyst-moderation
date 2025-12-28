@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 async def handle_navigation(
     callback: CallbackQuery,
+    state: FSMContext,
     action: str,
     year: int,
     month: int,
@@ -47,7 +48,9 @@ async def handle_navigation(
             month = 1
             year += 1
 
-    calendar_kb = CalendarKeyboard.create_calendar(
+    current_state = await state.get_state()
+    calendar_kb = _create_calendar_by_state(
+        current_state=current_state,
         year=year,
         month=month,
         start_date=cal_start,
@@ -302,7 +305,15 @@ async def calendar_handler(callback: CallbackQuery, state: FSMContext) -> None:
 
         elif action in ("prev", "next"):
             year, month = int(data[2]), int(data[3])
-            await handle_navigation(callback, action, year, month, cal_start, cal_end)
+            await handle_navigation(
+                callback=callback,
+                state=state,
+                action=action,
+                year=year,
+                month=month,
+                cal_start=cal_start,
+                cal_end=cal_end,
+            )
 
         elif action == "day":
             year, month, day = int(data[2]), int(data[3]), int(data[4])
