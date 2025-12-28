@@ -20,6 +20,7 @@ from repositories import (
     MessageReactionRepository,
     MessageReplyRepository,
     MessageRepository,
+    PunishmentRepository,
     UserRepository,
 )
 from services import AdminActionLogService
@@ -39,6 +40,7 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         user_repository: UserRepository,
         reaction_repository: MessageReactionRepository,
         chat_repository: ChatRepository,
+        punishment_repository: PunishmentRepository,
         admin_action_log_service: AdminActionLogService = None,
     ):
         super().__init__(
@@ -47,6 +49,7 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
             user_repository,
             reaction_repository,
             chat_repository,
+            punishment_repository,
         )
         self._admin_action_log_service = admin_action_log_service
 
@@ -103,16 +106,35 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         messages = user_data.get("messages", [])
         reactions = user_data.get("reactions", [])
 
+        # Получаем статистику наказаний, выданных пользователем
+        punishment_stats = (
+            await self._punishment_repository.get_punishment_counts_by_moderator(
+                moderator_id=user.id,
+                start_date=adjusted_start,
+                end_date=adjusted_end,
+            )
+        )
+
         # Рассчитываем статистику
         if is_single_day:
             day_stats = self._calculate_day_stats(
-                messages, reactions, adjusted_start, adjusted_end
+                messages,
+                reactions,
+                adjusted_start,
+                adjusted_end,
+                warns_count=punishment_stats["warns"],
+                bans_count=punishment_stats["bans"],
             )
             multi_day_stats = None
         else:
             day_stats = None
             multi_day_stats = self._calculate_multi_day_stats(
-                messages, reactions, adjusted_start, adjusted_end
+                messages,
+                reactions,
+                adjusted_start,
+                adjusted_end,
+                warns_count=punishment_stats["warns"],
+                bans_count=punishment_stats["bans"],
             )
 
         replies_stats = self._calculate_replies_stats(replies)
@@ -202,10 +224,12 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         reactions: List[MessageReaction],
         start_date: datetime,
         end_date: datetime,
+        warns_count: int = 0,
+        bans_count: int = 0,
     ) -> Optional[SingleUserDayStats]:
         """Рассчитывает статистику за один день."""
 
-        if not messages and not reactions:
+        if not messages and not reactions and warns_count == 0 and bans_count == 0:
             return None
 
         first_message_time = None
@@ -228,6 +252,8 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
             first_reaction_time=first_reaction_time,
             avg_messages_per_hour=avg_messages_per_hour,
             total_messages=msg_count,
+            warns_count=warns_count,
+            bans_count=bans_count,
         )
 
     def _calculate_multi_day_stats(
@@ -236,9 +262,11 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         reactions: List[MessageReaction],
         start_date: datetime,
         end_date: datetime,
+        warns_count: int = 0,
+        bans_count: int = 0,
     ) -> Optional[SingleUserMultiDayStats]:
         """Рассчитывает статистику за несколько дней."""
-        if not messages and not reactions:
+        if not messages and not reactions and warns_count == 0 and bans_count == 0:
             return None
 
         avg_first_message_time = self.get_avg_time_first_messages(messages)
@@ -258,6 +286,8 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
             avg_messages_per_hour=avg_messages_per_hour,
             avg_messages_per_day=avg_messages_per_day,
             total_messages=msg_count,
+            warns_count=warns_count,
+            bans_count=bans_count,
         )
 
     def _calculate_replies_stats(self, replies: List[MessageReply]) -> RepliesStats:
