@@ -83,7 +83,7 @@ class AnalyticsBufferService:
             json_data = dto.model_dump_json()
             await self._redis.rpush(self.REDIS_KEY_REPLIES, json_data.encode("utf-8"))
             logger.debug(
-                f"Reply добавлен в буфер: reply_message_id={dto.reply_message_id}"
+                f"Reply добавлен в буфер: reply_message_id={dto.reply_message_id_str}"
             )
         except Exception as e:
             logger.error(f"Ошибка при добавлении reply в буфер: {e}", exc_info=True)
