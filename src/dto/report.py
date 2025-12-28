@@ -97,6 +97,8 @@ class SingleUserDayStats:
     first_reaction_time: Optional[datetime]
     avg_messages_per_hour: float
     total_messages: int
+    warns_count: int = 0
+    bans_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -108,6 +110,8 @@ class SingleUserMultiDayStats:
     avg_messages_per_hour: float
     avg_messages_per_day: float
     total_messages: int
+    warns_count: int = 0
+    bans_count: int = 0
 
 
 @dataclass(frozen=True)
