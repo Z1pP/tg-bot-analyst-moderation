@@ -92,6 +92,8 @@ class AllUsersReportPresenter:
             [
                 f"• <b>{stats.avg_messages_per_hour}</b> - сред. кол-во сообщ./час",
                 f"• <b>{stats.total_messages}</b> - всего сообщений",
+                f"• <b>{stats.warns_count}</b> - выдано варнов",
+                f"• <b>{stats.bans_count}</b> - выдано банов",
             ]
         )
 
@@ -120,6 +122,8 @@ class AllUsersReportPresenter:
                 f"• <b>{stats.avg_messages_per_hour}</b> - сред. кол-во сообщ./час",
                 f"• <b>{stats.avg_messages_per_day}</b> - сред. кол-во сообщ./день",
                 f"• <b>{stats.total_messages}</b> - всего сообщ. за период",
+                f"• <b>{stats.warns_count}</b> - выдано варнов",
+                f"• <b>{stats.bans_count}</b> - выдано банов",
             ]
         )
 
