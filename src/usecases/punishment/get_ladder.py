@@ -1,7 +1,4 @@
-from typing import List
-
 from dto.punishment import PunishmentLadderResultDTO, PunishmentLadderStepDTO
-from models import PunishmentLadder
 from repositories import PunishmentLadderRepository
 from services import ChatService, PunishmentService
 
