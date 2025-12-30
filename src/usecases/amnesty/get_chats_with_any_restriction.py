@@ -47,18 +47,13 @@ class GetChatsWithAnyRestrictionUseCase(BaseGetChatsUseCase):
 
             # 3. Проверяем фактический статус в Telegram
             try:
-                is_member_banned = await self.bot_permission_service.is_member_banned(
-                    tg_id=dto.violator_tgid,
-                    chat_tg_id=chat.chat_id,
+                member_status = (
+                    await self.bot_permission_service.get_chat_member_status(
+                        user_tgid=int(dto.violator_tgid),
+                        chat_tgid=chat.chat_id,
+                    )
                 )
-                if is_member_banned:
-                    return True
-
-                is_member_muted = await self.bot_permission_service.is_member_muted(
-                    tg_id=dto.violator_tgid,
-                    chat_tg_id=chat.chat_id,
-                )
-                if is_member_muted:
+                if member_status.is_banned or member_status.is_muted:
                     return True
             except Exception:
                 pass
