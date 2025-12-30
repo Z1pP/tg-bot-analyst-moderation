@@ -7,6 +7,7 @@ from .dialogs import (
     MenuDialogs,
     MessageManagerDialogs,
     ModerationMenuDialogs,
+    PunishmentDialogs,
     RatingDialogs,
     ReleaseNotesDialogs,
     ReportDialogs,
@@ -113,6 +114,9 @@ class InlineButtons:
         ARCHIVE_SCHEDULE_DISABLE = "🛑 Отключить рассылку"
         BACK_TO_ARCHIVE_SETTING = "⬅️ Вернуться"
         BACK_TO_SELECT_ACTION = "⬅️ Назад к выбору действия"
+        PUNISHMENT_SETTING = "⚖️ Настройка наказаний"
+        PUNISHMENT_CREATE_NEW = "🆕 Создать новую"
+        PUNISHMENT_SET_DEFAULT = "🔄 Установить по умолчанию"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
@@ -193,3 +197,5 @@ class Dialog:
     Roles = RolesDialogs
     # Chat rating
     Rating = RatingDialogs
+    # Punishments
+    Punishment = PunishmentDialogs
