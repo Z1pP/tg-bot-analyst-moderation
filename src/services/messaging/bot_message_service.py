@@ -418,6 +418,7 @@ class BotMessageService:
             return await self.bot.unban_chat_member(
                 chat_id=chat_tg_id,
                 user_id=user_tg_id,
+                only_if_banned=True,
             )
         except Exception as e:
             logger.error(
