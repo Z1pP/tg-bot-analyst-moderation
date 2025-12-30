@@ -86,6 +86,11 @@ from usecases.moderation import (
     GiveUserBanUseCase,
     GiveUserWarnUseCase,
 )
+from usecases.punishment import (
+    GetPunishmentLadderUseCase,
+    SetDefaultPunishmentLadderUseCase,
+    UpdatePunishmentLadderUseCase,
+)
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
@@ -219,6 +224,19 @@ class ContainerSetup:
         ContainerSetup._register_template_usecases(container)
         ContainerSetup._register_reaction_usecases(container)
         ContainerSetup._register_moderation_usecases(container)
+        ContainerSetup._register_punishment_usecases(container)
+
+    @staticmethod
+    def _register_punishment_usecases(container: Container) -> None:
+        """Регистрация use cases для управления наказаниями."""
+        punishment_usecases = [
+            GetPunishmentLadderUseCase,
+            SetDefaultPunishmentLadderUseCase,
+            UpdatePunishmentLadderUseCase,
+        ]
+
+        for usecase in punishment_usecases:
+            container.register(usecase)
 
     @staticmethod
     def _register_summarize_usecases(container: Container) -> None:
