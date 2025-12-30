@@ -2,6 +2,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import InlineButtons
+from constants.callback import CallbackData
 
 block_actions = InlineButtons.BlockButtons()
 
@@ -18,7 +19,7 @@ def no_reason_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def block_actions_ikb() -> InlineKeyboardMarkup:
+def moderation_menu_ikb() -> InlineKeyboardMarkup:
     """Клавиатура с действия"""
     builder = InlineKeyboardBuilder()
     builder.row(
@@ -39,7 +40,7 @@ def block_actions_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
-            callback_data="back_to_main_menu_from_block",
+            callback_data=CallbackData.Menu.MAIN_MENU,
         )
     )
     return builder.as_markup()
