@@ -2,11 +2,11 @@ from .dialogs import (
     AdminLogsDialogs,
     AmnestyUserDialogs,
     BanUserDialogs,
-    BlockMenuDialogs,
     CalendarDialogs,
     ChatDialogs,
     MenuDialogs,
     MessageManagerDialogs,
+    ModerationMenuDialogs,
     RatingDialogs,
     ReleaseNotesDialogs,
     ReportDialogs,
@@ -164,7 +164,7 @@ class Dialog:
     # User Tracking
     UserTracking = UserTrackingDialogs
     # Moderation User
-    BlockMenu = BlockMenuDialogs
+    ModerationMenu = ModerationMenuDialogs
     # Ban User
     BanUser = BanUserDialogs
     # Warn User
