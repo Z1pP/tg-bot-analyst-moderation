@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from database.session import DatabaseContextManager
 from models.punishment_ladder import PunishmentLadder
@@ -24,6 +24,7 @@ class PunishmentLadderRepository:
         Сначала ищет настройку для конкретного chat_id. Если не находит,
         ищет глобальную настройку (где chat_id IS NULL).
         """
+        chat_id = str(chat_id)
         async with self._db.session() as session:
             try:
                 logger.info("Getting punishment for step %s in chat %s", step, chat_id)
@@ -65,6 +66,7 @@ class PunishmentLadderRepository:
 
     async def get_ladder_by_chat_id(self, chat_id: str) -> list[PunishmentLadder]:
         """Возвращает всю лестницу наказаний для конкретного чата."""
+        chat_id = str(chat_id)
         async with self._db.session() as session:
             try:
                 logger.info("Getting punishment ladder for chat %s", chat_id)
@@ -99,4 +101,34 @@ class PunishmentLadderRepository:
                 return ladder
             except Exception as e:
                 logger.error("Error getting global ladder: %s", e)
+                raise
+
+    async def delete_ladder_by_chat_id(self, chat_id: str) -> None:
+        """Удаляет всю лестницу наказаний для конкретного чата."""
+        chat_id = str(chat_id)
+        async with self._db.session() as session:
+            try:
+                logger.info("Deleting punishment ladder for chat %s", chat_id)
+                stmt = delete(PunishmentLadder).where(
+                    PunishmentLadder.chat_id == chat_id
+                )
+                await session.execute(stmt)
+                await session.commit()
+                logger.info("Punishment ladder for chat %s deleted.", chat_id)
+            except Exception as e:
+                logger.error("Error deleting ladder for chat %s: %s", chat_id, e)
+                await session.rollback()
+                raise
+
+    async def create_ladder(self, steps: list[PunishmentLadder]) -> None:
+        """Сохраняет новую лестницу наказаний."""
+        async with self._db.session() as session:
+            try:
+                logger.info("Creating new punishment ladder.")
+                session.add_all(steps)
+                await session.commit()
+                logger.info("New punishment ladder created with %d steps.", len(steps))
+            except Exception as e:
+                logger.error("Error creating ladder: %s", e)
+                await session.rollback()
                 raise
