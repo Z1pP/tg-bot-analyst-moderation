@@ -224,11 +224,10 @@ class BotMessageService:
                 raise MessageTooOldError()
 
         try:
-            await self.bot.delete_message(
+            return await self.bot.delete_message(
                 chat_id=chat_id,
                 message_id=message_id,
             )
-            return True
         except Exception as e:
             logger.error("Не удалось удалить сообщение в чате %s: %s", chat_id, e)
             return False
