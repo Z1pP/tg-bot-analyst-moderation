@@ -134,6 +134,13 @@ class RoleCallbackData:
     INPUT_USER_DATA = "input_user_data"
 
 
+class ModerationCallbackData:
+    """Класс для хранения callback данных модерации"""
+
+    # Commands
+    MENU = "moderation_menu"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
@@ -141,6 +148,7 @@ class CallbackData:
     Report = ReportCallbackData
     User = UserCallbackData
     Menu = MenuCallbackData
+    ModerationMenu = ModerationCallbackData
     AdminLogs = AdminLogsCallbackData
     ReleaseNotes = ReleaseNotesCallbackData
     Role = RoleCallbackData
