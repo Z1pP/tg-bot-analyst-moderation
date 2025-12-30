@@ -6,11 +6,11 @@ from .admin_logs import (
 from .admin_logs import (
     router as admin_logs_router,
 )
-from .banhammer import router as banhammer_router
 from .categories import router as categories_router
 from .chats import router as chats_router
 from .common import router as common_router
 from .message_management import router as message_management_router
+from .moderation import router as moderation_router
 from .release_notes import router as release_notes_router
 from .reports import router as reports_router
 from .roles import router as roles_router
@@ -21,7 +21,7 @@ from .users import router as users_router
 
 router = Router(name="private_router")
 router.include_router(common_router)
-router.include_router(banhammer_router)
+router.include_router(moderation_router)
 router.include_router(users_router)
 router.include_router(chats_router)
 router.include_router(reports_router)
