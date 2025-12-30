@@ -11,7 +11,7 @@ from keyboards.inline.chats import chats_management_ikb
 from keyboards.inline.menu import admin_menu_ikb
 from services.user import UserService
 from states import MenuStates
-from states.chat_states import ChatStateManager
+from states.chat import ChatStateManager
 from utils.send_message import safe_edit_message
 from utils.state_logger import log_and_set_state
 
