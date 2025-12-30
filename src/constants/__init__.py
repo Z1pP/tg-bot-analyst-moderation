@@ -120,7 +120,7 @@ class InlineButtons:
         WARN_USER = "❗Предупреждение"
         BACK_TO_BLOCK_MENU = "📋 Вернуться в меню"
         # Amnesty actions
-        UNBAN = "🕊️ Полный разблок"
+        UNBAN = "🕊️ Полная амнистия"
         CANCEL_WARN = "⏪ Отмена посл. преда"
         UNMUTE = "🔊 Размут"
         CONFIRM_ACTION = "Да"
