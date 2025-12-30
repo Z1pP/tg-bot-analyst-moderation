@@ -13,7 +13,7 @@ from dto import ModerationActionDTO
 from keyboards.inline.banhammer import back_to_block_menu_ikb, moderation_menu_ikb
 from keyboards.inline.chats import tracked_chats_with_all_ikb
 from services import UserService
-from states.banhammer_states import ModerationStates
+from states.moderation import ModerationStates
 from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
 from utils.state_logger import log_and_set_state

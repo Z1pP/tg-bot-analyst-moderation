@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 
 from constants import Dialog, InlineButtons
 from keyboards.inline.banhammer import moderation_menu_ikb
-from states.banhammer_states import ModerationStates
+from states.moderation import ModerationStates
 from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
