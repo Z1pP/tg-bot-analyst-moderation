@@ -8,7 +8,7 @@ from constants.punishment import PunishmentActions as Actions
 from keyboards.inline.banhammer import (
     no_reason_ikb,
 )
-from states import BanHammerStates, BanUserStates
+from states import BanUserStates, ModerationStates
 from usecases.moderation import GiveUserBanUseCase
 
 from .common import (
@@ -25,7 +25,7 @@ block_buttons = InlineButtons.BlockButtons()
 
 @router.callback_query(
     F.data == block_buttons.BLOCK_USER,
-    BanHammerStates.block_menu,
+    ModerationStates.menu,
 )
 async def block_user_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """
@@ -59,7 +59,7 @@ async def process_user_data_input(
         },
         success_keyboard=no_reason_ikb,
         next_state=BanUserStates.waiting_reason_input,
-        error_state=BanHammerStates.block_menu,
+        error_state=ModerationStates.menu,
     )
 
 
