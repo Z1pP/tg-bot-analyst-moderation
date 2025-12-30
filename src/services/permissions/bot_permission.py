@@ -106,6 +106,17 @@ class BotPermissionService:
             )
             return None
 
+    async def is_bot_in_chat(self, chat_tgid: ChatIdUnion) -> bool:
+        """Проверяет, состоит ли бот в чате."""
+        member = await self.get_bot_member(chat_tgid=chat_tgid)
+        if not member:
+            return False
+
+        if member.status in ("left", "kicked"):
+            return False
+
+        return True
+
     async def can_moderate(self, chat_tgid: ChatIdUnion) -> bool:
         """Проверяет право бота на модерацию."""
         member = await self.get_bot_member(chat_tgid=chat_tgid)
@@ -116,6 +127,41 @@ class BotPermissionService:
             return True
         if isinstance(member, ChatMemberAdministrator):
             return getattr(member, "can_restrict_members", False)
+        return False
+
+    async def can_delete_messages(self, chat_tgid: ChatIdUnion) -> bool:
+        """Проверяет право бота на удаление сообщений."""
+        member = await self.get_bot_member(chat_tgid=chat_tgid)
+        if not member:
+            return False
+
+        if isinstance(member, ChatMemberOwner):
+            return True
+        if isinstance(member, ChatMemberAdministrator):
+            return getattr(member, "can_delete_messages", False)
+        return False
+
+    async def can_post_messages(self, chat_tgid: ChatIdUnion) -> bool:
+        """Проверяет право бота на отправку сообщений."""
+        member = await self.get_bot_member(chat_tgid=chat_tgid)
+        if not member:
+            return False
+
+        if isinstance(member, (ChatMemberOwner, ChatMemberAdministrator)):
+            return True
+
+        return False
+
+    async def can_invite_users(self, chat_tgid: ChatIdUnion) -> bool:
+        """Проверяет право бота на создание приглашений."""
+        member = await self.get_bot_member(chat_tgid=chat_tgid)
+        if not member:
+            return False
+
+        if isinstance(member, ChatMemberOwner):
+            return True
+        if isinstance(member, ChatMemberAdministrator):
+            return getattr(member, "can_invite_users", False)
         return False
 
     async def is_administrator(
@@ -145,6 +191,23 @@ class BotPermissionService:
         except TelegramAPIError as e:
             logger.error(
                 "Ошибка проверки бана для %s в чате %s: %s", tg_id, chat_tg_id, e
+            )
+            return False
+
+    async def is_member_muted(
+        self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
+    ) -> bool:
+        """Проверяет мут пользователя."""
+        try:
+            member = await self.bot.get_chat_member(
+                chat_id=chat_tg_id, user_id=int(tg_id)
+            )
+            if isinstance(member, ChatMemberRestricted):
+                return not member.can_send_messages
+            return False
+        except TelegramAPIError as e:
+            logger.error(
+                "Ошибка проверки мута для %s в чате %s: %s", tg_id, chat_tg_id, e
             )
             return False
 

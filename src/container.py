@@ -36,11 +36,11 @@ from services import (
     ReportScheduleService,
     UserService,
 )
-from services.chat.summarize import IAIService
-from services.chat.summarize.open_router_service import OpenRouterService
 from services.analytics_buffer_service import AnalyticsBufferService
 from services.caching import ICache, RedisCache
 from services.categories import CategoryService
+from services.chat.summarize import IAIService
+from services.chat.summarize.open_router_service import OpenRouterService
 from services.release_note_service import ReleaseNoteService
 from services.scheduler import TaskiqSchedulerService
 from services.templates import (
@@ -54,6 +54,7 @@ from usecases.admin_actions import (
 )
 from usecases.amnesty import (
     CancelLastWarnUseCase,
+    GetChatsWithAnyRestrictionUseCase,
     GetChatsWithBannedUserUseCase,
     GetChatsWithMutedUserUseCase,
     GetChatsWithPunishedUserUseCase,
@@ -84,6 +85,11 @@ from usecases.message import (
 from usecases.moderation import (
     GiveUserBanUseCase,
     GiveUserWarnUseCase,
+)
+from usecases.punishment import (
+    GetPunishmentLadderUseCase,
+    SetDefaultPunishmentLadderUseCase,
+    UpdatePunishmentLadderUseCase,
 )
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
 from usecases.report import (
@@ -185,7 +191,8 @@ class ContainerSetup:
         container.register(
             IAIService,
             lambda: OpenRouterService(
-                api_key=settings.OPEN_ROUTER_TOKEN, model_name=settings.OPEN_ROUTER_MODEL
+                api_key=settings.OPEN_ROUTER_TOKEN,
+                model_name=settings.OPEN_ROUTER_MODEL,
             ),
         )
         container.register(UserService)
@@ -217,6 +224,19 @@ class ContainerSetup:
         ContainerSetup._register_template_usecases(container)
         ContainerSetup._register_reaction_usecases(container)
         ContainerSetup._register_moderation_usecases(container)
+        ContainerSetup._register_punishment_usecases(container)
+
+    @staticmethod
+    def _register_punishment_usecases(container: Container) -> None:
+        """Регистрация use cases для управления наказаниями."""
+        punishment_usecases = [
+            GetPunishmentLadderUseCase,
+            SetDefaultPunishmentLadderUseCase,
+            UpdatePunishmentLadderUseCase,
+        ]
+
+        for usecase in punishment_usecases:
+            container.register(usecase)
 
     @staticmethod
     def _register_summarize_usecases(container: Container) -> None:
@@ -278,6 +298,7 @@ class ContainerSetup:
         container.register(GiveUserWarnUseCase)
         container.register(GiveUserBanUseCase)
         container.register(CancelLastWarnUseCase)
+        container.register(GetChatsWithAnyRestrictionUseCase)
         container.register(GetChatsWithBannedUserUseCase)
         container.register(GetChatsWithMutedUserUseCase)
         container.register(GetChatsWithPunishedUserUseCase)

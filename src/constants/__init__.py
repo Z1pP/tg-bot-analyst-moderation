@@ -2,11 +2,12 @@ from .dialogs import (
     AdminLogsDialogs,
     AmnestyUserDialogs,
     BanUserDialogs,
-    BlockMenuDialogs,
     CalendarDialogs,
     ChatDialogs,
     MenuDialogs,
     MessageManagerDialogs,
+    ModerationMenuDialogs,
+    PunishmentDialogs,
     RatingDialogs,
     ReleaseNotesDialogs,
     ReportDialogs,
@@ -113,6 +114,9 @@ class InlineButtons:
         ARCHIVE_SCHEDULE_DISABLE = "🛑 Отключить рассылку"
         BACK_TO_ARCHIVE_SETTING = "⬅️ Вернуться"
         BACK_TO_SELECT_ACTION = "⬅️ Назад к выбору действия"
+        PUNISHMENT_SETTING = "⚖️ Настройка наказаний"
+        PUNISHMENT_CREATE_NEW = "🆕 Создать новую"
+        PUNISHMENT_SET_DEFAULT = "🔄 Установить по умолчанию"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
@@ -120,7 +124,7 @@ class InlineButtons:
         WARN_USER = "❗Предупреждение"
         BACK_TO_BLOCK_MENU = "📋 Вернуться в меню"
         # Amnesty actions
-        UNBAN = "🕊️ Полный разблок"
+        UNBAN = "🕊️ Полная амнистия"
         CANCEL_WARN = "⏪ Отмена посл. преда"
         UNMUTE = "🔊 Размут"
         CONFIRM_ACTION = "Да"
@@ -164,7 +168,7 @@ class Dialog:
     # User Tracking
     UserTracking = UserTrackingDialogs
     # Moderation User
-    BlockMenu = BlockMenuDialogs
+    ModerationMenu = ModerationMenuDialogs
     # Ban User
     BanUser = BanUserDialogs
     # Warn User
@@ -193,3 +197,5 @@ class Dialog:
     Roles = RolesDialogs
     # Chat rating
     Rating = RatingDialogs
+    # Punishments
+    Punishment = PunishmentDialogs

@@ -1,8 +1,8 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
-class BanHammerStates(StatesGroup):
-    block_menu = State()
+class ModerationStates(StatesGroup):
+    menu = State()
 
 
 class AmnestyStates(StatesGroup):

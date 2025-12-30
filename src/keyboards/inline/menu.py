@@ -47,8 +47,8 @@ def admin_menu_ikb(
             callback_data=CallbackData.Menu.MESSAGE_MANAGEMENT,
         ),
         InlineKeyboardButton(
-            text=Dialog.BlockMenu.LOCK_MENU,
-            callback_data=CallbackData.Menu.LOCK_MENU,
+            text=Dialog.ModerationMenu.MODERATION_MENU,
+            callback_data=CallbackData.ModerationMenu.MENU,
         ),
         width=2,
     )

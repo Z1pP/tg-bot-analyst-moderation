@@ -224,11 +224,10 @@ class BotMessageService:
                 raise MessageTooOldError()
 
         try:
-            await self.bot.delete_message(
+            return await self.bot.delete_message(
                 chat_id=chat_id,
                 message_id=message_id,
             )
-            return True
         except Exception as e:
             logger.error("Не удалось удалить сообщение в чате %s: %s", chat_id, e)
             return False
@@ -419,6 +418,7 @@ class BotMessageService:
             return await self.bot.unban_chat_member(
                 chat_id=chat_tg_id,
                 user_id=user_tg_id,
+                only_if_banned=True,
             )
         except Exception as e:
             logger.error(

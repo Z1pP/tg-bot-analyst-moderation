@@ -1,6 +1,7 @@
 import logging
 
 from dto import ModerationActionDTO
+from exceptions.moderation import ModerationError
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services import (
     BotMessageService,
@@ -63,7 +64,14 @@ class GiveUserWarnUseCase(ModerationUseCase):
         Raises:
             ModerationError: При ошибках проверок или прав
         """
-        context = await self._prepare_moderation_context(dto=dto)
+        try:
+            context = await self._prepare_moderation_context(dto=dto)
+        except ModerationError as e:
+            await self.bot_message_service.send_private_message(
+                user_tgid=dto.admin_tgid,
+                text=e.get_user_message(),
+            )
+            return
 
         if not context:
             return
@@ -90,11 +98,6 @@ class GiveUserWarnUseCase(ModerationUseCase):
                 "Не удалось применить наказание для пользователя %s в чате %s",
                 context.violator.tg_id,
                 context.chat.chat_id,
-            )
-            await self.bot_message_service.delete_message_from_chat(
-                chat_id=context.dto.chat_tgid,
-                message_id=context.dto.original_message_id,
-                message_date=dto.original_message_date,
             )
             return
 

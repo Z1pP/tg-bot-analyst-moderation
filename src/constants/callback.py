@@ -22,6 +22,9 @@ class ChatCallbackData:
     BACK_TO_CHAT_ACTIONS = "back_to_chat_actions"
     BACK_TO_CHATS_MANAGEMENT = "back_to_chats_management"
     BACK_TO_MAIN_MENU_FROM_CHATS = "back_to_main_menu_from_chats"
+    PUNISHMENT_SETTING = "punishment_setting"
+    PUNISHMENT_CREATE_NEW = "punishment_create_new"
+    PUNISHMENT_SET_DEFAULT = "punishment_set_default"
     ALL_CHATS = "chat__all"
     CHATS_PAGE_INFO = "chats_page_info"
     REMOVE_CHATS_PAGE_INFO = "remove_chats_page_info"
@@ -134,6 +137,13 @@ class RoleCallbackData:
     INPUT_USER_DATA = "input_user_data"
 
 
+class ModerationCallbackData:
+    """Класс для хранения callback данных модерации"""
+
+    # Commands
+    MENU = "moderation_menu"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
@@ -141,6 +151,7 @@ class CallbackData:
     Report = ReportCallbackData
     User = UserCallbackData
     Menu = MenuCallbackData
+    ModerationMenu = ModerationCallbackData
     AdminLogs = AdminLogsCallbackData
     ReleaseNotes = ReleaseNotesCallbackData
     Role = RoleCallbackData

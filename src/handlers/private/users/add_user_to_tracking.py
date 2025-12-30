@@ -11,7 +11,7 @@ from container import container
 from dto import UserTrackingDTO
 from keyboards.inline.users import cancel_add_user_ikb, users_menu_ikb
 from states import UserStateManager
-from states.user_states import UsernameStates
+from states.user import UsernameStates
 from usecases.user_tracking import AddUserToTrackingUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import safe_edit_message

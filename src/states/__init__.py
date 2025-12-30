@@ -1,18 +1,19 @@
 from .archive_chat import ChatArchiveState
-from .banhammer_states import (
+from .category import CategoryStateManager
+from .chat import ChatStateManager
+from .main_menu import MenuStates
+from .message_management import MessageManagerState
+from .moderation import (
     AmnestyStates,
-    BanHammerStates,
     BanUserStates,
+    ModerationStates,
     WarnUserStates,
 )
-from .category import CategoryStateManager
-from .chat_states import ChatStateManager
-from .menu_states import MenuStates
-from .message_management import MessageManagerState
-from .rating_states import RatingStateManager
+from .punishment import PunishmentState
+from .rating import RatingStateManager
 from .roles import RoleState
 from .templates import TemplateStateManager
-from .user_states import (
+from .user import (
     AllUsersReportStates,
     SingleUserReportStates,
     UsernameStates,
@@ -28,7 +29,7 @@ __all__ = [
     "UserStateManager",
     "TemplateStateManager",
     "MenuStates",
-    "BanHammerStates",
+    "ModerationStates",
     "AmnestyStates",
     "BanUserStates",
     "WarnUserStates",
@@ -38,4 +39,5 @@ __all__ = [
     "ChatArchiveState",
     "WorkHoursState",
     "RatingStateManager",
+    "PunishmentState",
 ]

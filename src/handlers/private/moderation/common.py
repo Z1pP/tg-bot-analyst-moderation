@@ -10,10 +10,10 @@ from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
 from container import container
 from dto import ModerationActionDTO
-from keyboards.inline.banhammer import back_to_block_menu_ikb, block_actions_ikb
+from keyboards.inline.banhammer import back_to_block_menu_ikb, moderation_menu_ikb
 from keyboards.inline.chats import tracked_chats_with_all_ikb
 from services import UserService
-from states.banhammer_states import BanHammerStates
+from states.moderation import ModerationStates
 from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
 from utils.state_logger import log_and_set_state
@@ -69,7 +69,7 @@ async def process_moderation_action(
         logger.error("Некорректные данные в state: %s", data)
         await callback.message.edit_text(
             text="❌ Ошибка: некорректные данные. Попробуйте снова.",
-            reply_markup=block_actions_ikb(),
+            reply_markup=moderation_menu_ikb(),
         )
         return
 
@@ -133,10 +133,10 @@ async def process_moderation_action(
 
     await callback.message.edit_text(
         text=response_text,
-        reply_markup=block_actions_ikb(),
+        reply_markup=moderation_menu_ikb(),
     )
 
-    await log_and_set_state(callback.message, state, BanHammerStates.block_menu)
+    await log_and_set_state(callback.message, state, ModerationStates.menu)
 
 
 async def process_user_input_common(
@@ -166,7 +166,7 @@ async def process_user_input_common(
             message_id=message_to_edit_id,
         )
         if show_block_actions_on_error:
-            kwargs["reply_markup"] = block_actions_ikb()
+            kwargs["reply_markup"] = moderation_menu_ikb()
 
         await bot.edit_message_text(**kwargs)
 
@@ -195,7 +195,7 @@ async def process_user_input_common(
             message_id=message_to_edit_id,
         )
         if show_block_actions_on_error:
-            kwargs["reply_markup"] = block_actions_ikb()
+            kwargs["reply_markup"] = moderation_menu_ikb()
 
         await bot.edit_message_text(**kwargs)
 
@@ -272,12 +272,12 @@ async def process_reason_common(
             chat_id=chat_id,
             message_id=message_to_edit_id,
             text=Dialog.WarnUser.NO_CHATS.format(username=username),
-            reply_markup=block_actions_ikb(),
+            reply_markup=moderation_menu_ikb(),
         )
         await log_and_set_state(
             message=sender.message if is_callback else sender,
             state=state,
-            new_state=BanHammerStates.block_menu,
+            new_state=ModerationStates.menu,
         )
         logger.warning(
             "Отслеживаемы чаты не найдены для пользователя %s (%s)",

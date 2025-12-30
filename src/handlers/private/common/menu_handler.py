@@ -128,26 +128,3 @@ async def message_management_callback_handler(
     await log_and_set_state(
         callback.message, state, MessageManagerState.waiting_message_link
     )
-
-
-@router.callback_query(F.data == CallbackData.Menu.LOCK_MENU)
-async def lock_menu_callback_handler(
-    callback: CallbackQuery, state: FSMContext
-) -> None:
-    """Обработчик меню блокировок через callback"""
-    from constants import Dialog
-    from keyboards.inline.banhammer import block_actions_ikb
-    from states import BanHammerStates
-
-    await callback.answer()
-    await state.clear()
-
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=Dialog.BlockMenu.SELECT_ACTION,
-        reply_markup=block_actions_ikb(),
-    )
-
-    await log_and_set_state(callback.message, state, BanHammerStates.block_menu)

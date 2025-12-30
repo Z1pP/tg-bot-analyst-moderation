@@ -8,7 +8,7 @@ from constants.punishment import PunishmentActions as Actions
 from keyboards.inline.banhammer import (
     no_reason_ikb,
 )
-from states import BanHammerStates, WarnUserStates
+from states import ModerationStates, WarnUserStates
 from usecases.moderation import GiveUserWarnUseCase
 
 from .common import (
@@ -25,7 +25,7 @@ block_buttons = InlineButtons.BlockButtons()
 
 @router.callback_query(
     F.data == block_buttons.WARN_USER,
-    BanHammerStates.block_menu,
+    ModerationStates.menu,
 )
 async def warn_user_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """Обработчик для предупреждения пользователя."""

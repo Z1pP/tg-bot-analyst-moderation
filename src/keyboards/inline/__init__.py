@@ -1,5 +1,10 @@
 from .calendar_kb import CalendarKeyboard
 from .menu import admin_menu_ikb
+from .punishments import (
+    punishment_action_ikb,
+    punishment_next_step_ikb,
+    punishment_setting_ikb,
+)
 from .report import (
     order_details_kb_all_users,
     order_details_kb_chat,
@@ -37,4 +42,7 @@ __all__ = [
     "time_period_ikb_chat",
     "CalendarKeyboard",
     "role_select_ikb",
+    "punishment_setting_ikb",
+    "punishment_action_ikb",
+    "punishment_next_step_ikb",
 ]

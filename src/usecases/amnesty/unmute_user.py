@@ -22,22 +22,39 @@ class UnmuteUserUseCase(BaseAmnestyUseCase):
         for chat in dto.chat_dtos:
             archive_chats = await self._validate_and_get_archive_chats(chat)
 
-            success = await self.bot_message_service.unmute_chat_member(
-                chat_tg_id=chat.tg_id,
-                user_tg_id=int(dto.violator_tgid),
+            # Проверяем текущий статус в Telegram API
+            member_status = await self.bot_permission_service.get_chat_member_status(
+                user_tgid=int(dto.violator_tgid),
+                chat_tgid=chat.tg_id,
             )
 
-            if success:
-                await self.user_chat_status_repository.update_status(
-                    user_id=dto.violator_id,
-                    chat_id=chat.id,
-                    is_muted=False,
-                    muted_until=None,
+            # Размучиваем в Telegram только если пользователь действительно замучен
+            if member_status.is_muted:
+                await self.bot_message_service.unmute_chat_member(
+                    chat_tg_id=chat.tg_id,
+                    user_tg_id=int(dto.violator_tgid),
                 )
 
-                report_text = (
-                    f"🔊 Размут пользователя @{dto.violator_username}\n\n"
-                    f"• Размутил: @{dto.admin_username} в чате <b>{chat.title}</b>"
-                )
+            # Синхронизируем статус в БД
+            await self.user_chat_status_repository.get_or_create(
+                user_id=dto.violator_id,
+                chat_id=chat.id,
+                defaults={
+                    "is_muted": False,
+                    "muted_until": None,
+                },
+            )
 
-                await self._send_report_to_archives(archive_chats, report_text)
+            await self.user_chat_status_repository.update_status(
+                user_id=dto.violator_id,
+                chat_id=chat.id,
+                is_muted=False,
+                muted_until=None,
+            )
+
+            report_text = (
+                f"🔊 Размут пользователя @{dto.violator_username}\n\n"
+                f"• Размутил: @{dto.admin_username} в чате <b>{chat.title}</b>"
+            )
+
+            await self._send_report_to_archives(archive_chats, report_text)

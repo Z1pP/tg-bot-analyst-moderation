@@ -12,13 +12,13 @@ from exceptions import AmnestyError
 from keyboards.inline.amnesty import confirm_action_ikb
 from keyboards.inline.banhammer import (
     amnesty_actions_ikb,
-    block_actions_ikb,
+    moderation_menu_ikb,
 )
 from keyboards.inline.chats import tracked_chats_with_all_ikb
-from states import AmnestyStates, BanHammerStates
+from states import AmnestyStates, ModerationStates
 from usecases.amnesty import (
     CancelLastWarnUseCase,
-    GetChatsWithBannedUserUseCase,
+    GetChatsWithAnyRestrictionUseCase,
     GetChatsWithMutedUserUseCase,
     GetChatsWithPunishedUserUseCase,
     UnbanUserUseCase,
@@ -36,7 +36,7 @@ block_buttons = InlineButtons.BlockButtons()
 
 @router.callback_query(
     F.data == block_buttons.AMNESTY,
-    BanHammerStates.block_menu,
+    ModerationStates.menu,
 )
 async def amnesty_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
     """
@@ -70,7 +70,7 @@ async def waiting_user_data_input(
         },
         success_keyboard=amnesty_actions_ikb,
         next_state=AmnestyStates.waiting_action_select,
-        error_state=BanHammerStates.block_menu,
+        error_state=ModerationStates.menu,
         show_block_actions_on_error=True,
     )
 
@@ -136,7 +136,7 @@ async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> No
         text = "❗️Неизвестное действие. Попробуйте еще раз."
         await callback.message.edit_text(
             text=text,
-            reply_markup=block_actions_ikb(),
+            reply_markup=moderation_menu_ikb(),
         )
         return
 
@@ -231,13 +231,13 @@ async def execute_amnesty_action(
             logger.error("Ошибка амнистии: %s", e, exc_info=True)
             await callback.message.edit_text(
                 text=e.get_user_message(),
-                reply_markup=block_actions_ikb(),
+                reply_markup=moderation_menu_ikb(),
             )
             return
 
         text = (
-            f"✅ @{amnesty_dto.violator_username} амнистирован — "
-            "все предупреждения были сброшены!"
+            f"✅ @{amnesty_dto.violator_username} полностью амнистирован!\n\n"
+            "Все ограничения (бан, мут) сняты, а лестница наказаний обнулена."
         )
     elif action == Dialog.AmnestyUser.UNMUTE:
         unmute_usecase: UnmuteUserUseCase = container.resolve(UnmuteUserUseCase)
@@ -247,7 +247,7 @@ async def execute_amnesty_action(
             logger.error("Ошибка амнистии: %s", e, exc_info=True)
             await callback.message.edit_text(
                 text=e.get_user_message(),
-                reply_markup=block_actions_ikb(),
+                reply_markup=moderation_menu_ikb(),
             )
             return
 
@@ -265,7 +265,7 @@ async def execute_amnesty_action(
             logger.error("Ошибка отмены предупреждения: %s", e, exc_info=True)
             await callback.message.edit_text(
                 text=e.get_user_message(),
-                reply_markup=block_actions_ikb(),
+                reply_markup=moderation_menu_ikb(),
             )
             return
 
@@ -292,7 +292,7 @@ async def execute_amnesty_action(
             )
     else:
         text = "❗️Неизвестное действие. Попробуйте еще раз."
-        await callback.message.edit_text(text=text, reply_markup=block_actions_ikb())
+        await callback.message.edit_text(text=text, reply_markup=moderation_menu_ikb())
         return
 
     await callback.message.edit_text(
@@ -339,18 +339,18 @@ async def handle_chats_error(
             "Перепроверьте введённые данные, либо попробуйте снять ограничение вручную."
         )
 
-    await callback.message.edit_text(text=text, reply_markup=block_actions_ikb())
+    await callback.message.edit_text(text=text, reply_markup=moderation_menu_ikb())
     await log_and_set_state(
         message=callback.message,
         state=state,
-        new_state=BanHammerStates.block_menu,
+        new_state=ModerationStates.menu,
     )
 
 
 ACTION_CONFIG = {
     Dialog.AmnestyUser.UNBAN: {
-        "usecase": GetChatsWithBannedUserUseCase,
-        "text": lambda username: f"Выберите чат, где нужно произвести амнистию @{username}",
+        "usecase": GetChatsWithAnyRestrictionUseCase,
+        "text": lambda username: f"Выберите чат, где нужно произвести полную амнистию для @{username}",
     },
     Dialog.AmnestyUser.UNMUTE: {
         "usecase": GetChatsWithMutedUserUseCase,

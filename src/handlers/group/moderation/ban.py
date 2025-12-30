@@ -26,10 +26,9 @@ async def ban_user_handler(message: types.Message) -> None:
     """
     dto = map_message_to_moderation_dto(message=message)
 
-    await message.delete()
-
     try:
         usecase: GiveUserBanUseCase = container.resolve(GiveUserBanUseCase)
         await usecase.execute(dto=dto)
     except Exception as e:
-        await message.reply(f"❌ Не удалось забанить пользователя. Ошибка: {e}")
+        logger.error(f"Ошибка при бане пользователя: {e}")
+        return

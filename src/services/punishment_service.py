@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import List, Optional
 
+from constants import Dialog
 from constants.punishment import PunishmentText
 from dto import ModerationActionDTO
 from models import Punishment, User
@@ -309,3 +310,39 @@ class PunishmentService:
         return await self.punishment_repository.delete_user_punishments(
             user_id, chat_id
         )
+
+    def format_ladder_text(self, ladder: List[PunishmentLadder]) -> str:
+        """
+        Форматирует лестницу наказаний в текст.
+
+        Args:
+            ladder: Список ступеней лестницы
+
+        Returns:
+            Форматированный текст
+        """
+        if not ladder:
+            return Dialog.Punishment.LADDER_EMPTY
+
+        ladder_lines = []
+        for p in ladder:
+            duration = ""
+            if p.punishment_type == PunishmentType.MUTE and p.duration_seconds:
+                duration = f"({format_duration(p.duration_seconds)})"
+
+            p_type_map = {
+                PunishmentType.WARNING: "Предупреждение",
+                PunishmentType.MUTE: "Мут",
+                PunishmentType.BAN: "Бан",
+            }
+
+            line = Dialog.Punishment.LADDER_STEP_FORMAT.format(
+                step=p.step,
+                punishment_type=p_type_map.get(
+                    p.punishment_type, p.punishment_type.value
+                ),
+                duration=duration,
+            )
+            ladder_lines.append(line)
+
+        return "\n".join(ladder_lines)
