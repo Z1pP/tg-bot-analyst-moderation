@@ -18,7 +18,7 @@ from keyboards.inline.chats import tracked_chats_with_all_ikb
 from states import AmnestyStates, ModerationStates
 from usecases.amnesty import (
     CancelLastWarnUseCase,
-    GetChatsWithBannedUserUseCase,
+    GetChatsWithAnyRestrictionUseCase,
     GetChatsWithMutedUserUseCase,
     GetChatsWithPunishedUserUseCase,
     UnbanUserUseCase,
@@ -236,8 +236,8 @@ async def execute_amnesty_action(
             return
 
         text = (
-            f"✅ @{amnesty_dto.violator_username} амнистирован — "
-            "все предупреждения были сброшены!"
+            f"✅ @{amnesty_dto.violator_username} полностью амнистирован!\n\n"
+            "Все ограничения (бан, мут) сняты, а лестница наказаний обнулена."
         )
     elif action == Dialog.AmnestyUser.UNMUTE:
         unmute_usecase: UnmuteUserUseCase = container.resolve(UnmuteUserUseCase)
@@ -349,8 +349,8 @@ async def handle_chats_error(
 
 ACTION_CONFIG = {
     Dialog.AmnestyUser.UNBAN: {
-        "usecase": GetChatsWithBannedUserUseCase,
-        "text": lambda username: f"Выберите чат, где нужно произвести амнистию @{username}",
+        "usecase": GetChatsWithAnyRestrictionUseCase,
+        "text": lambda username: f"Выберите чат, где нужно произвести полную амнистию для @{username}",
     },
     Dialog.AmnestyUser.UNMUTE: {
         "usecase": GetChatsWithMutedUserUseCase,
