@@ -26,10 +26,9 @@ async def warn_user_handler(message: types.Message) -> None:
     """
     dto = map_message_to_moderation_dto(message=message)
 
-    await message.delete()
-
     try:
         usecase: GiveUserWarnUseCase = container.resolve(GiveUserWarnUseCase)
         await usecase.execute(dto=dto)
     except Exception as e:
-        await message.reply(f"❌ Не удалось выдать предупреждение. Ошибка: {e}")
+        logger.error(f"Ошибка при выдаче предупреждения: {e}")
+        return
