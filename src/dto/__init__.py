@@ -10,6 +10,12 @@ from .daily_activity import (
 from .message import CreateMessageDTO, ResultMessageDTO
 from .message_reply import CreateMessageReplyDTO, ResultMessageReplyDTO
 from .moderation import ModerationActionDTO
+from .punishment import (
+    PunishmentCommandResultDTO,
+    PunishmentLadderResultDTO,
+    PunishmentLadderStepDTO,
+    UpdatePunishmentLadderDTO,
+)
 from .reaction import MessageReactionDTO
 from .report import (
     AllUsersReportDTO,
@@ -68,4 +74,9 @@ __all__ = [
     # User Tracking
     "UserTrackingDTO",
     "RemoveUserTrackingDTO",
+    # Punishment
+    "PunishmentLadderStepDTO",
+    "PunishmentLadderResultDTO",
+    "UpdatePunishmentLadderDTO",
+    "PunishmentCommandResultDTO",
 ]
