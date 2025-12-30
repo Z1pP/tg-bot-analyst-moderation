@@ -9,7 +9,7 @@ from constants.callback import CallbackData
 from container import container
 from keyboards.inline.time_period import time_period_ikb_single_user
 from keyboards.inline.users import user_actions_ikb
-from states.user_states import SingleUserReportStates
+from states.user import SingleUserReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from utils.exception_handler import handle_exception
 from utils.state_logger import log_and_set_state
