@@ -1,8 +1,8 @@
 from .archive_chat import ChatArchiveState
 from .banhammer_states import (
     AmnestyStates,
-    BanHammerStates,
     BanUserStates,
+    ModerationStates,
     WarnUserStates,
 )
 from .category import CategoryStateManager
@@ -28,7 +28,7 @@ __all__ = [
     "UserStateManager",
     "TemplateStateManager",
     "MenuStates",
-    "BanHammerStates",
+    "ModerationStates",
     "AmnestyStates",
     "BanUserStates",
     "WarnUserStates",
