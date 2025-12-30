@@ -12,6 +12,8 @@ __all__ = [
     "MessageTooOldError",
     "MessageDeleteError",
     "MessageSendError",
+    "BotNoAdminRightsInArchiveChatError",
+    "BotNotInArchiveChatError",
 ]
 
 
@@ -101,3 +103,29 @@ class MessageSendError(BotBaseException):
 
     def get_user_message(self) -> str:
         return "❌ Не удалось отправить сообщение"
+
+
+class BotNoAdminRightsInArchiveChatError(PrivateModerationError):
+    """Бот не имеет прав администратора в архивном чате."""
+
+    def __init__(self, archive_chat_title: str):
+        self.archive_chat_title = archive_chat_title
+
+    def get_user_message(self) -> str:
+        return (
+            f"❌ Бот не имеет прав администратора в архивном чате <b>{self.archive_chat_title}</b>.\n"
+            "Пожалуйста, выдайте боту права администратора для корректной работы."
+        )
+
+
+class BotNotInArchiveChatError(PrivateModerationError):
+    """Бот не состоит в архивном чате."""
+
+    def __init__(self, archive_chat_title: str):
+        self.archive_chat_title = archive_chat_title
+
+    def get_user_message(self) -> str:
+        return (
+            f"❌ Бот не найден в архивном чате <b>{self.archive_chat_title}</b>.\n"
+            "Пожалуйста, добавьте бота в этот чат для его активации."
+        )
