@@ -29,33 +29,36 @@ class UnbanUserUseCase(BaseAmnestyUseCase):
         for chat in dto.chat_dtos:
             archive_chats = await self._validate_and_get_archive_chats(chat)
 
-            # Собираем информацию об ограничениях до их снятия
-            status = await self.user_chat_status_repository.get_status(
+            # Собираем информацию об ограничениях до их снятия из Telegram API
+            member_status = await self.bot_permission_service.get_chat_member_status(
+                user_tgid=int(dto.violator_tgid),
+                chat_tgid=chat.tg_id,
+            )
+
+            # Выполняем разбан и размут в Telegram, если это необходимо
+            if member_status.is_banned:
+                await self.bot_message_service.unban_chat_member(
+                    chat_tg_id=chat.tg_id,
+                    user_tg_id=int(dto.violator_tgid),
+                )
+
+            if member_status.is_muted:
+                await self.bot_message_service.unmute_chat_member(
+                    chat_tg_id=chat.tg_id,
+                    user_tg_id=int(dto.violator_tgid),
+                )
+
+            # Гарантируем наличие записи в БД и её актуальность (синхронизация)
+            await self.user_chat_status_repository.get_or_create(
                 user_id=dto.violator_id,
                 chat_id=chat.id,
+                defaults={
+                    "is_banned": False,
+                    "is_muted": False,
+                    "muted_until": None,
+                },
             )
 
-            is_tg_banned = await self.bot_permission_service.is_member_banned(
-                tg_id=dto.violator_tgid,
-                chat_tg_id=chat.tg_id,
-            )
-            is_tg_muted = await self.bot_permission_service.is_member_muted(
-                tg_id=dto.violator_tgid,
-                chat_tg_id=chat.tg_id,
-            )
-
-            # Выполняем и разбан, и размут для полной амнистии
-            await self.bot_message_service.unban_chat_member(
-                chat_tg_id=chat.tg_id,
-                user_tg_id=int(dto.violator_tgid),
-            )
-            await self.bot_message_service.unmute_chat_member(
-                chat_tg_id=chat.tg_id,
-                user_tg_id=int(dto.violator_tgid),
-            )
-
-            # Всегда обновляем статус в БД и удаляем наказания,
-            # так как это "полная амнистия"
             await self.user_chat_status_repository.update_status(
                 user_id=dto.violator_id,
                 chat_id=chat.id,
@@ -69,11 +72,10 @@ class UnbanUserUseCase(BaseAmnestyUseCase):
                 chat_id=chat.id,
             )
 
-            # Формируем список того, что было снято
             removed_list = []
-            if (status and status.is_banned) or is_tg_banned:
+            if member_status.is_banned:
                 removed_list.append("бан")
-            if (status and status.is_muted) or is_tg_muted:
+            if member_status.is_muted:
                 removed_list.append("мут")
             if deleted_warns > 0:
                 removed_list.append(f"предупреждения ({deleted_warns})")
