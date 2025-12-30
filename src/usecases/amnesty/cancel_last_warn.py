@@ -79,6 +79,12 @@ class CancelLastWarnUseCase(BaseAmnestyUseCase):
                 member_status.is_banned = False
                 member_status.banned_until = None
 
+        # Гарантируем наличие записи в БД перед обновлением
+        await self.user_chat_status_repository.get_or_create(
+            user_id=dto.violator_id,
+            chat_id=chat.id,
+        )
+
         await self.user_chat_status_repository.update_status(
             user_id=dto.violator_id,
             chat_id=chat.id,
