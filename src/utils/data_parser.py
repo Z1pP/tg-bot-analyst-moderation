@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, time
 from typing import Optional
 
@@ -60,3 +61,25 @@ def parse_tolerance(text: str) -> Optional[int]:
         return None
     except ValueError:
         return None
+
+
+def parse_duration(text: str) -> Optional[int]:
+    """
+    Парсит длительность из строки (10m, 2h, 1d) в секунды.
+
+    Args:
+        text: Строка с длительностью
+
+    Returns:
+        Количество секунд или None при ошибке
+    """
+    if not text or not text.strip():
+        return None
+
+    match = re.match(r"^(\d+)([mhd])$", text.strip().lower())
+    if not match:
+        return None
+
+    value, unit = int(match.group(1)), match.group(2)
+    multipliers = {"m": 60, "h": 3600, "d": 86400}
+    return value * multipliers[unit]
