@@ -283,6 +283,10 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         ),
         InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.PUNISHMENT_SETTING,
+            callback_data=CallbackData.Chat.PUNISHMENT_SETTING,
+        ),
+        InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_SELECTION_CHAT,
             callback_data=CallbackData.Chat.SELECT_CHAT,
         ),
