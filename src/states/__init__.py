@@ -9,6 +9,7 @@ from .moderation import (
     ModerationStates,
     WarnUserStates,
 )
+from .punishment import PunishmentState
 from .rating import RatingStateManager
 from .roles import RoleState
 from .templates import TemplateStateManager
@@ -38,4 +39,5 @@ __all__ = [
     "ChatArchiveState",
     "WorkHoursState",
     "RatingStateManager",
+    "PunishmentState",
 ]
