@@ -194,6 +194,23 @@ class BotPermissionService:
             )
             return False
 
+    async def is_member_muted(
+        self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
+    ) -> bool:
+        """Проверяет мут пользователя."""
+        try:
+            member = await self.bot.get_chat_member(
+                chat_id=chat_tg_id, user_id=int(tg_id)
+            )
+            if isinstance(member, ChatMemberRestricted):
+                return not member.can_send_messages
+            return False
+        except TelegramAPIError as e:
+            logger.error(
+                "Ошибка проверки мута для %s в чате %s: %s", tg_id, chat_tg_id, e
+            )
+            return False
+
     async def check_archive_permissions(
         self, chat_tgid: ChatIdUnion
     ) -> BotPermissionsCheck:
