@@ -118,6 +118,43 @@ class BotPermissionService:
             return getattr(member, "can_restrict_members", False)
         return False
 
+    async def can_delete_messages(self, chat_tgid: ChatIdUnion) -> bool:
+        """Проверяет право бота на удаление сообщений."""
+        member = await self.get_bot_member(chat_tgid=chat_tgid)
+        if not member:
+            return False
+
+        if isinstance(member, ChatMemberOwner):
+            return True
+        if isinstance(member, ChatMemberAdministrator):
+            return getattr(member, "can_delete_messages", False)
+        return False
+
+    async def can_post_messages(self, chat_tgid: ChatIdUnion) -> bool:
+        """Проверяет право бота на отправку сообщений."""
+        member = await self.get_bot_member(chat_tgid=chat_tgid)
+        if not member:
+            return False
+
+        if isinstance(member, ChatMemberOwner):
+            return True
+        if isinstance(member, ChatMemberAdministrator):
+            # В каналах это отдельное право, в группах админ может всегда
+            return getattr(member, "can_post_messages", True)
+        return False
+
+    async def can_invite_users(self, chat_tgid: ChatIdUnion) -> bool:
+        """Проверяет право бота на создание приглашений."""
+        member = await self.get_bot_member(chat_tgid=chat_tgid)
+        if not member:
+            return False
+
+        if isinstance(member, ChatMemberOwner):
+            return True
+        if isinstance(member, ChatMemberAdministrator):
+            return getattr(member, "can_invite_users", False)
+        return False
+
     async def is_administrator(
         self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
     ) -> bool:
