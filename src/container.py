@@ -36,11 +36,11 @@ from services import (
     ReportScheduleService,
     UserService,
 )
-from services.chat.summarize import IAIService
-from services.chat.summarize.open_router_service import OpenRouterService
 from services.analytics_buffer_service import AnalyticsBufferService
 from services.caching import ICache, RedisCache
 from services.categories import CategoryService
+from services.chat.summarize import IAIService
+from services.chat.summarize.open_router_service import OpenRouterService
 from services.release_note_service import ReleaseNoteService
 from services.scheduler import TaskiqSchedulerService
 from services.templates import (
@@ -54,6 +54,7 @@ from usecases.admin_actions import (
 )
 from usecases.amnesty import (
     CancelLastWarnUseCase,
+    GetChatsWithAnyRestrictionUseCase,
     GetChatsWithBannedUserUseCase,
     GetChatsWithMutedUserUseCase,
     GetChatsWithPunishedUserUseCase,
@@ -185,7 +186,8 @@ class ContainerSetup:
         container.register(
             IAIService,
             lambda: OpenRouterService(
-                api_key=settings.OPEN_ROUTER_TOKEN, model_name=settings.OPEN_ROUTER_MODEL
+                api_key=settings.OPEN_ROUTER_TOKEN,
+                model_name=settings.OPEN_ROUTER_MODEL,
             ),
         )
         container.register(UserService)
@@ -278,6 +280,7 @@ class ContainerSetup:
         container.register(GiveUserWarnUseCase)
         container.register(GiveUserBanUseCase)
         container.register(CancelLastWarnUseCase)
+        container.register(GetChatsWithAnyRestrictionUseCase)
         container.register(GetChatsWithBannedUserUseCase)
         container.register(GetChatsWithMutedUserUseCase)
         container.register(GetChatsWithPunishedUserUseCase)
