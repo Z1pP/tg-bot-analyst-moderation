@@ -12,6 +12,8 @@ x-common-setup: &common-setup
     options:
       max-size: "10m"
       max-file: "3"
+  volumes:
+    - ./logs:/app/logs
 
 # 2. Шаблон переменных окружения для подключения к БД и Redis внутри сети Docker
 x-db-env: &db-env
@@ -34,8 +36,7 @@ services:
       tunnel: { condition: service_started }
     environment:
       <<: *db-env
-    volumes:
-      - ./logs:/app/logs
+      SERVICE_NAME: bot
     command: >
       bash -c "
         echo '⏳ Waiting for Cloudflare Tunnel...';
@@ -95,6 +96,7 @@ services:
       redis: { condition: service_healthy }
     environment:
       <<: *db-env
+      SERVICE_NAME: scheduler
     command: python src/taskiq_scheduler_entrypoint.py
 
   analytics_scheduler:
@@ -104,6 +106,7 @@ services:
       redis: { condition: service_healthy }
     environment:
       <<: *db-env
+      SERVICE_NAME: analytics_scheduler
     command: python src/analytics_scheduler_entrypoint.py
 
   worker:
@@ -113,6 +116,7 @@ services:
       redis: { condition: service_healthy }
     environment:
       <<: *db-env
+      SERVICE_NAME: worker
     command: taskiq worker scheduler.taskiq:broker tasks.report_tasks tasks.analytics_tasks
 
 networks:
