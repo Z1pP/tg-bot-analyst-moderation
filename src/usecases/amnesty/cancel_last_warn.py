@@ -1,6 +1,7 @@
 import logging
 from dataclasses import asdict
 
+from constants.enums import AdminActionType
 from constants.punishment import PunishmentType
 from dto import AmnestyUserDTO, CancelWarnResultDTO
 from repositories import (
@@ -8,7 +9,12 @@ from repositories import (
     PunishmentRepository,
     UserChatStatusRepository,
 )
-from services import BotMessageService, BotPermissionService, ChatService
+from services import (
+    AdminActionLogService,
+    BotMessageService,
+    BotPermissionService,
+    ChatService,
+)
 from services.time_service import TimeZoneService
 from utils.formatter import format_duration
 
@@ -28,11 +34,13 @@ class CancelLastWarnUseCase(BaseAmnestyUseCase):
         punishment_ladder_repository: PunishmentLadderRepository,
         user_chat_status_repository: UserChatStatusRepository,
         chat_service: ChatService,
+        admin_action_log_service: AdminActionLogService,
     ):
         super().__init__(bot_message_service, bot_permission_service, chat_service)
         self.punishment_repository = punishment_repository
         self.punishment_ladder_repository = punishment_ladder_repository
         self.user_chat_status_repository = user_chat_status_repository
+        self.admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: AmnestyUserDTO) -> CancelWarnResultDTO:
         if len(dto.chat_dtos) > 1:
@@ -124,6 +132,17 @@ class CancelLastWarnUseCase(BaseAmnestyUseCase):
         )
 
         await self._send_report_to_archives(archive_chats, report_text)
+
+        # Логируем действие администратора
+        details = (
+            f"Нарушитель: @{dto.violator_username} ({dto.violator_tgid}), "
+            f"Чат: {chat.title} ({chat.tg_id})"
+        )
+        await self.admin_action_log_service.log_action(
+            admin_tg_id=dto.admin_tgid,
+            action_type=AdminActionType.CANCEL_LAST_WARN,
+            details=details,
+        )
 
         return CancelWarnResultDTO(
             success=True,
