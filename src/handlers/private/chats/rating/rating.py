@@ -140,7 +140,10 @@ async def _render_rating_view(
     try:
         usecase: GetDailyTopUsersUseCase = container.resolve(GetDailyTopUsersUseCase)
         stats = await usecase.execute(
-            chat_id=chat_id, start_date=start_date, end_date=end_date
+            chat_id=chat_id,
+            admin_tg_id=str(callback.from_user.id),
+            start_date=start_date,
+            end_date=end_date,
         )
     except Exception as e:
         logger.error("Ошибка при получении рейтинга чата: %s", e, exc_info=True)
