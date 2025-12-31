@@ -20,7 +20,6 @@ from services.report_schedule_service import ReportScheduleService
 from services.time_service import TimeZoneService
 from states import ChatStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -344,8 +343,4 @@ async def archive_back_to_chat_actions_handler(
         reply_markup=chat_actions_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ChatStateManager.selecting_chat,
-    )
+    await state.set_state(ChatStateManager.selecting_chat)

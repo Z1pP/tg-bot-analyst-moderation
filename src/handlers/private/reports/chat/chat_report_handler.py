@@ -25,7 +25,6 @@ from utils.send_message import (
     safe_edit_message,
     send_split_html_message,
 )
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -50,11 +49,7 @@ async def get_chat_statistics_handler(
         reply_markup=time_period_ikb_chat(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ChatStateManager.selecting_period,
-    )
+    await state.set_state(ChatStateManager.selecting_period)
 
 
 @router.callback_query(
@@ -205,11 +200,7 @@ async def process_period_selection_callback(
     )
 
     if period_text == TimePeriod.CUSTOM.value:
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=ChatStateManager.selecting_custom_period,
-        )
+        await state.set_state(ChatStateManager.selecting_custom_period)
 
         # Показываем календарь
         now = TimeZoneService.now()
@@ -319,8 +310,4 @@ async def _render_report_view(
         reply_markup=order_details_kb_chat(show_details=not result.is_single_day),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ChatStateManager.selecting_period,
-    )
+    await state.set_state(ChatStateManager.selecting_period)

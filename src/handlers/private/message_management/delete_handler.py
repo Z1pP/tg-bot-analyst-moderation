@@ -10,7 +10,6 @@ from exceptions.moderation import MessageDeleteError
 from keyboards.inline.message_actions import message_action_ikb, send_message_ikb
 from states.message_management import MessageManagerState
 from usecases.admin_actions import DeleteMessageUseCase
-from utils.state_logger import log_and_set_state
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -40,9 +39,7 @@ async def message_delete_confirm_handler(
                 reply_markup=send_message_ikb(),
             )
             await state.update_data(active_message_id=callback.message.message_id)
-            await log_and_set_state(
-                callback.message, state, MessageManagerState.waiting_message_link
-            )
+            await state.set_state(MessageManagerState.waiting_message_link)
             return
 
         await callback.message.edit_text(
@@ -53,9 +50,7 @@ async def message_delete_confirm_handler(
             reply_markup=message_action_ikb(),
         )
 
-        await log_and_set_state(
-            callback.message, state, MessageManagerState.waiting_action_select
-        )
+        await state.set_state(MessageManagerState.waiting_action_select)
 
         logger.info(
             "Админ %s отменил удаление и вернулся к окну действий с сообщением",
@@ -94,9 +89,7 @@ async def message_delete_confirm_handler(
         )
         # Сохраняем message_id для последующего редактирования
         await state.update_data(active_message_id=callback.message.message_id)
-        await log_and_set_state(
-            callback.message, state, MessageManagerState.waiting_message_link
-        )
+        await state.set_state(MessageManagerState.waiting_message_link)
         logger.info(
             "Админ %s удалил сообщение %s из чата %s",
             callback.from_user.id,
@@ -111,9 +104,7 @@ async def message_delete_confirm_handler(
             reply_markup=send_message_ikb(),
         )
         await state.update_data(active_message_id=callback.message.message_id)
-        await log_and_set_state(
-            callback.message, state, MessageManagerState.waiting_message_link
-        )
+        await state.set_state(MessageManagerState.waiting_message_link)
     except Exception as e:
         logger.error(
             "Ошибка удаления сообщения %s: %s",
@@ -128,6 +119,4 @@ async def message_delete_confirm_handler(
             reply_markup=send_message_ikb(),
         )
         await state.update_data(active_message_id=callback.message.message_id)
-        await log_and_set_state(
-            callback.message, state, MessageManagerState.waiting_message_link
-        )
+        await state.set_state(MessageManagerState.waiting_message_link)

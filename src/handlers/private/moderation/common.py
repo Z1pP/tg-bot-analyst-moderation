@@ -16,7 +16,6 @@ from services import UserService
 from states.moderation import ModerationStates
 from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
-from utils.state_logger import log_and_set_state
 from utils.user_data_parser import parse_data_from_text
 
 ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
@@ -40,11 +39,7 @@ async def process_user_handler_common(
         text=dialog_text,
         reply_markup=back_to_block_menu_ikb(),
     )
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=next_state,
-    )
+    await state.set_state(next_state)
 
 
 async def process_moderation_action(
@@ -136,7 +131,7 @@ async def process_moderation_action(
         reply_markup=moderation_menu_ikb(),
     )
 
-    await log_and_set_state(callback.message, state, ModerationStates.menu)
+    await state.set_state(ModerationStates.menu)
 
 
 async def process_user_input_common(
@@ -171,7 +166,7 @@ async def process_user_input_common(
         await bot.edit_message_text(**kwargs)
 
         if error_state:
-            await log_and_set_state(message=message, state=state, new_state=error_state)
+            await state.set_state(error_state)
         return
 
     user_service: UserService = container.resolve(UserService)
@@ -200,7 +195,7 @@ async def process_user_input_common(
         await bot.edit_message_text(**kwargs)
 
         if error_state:
-            await log_and_set_state(message=message, state=state, new_state=error_state)
+            await state.set_state(error_state)
         return
 
     await state.update_data(
@@ -223,11 +218,7 @@ async def process_user_input_common(
         except TelegramBadRequest as e:
             logger.error("Ошибка редактирования сообщения: %s", e, exc_info=True)
 
-    await log_and_set_state(
-        message=message,
-        state=state,
-        new_state=next_state,
-    )
+    await state.set_state(next_state)
 
 
 async def process_reason_common(
@@ -274,11 +265,7 @@ async def process_reason_common(
             text=Dialog.WarnUser.NO_CHATS.format(username=username),
             reply_markup=moderation_menu_ikb(),
         )
-        await log_and_set_state(
-            message=sender.message if is_callback else sender,
-            state=state,
-            new_state=ModerationStates.menu,
-        )
+        await state.set_state(ModerationStates.menu)
         logger.warning(
             "Отслеживаемы чаты не найдены для пользователя %s (%s)",
             username,
@@ -298,8 +285,4 @@ async def process_reason_common(
     except TelegramBadRequest as e:
         logger.error("Ошибка при редактировании сообщения: %s", e, exc_info=True)
 
-    await log_and_set_state(
-        message=sender.message if is_callback else sender,
-        state=state,
-        new_state=next_state,
-    )
+    await state.set_state(next_state)

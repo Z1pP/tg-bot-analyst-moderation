@@ -3,7 +3,6 @@ from aiogram.fsm.context import FSMContext
 
 from keyboards.inline.templates import templates_menu_ikb
 from states import TemplateStateManager
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 
@@ -21,8 +20,4 @@ async def templates_menu_handler(callback: types.CallbackQuery, state: FSMContex
         reply_markup=templates_menu_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.templates_menu,
-    )
+    await state.set_state(TemplateStateManager.templates_menu)

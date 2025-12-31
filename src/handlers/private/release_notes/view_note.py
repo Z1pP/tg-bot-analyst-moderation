@@ -12,7 +12,6 @@ from services.release_note_service import ReleaseNoteService
 from services.time_service import TimeZoneService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -58,8 +57,4 @@ async def view_note_callback_handler(
         ),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.view_note,
-    )
+    await state.set_state(ReleaseNotesStateManager.view_note)

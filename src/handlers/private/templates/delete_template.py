@@ -16,7 +16,6 @@ from keyboards.inline.templates import (
 )
 from states import TemplateStateManager
 from usecases.templates import DeleteTemplateUseCase
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 
@@ -56,11 +55,7 @@ async def remove_template_handler(
         reply_markup=conf_remove_template_kb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.removing_template,
-    )
+    await state.set_state(TemplateStateManager.removing_template)
 
 
 @router.callback_query(
@@ -97,11 +92,7 @@ async def confirmation_removing_template_handler(
                         show_back_to_categories=True,
                     ),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             elif state_data.chat_id:
                 # Возвращаемся к списку шаблонов чата
                 templates, total_count = await get_templates_and_count(
@@ -117,11 +108,7 @@ async def confirmation_removing_template_handler(
                         show_back_to_categories=False,
                     ),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             elif state_data.template_scope == "global":
                 # Возвращаемся к списку глобальных шаблонов
                 templates, total_count = await get_templates_and_count(
@@ -137,33 +124,21 @@ async def confirmation_removing_template_handler(
                         show_back_to_categories=False,
                     ),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             else:
                 # Если нет ни category_id, ни chat_id, ни global scope, возвращаемся в меню
                 await callback.message.edit_text(
                     text="❌ Удаление отменено",
                     reply_markup=templates_menu_ikb(),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=TemplateStateManager.templates_menu,
-                )
+                await state.set_state(TemplateStateManager.templates_menu)
         except Exception as e:
             logger.error("Ошибка при возврате к списку шаблонов: %s", e, exc_info=True)
             await callback.message.edit_text(
                 text="❌ Удаление отменено",
                 reply_markup=templates_menu_ikb(),
             )
-            await log_and_set_state(
-                message=callback.message,
-                state=state,
-                new_state=TemplateStateManager.templates_menu,
-            )
+            await state.set_state(TemplateStateManager.templates_menu)
         return
 
     try:
@@ -176,19 +151,11 @@ async def confirmation_removing_template_handler(
             text="✅ Шаблон успешно удален",
             reply_markup=templates_menu_ikb(),
         )
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.templates_menu,
-        )
+        await state.set_state(TemplateStateManager.templates_menu)
     except Exception as e:
         logger.error("Ошибка при удалении шаблона: %s", e, exc_info=True)
         await callback.message.edit_text(
             "⚠️ Произошла ошибка при удалении",
             reply_markup=templates_menu_ikb(),
         )
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.templates_menu,
-        )
+        await state.set_state(TemplateStateManager.templates_menu)

@@ -15,7 +15,6 @@ from keyboards.inline.templates import templates_menu_ikb
 from states import CategoryStateManager, TemplateStateManager
 from usecases.categories import GetCategoryByIdUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -75,11 +74,7 @@ async def request_category_name_handler(callback: CallbackQuery, state: FSMConte
         reply_markup=reply_markup,
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=CategoryStateManager.process_category_name,
-    )
+    await state.set_state(CategoryStateManager.process_category_name)
 
 
 @router.message(CategoryStateManager.process_category_name)
@@ -133,13 +128,8 @@ async def process_category_name_handler(
             else confirmation_edit_category_ikb(),
         )
 
-    await log_and_set_state(
-        message=message,
-        state=state,
-        new_state=CategoryStateManager.confirm_category_creation
-        if mode == "add"
-        else CategoryStateManager.confirm_category_edit,
-    )
+    await state.set_state(CategoryStateManager.confirm_category_creation
+        if mode)
 
 
 @router.callback_query(F.data == "cancel_category")
@@ -152,11 +142,7 @@ async def cancel_category_handler(callback: CallbackQuery, state: FSMContext):
         text="❌ Действие отменено.",
         reply_markup=templates_menu_ikb(),
     )
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.templates_menu,
-    )
+    await state.set_state(TemplateStateManager.templates_menu)
 
 
 def validate_category_name(category_name: str) -> bool:

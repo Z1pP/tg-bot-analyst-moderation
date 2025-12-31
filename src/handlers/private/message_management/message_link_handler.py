@@ -7,7 +7,6 @@ from constants import Dialog
 from keyboards.inline.message_actions import message_action_ikb, send_message_ikb
 from states.message_management import MessageManagerState
 from utils.data_parser import MESSAGE_LINK_PATTERN, parse_message_link
-from utils.state_logger import log_and_set_state
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -105,4 +104,4 @@ async def message_link_handler(
             reply_markup=message_action_ikb(),
         )
 
-    await log_and_set_state(message, state, MessageManagerState.waiting_action_select)
+    await state.set_state(MessageManagerState.waiting_action_select)

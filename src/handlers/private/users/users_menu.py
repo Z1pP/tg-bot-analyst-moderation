@@ -12,7 +12,6 @@ from keyboards.inline.users import users_menu_ikb
 from services.user import UserService
 from states import MenuStates, UserStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -31,11 +30,7 @@ async def users_menu_handler(callback: types.CallbackQuery, state: FSMContext):
         reply_markup=users_menu_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=UserStateManager.users_menu,
-    )
+    await state.set_state(UserStateManager.users_menu)
 
 
 @router.callback_query(F.data == CallbackData.User.BACK_TO_MAIN_MENU_FROM_USERS)
@@ -67,8 +62,4 @@ async def back_to_main_menu_from_users_handler(
         ),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=MenuStates.main_menu,
-    )
+    await state.set_state(MenuStates.main_menu)

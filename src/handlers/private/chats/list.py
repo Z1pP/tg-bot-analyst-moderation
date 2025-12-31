@@ -15,7 +15,6 @@ from keyboards.inline.chats import (
 from states import ChatStateManager
 from usecases.chat import GetTrackedChatsUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -68,8 +67,4 @@ async def show_tracked_chats_handler(
         ),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ChatStateManager.listing_tracking_chats,
-    )
+    await state.set_state(ChatStateManager.listing_tracking_chats)

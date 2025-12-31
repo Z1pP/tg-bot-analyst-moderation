@@ -19,7 +19,6 @@ from services.release_note_service import ReleaseNoteService
 from services.user import UserService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name="add_release_note_router")
 logger = logging.getLogger(__name__)
@@ -49,11 +48,7 @@ async def add_note_start_handler(callback: CallbackQuery, state: FSMContext) -> 
 
     await state.update_data(active_message_id=callback.message.message_id)
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.selecting_add_language,
-    )
+    await state.set_state(ReleaseNotesStateManager.selecting_add_language)
 
 
 @router.message(ReleaseNotesStateManager.waiting_for_title)
@@ -253,11 +248,7 @@ async def cancel_add_note_handler(callback: CallbackQuery, state: FSMContext) ->
         ),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.menu,
-    )
+    await state.set_state(ReleaseNotesStateManager.menu)
 
 
 @router.callback_query(
@@ -297,11 +288,7 @@ async def select_add_language_handler(
         reply_markup=cancel_add_release_note_ikb(),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.waiting_for_title,
-    )
+    await state.set_state(ReleaseNotesStateManager.waiting_for_title)
 
 
 @router.callback_query(
@@ -324,8 +311,4 @@ async def change_title_while_adding_handler(
         reply_markup=cancel_add_release_note_ikb(),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.waiting_for_title,
-    )
+    await state.set_state(ReleaseNotesStateManager.waiting_for_title)

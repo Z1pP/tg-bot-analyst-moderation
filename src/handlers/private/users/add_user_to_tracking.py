@@ -15,7 +15,6 @@ from states.user import UsernameStates
 from usecases.user_tracking import AddUserToTrackingUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 from utils.user_data_parser import parse_data_from_text
 
 router = Router(name=__name__)
@@ -50,11 +49,7 @@ async def add_user_to_tracking_handler(
 
         await state.update_data(active_message_id=callback.message.message_id)
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=UsernameStates.waiting_user_data_input,
-        )
+        await state.set_state(UsernameStates.waiting_user_data_input)
     except Exception as e:
         await handle_exception(callback.message, e, "add_user_to_tracking_handler")
 
@@ -70,11 +65,7 @@ async def cancel_add_user_handler(callback: CallbackQuery, state: FSMContext) ->
         reply_markup=users_menu_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=UserStateManager.users_menu,
-    )
+    await state.set_state(UserStateManager.users_menu)
 
 
 @router.message(UsernameStates.waiting_user_data_input)
@@ -155,10 +146,6 @@ async def process_adding_user(message: Message, state: FSMContext) -> None:
                 reply_markup=users_menu_ikb(),
             )
 
-        await log_and_set_state(
-            message=message,
-            state=state,
-            new_state=UserStateManager.users_menu,
-        )
+        await state.set_state(UserStateManager.users_menu)
     except Exception as e:
         await handle_exception(message, e, "process_adding_user")

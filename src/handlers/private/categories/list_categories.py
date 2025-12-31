@@ -9,7 +9,6 @@ from keyboards.inline.categories import categories_inline_ikb
 from keyboards.inline.templates import templates_menu_ikb
 from services.categories import CategoryService
 from states import TemplateStateManager
-from utils.state_logger import log_and_set_state
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +47,7 @@ async def select_category_handler(
             ),
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.listing_categories,
-        )
+        await state.set_state(TemplateStateManager.listing_categories)
     except Exception as e:
         logger.error("Ошибка при получении категорий: %s", e, exc_info=True)
         await callback.message.edit_text(

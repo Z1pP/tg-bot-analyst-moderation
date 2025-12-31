@@ -19,7 +19,6 @@ from usecases.chat_tracking import (
     RemoveChatFromTrackingUseCase,
 )
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
@@ -188,8 +187,4 @@ async def confirmation_untracking_chat_handler(
         reply_markup=chats_management_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=MenuStates.chats_menu,
-    )
+    await state.set_state(MenuStates.chats_menu)

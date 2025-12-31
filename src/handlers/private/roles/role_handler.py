@@ -14,7 +14,6 @@ from services.user import UserService
 from states import RoleState
 from usecases.user import UpdateUserRoleUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 from utils.user_data_parser import parse_data_from_text
 
 router = Router(name=__name__)
@@ -39,11 +38,7 @@ async def input_user_data_handler(callback: CallbackQuery, state: FSMContext) ->
 
     await state.update_data(active_message_id=callback.message.message_id)
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=RoleState.waiting_user_input,
-    )
+    await state.set_state(RoleState.waiting_user_input)
 
 
 @router.message(RoleState.waiting_user_input)

@@ -12,7 +12,6 @@ from keyboards.inline.message_actions import cancel_send_message_ikb, send_messa
 from states.message_management import MessageManagerState
 from usecases.admin_actions import SendMessageToChatUseCase
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
-from utils.state_logger import log_and_set_state
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -52,9 +51,7 @@ async def send_message_button_handler(
         Dialog.MessageManager.SELECT_CHAT,
         reply_markup=select_chat_ikb(user_chats_dto.chats),
     )
-    await log_and_set_state(
-        callback.message, state, MessageManagerState.waiting_chat_select
-    )
+    await state.set_state(MessageManagerState.waiting_chat_select)
     logger.info("Админ %s выбирает чат для отправки сообщения", callback.from_user.id)
 
 
@@ -101,9 +98,7 @@ async def chat_selected_handler(
         Dialog.MessageManager.SEND_CONTENT_INPUT,
         reply_markup=cancel_send_message_ikb(),
     )
-    await log_and_set_state(
-        callback.message, state, MessageManagerState.waiting_send_content
-    )
+    await state.set_state(MessageManagerState.waiting_send_content)
     logger.info(
         "Админ %s выбрал чат %s для отправки сообщения",
         callback.from_user.id,
@@ -167,4 +162,4 @@ async def send_content_handler(message: types.Message, state: FSMContext) -> Non
             reply_markup=send_message_ikb(),
         )
 
-    await log_and_set_state(message, state, MessageManagerState.waiting_message_link)
+    await state.set_state(MessageManagerState.waiting_message_link)

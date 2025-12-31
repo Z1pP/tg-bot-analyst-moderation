@@ -25,7 +25,6 @@ from usecases.amnesty import (
     UnmuteUserUseCase,
 )
 from utils.formatter import format_duration
-from utils.state_logger import log_and_set_state
 
 from .common import process_user_handler_common, process_user_input_common
 
@@ -101,11 +100,7 @@ async def amnsesy_action_handler(
         reply_markup=confirm_action_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=AmnestyStates.waiting_confirmation_action,
-    )
+    await state.set_state(AmnestyStates.waiting_confirmation_action)
 
 
 @router.callback_query(
@@ -159,11 +154,7 @@ async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> No
         reply_markup=tracked_chats_with_all_ikb(dtos=chat_dtos),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=AmnestyStates.waiting_chat_select,
-    )
+    await state.set_state(AmnestyStates.waiting_chat_select)
 
 
 @router.callback_query(
@@ -181,11 +172,7 @@ async def cancel_action(callback: types.CallbackQuery, state: FSMContext) -> Non
         text=text,
         reply_markup=amnesty_actions_ikb(),
     )
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=AmnestyStates.waiting_action_select,
-    )
+    await state.set_state(AmnestyStates.waiting_action_select)
 
 
 @router.callback_query(
@@ -300,11 +287,7 @@ async def execute_amnesty_action(
         reply_markup=amnesty_actions_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=AmnestyStates.waiting_action_select,
-    )
+    await state.set_state(AmnestyStates.waiting_action_select)
 
 
 @dataclass(frozen=True, slots=True)
@@ -340,11 +323,7 @@ async def handle_chats_error(
         )
 
     await callback.message.edit_text(text=text, reply_markup=moderation_menu_ikb())
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ModerationStates.menu,
-    )
+    await state.set_state(ModerationStates.menu)
 
 
 ACTION_CONFIG = {

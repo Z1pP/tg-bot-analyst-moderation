@@ -17,7 +17,6 @@ from services.templates import TemplateContentService
 from states import TemplateStateManager
 from usecases.categories import GetCategoriesPaginatedUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 from .common import common_process_template_title_handler
 
@@ -59,11 +58,7 @@ async def add_template_handler(
             ),
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.process_template_category,
-        )
+        await state.set_state(TemplateStateManager.process_template_category)
 
     except Exception as e:
         logger.error(f"Ошибка при начале создания шаблона: {e}")
@@ -108,11 +103,7 @@ async def process_template_category_handler(
         reply_markup=cancel_template_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.process_template_title,
-    )
+    await state.set_state(TemplateStateManager.process_template_title)
 
 
 @router.message(TemplateStateManager.process_template_title)
@@ -181,11 +172,7 @@ async def process_template_content_handler(
             reply_markup=templates_menu_ikb(),
         )
 
-    await log_and_set_state(
-        message=message,
-        state=state,
-        new_state=TemplateStateManager.templates_menu,
-    )
+    await state.set_state(TemplateStateManager.templates_menu)
 
 
 @router.callback_query(
@@ -286,8 +273,4 @@ async def process_template_chat_handler(
 
     await callback.message.answer(text=text)
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.process_template_title,
-    )
+    await state.set_state(TemplateStateManager.process_template_title)

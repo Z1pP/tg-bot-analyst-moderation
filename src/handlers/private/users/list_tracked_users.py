@@ -11,7 +11,6 @@ from keyboards.inline.users import users_inline_kb, users_menu_ikb
 from states import UserStateManager
 from usecases.user_tracking import GetListTrackedUsersUseCase
 from utils.exception_handler import handle_exception
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -58,10 +57,6 @@ async def users_list_handler(callback: CallbackQuery, state: FSMContext) -> None
             ),
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=UserStateManager.listing_users,
-        )
+        await state.set_state(UserStateManager.listing_users)
     except Exception as e:
         await handle_exception(callback.message, e, "users_list_handler")
