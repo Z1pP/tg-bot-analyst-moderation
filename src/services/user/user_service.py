@@ -18,6 +18,18 @@ class UserService:
     async def get_by_username(self, username: str) -> Optional[User]:
         return await self._user_repository.get_user_by_username(username=username)
 
+    async def get_user_by_id(self, user_id: int) -> Optional[User]:
+        # Проверяем кеш
+        user = await self._cache.get(f"user:id:{user_id}")
+        if user:
+            return user
+
+        # Ищем в БД
+        user = await self._user_repository.get_user_by_id(user_id=user_id)
+        if user:
+            await self._cache_user(user)
+        return user
+
     async def get_user(self, tg_id: str = None, username: str = None) -> Optional[User]:
         # Проверяем кеш по tg_id
         if tg_id:
@@ -55,7 +67,9 @@ class UserService:
         return user
 
     async def _cache_user(self, user: User) -> None:
-        """Кеширует пользователя по tg_id и username"""
+        """Кеширует пользователя по id, tg_id и username"""
+        if user.id:
+            await self._cache.set(f"user:id:{user.id}", user)
         if user.tg_id:
             await self._cache.set(f"user:tg_id:{user.tg_id}", user)
         if user.username:
