@@ -2,10 +2,11 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
+from constants import Dialog
+from constants.enums import AdminActionType
 from dto import UserTrackingDTO
 from repositories import UserTrackingRepository
-from services import UserService
-from constants import Dialog
+from services import AdminActionLogService, UserService
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +22,11 @@ class AddUserToTrackingUseCase:
         self,
         user_service: UserService,
         user_tracking_repository: UserTrackingRepository,
+        admin_action_log_service: AdminActionLogService,
     ):
         self._user_tracking_repository = user_tracking_repository
         self._user_service = user_service
+        self._admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: UserTrackingDTO) -> AddUserToTrackingResult:
         user = await self._user_service.get_user(
@@ -66,6 +69,14 @@ class AddUserToTrackingUseCase:
             await self._user_tracking_repository.add_user_to_tracking(
                 admin_id=admin.id,
                 user_id=user.id,
+            )
+
+            # Логируем действие администратора
+            details = f"Пользователь: @{user.username} ({user.tg_id})"
+            await self._admin_action_log_service.log_action(
+                admin_tg_id=admin.tg_id,
+                action_type=AdminActionType.ADD_USER,
+                details=details,
             )
 
             return AddUserToTrackingResult(
