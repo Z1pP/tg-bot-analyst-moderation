@@ -128,8 +128,11 @@ async def process_category_name_handler(
             else confirmation_edit_category_ikb(),
         )
 
-    await state.set_state(CategoryStateManager.confirm_category_creation
-        if mode)
+    await state.set_state(
+        CategoryStateManager.confirm_category_creation
+        if mode == "add"
+        else CategoryStateManager.confirm_category_edit
+    )
 
 
 @router.callback_query(F.data == "cancel_category")
