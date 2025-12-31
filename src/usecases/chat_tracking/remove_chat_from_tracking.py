@@ -1,7 +1,9 @@
 import logging
 from typing import Optional
 
+from constants.enums import AdminActionType
 from repositories import ChatRepository, ChatTrackingRepository, UserRepository
+from services import AdminActionLogService
 
 logger = logging.getLogger(__name__)
 
@@ -12,10 +14,12 @@ class RemoveChatFromTrackingUseCase:
         chat_tracking_repository: ChatTrackingRepository,
         user_repository: UserRepository,
         chat_repository: ChatRepository,
+        admin_action_log_service: AdminActionLogService,
     ):
         self.chat_tracking_repository = chat_tracking_repository
         self.chat_repository = chat_repository
         self.user_repository = user_repository
+        self.admin_action_log_service = admin_action_log_service
 
     async def execute(self, user_id: int, chat_id: int) -> tuple[bool, Optional[str]]:
         """
@@ -49,6 +53,14 @@ class RemoveChatFromTrackingUseCase:
             if success:
                 logger.info(
                     f"Чат '{chat.title}' успешно удален из отслеживания админом {admin.username}"
+                )
+
+                # Логируем действие администратора
+                details = f"Чат: {chat.title} ({chat.chat_id})"
+                await self.admin_action_log_service.log_action(
+                    admin_tg_id=admin.tg_id,
+                    action_type=AdminActionType.REMOVE_CHAT,
+                    details=details,
                 )
                 return True, None
             else:
