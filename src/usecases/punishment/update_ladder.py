@@ -1,7 +1,8 @@
+from constants.enums import AdminActionType
 from dto.punishment import PunishmentCommandResultDTO, UpdatePunishmentLadderDTO
 from models import PunishmentLadder
 from repositories import PunishmentLadderRepository
-from services import ChatService
+from services import AdminActionLogService, ChatService
 
 
 class UpdatePunishmentLadderUseCase:
@@ -9,12 +10,14 @@ class UpdatePunishmentLadderUseCase:
         self,
         punishment_ladder_repository: PunishmentLadderRepository,
         chat_service: ChatService,
+        admin_action_log_service: AdminActionLogService,
     ):
         self._punishment_ladder_repository = punishment_ladder_repository
         self._chat_service = chat_service
+        self._admin_action_log_service = admin_action_log_service
 
     async def execute(
-        self, dto: UpdatePunishmentLadderDTO
+        self, dto: UpdatePunishmentLadderDTO, admin_tg_id: str
     ) -> PunishmentCommandResultDTO:
         chat = await self._chat_service.get_chat_with_archive(chat_id=dto.chat_db_id)
         if not chat:
@@ -40,4 +43,16 @@ class UpdatePunishmentLadderUseCase:
             )
 
         await self._punishment_ladder_repository.create_ladder(steps)
+
+        # Логируем действие администратора
+        chat_title = chat.title if chat else f"ID: {dto.chat_db_id}"
+        details = (
+            f"Чат: {chat_title} ({dto.chat_db_id}), Действие: сохранение новой лестницы"
+        )
+        await self._admin_action_log_service.log_action(
+            admin_tg_id=admin_tg_id,
+            action_type=AdminActionType.PUNISHMENT_SETTING,
+            details=details,
+        )
+
         return PunishmentCommandResultDTO(success=True)

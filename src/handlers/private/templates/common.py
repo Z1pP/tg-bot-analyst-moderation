@@ -4,7 +4,6 @@ from aiogram.fsm.context import FSMContext
 from keyboards.inline.templates import cancel_template_ikb, templates_menu_ikb
 from states.templates import TemplateStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 
@@ -42,11 +41,7 @@ async def common_process_template_title_handler(
         reply_markup=cancel_template_ikb(),
     )
 
-    await log_and_set_state(
-        message=message,
-        state=state,
-        new_state=TemplateStateManager.process_template_content,
-    )
+    await state.set_state(TemplateStateManager.process_template_content)
 
 
 @router.callback_query(F.data == "cancel_template")
@@ -59,11 +54,7 @@ async def cancel_template_handler(callback: types.CallbackQuery, state: FSMConte
         text="❌ Действие отменено.",
         reply_markup=templates_menu_ikb(),
     )
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.templates_menu,
-    )
+    await state.set_state(TemplateStateManager.templates_menu)
 
 
 def validate_template_title(title: str) -> bool:

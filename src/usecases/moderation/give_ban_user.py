@@ -1,10 +1,12 @@
 import logging
 
+from constants.enums import AdminActionType
 from constants.punishment import PunishmentText, PunishmentType
 from dto import ModerationActionDTO
 from exceptions.moderation import ModerationError
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services import (
+    AdminActionLogService,
     BotMessageService,
     BotPermissionService,
     ChatService,
@@ -38,6 +40,7 @@ class GiveUserBanUseCase(ModerationUseCase):
         punishment_service: PunishmentService,
         user_chat_status_repository: UserChatStatusRepository,
         permission_service: BotPermissionService,
+        admin_action_log_service: AdminActionLogService,
     ):
         super().__init__(
             user_service,
@@ -47,6 +50,7 @@ class GiveUserBanUseCase(ModerationUseCase):
             permission_service,
         )
         self.punishment_service = punishment_service
+        self.admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: ModerationActionDTO) -> None:
         """
@@ -123,4 +127,16 @@ class GiveUserBanUseCase(ModerationUseCase):
             report_text=report_text,
             reason_text=reason_text,
             admin_answer_text=admin_answer_text,
+        )
+
+        # Логируем действие администратора
+        details = (
+            f"Нарушитель: @{context.violator.username} ({context.violator.tg_id}), "
+            f"Чат: {context.chat.title} ({context.chat.chat_id}), "
+            f"Период: бессрочно"
+        )
+        await self.admin_action_log_service.log_action(
+            admin_tg_id=dto.admin_tgid,
+            action_type=AdminActionType.BAN_USER,
+            details=details,
         )

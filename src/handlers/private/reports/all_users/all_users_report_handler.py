@@ -20,7 +20,6 @@ from states import AllUsersReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.report import GetAllUsersReportUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -87,11 +86,7 @@ async def get_all_users_report_handler(
         reply_markup=time_period_ikb_all_users(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=AllUsersReportStates.selecting_period,
-    )
+    await state.set_state(AllUsersReportStates.selecting_period)
 
 
 @router.callback_query(
@@ -110,11 +105,7 @@ async def process_period_selection_callback(
     if period_text == TimePeriod.CUSTOM.value:
         logger.info("Запрос пользовательского периода")
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=AllUsersReportStates.selecting_custom_period,
-        )
+        await state.set_state(AllUsersReportStates.selecting_custom_period)
 
         # Показываем календарь
         now = TimeZoneService.now()
@@ -217,11 +208,7 @@ async def _render_all_users_report(
         if not result.is_single_day:
             await state.update_data(all_users_report_dto=report_dto)
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=AllUsersReportStates.selecting_period,
-        )
+        await state.set_state(AllUsersReportStates.selecting_period)
 
         # Объединяем все части отчета в один текст
         full_report = "\n\n".join(report_parts)

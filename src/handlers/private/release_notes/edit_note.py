@@ -19,7 +19,6 @@ from services.release_note_service import ReleaseNoteService
 from services.user import UserService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -63,11 +62,7 @@ async def edit_note_start_handler(callback: CallbackQuery, state: FSMContext) ->
         reply_markup=edit_release_note_ikb(),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.editing_note,
-    )
+    await state.set_state(ReleaseNotesStateManager.editing_note)
 
 
 @router.callback_query(
@@ -88,11 +83,7 @@ async def edit_title_start_handler(callback: CallbackQuery, state: FSMContext) -
         reply_markup=cancel_edit_release_note_ikb(),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.editing_title,
-    )
+    await state.set_state(ReleaseNotesStateManager.editing_title)
 
 
 @router.message(ReleaseNotesStateManager.editing_title)
@@ -160,11 +151,7 @@ async def process_edit_title_handler(message: Message, state: FSMContext) -> Non
                 text=f"{update_message}\n\n{Dialog.ReleaseNotes.RELEASE_NOTES_MENU}",
                 reply_markup=release_notes_menu_ikb(notes, page, total_pages),
             )
-            await log_and_set_state(
-                message,
-                state,
-                ReleaseNotesStateManager.menu,
-            )
+            await state.set_state(ReleaseNotesStateManager.menu)
         except Exception as e:
             logger.error("Ошибка при возврате к меню: %s", e, exc_info=True)
             await message.reply(update_message)
@@ -192,11 +179,7 @@ async def edit_content_start_handler(
         reply_markup=cancel_edit_release_note_ikb(),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.editing_content,
-    )
+    await state.set_state(ReleaseNotesStateManager.editing_content)
 
 
 @router.message(ReleaseNotesStateManager.editing_content)
@@ -260,11 +243,7 @@ async def process_edit_content_handler(message: Message, state: FSMContext) -> N
                 text=f"{update_message}\n\n{Dialog.ReleaseNotes.RELEASE_NOTES_MENU}",
                 reply_markup=release_notes_menu_ikb(notes, page, total_pages),
             )
-            await log_and_set_state(
-                message,
-                state,
-                ReleaseNotesStateManager.menu,
-            )
+            await state.set_state(ReleaseNotesStateManager.menu)
         except Exception as e:
             logger.error("Ошибка при возврате к меню: %s", e, exc_info=True)
             await message.reply(update_message)
@@ -316,11 +295,7 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
         ),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.view_note,
-    )
+    await state.set_state(ReleaseNotesStateManager.view_note)
 
 
 @router.callback_query(
@@ -360,8 +335,4 @@ async def cancel_edit_title_or_content_handler(
         reply_markup=edit_release_note_ikb(),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.editing_note,
-    )
+    await state.set_state(ReleaseNotesStateManager.editing_note)

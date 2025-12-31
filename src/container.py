@@ -72,6 +72,7 @@ from usecases.chat import (
     GetAllChatsUseCase,
     GetChatsForUserActionUseCase,
     GetTrackedChatsUseCase,
+    UpdateChatWorkHoursUseCase,
 )
 from usecases.chat_tracking import (
     AddChatToTrackUseCase,
@@ -116,6 +117,7 @@ from usecases.user import (
     GetOrCreateUserIfNotExistUserCase,
     GetUserByIdUseCase,
     GetUserByTgIdUseCase,
+    UpdateUserRoleUseCase,
 )
 from usecases.user_tracking import (
     AddUserToTrackingUseCase,
@@ -264,6 +266,7 @@ class ContainerSetup:
             GetUserByTgIdUseCase,
             GetAllUsersUseCase,
             GetUserByIdUseCase,
+            UpdateUserRoleUseCase,
         ]
 
         for usecase in user_usecases:
@@ -276,6 +279,7 @@ class ContainerSetup:
             GetAllChatsUseCase,
             GetTrackedChatsUseCase,
             GetChatsForUserActionUseCase,
+            UpdateChatWorkHoursUseCase,
         ]
 
         for usecase in chat_usecases:

@@ -1,6 +1,12 @@
+from constants.enums import AdminActionType
 from dto import AmnestyUserDTO
 from repositories import UserChatStatusRepository
-from services import BotMessageService, BotPermissionService, ChatService
+from services import (
+    AdminActionLogService,
+    BotMessageService,
+    BotPermissionService,
+    ChatService,
+)
 
 from .base_amnesty import BaseAmnestyUseCase
 
@@ -14,9 +20,11 @@ class UnmuteUserUseCase(BaseAmnestyUseCase):
         bot_permission_service: BotPermissionService,
         user_chat_status_repository: UserChatStatusRepository,
         chat_service: ChatService,
+        admin_action_log_service: AdminActionLogService,
     ):
         super().__init__(bot_message_service, bot_permission_service, chat_service)
         self.user_chat_status_repository = user_chat_status_repository
+        self.admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: AmnestyUserDTO) -> None:
         for chat in dto.chat_dtos:
@@ -58,3 +66,14 @@ class UnmuteUserUseCase(BaseAmnestyUseCase):
             )
 
             await self._send_report_to_archives(archive_chats, report_text)
+
+            # Логируем действие администратора
+            details = (
+                f"Нарушитель: @{dto.violator_username} ({dto.violator_tgid}), "
+                f"Чат: {chat.title} ({chat.tg_id})"
+            )
+            await self.admin_action_log_service.log_action(
+                admin_tg_id=dto.admin_tgid,
+                action_type=AdminActionType.UNMUTE_USER,
+                details=details,
+            )

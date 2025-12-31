@@ -1,9 +1,11 @@
 import logging
 
+from constants.enums import AdminActionType
 from dto import ModerationActionDTO
 from exceptions.moderation import ModerationError
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services import (
+    AdminActionLogService,
     BotMessageService,
     BotPermissionService,
     ChatService,
@@ -11,6 +13,7 @@ from services import (
     UserService,
 )
 from services.time_service import TimeZoneService
+from utils.formatter import format_duration
 
 from .base import ModerationUseCase
 
@@ -44,6 +47,7 @@ class GiveUserWarnUseCase(ModerationUseCase):
         punishment_service: PunishmentService,
         user_chat_status_repository: UserChatStatusRepository,
         permission_service: BotPermissionService,
+        admin_action_log_service: AdminActionLogService,
     ):
         super().__init__(
             user_service,
@@ -53,6 +57,7 @@ class GiveUserWarnUseCase(ModerationUseCase):
             permission_service,
         )
         self.punishment_service = punishment_service
+        self.admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: ModerationActionDTO) -> None:
         """
@@ -144,4 +149,21 @@ class GiveUserWarnUseCase(ModerationUseCase):
             report_text=report,
             reason_text=reason_text,
             admin_answer_text=admin_answer_text,
+        )
+
+        # Логируем действие администратора
+        duration_text = "бессрочно"
+        if punishment_ladder.duration_seconds:
+            duration_text = format_duration(punishment_ladder.duration_seconds)
+
+        details = (
+            f"Нарушитель: @{context.violator.username} ({context.violator.tg_id}), "
+            f"Чат: {context.chat.title} ({context.chat.chat_id}), "
+            f"Наказание: {punishment_ladder.punishment_type.value}, "
+            f"Период: {duration_text}"
+        )
+        await self.admin_action_log_service.log_action(
+            admin_tg_id=dto.admin_tgid,
+            action_type=AdminActionType.WARN_USER,
+            details=details,
         )

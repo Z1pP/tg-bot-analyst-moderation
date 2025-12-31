@@ -20,7 +20,6 @@ from usecases.user_tracking import (
     RemoveUserFromTrackingUseCase,
 )
 from utils.exception_handler import handle_exception
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -73,11 +72,7 @@ async def remove_user_from_tracking_handler(
         )
 
         await state.update_data(current_page=1)
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=UserStateManager.removing_user,
-        )
+        await state.set_state(UserStateManager.removing_user)
     except Exception as e:
         await handle_exception(
             message=callback.message,
@@ -162,6 +157,7 @@ async def confirmation_removing_user(
             if success:
                 user_username = data.get("user_username", "")
                 logger.info(f"Пользователь ID {user_id} успешно удален из отслеживания")
+
                 text = (
                     f"✅ Готово! Пользователь @{user_username} удалён из отлеживания!\n\n"
                     "❗️Вы всегда можете вернуть пользователя "
@@ -179,11 +175,7 @@ async def confirmation_removing_user(
                     reply_markup=users_menu_ikb(),
                 )
 
-            await log_and_set_state(
-                message=callback.message,
-                state=state,
-                new_state=UserStateManager.users_menu,
-            )
+            await state.set_state(UserStateManager.users_menu)
         else:
             # Отмена - возвращаемся к списку пользователей для удаления
             logger.info(f"Удаление пользователя ID {user_id} отменено")
@@ -199,11 +191,7 @@ async def confirmation_removing_user(
                     "ещё не добавлен ни один пользователь.",
                     reply_markup=users_menu_ikb(),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=UserStateManager.users_menu,
-                )
+                await state.set_state(UserStateManager.users_menu)
                 return
 
             total_count = len(tracked_users)
@@ -223,11 +211,7 @@ async def confirmation_removing_user(
                 ),
             )
             await state.update_data(current_page=page)
-            await log_and_set_state(
-                message=callback.message,
-                state=state,
-                new_state=UserStateManager.removing_user,
-            )
+            await state.set_state(UserStateManager.removing_user)
     except Exception as e:
         await handle_exception(callback.message, e, "confirmation_removing_user")
     finally:

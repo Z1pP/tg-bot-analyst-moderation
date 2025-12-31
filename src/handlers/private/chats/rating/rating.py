@@ -17,7 +17,6 @@ from services.time_service import TimeZoneService
 from states import RatingStateManager
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
@@ -36,11 +35,7 @@ async def chat_daily_rating_handler(callback: CallbackQuery, state: FSMContext) 
         reply_markup=time_period_ikb_chat(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=RatingStateManager.selecting_period,
-    )
+    await state.set_state(RatingStateManager.selecting_period)
 
 
 @router.callback_query(
@@ -65,11 +60,7 @@ async def process_period_selection_callback(
     )
 
     if period_text == TimePeriod.CUSTOM.value:
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=RatingStateManager.selecting_custom_period,
-        )
+        await state.set_state(RatingStateManager.selecting_custom_period)
 
         # Показываем календарь
         now = TimeZoneService.now()
@@ -140,7 +131,10 @@ async def _render_rating_view(
     try:
         usecase: GetDailyTopUsersUseCase = container.resolve(GetDailyTopUsersUseCase)
         stats = await usecase.execute(
-            chat_id=chat_id, start_date=start_date, end_date=end_date
+            chat_id=chat_id,
+            admin_tg_id=str(callback.from_user.id),
+            start_date=start_date,
+            end_date=end_date,
         )
     except Exception as e:
         logger.error("Ошибка при получении рейтинга чата: %s", e, exc_info=True)

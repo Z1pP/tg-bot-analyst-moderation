@@ -13,7 +13,6 @@ from services.categories import CategoryService
 from states import CategoryStateManager, TemplateStateManager
 from usecases.categories import DeleteCategoryUseCase, GetCategoryByIdUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -59,11 +58,7 @@ async def remove_category_handler(
         reply_markup=conf_remove_category_kb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=CategoryStateManager.removing_category,
-    )
+    await state.set_state(CategoryStateManager.removing_category)
 
 
 @router.callback_query(
@@ -112,11 +107,7 @@ async def confirm_removing_category_handler(
                 text=f"{text}\n\n❗ Категорий не осталось.",
                 reply_markup=templates_menu_ikb(),
             )
-            await log_and_set_state(
-                message=callback.message,
-                state=state,
-                new_state=TemplateStateManager.templates_menu,
-            )
+            await state.set_state(TemplateStateManager.templates_menu)
             return
 
         first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
@@ -133,11 +124,7 @@ async def confirm_removing_category_handler(
             ),
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.listing_categories,
-        )
+        await state.set_state(TemplateStateManager.listing_categories)
 
     except CategoryNotFoundError as e:
         logger.warning("Категория ID=%d не найдена: %s", category_id, e)
@@ -149,11 +136,7 @@ async def confirm_removing_category_handler(
             text=text,
             reply_markup=templates_menu_ikb(),
         )
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.templates_menu,
-        )
+        await state.set_state(TemplateStateManager.templates_menu)
 
     except Exception:
         logger.exception("Ошибка при удалении категории ID=%d", category_id)
@@ -165,11 +148,7 @@ async def confirm_removing_category_handler(
             text=text,
             reply_markup=templates_menu_ikb(),
         )
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.templates_menu,
-        )
+        await state.set_state(TemplateStateManager.templates_menu)
 
 
 @router.callback_query(
@@ -197,11 +176,7 @@ async def cancel_removing_category_handler(
             text="❌ Удаление категории отменено.",
             reply_markup=templates_menu_ikb(),
         )
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.templates_menu,
-        )
+        await state.set_state(TemplateStateManager.templates_menu)
         return
 
     try:
@@ -230,11 +205,7 @@ async def cancel_removing_category_handler(
                 text=f"❌ Удаление категории {category_name} отменено.\n\n❗ Категорий не найдено.",
                 reply_markup=templates_menu_ikb(),
             )
-            await log_and_set_state(
-                message=callback.message,
-                state=state,
-                new_state=TemplateStateManager.templates_menu,
-            )
+            await state.set_state(TemplateStateManager.templates_menu)
             return
 
         first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
@@ -251,11 +222,7 @@ async def cancel_removing_category_handler(
             ),
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.listing_categories,
-        )
+        await state.set_state(TemplateStateManager.listing_categories)
 
     except Exception as e:
         logger.exception("Ошибка при отмене удаления категории: %s", e)
@@ -266,8 +233,4 @@ async def cancel_removing_category_handler(
             text="❌ Удаление категории отменено.",
             reply_markup=templates_menu_ikb(),
         )
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.templates_menu,
-        )
+        await state.set_state(TemplateStateManager.templates_menu)

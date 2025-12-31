@@ -14,7 +14,6 @@ from services.release_note_service import ReleaseNoteService
 from services.user import UserService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -41,11 +40,7 @@ async def release_notes_menu_callback_handler(
             text=Dialog.ReleaseNotes.SELECT_LANGUAGE,
             reply_markup=select_language_ikb(),
         )
-        await log_and_set_state(
-            callback.message,
-            state,
-            ReleaseNotesStateManager.selecting_language,
-        )
+        await state.set_state(ReleaseNotesStateManager.selecting_language)
         return
 
     # Для обычных пользователей используем их язык
@@ -80,11 +75,7 @@ async def release_notes_menu_callback_handler(
         ),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.menu,
-    )
+    await state.set_state(ReleaseNotesStateManager.menu)
 
 
 @router.callback_query(
@@ -162,11 +153,7 @@ async def back_to_release_notes_menu_callback_handler(
             text=Dialog.ReleaseNotes.SELECT_LANGUAGE,
             reply_markup=select_language_ikb(),
         )
-        await log_and_set_state(
-            callback.message,
-            state,
-            ReleaseNotesStateManager.selecting_language,
-        )
+        await state.set_state(ReleaseNotesStateManager.selecting_language)
         return
 
     # Для обычных пользователей используем их язык
@@ -216,8 +203,4 @@ async def select_language_handler(callback: CallbackQuery, state: FSMContext) ->
     )
 
     await state.update_data(selected_language=lang_code, page=page)
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.menu,
-    )
+    await state.set_state(ReleaseNotesStateManager.menu)

@@ -4,7 +4,6 @@ from aiogram.fsm.context import FSMContext
 from constants import Dialog, InlineButtons
 from keyboards.inline.banhammer import moderation_menu_ikb
 from states.moderation import ModerationStates
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 block_buttons = InlineButtons.BlockButtons()
@@ -24,8 +23,4 @@ async def back_to_block_menu_handler(
         reply_markup=moderation_menu_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ModerationStates.menu,
-    )
+    await state.set_state(ModerationStates.menu)

@@ -12,9 +12,9 @@ from keyboards.inline.chats import (
     chat_actions_ikb,
     work_hours_menu_ikb,
 )
-from repositories.chat_repository import ChatRepository
 from services import ChatService
 from states import ChatStateManager, WorkHoursState
+from usecases.chat import UpdateChatWorkHoursUseCase
 from utils.data_parser import parse_time, parse_tolerance
 from utils.send_message import safe_edit_message
 
@@ -162,9 +162,13 @@ async def work_start_input_handler(message: Message, state: FSMContext) -> None:
         return
 
     try:
-        chat_repository: ChatRepository = container.resolve(ChatRepository)
-        updated_chat = await chat_repository.update_work_hours(
-            chat_id=chat_id, start_time=parsed_time
+        usecase: UpdateChatWorkHoursUseCase = container.resolve(
+            UpdateChatWorkHoursUseCase
+        )
+        updated_chat = await usecase.execute(
+            chat_id=chat_id,
+            admin_tg_id=str(message.from_user.id),
+            start_time=parsed_time,
         )
 
         if not updated_chat:
@@ -247,9 +251,13 @@ async def work_end_input_handler(message: Message, state: FSMContext) -> None:
         return
 
     try:
-        chat_repository: ChatRepository = container.resolve(ChatRepository)
-        updated_chat = await chat_repository.update_work_hours(
-            chat_id=chat_id, end_time=parsed_time
+        usecase: UpdateChatWorkHoursUseCase = container.resolve(
+            UpdateChatWorkHoursUseCase
+        )
+        updated_chat = await usecase.execute(
+            chat_id=chat_id,
+            admin_tg_id=str(message.from_user.id),
+            end_time=parsed_time,
         )
 
         if not updated_chat:
@@ -332,9 +340,13 @@ async def tolerance_input_handler(message: Message, state: FSMContext) -> None:
         return
 
     try:
-        chat_repository: ChatRepository = container.resolve(ChatRepository)
-        updated_chat = await chat_repository.update_work_hours(
-            chat_id=chat_id, tolerance=parsed_tolerance
+        usecase: UpdateChatWorkHoursUseCase = container.resolve(
+            UpdateChatWorkHoursUseCase
+        )
+        updated_chat = await usecase.execute(
+            chat_id=chat_id,
+            admin_tg_id=str(message.from_user.id),
+            tolerance=parsed_tolerance,
         )
 
         if not updated_chat:

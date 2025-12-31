@@ -14,7 +14,6 @@ from services.templates import TemplateService
 from states import TemplateStateManager
 from usecases.chat import GetTrackedChatsUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -50,11 +49,7 @@ async def select_category_for_template_handler(
             reply_markup=template_scope_selector_ikb(chats=chats),
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.process_template_chat,
-        )
+        await state.set_state(TemplateStateManager.process_template_chat)
     except Exception as e:
         logger.error("Ошибка при получении списка чатов чатов: %s", e, exc_info=True)
         await safe_edit_message(
@@ -102,11 +97,7 @@ async def show_templates_by_category_handler(
             ),
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.listing_templates,
-        )
+        await state.set_state(TemplateStateManager.listing_templates)
     except Exception as e:
         logger.error("Ошибка при получении шаблонов: %s", e)
         # Пытаемся вернуться к списку категорий
@@ -126,11 +117,7 @@ async def show_templates_by_category_handler(
                         total_count=len(categories),
                     ),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_categories,
-                )
+                await state.set_state(TemplateStateManager.listing_categories)
             else:
                 await safe_edit_message(
                     bot=callback.bot,

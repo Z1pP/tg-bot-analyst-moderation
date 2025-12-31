@@ -10,7 +10,6 @@ from exceptions.moderation import MessageSendError
 from keyboards.inline.message_actions import send_message_ikb
 from states.message_management import MessageManagerState
 from usecases.admin_actions import ReplyToMessageUseCase
-from utils.state_logger import log_and_set_state
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -74,9 +73,7 @@ async def message_reply_handler(
             )
             await state.update_data(active_message_id=sent_msg.message_id)
 
-        await log_and_set_state(
-            message, state, MessageManagerState.waiting_message_link
-        )
+        await state.set_state(MessageManagerState.waiting_message_link)
 
         logger.info(
             "Админ %s ответил на сообщение %s в чате %s",
@@ -106,9 +103,7 @@ async def message_reply_handler(
         else:
             sent_msg = await message.answer(error_text, reply_markup=send_message_ikb())
             await state.update_data(active_message_id=sent_msg.message_id)
-        await log_and_set_state(
-            message, state, MessageManagerState.waiting_message_link
-        )
+        await state.set_state(MessageManagerState.waiting_message_link)
     except Exception as e:
         logger.error(
             "Ошибка отправки ответа на сообщение %s: %s",
@@ -136,8 +131,4 @@ async def message_reply_handler(
             sent_msg = await message.answer(error_text, reply_markup=send_message_ikb())
             await state.update_data(active_message_id=sent_msg.message_id)
 
-        await log_and_set_state(
-            message,
-            state,
-            MessageManagerState.waiting_message_link,
-        )
+        await state.set_state(MessageManagerState.waiting_message_link)

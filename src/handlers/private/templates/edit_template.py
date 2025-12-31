@@ -23,7 +23,6 @@ from services.templates import TemplateContentService
 from states import TemplateStateManager
 from usecases.templates import UpdateTemplateTitleUseCase
 from utils.exception_handler import handle_exception
-from utils.state_logger import log_and_set_state
 
 from .common import validate_template_title
 
@@ -66,11 +65,7 @@ async def edit_template_handler(callback: CallbackQuery, state: FSMContext) -> N
             parse_mode="HTML",
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.editing_template,
-        )
+        await state.set_state(TemplateStateManager.editing_template)
 
         logger.info(
             f"Начато редактирование шаблона {template_id} пользователем {callback.from_user.username}"
@@ -95,11 +90,7 @@ async def edit_title_handler(callback: CallbackQuery, state: FSMContext) -> None
             parse_mode="HTML",
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.editing_title,
-        )
+        await state.set_state(TemplateStateManager.editing_title)
 
     except Exception as e:
         await handle_exception(callback.message, e, "edit_title_callback")
@@ -176,11 +167,7 @@ async def process_edit_title_handler(
                     ),
                     parse_mode="HTML",
                 )
-                await log_and_set_state(
-                    message=message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             elif state_data.chat_id:
                 templates, total_count = await get_templates_and_count(
                     data=state_data, page=1
@@ -197,11 +184,7 @@ async def process_edit_title_handler(
                     ),
                     parse_mode="HTML",
                 )
-                await log_and_set_state(
-                    message=message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             elif state_data.template_scope == "global":
                 templates, total_count = await get_templates_and_count(
                     data=state_data, page=1
@@ -218,11 +201,7 @@ async def process_edit_title_handler(
                     ),
                     parse_mode="HTML",
                 )
-                await log_and_set_state(
-                    message=message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             else:
                 await bot.edit_message_text(
                     chat_id=message.chat.id,
@@ -231,11 +210,7 @@ async def process_edit_title_handler(
                     reply_markup=templates_menu_ikb(),
                     parse_mode="HTML",
                 )
-                await log_and_set_state(
-                    message=message,
-                    state=state,
-                    new_state=TemplateStateManager.templates_menu,
-                )
+                await state.set_state(TemplateStateManager.templates_menu)
         except Exception as e:
             logger.error("Ошибка при возврате к списку шаблонов: %s", e, exc_info=True)
             await bot.edit_message_text(
@@ -245,11 +220,7 @@ async def process_edit_title_handler(
                 reply_markup=templates_menu_ikb(),
                 parse_mode="HTML",
             )
-            await log_and_set_state(
-                message=message,
-                state=state,
-                new_state=TemplateStateManager.templates_menu,
-            )
+            await state.set_state(TemplateStateManager.templates_menu)
 
     except Exception as e:
         logger.error("Ошибка при обновлении названия шаблона: %s", e, exc_info=True)
@@ -269,11 +240,7 @@ async def edit_content_handler(callback: CallbackQuery, state: FSMContext) -> No
             parse_mode="HTML",
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.editing_content,
-        )
+        await state.set_state(TemplateStateManager.editing_content)
 
     except Exception as e:
         await handle_exception(callback.message, e, "edit_content_callback")
@@ -358,11 +325,7 @@ async def process_edit_content_handler(
                         show_back_to_categories=True,
                     ),
                 )
-                await log_and_set_state(
-                    message=message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             elif state_data.chat_id:
                 templates, total_count = await get_templates_and_count(
                     data=state_data, page=1
@@ -378,11 +341,7 @@ async def process_edit_content_handler(
                         show_back_to_categories=False,
                     ),
                 )
-                await log_and_set_state(
-                    message=message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             elif state_data.template_scope == "global":
                 templates, total_count = await get_templates_and_count(
                     data=state_data, page=1
@@ -398,11 +357,7 @@ async def process_edit_content_handler(
                         show_back_to_categories=False,
                     ),
                 )
-                await log_and_set_state(
-                    message=message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             else:
                 await bot.edit_message_text(
                     chat_id=message.chat.id,
@@ -410,11 +365,7 @@ async def process_edit_content_handler(
                     text=update_message,
                     reply_markup=templates_menu_ikb(),
                 )
-                await log_and_set_state(
-                    message=message,
-                    state=state,
-                    new_state=TemplateStateManager.templates_menu,
-                )
+                await state.set_state(TemplateStateManager.templates_menu)
         except Exception as e:
             logger.error("Ошибка при возврате к списку шаблонов: %s", e, exc_info=True)
             await bot.edit_message_text(
@@ -423,11 +374,7 @@ async def process_edit_content_handler(
                 text=update_message,
                 reply_markup=templates_menu_ikb(),
             )
-            await log_and_set_state(
-                message=message,
-                state=state,
-                new_state=TemplateStateManager.templates_menu,
-            )
+            await state.set_state(TemplateStateManager.templates_menu)
 
     except Exception as e:
         logger.error("Ошибка при обновлении содержимого шаблона: %s", e, exc_info=True)
@@ -459,11 +406,7 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
                         show_back_to_categories=True,
                     ),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             elif state_data.chat_id:
                 # Возвращаемся к списку шаблонов чата
                 templates, total_count = await get_templates_and_count(
@@ -479,11 +422,7 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
                         show_back_to_categories=False,
                     ),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             elif state_data.template_scope == "global":
                 # Возвращаемся к списку глобальных шаблонов
                 templates, total_count = await get_templates_and_count(
@@ -499,33 +438,21 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
                         show_back_to_categories=False,
                     ),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=TemplateStateManager.listing_templates,
-                )
+                await state.set_state(TemplateStateManager.listing_templates)
             else:
                 # Если нет ни category_id, ни chat_id, ни global scope, возвращаемся в меню
                 await callback.message.edit_text(
                     text=Dialog.Template.EDIT_CANCELLED,
                     reply_markup=templates_menu_ikb(),
                 )
-                await log_and_set_state(
-                    message=callback.message,
-                    state=state,
-                    new_state=TemplateStateManager.templates_menu,
-                )
+                await state.set_state(TemplateStateManager.templates_menu)
         except Exception as e:
             logger.error("Ошибка при возврате к списку шаблонов: %s", e, exc_info=True)
             await callback.message.edit_text(
                 text=Dialog.Template.ERROR_EDIT_TEMPLATE,
                 reply_markup=templates_menu_ikb(),
             )
-            await log_and_set_state(
-                message=callback.message,
-                state=state,
-                new_state=TemplateStateManager.templates_menu,
-            )
+            await state.set_state(TemplateStateManager.templates_menu)
 
     except Exception as e:
         await handle_exception(callback.message, e, "cancel_edit_callback")
@@ -561,11 +488,7 @@ async def _cancel_edit_title_or_content(
         parse_mode="HTML",
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.editing_template,
-    )
+    await state.set_state(TemplateStateManager.editing_template)
 
     logger.info(
         f"Отмена редактирования названия/содержимого шаблона {template_id}, "

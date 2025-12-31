@@ -12,7 +12,6 @@ from keyboards.inline.users import user_actions_ikb
 from states.user import SingleUserReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from utils.exception_handler import handle_exception
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -26,11 +25,7 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
     try:
         user_id = int(callback.data.replace(CallbackData.User.PREFIX_USER, ""))
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=SingleUserReportStates.selected_single_user,
-        )
+        await state.set_state(SingleUserReportStates.selected_single_user)
         await state.update_data(user_id=user_id)
 
         await callback.message.edit_text(
@@ -87,11 +82,7 @@ async def get_user_report_handler(callback: CallbackQuery, state: FSMContext) ->
             )
             return
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=SingleUserReportStates.selecting_period,
-        )
+        await state.set_state(SingleUserReportStates.selecting_period)
 
         await callback.message.edit_text(
             text=Dialog.Report.SELECT_PERIOD,

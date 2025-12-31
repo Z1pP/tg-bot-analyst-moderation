@@ -11,7 +11,6 @@ from keyboards.inline.message_actions import send_message_ikb
 from services.user import UserService
 from states import MenuStates, MessageManagerState
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -37,9 +36,7 @@ async def message_management_menu_handler(
     # Сохраняем message_id для последующего редактирования
     await state.update_data(active_message_id=callback.message.message_id)
 
-    await log_and_set_state(
-        callback.message, state, MessageManagerState.waiting_message_link
-    )
+    await state.set_state(MessageManagerState.waiting_message_link)
 
 
 @router.callback_query(F.data == "back_to_main_menu_from_message_management")
@@ -71,8 +68,4 @@ async def back_to_main_menu_from_message_management_handler(
         ),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=MenuStates.main_menu,
-    )
+    await state.set_state(MenuStates.main_menu)

@@ -17,7 +17,6 @@ from services.release_note_service import ReleaseNoteService
 from services.user import UserService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -55,11 +54,7 @@ async def delete_note_start_handler(callback: CallbackQuery, state: FSMContext) 
         reply_markup=confirm_delete_release_note_ikb(note_id),
     )
 
-    await log_and_set_state(
-        callback.message,
-        state,
-        ReleaseNotesStateManager.deleting_note,
-    )
+    await state.set_state(ReleaseNotesStateManager.deleting_note)
 
 
 @router.callback_query(
@@ -115,11 +110,7 @@ async def confirm_delete_handler(callback: CallbackQuery, state: FSMContext) -> 
             ),
         )
 
-        await log_and_set_state(
-            callback.message,
-            state,
-            ReleaseNotesStateManager.view_note,
-        )
+        await state.set_state(ReleaseNotesStateManager.view_note)
         return
 
     try:
@@ -165,11 +156,7 @@ async def confirm_delete_handler(callback: CallbackQuery, state: FSMContext) -> 
             ),
         )
 
-        await log_and_set_state(
-            callback.message,
-            state,
-            ReleaseNotesStateManager.menu,
-        )
+        await state.set_state(ReleaseNotesStateManager.menu)
 
     except Exception as e:
         logger.error("Ошибка при удалении заметки: %s", e, exc_info=True)

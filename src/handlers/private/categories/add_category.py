@@ -10,7 +10,6 @@ from keyboards.inline.templates import templates_menu_ikb
 from states import CategoryStateManager, TemplateStateManager
 from usecases.categories import CreateCategoryUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -55,8 +54,4 @@ async def confirm_category_creation_handler(
         reply_markup=templates_menu_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=TemplateStateManager.templates_menu,
-    )
+    await state.set_state(TemplateStateManager.templates_menu)

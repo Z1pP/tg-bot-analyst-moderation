@@ -10,11 +10,10 @@ from constants.enums import UserRole
 from container import container
 from keyboards.inline.roles import cancel_role_select_ikb, role_select_ikb
 from repositories import UserRepository
-from services.caching import ICache
 from services.user import UserService
 from states import RoleState
+from usecases.user import UpdateUserRoleUseCase
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 from utils.user_data_parser import parse_data_from_text
 
 router = Router(name=__name__)
@@ -39,11 +38,7 @@ async def input_user_data_handler(callback: CallbackQuery, state: FSMContext) ->
 
     await state.update_data(active_message_id=callback.message.message_id)
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=RoleState.waiting_user_input,
-    )
+    await state.set_state(RoleState.waiting_user_input)
 
 
 @router.message(RoleState.waiting_user_input)
@@ -208,32 +203,14 @@ async def role_select_callback_handler(callback: CallbackQuery) -> None:
             return
 
         # Обновляем роль
-        updated_user = await user_repo.update_user_role(
-            user_id=user_id, new_role=new_role
+        usecase: UpdateUserRoleUseCase = container.resolve(UpdateUserRoleUseCase)
+        updated_user = await usecase.execute(
+            user_id=user_id, new_role=new_role, admin_tg_id=admin_tg_id
         )
 
         if not updated_user:
             await callback.message.edit_text("❌ Не удалось обновить роль пользователя")
             return
-
-        # Инвалидируем и обновляем кеш
-        # Важно: используем те же ключи, что и в BaseUserFilter и UserService
-        cache: ICache = container.resolve(ICache)
-        if updated_user.tg_id:
-            # Удаляем старые значения из кеша
-            await cache.delete(updated_user.tg_id)  # Ключ для BaseUserFilter
-            await cache.delete(
-                f"user:tg_id:{updated_user.tg_id}"
-            )  # Ключ для UserService
-            # Обновляем кеш с новой ролью
-            await cache.set(updated_user.tg_id, updated_user)  # Ключ для BaseUserFilter
-            await cache.set(
-                f"user:tg_id:{updated_user.tg_id}", updated_user
-            )  # Ключ для UserService
-        if updated_user.username:
-            await cache.delete(f"user:username:{updated_user.username}")
-            # Обновляем кеш с новой ролью
-            await cache.set(f"user:username:{updated_user.username}", updated_user)
 
         # Формируем текст подтверждения
         admin_username = callback.from_user.username or f"ID:{admin_tg_id}"

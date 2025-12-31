@@ -11,7 +11,6 @@ from keyboards.inline.chats import chat_actions_ikb
 from services.chat import ChatService
 from states import ChatStateManager, RatingStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -63,8 +62,4 @@ async def back_to_chat_actions_handler(
         reply_markup=chat_actions_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ChatStateManager.selecting_chat,
-    )
+    await state.set_state(ChatStateManager.selecting_chat)

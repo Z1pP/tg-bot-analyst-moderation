@@ -14,7 +14,6 @@ from keyboards.inline.users import users_menu_ikb
 from services.user import UserService
 from states import MenuStates, UserStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -49,7 +48,7 @@ async def main_menu_callback_handler(
         ),
     )
 
-    await log_and_set_state(callback.message, state, MenuStates.main_menu)
+    await state.set_state(MenuStates.main_menu)
 
 
 @router.callback_query(F.data == CallbackData.Menu.USERS_MENU)
@@ -67,11 +66,7 @@ async def users_menu_callback_handler(
         reply_markup=users_menu_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=UserStateManager.users_menu,
-    )
+    await state.set_state(UserStateManager.users_menu)
 
 
 @router.callback_query(F.data == CallbackData.Menu.CHATS_MENU)
@@ -90,11 +85,7 @@ async def chats_menu_callback_handler(
         reply_markup=chats_management_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=MenuStates.chats_menu,
-    )
+    await state.set_state(MenuStates.chats_menu)
 
 
 @router.callback_query(F.data == CallbackData.Menu.MESSAGE_MANAGEMENT)
@@ -125,6 +116,4 @@ async def message_management_callback_handler(
     # Сохраняем message_id для последующего редактирования
     await state.update_data(active_message_id=callback.message.message_id)
 
-    await log_and_set_state(
-        callback.message, state, MessageManagerState.waiting_message_link
-    )
+    await state.set_state(MessageManagerState.waiting_message_link)

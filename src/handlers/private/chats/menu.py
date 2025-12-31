@@ -13,7 +13,6 @@ from services.user import UserService
 from states import MenuStates
 from states.chat import ChatStateManager
 from utils.send_message import safe_edit_message
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -35,11 +34,7 @@ async def show_chats_menu_handler(
         reply_markup=chats_management_ikb(),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=ChatStateManager.chats_menu,
-    )
+    await state.set_state(ChatStateManager.chats_menu)
 
 
 @router.callback_query(F.data == CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS)
@@ -72,8 +67,4 @@ async def return_to_main_menu_handler(
         ),
     )
 
-    await log_and_set_state(
-        message=callback.message,
-        state=state,
-        new_state=MenuStates.main_menu,
-    )
+    await state.set_state(MenuStates.main_menu)

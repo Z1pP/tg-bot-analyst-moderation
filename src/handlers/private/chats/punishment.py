@@ -77,7 +77,9 @@ async def set_default_punishments_handler(
 
     try:
         usecase = container.resolve(SetDefaultPunishmentLadderUseCase)
-        result = await usecase.execute(chat_db_id=chat_db_id)
+        result = await usecase.execute(
+            chat_db_id=chat_db_id, admin_tg_id=str(callback.from_user.id)
+        )
         if result.success:
             await callback.answer(Dialog.Punishment.SUCCESS_SET_DEFAULT)
             await punishment_setting_handler(callback, state)
@@ -252,7 +254,7 @@ async def save_ladder_handler(
         )
 
         usecase = container.resolve(UpdatePunishmentLadderUseCase)
-        result = await usecase.execute(dto=dto)
+        result = await usecase.execute(dto=dto, admin_tg_id=str(callback.from_user.id))
 
         if result.success:
             await callback.answer(Dialog.Punishment.LADDER_SAVED)

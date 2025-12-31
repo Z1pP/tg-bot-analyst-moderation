@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from constants.enums import AdminActionType
 from dto.daily_activity import ChatDailyStatsDTO
 from repositories import ChatRepository, MessageRepository, UserRepository
 from repositories.reaction_repository import MessageReactionRepository
-from services import BotPermissionService
+from services import AdminActionLogService, BotPermissionService
 
 
 @dataclass
@@ -21,16 +22,19 @@ class GetDailyTopUsersUseCase:
         chat_repository: ChatRepository,
         reaction_repository: MessageReactionRepository,
         bot_permission_service: BotPermissionService,
+        admin_action_log_service: AdminActionLogService,
     ):
         self._user_repository = user_repository
         self._message_repository = message_repository
         self._chat_repository = chat_repository
         self._reaction_repository = reaction_repository
         self._bot_permission_service = bot_permission_service
+        self._admin_action_log_service = admin_action_log_service
 
     async def execute(
         self,
         chat_id: int,
+        admin_tg_id: str,
         date: datetime | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
@@ -90,6 +94,14 @@ class GetDailyTopUsersUseCase:
         # Подсчитываем общую статистику
         total_messages = sum(user.message_count for user in top_users)
         total_reactions = sum(user.reaction_count for user in top_reactors)
+
+        # Логируем действие администратора
+        details = f"Чат: {chat_title} ({chat_id}), Период: {start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}"
+        await self._admin_action_log_service.log_action(
+            admin_tg_id=admin_tg_id,
+            action_type=AdminActionType.GET_CHAT_DAILY_RATING,
+            details=details,
+        )
 
         return ChatDailyStatsDTO(
             chat_id=chat_id,

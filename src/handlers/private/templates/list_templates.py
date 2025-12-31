@@ -6,7 +6,6 @@ from keyboards.inline.template_scope import template_scope_selection_ikb
 from states import TemplateStateManager
 from usecases.chat import GetTrackedChatsUseCase
 from utils.exception_handler import handle_exception
-from utils.state_logger import log_and_set_state
 
 router = Router(name=__name__)
 
@@ -32,11 +31,7 @@ async def templates_list_handler(
             reply_markup=template_scope_selection_ikb(chats),
         )
 
-        await log_and_set_state(
-            message=callback.message,
-            state=state,
-            new_state=TemplateStateManager.selecting_template_scope,
-        )
+        await state.set_state(TemplateStateManager.selecting_template_scope)
 
     except Exception as e:
         await handle_exception(
