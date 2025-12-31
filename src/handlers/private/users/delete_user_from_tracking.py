@@ -162,6 +162,7 @@ async def confirmation_removing_user(
             if success:
                 user_username = data.get("user_username", "")
                 logger.info(f"Пользователь ID {user_id} успешно удален из отслеживания")
+
                 text = (
                     f"✅ Готово! Пользователь @{user_username} удалён из отлеживания!\n\n"
                     "❗️Вы всегда можете вернуть пользователя "
