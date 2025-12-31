@@ -127,6 +127,7 @@ async def process_summary_type_selection_handler(
         summary = await usecase.execute(
             chat_id=chat_id,
             summary_type=summary_type,
+            admin_tg_id=str(callback.from_user.id),
             start_date=start_date,
             end_date=end_date,
         )
