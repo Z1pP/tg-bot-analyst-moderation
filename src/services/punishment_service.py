@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -10,6 +11,8 @@ from repositories import PunishmentLadderRepository, PunishmentRepository
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services.time_service import TimeZoneService
 from utils.formatter import format_duration
+
+logger = logging.getLogger(__name__)
 
 
 class PunishmentService:
@@ -107,28 +110,44 @@ class PunishmentService:
         self,
         warn_count: int,
         chat_id: str,
-    ) -> Optional[PunishmentLadder]:
+    ) -> PunishmentLadder:
         """
         Определяет наказание по текущему количеству предупреждений.
 
         Если количество предупреждений >= максимального шага,
         возвращает максимальное наказание.
+        Если лестница пуста, возвращает дефолтное предупреждение.
 
         Args:
             warn_count: Текущее количество предупреждений
             chat_id: Telegram ID чата
 
         Returns:
-            Объект наказания из PunishmentLadder или None
+            Объект наказания из PunishmentLadder
         """
         max_punishment = await self.get_max_punishment(chat_id=chat_id)
 
-        if max_punishment and warn_count >= max_punishment.step:
-            return max_punishment
+        if max_punishment:
+            if warn_count >= max_punishment.step:
+                return max_punishment
 
-        return await self.punishment_ladder_repository.get_punishment_by_step(
+            punishment = await self.punishment_ladder_repository.get_punishment_by_step(
+                step=warn_count + 1,
+                chat_id=chat_id,
+            )
+            if punishment:
+                return punishment
+
+        # Дефолтный фолбек, если лестница не настроена
+        logger.warning(
+            "Лестница наказаний не настроена для чата %s. Используется дефолтное предупреждение.",
+            chat_id,
+        )
+        return PunishmentLadder(
             step=warn_count + 1,
-            chat_id=chat_id,
+            punishment_type=PunishmentType.WARNING,
+            duration_seconds=0,
+            chat_id=None,
         )
 
     async def get_max_punishment(self, chat_id: str) -> Optional[PunishmentLadder]:
