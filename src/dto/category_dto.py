@@ -1,12 +1,13 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict
 
 from models import TemplateCategory
 
 
-@dataclass(frozen=True)
-class CategoryDTO:
+class CategoryDTO(BaseModel):
     id: int
     name: str
+
+    model_config = ConfigDict(frozen=True)
 
     @classmethod
     def from_model(cls, category: TemplateCategory) -> "CategoryDTO":
@@ -17,12 +18,14 @@ class CategoryDTO:
         )
 
 
-@dataclass(frozen=True)
-class CreateCategoryDTO:
+class CreateCategoryDTO(BaseModel):
     name: str
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class UpdateCategoryDTO:
+
+class UpdateCategoryDTO(BaseModel):
     id: int
     name: str
+
+    model_config = ConfigDict(frozen=True)
