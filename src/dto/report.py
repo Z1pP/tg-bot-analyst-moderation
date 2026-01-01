@@ -4,20 +4,6 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
 
 
-class DailyReportDTO(BaseModel):
-    username: str
-    start_date: datetime
-    end_date: datetime
-    selected_period: Optional[str] = None
-
-
-class AVGReportDTO(BaseModel):
-    username: str
-    start_date: datetime
-    end_date: datetime
-    selected_period: Optional[str] = None
-
-
 class SingleUserReportDTO(BaseModel):
     user_id: int
     admin_tg_id: str
