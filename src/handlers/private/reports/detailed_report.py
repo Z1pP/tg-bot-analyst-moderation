@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from constants import Dialog
 from constants.callback import CallbackData
 from container import container
-from dto.report import AllUsersReportDTO, ChatReportDTO
+from dto.report import AllUsersReportDTO, ChatReportDTO, SingleUserReportDTO
 from keyboards.inline.report import hide_details_ikb
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
@@ -47,11 +47,14 @@ async def detailed_report_handler(
         logger.info(f"chat_dto: {type(chat_dto) if chat_dto else None}")
 
         if single_user_dto:
-            await _handle_single_user_details(callback, single_user_dto)
+            dto = SingleUserReportDTO.model_validate(single_user_dto)
+            await _handle_single_user_details(callback, dto)
         elif all_users_dto:
-            await _handle_all_users_details(callback, all_users_dto)
+            dto = AllUsersReportDTO.model_validate(all_users_dto)
+            await _handle_all_users_details(callback, dto)
         elif chat_dto:
-            await _handle_chat_details(callback, chat_dto)
+            dto = ChatReportDTO.model_validate(chat_dto)
+            await _handle_chat_details(callback, dto)
         else:
             await send_html_message_with_kb(
                 message=callback.message,
