@@ -1,12 +1,12 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel
 
 from models.user import User, UserRole
 
 
-@dataclass
-class UserDTO:
+class UserDTO(BaseModel):
     """Data Transfer Object для пользователя"""
 
     # Обязательные поля
@@ -38,8 +38,7 @@ class UserDTO:
         )
 
 
-@dataclass
-class CreateUserDTO:
+class CreateUserDTO(BaseModel):
     """DTO для создания нового пользователя"""
 
     tg_id: str
@@ -48,8 +47,7 @@ class CreateUserDTO:
     is_active: bool = True
 
 
-@dataclass
-class UpdateUserDTO:
+class UpdateUserDTO(BaseModel):
     """DTO для обновления пользователя"""
 
     id: int
@@ -59,8 +57,7 @@ class UpdateUserDTO:
     is_active: Optional[bool] = None
 
 
-@dataclass
-class DbUserDTO:
+class DbUserDTO(BaseModel):
     """DTO для юзера из базы данных"""
 
     id: int
