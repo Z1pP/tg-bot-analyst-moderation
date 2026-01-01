@@ -1,6 +1,6 @@
 from aiogram import Router
 
-from .archive_bind_handler import router as archive_bind_router
+from .archive import router as archive_bind_router
 from .chat_tracking_handler import router as chat_tracking_router
 from .message_handler import router as message_router
 from .moderation import router as moderation_router
