@@ -206,7 +206,9 @@ async def _render_all_users_report(
 
         # Сохраняем report_dto для детализации (только для многодневных отчетов)
         if not result.is_single_day:
-            await state.update_data(all_users_report_dto=report_dto)
+            await state.update_data(
+                all_users_report_dto=report_dto.model_dump(mode="json")
+            )
 
         await state.set_state(AllUsersReportStates.selecting_period)
 
