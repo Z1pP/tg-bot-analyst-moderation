@@ -1,11 +1,11 @@
-from dataclasses import dataclass
 from datetime import datetime
+
+from pydantic import BaseModel
 
 from models import MessageReply
 
 
-@dataclass
-class CreateMessageReplyDTO:
+class CreateMessageReplyDTO(BaseModel):
     """DTO для создания новой связи сообщений"""
 
     chat_id: int
@@ -18,8 +18,7 @@ class CreateMessageReplyDTO:
     reply_message_id_str: str = ""  # Telegram message_id (строка) для буферизации
 
 
-@dataclass
-class ResultMessageReplyDTO:
+class ResultMessageReplyDTO(BaseModel):
     """DTO для связи сообщений reply"""
 
     id: int
@@ -36,10 +35,10 @@ class ResultMessageReplyDTO:
         Создает DTO из модели MessageReply
 
         Args:
-            reply: Модель связи сообщений
+            model: Модель связи сообщений
 
         Returns:
-            MessageReplyDTO: DTO связи сообщений
+            ResultMessageReplyDTO: DTO связи сообщений
         """
         return cls(
             id=model.id,
