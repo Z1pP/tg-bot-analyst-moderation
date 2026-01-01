@@ -5,7 +5,6 @@ from typing import List, Optional
 from sqlalchemy import and_, delete, func, select
 
 from constants.enums import UserRole
-from database.session import DatabaseContextManager
 from models import (
     AdminChatAccess,
     ChatMessage,
@@ -14,14 +13,12 @@ from models import (
     User,
     admin_user_tracking,
 )
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class UserRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class UserRepository(BaseRepository):
     async def total_active_users(
         self,
         chat_id: int,
