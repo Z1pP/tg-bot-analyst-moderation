@@ -1,12 +1,15 @@
 import logging
-from typing import List
+from typing import List, Type, TypeVar
 
 import redis.asyncio as redis
+from pydantic import BaseModel
 
 from config import settings
 from dto.buffer import BufferedMessageDTO, BufferedMessageReplyDTO, BufferedReactionDTO
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class AnalyticsBufferService:
@@ -45,190 +48,102 @@ class AnalyticsBufferService:
                 return False
         return True
 
-    async def add_message(self, dto: BufferedMessageDTO) -> None:
-        """Добавляет сообщение в буфер Redis"""
+    async def _add_to_buffer(self, key: str, dto: BaseModel, entity_name: str) -> None:
+        """Общий метод для добавления DTO в буфер Redis"""
         if not await self._ensure_connection():
-            logger.error("Redis недоступен, сообщение не добавлено в буфер")
+            logger.error(f"Redis недоступен, {entity_name} не добавлено в буфер")
             return
 
         try:
             json_data = dto.model_dump_json()
-            await self._redis.rpush(self.REDIS_KEY_MESSAGES, json_data.encode("utf-8"))
-            logger.debug(f"Сообщение добавлено в буфер: message_id={dto.message_id}")
+            await self._redis.rpush(key, json_data.encode("utf-8"))
+            logger.debug(f"{entity_name.capitalize()} добавлено в буфер")
         except Exception as e:
-            logger.error(f"Ошибка при добавлении сообщения в буфер: {e}", exc_info=True)
+            logger.error(
+                f"Ошибка при добавлении {entity_name} в буфер: {e}", exc_info=True
+            )
+
+    async def _pop_from_buffer(
+        self, key: str, dto_class: Type[T], count: int, entity_name: str
+    ) -> List[T]:
+        """Общий метод для получения пачки DTO из буфера Redis"""
+        if not await self._ensure_connection():
+            return []
+
+        try:
+            data = await self._redis.lrange(key, 0, count - 1)
+            items = []
+            for item in data:
+                try:
+                    json_str = item.decode("utf-8") if isinstance(item, bytes) else item
+                    dto = dto_class.model_validate_json(json_str)
+                    items.append(dto)
+                except Exception as e:
+                    logger.error(f"Ошибка десериализации {entity_name}: {e}")
+                    continue
+
+            logger.debug(f"Прочитано {len(items)} {entity_name} из буфера")
+            return items
+        except Exception as e:
+            logger.error(
+                f"Ошибка при чтении {entity_name} из буфера: {e}", exc_info=True
+            )
+            return []
+
+    async def _trim_buffer(self, key: str, count: int, entity_name: str) -> None:
+        """Общий метод для удаления обработанных элементов из буфера Redis"""
+        if not await self._ensure_connection():
+            return
+
+        try:
+            await self._redis.ltrim(key, count, -1)
+            logger.debug(f"Удалено {count} {entity_name} из буфера")
+        except Exception as e:
+            logger.error(
+                f"Ошибка при удалении {entity_name} из буфера: {e}", exc_info=True
+            )
+
+    async def add_message(self, dto: BufferedMessageDTO) -> None:
+        """Добавляет сообщение в буфер Redis"""
+        await self._add_to_buffer(self.REDIS_KEY_MESSAGES, dto, "сообщение")
 
     async def add_reaction(self, dto: BufferedReactionDTO) -> None:
         """Добавляет реакцию в буфер Redis"""
-        if not await self._ensure_connection():
-            logger.error("Redis недоступен, реакция не добавлена в буфер")
-            return
-
-        try:
-            json_data = dto.model_dump_json()
-            await self._redis.rpush(self.REDIS_KEY_REACTIONS, json_data.encode("utf-8"))
-            logger.debug(
-                f"Реакция добавлена в буфер: user_id={dto.user_id}, message_id={dto.message_id}"
-            )
-        except Exception as e:
-            logger.error(f"Ошибка при добавлении реакции в буфер: {e}", exc_info=True)
+        await self._add_to_buffer(self.REDIS_KEY_REACTIONS, dto, "реакция")
 
     async def add_reply(self, dto: BufferedMessageReplyDTO) -> None:
         """Добавляет reply сообщение в буфер Redis"""
-        if not await self._ensure_connection():
-            logger.error("Redis недоступен, reply не добавлен в буфер")
-            return
-
-        try:
-            json_data = dto.model_dump_json()
-            await self._redis.rpush(self.REDIS_KEY_REPLIES, json_data.encode("utf-8"))
-            logger.debug(
-                f"Reply добавлен в буфер: reply_message_id={dto.reply_message_id_str}"
-            )
-        except Exception as e:
-            logger.error(f"Ошибка при добавлении reply в буфер: {e}", exc_info=True)
+        await self._add_to_buffer(self.REDIS_KEY_REPLIES, dto, "reply")
 
     async def pop_messages(self, count: int = 100) -> List[BufferedMessageDTO]:
-        """
-        Безопасно читает пачку сообщений из Redis без удаления.
-
-        Args:
-            count: Количество сообщений для чтения
-
-        Returns:
-            Список DTO сообщений
-        """
-        if not await self._ensure_connection():
-            return []
-
-        try:
-            # LRANGE читает без удаления (0 до count-1)
-            data = await self._redis.lrange(self.REDIS_KEY_MESSAGES, 0, count - 1)
-            messages = []
-            for item in data:
-                try:
-                    json_str = item.decode("utf-8") if isinstance(item, bytes) else item
-                    dto = BufferedMessageDTO.model_validate_json(json_str)
-                    messages.append(dto)
-                except Exception as e:
-                    logger.error(f"Ошибка десериализации сообщения: {e}")
-                    continue
-
-            logger.debug(f"Прочитано {len(messages)} сообщений из буфера")
-            return messages
-        except Exception as e:
-            logger.error(f"Ошибка при чтении сообщений из буфера: {e}", exc_info=True)
-            return []
+        """Безопасно читает пачку сообщений из Redis без удаления."""
+        return await self._pop_from_buffer(
+            self.REDIS_KEY_MESSAGES, BufferedMessageDTO, count, "сообщений"
+        )
 
     async def pop_reactions(self, count: int = 100) -> List[BufferedReactionDTO]:
-        """
-        Безопасно читает пачку реакций из Redis без удаления.
-
-        Args:
-            count: Количество реакций для чтения
-
-        Returns:
-            Список DTO реакций
-        """
-        if not await self._ensure_connection():
-            return []
-
-        try:
-            data = await self._redis.lrange(self.REDIS_KEY_REACTIONS, 0, count - 1)
-            reactions = []
-            for item in data:
-                try:
-                    json_str = item.decode("utf-8") if isinstance(item, bytes) else item
-                    dto = BufferedReactionDTO.model_validate_json(json_str)
-                    reactions.append(dto)
-                except Exception as e:
-                    logger.error(f"Ошибка десериализации реакции: {e}")
-                    continue
-
-            logger.debug(f"Прочитано {len(reactions)} реакций из буфера")
-            return reactions
-        except Exception as e:
-            logger.error(f"Ошибка при чтении реакций из буфера: {e}", exc_info=True)
-            return []
+        """Безопасно читает пачку реакций из Redis без удаления."""
+        return await self._pop_from_buffer(
+            self.REDIS_KEY_REACTIONS, BufferedReactionDTO, count, "реакций"
+        )
 
     async def pop_replies(self, count: int = 100) -> List[BufferedMessageReplyDTO]:
-        """
-        Безопасно читает пачку reply сообщений из Redis без удаления.
-
-        Args:
-            count: Количество reply для чтения
-
-        Returns:
-            Список DTO reply сообщений
-        """
-        if not await self._ensure_connection():
-            return []
-
-        try:
-            data = await self._redis.lrange(self.REDIS_KEY_REPLIES, 0, count - 1)
-            replies = []
-            for item in data:
-                try:
-                    json_str = item.decode("utf-8") if isinstance(item, bytes) else item
-                    dto = BufferedMessageReplyDTO.model_validate_json(json_str)
-                    replies.append(dto)
-                except Exception as e:
-                    logger.error(f"Ошибка десериализации reply: {e}")
-                    continue
-
-            logger.debug(f"Прочитано {len(replies)} reply из буфера")
-            return replies
-        except Exception as e:
-            logger.error(f"Ошибка при чтении reply из буфера: {e}", exc_info=True)
-            return []
+        """Безопасно читает пачку reply сообщений из Redis без удаления."""
+        return await self._pop_from_buffer(
+            self.REDIS_KEY_REPLIES, BufferedMessageReplyDTO, count, "reply"
+        )
 
     async def trim_messages(self, count: int) -> None:
-        """
-        Удаляет обработанные сообщения из Redis.
-
-        Args:
-            count: Количество сообщений для удаления (LTRIM count -1)
-        """
-        if not await self._ensure_connection():
-            return
-
-        try:
-            await self._redis.ltrim(self.REDIS_KEY_MESSAGES, count, -1)
-            logger.debug(f"Удалено {count} сообщений из буфера")
-        except Exception as e:
-            logger.error(f"Ошибка при удалении сообщений из буфера: {e}", exc_info=True)
+        """Удаляет обработанные сообщения из Redis."""
+        await self._trim_buffer(self.REDIS_KEY_MESSAGES, count, "сообщений")
 
     async def trim_reactions(self, count: int) -> None:
-        """
-        Удаляет обработанные реакции из Redis.
-
-        Args:
-            count: Количество реакций для удаления (LTRIM count -1)
-        """
-        if not await self._ensure_connection():
-            return
-
-        try:
-            await self._redis.ltrim(self.REDIS_KEY_REACTIONS, count, -1)
-            logger.debug(f"Удалено {count} реакций из буфера")
-        except Exception as e:
-            logger.error(f"Ошибка при удалении реакций из буфера: {e}", exc_info=True)
+        """Удаляет обработанные реакции из Redis."""
+        await self._trim_buffer(self.REDIS_KEY_REACTIONS, count, "реакций")
 
     async def trim_replies(self, count: int) -> None:
-        """
-        Удаляет обработанные reply сообщения из Redis.
-
-        Args:
-            count: Количество reply для удаления (LTRIM count -1)
-        """
-        if not await self._ensure_connection():
-            return
-
-        try:
-            await self._redis.ltrim(self.REDIS_KEY_REPLIES, count, -1)
-            logger.debug(f"Удалено {count} reply из буфера")
-        except Exception as e:
-            logger.error(f"Ошибка при удалении reply из буфера: {e}", exc_info=True)
+        """Удаляет обработанные reply сообщения из Redis."""
+        await self._trim_buffer(self.REDIS_KEY_REPLIES, count, "reply")
 
     async def close(self) -> None:
         """Закрывает соединение с Redis"""
