@@ -1,19 +1,16 @@
 import logging
 from typing import List, Optional
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
-from database.session import DatabaseContextManager
 from models import ChatSession, MessageTemplate, TemplateMedia
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class MessageTemplateRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class MessageTemplateRepository(BaseRepository):
     async def create_template(
         self,
         title: str,
@@ -167,65 +164,76 @@ class MessageTemplateRepository:
         chat_id: str,
     ) -> Optional[MessageTemplate]:
         """
-        Функция велосипед для автоподстановки шаблона в зависимости от того в какой
-        чат было отправлено сообщение
+        Находит подходящий шаблон (с учетом переопределений для чата)
+        и увеличивает счетчик его использования.
         """
         async with self._db.session() as session:
             try:
-                # Получаем базовый шаблон по ID
-                base_query = (
-                    select(MessageTemplate)
-                    .where(MessageTemplate.id == template_id)
-                    .options(
-                        selectinload(MessageTemplate.media_items),
-                        selectinload(MessageTemplate.category),
-                    )
+                template = await self._get_effective_template(
+                    session, template_id, chat_id
                 )
-                result = await session.execute(base_query)
-                base_template = result.scalar_one_or_none()
 
-                if not base_template:
-                    logger.warning(f"Шаблон с ID={template_id} не найден")
-                    return None
-
-                # Проверяем что шаблон глоабльный
-                if base_template.chat_id is None:
-                    logger.debug(f"Шаблон '{base_template.title}' является глобальным")
-                    template_to_use = base_template
-
-                else:
-                    # Ищем шаблон для конкретного чата но с тем же названием
-                    chat_specific_query = (
-                        select(MessageTemplate)
-                        .join(ChatSession)
-                        .where(
-                            MessageTemplate.title == base_template.title,
-                            ChatSession.chat_id == chat_id,
-                        )
-                        .options(
-                            selectinload(MessageTemplate.media_items),
-                            selectinload(MessageTemplate.category),
-                        )
-                    )
-                    result = await session.execute(chat_specific_query)
-                    chat_template = result.scalar_one_or_none()
-
-                    template_to_use = chat_template
-
-                if template_to_use:
-                    # Увеличиваем счетчик использования
-                    template_to_use.usage_count += 1
+                if template:
+                    template.usage_count += 1
                     await session.commit()
-                    await session.refresh(template_to_use)
                     logger.info(
-                        f"Шаблон '{template_to_use.title}' был использован {template_to_use.usage_count} раз"
+                        "Шаблон '%s' (ID=%d) использован %d раз",
+                        template.title,
+                        template.id,
+                        template.usage_count,
                     )
-
-                return template_to_use
+                return template
             except Exception as e:
-                logger.error(f"Ошибка при обновлении шаблона: {e}")
+                logger.error("Ошибка при получении и обновлении шаблона: %s", e)
                 await session.rollback()
                 raise
+
+    async def _get_effective_template(
+        self, session, template_id: int, chat_tg_id: str
+    ) -> Optional[MessageTemplate]:
+        """
+        Находит эффективный шаблон с использованием JOIN.
+        Если базовый шаблон глобальный - возвращает его.
+        Если базовый шаблон привязан к чату - ищет шаблон с тем же названием в целевом чате.
+        """
+        # Подзапрос для получения данных базового шаблона
+        base_template_stmt = (
+            select(MessageTemplate.title, MessageTemplate.chat_id)
+            .where(MessageTemplate.id == template_id)
+            .subquery()
+        )
+
+        # Основной запрос: ищем либо сам глобальный шаблон,
+        # либо его переопределение в конкретном чате по названию
+        query = (
+            select(MessageTemplate)
+            .join(
+                base_template_stmt,
+                MessageTemplate.title == base_template_stmt.c.title,
+            )
+            .outerjoin(ChatSession, MessageTemplate.chat_id == ChatSession.id)
+            .where(
+                or_(
+                    # Если базовый шаблон глобальный - возвращаем его (по ID)
+                    and_(
+                        MessageTemplate.id == template_id,
+                        base_template_stmt.c.chat_id.is_(None),
+                    ),
+                    # Если базовый не глобальный - ищем шаблон с тем же названием в целевом чате
+                    and_(
+                        ChatSession.chat_id == chat_tg_id,
+                        base_template_stmt.c.chat_id.is_not(None),
+                    ),
+                )
+            )
+            .options(
+                selectinload(MessageTemplate.media_items),
+                selectinload(MessageTemplate.category),
+            )
+        )
+
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
 
     async def delete_template(self, template_id: int) -> bool:
         async with self._db.session() as session:
