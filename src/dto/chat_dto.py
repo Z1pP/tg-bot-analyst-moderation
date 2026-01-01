@@ -1,15 +1,17 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import List
+
+from pydantic import BaseModel, ConfigDict
 
 from models import ChatSession
 
 
-@dataclass(frozen=True)
-class ChatDTO:
+class ChatDTO(BaseModel):
     id: int
     tg_id: str
     title: str
+
+    model_config = ConfigDict(frozen=True)
 
     @classmethod
     def from_model(cls, chat: ChatSession) -> "ChatDTO":
@@ -21,15 +23,15 @@ class ChatDTO:
         )
 
 
-@dataclass(frozen=True)
-class UserChatsDTO:
+class UserChatsDTO(BaseModel):
     chats: List[ChatDTO]
     user_id: int
     total_count: int
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass
-class DbChatDTO:
+
+class DbChatDTO(BaseModel):
     """DTO для чата из базы данных"""
 
     id: int
