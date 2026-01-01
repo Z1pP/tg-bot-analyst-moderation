@@ -1,9 +1,9 @@
-from dataclasses import dataclass
 from typing import Optional
 
+from pydantic import BaseModel, ConfigDict
 
-@dataclass(frozen=True, slots=True)
-class MessageActionDTO:
+
+class MessageActionDTO(BaseModel):
     """DTO для действий с сообщениями через админ-панель."""
 
     chat_tgid: str
@@ -12,12 +12,15 @@ class MessageActionDTO:
     admin_username: str
     admin_message_id: Optional[int] = None
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True, slots=True)
-class SendMessageDTO:
+
+class SendMessageDTO(BaseModel):
     """DTO для отправки сообщения в чат."""
 
     chat_tgid: str
     admin_tgid: str
     admin_username: str
     admin_message_id: int
+
+    model_config = ConfigDict(frozen=True)
