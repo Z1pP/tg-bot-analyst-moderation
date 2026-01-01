@@ -10,6 +10,7 @@ from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
 from container import container
 from dto import ModerationActionDTO
+from dto.chat_dto import ChatDTO
 from keyboards.inline.banhammer import back_to_block_menu_ikb, moderation_menu_ikb
 from keyboards.inline.chats import tracked_chats_with_all_ikb
 from services import UserService
@@ -56,17 +57,19 @@ async def process_moderation_action(
 
     data = await state.get_data()
     chat_id = callback.data.split("__")[1]
-    chat_dtos = data.get("chat_dtos")
+    chat_dtos_data = data.get("chat_dtos")
     username = data.get("username")
     user_tgid = data.get("tg_id")
 
-    if not chat_dtos or not username or not user_tgid:
+    if not chat_dtos_data or not username or not user_tgid:
         logger.error("Некорректные данные в state: %s", data)
         await callback.message.edit_text(
             text="❌ Ошибка: некорректные данные. Попробуйте снова.",
             reply_markup=moderation_menu_ikb(),
         )
         return
+
+    chat_dtos = [ChatDTO.model_validate(chat) for chat in chat_dtos_data]
 
     if chat_id != "all":
         chat_dtos = [chat for chat in chat_dtos if chat.id == int(chat_id)]
@@ -273,7 +276,10 @@ async def process_reason_common(
         )
         return
 
-    await state.update_data(reason=reason, chat_dtos=chat_dtos)
+    await state.update_data(
+        reason=reason,
+        chat_dtos=[chat.model_dump(mode="json") for chat in chat_dtos],
+    )
 
     try:
         await bot.edit_message_text(
