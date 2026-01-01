@@ -52,9 +52,10 @@ class BaseUserFilter(Filter):
         """Обновляет username в БД и кеше только при изменении"""
         try:
             user_repo: UserRepository = container.resolve(UserRepository)
-            updated_user = await user_repo.update_username(
+            updated_user = await user_repo.update_user(
                 user_id=user.id,
-                new_username=new_username,
+                username=new_username,
+                check_changes=True,
             )
 
             # Обновляем кеш только если обновление прошло успешно
