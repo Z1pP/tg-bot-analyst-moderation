@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request
 from bot import configure_dispatcher
 from commands.start_commands import set_bot_commands
 from container import ContainerSetup
+from database.session import engine
 from utils.logger_config import setup_logger
 
 setup_logger(log_level=logging.INFO)
@@ -118,6 +119,30 @@ async def run_polling():
     logger.info("Запуск polling...")
 
     await dp.start_polling(bot)
+
+
+async def shutdown(bot, dp):
+    """
+    Функция для корректного завершения всех ресурсов.
+    """
+    logger.info("Начало процесса Graceful Shutdown...")
+
+    if dp.is_polling():
+        logger.info("Остановка polling...")
+        dp.stop_polling()
+
+    if bot:
+        logger.info("Закрытие сессии бота...")
+        await bot.session.close()
+
+    logger.info("Закрытие соединений с БД...")
+    await engine.dispose()
+
+    if dp.storage:
+        logger.info("Закрытие хранилища FSM...")
+        await dp.storage.close()
+
+    logger.info("Бот успешно остановлен.")
 
 
 async def main():
