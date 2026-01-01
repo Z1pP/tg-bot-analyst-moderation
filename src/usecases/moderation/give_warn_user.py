@@ -84,6 +84,7 @@ class GiveUserWarnUseCase(ModerationUseCase):
         # Получаем номер следующего наканазания и само наказание из БД
         punishment_count = await self.punishment_service.get_punishment_count(
             user_id=context.violator.id,
+            chat_id=context.chat.id,
         )
         punishment_ladder = await self.punishment_service.get_punishment(
             warn_count=punishment_count,
