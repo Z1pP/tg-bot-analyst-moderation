@@ -1,16 +1,18 @@
-from dataclasses import dataclass
 from typing import List
+
+from pydantic import BaseModel, ConfigDict
 
 from models import MessageTemplate
 
 
-@dataclass(frozen=True)
-class TemplateDTO:
+class TemplateDTO(BaseModel):
     id: int
     title: str
     content: str
     usage_count: int
     has_media: bool
+
+    model_config = ConfigDict(frozen=True)
 
     @classmethod
     def from_model(cls, template: MessageTemplate) -> "TemplateDTO":
@@ -24,13 +26,15 @@ class TemplateDTO:
         )
 
 
-@dataclass(frozen=True)
-class UpdateTemplateTitleDTO:
+class UpdateTemplateTitleDTO(BaseModel):
     template_id: int
     new_title: str
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class TemplateSearchResultDTO:
+
+class TemplateSearchResultDTO(BaseModel):
     templates: List[TemplateDTO]
     total_count: int
+
+    model_config = ConfigDict(frozen=True)
