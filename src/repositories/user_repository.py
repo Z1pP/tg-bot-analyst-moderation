@@ -60,7 +60,9 @@ class UserRepository:
                     e,
                 )
 
-    async def update_user(self, user_id: int, username: str) -> Optional[User]:
+    async def update_user(
+        self, user_id: int, username: str, check_changes: bool = False
+    ) -> Optional[User]:
         """Обновляет username пользователя."""
         async with self._db.session() as session:
             try:
@@ -69,6 +71,9 @@ class UserRepository:
                     logger.warning("Пользователь %s не найден", user_id)
                     return None
 
+                if check_changes and user.username == username:
+                    return user
+
                 user.username = username
                 await session.commit()
                 await session.refresh(user)
@@ -76,36 +81,6 @@ class UserRepository:
                     "Username обновлен для пользователя %s: %s",
                     user_id,
                     username,
-                )
-                return user
-            except Exception as e:
-                logger.error(
-                    "Ошибка при обновлении username пользователя %s: %s",
-                    user_id,
-                    e,
-                )
-                await session.rollback()
-                raise
-
-    async def update_username(self, user_id: int, new_username: str) -> Optional[User]:
-        """Обновляет username пользователя только при изменении."""
-        async with self._db.session() as session:
-            try:
-                user = await session.get(User, user_id)
-                if not user:
-                    logger.warning("Пользователь %s не найден", user_id)
-                    return None
-
-                # Проверяем нужно ли обновление
-                if user.username == new_username:
-                    return user  # Нет изменений
-
-                user.username = new_username
-                await session.commit()
-                logger.info(
-                    "Username обновлен для пользователя %s: %s",
-                    user_id,
-                    new_username,
                 )
                 return user
             except Exception as e:
