@@ -5,16 +5,13 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from database.session import DatabaseContextManager
 from models.chat_session import ChatSession
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class ChatRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class ChatRepository(BaseRepository):
     async def get_chat_by_id(self, chat_id: int) -> Optional[ChatSession]:
         """Получает чат по идентификатору."""
         async with self._db.session() as session:
