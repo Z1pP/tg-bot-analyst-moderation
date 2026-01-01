@@ -45,6 +45,7 @@ async def lifespan(app: FastAPI):
         url = f"{args.webhook_url}/webhook"
         logger.info("🚀 Устанавливаем webhook: %s", url)
         await bot.set_webhook(url)
+        await set_bot_commands(bot)
 
     yield
 
@@ -148,10 +149,10 @@ async def shutdown(bot, dp):
 async def main():
     """Точка входа: выбирает режим запуска (webhook/polling)."""
     try:
-        # if args.webhook_url:
-        #     await run_webhook()
-        # else:
-        await run_polling()
+        if args.webhook_url:
+            await run_webhook()
+        else:
+            await run_polling()
     except Exception as e:
         logger.error("Критическая ошибка: %s", str(e), exc_info=True)
         sys.exit(1)
