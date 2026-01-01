@@ -82,48 +82,66 @@ class MessageTemplateRepository:
                 logger.error(f"Ошибка при поиске шаблонов: {e}")
                 raise
 
-    async def get_templates_count_by_category(self, category_id: int) -> int:
-        async with self._db.session() as session:
-            try:
-                query = select(func.count(MessageTemplate.id)).where(
-                    MessageTemplate.category_id == category_id
-                )
-                result = await session.execute(query)
-                return result.scalar_one()
-            except Exception as e:
-                logger.error("Ошибка при получении количества шаблонов: %s", e)
-                raise
-
-    async def get_templates_count(self) -> int:
+    async def get_templates_count(
+        self,
+        category_id: Optional[int] = None,
+        chat_id: Optional[int] = None,
+        global_only: bool = False,
+    ) -> int:
+        """Получает количество шаблонов с учетом фильтров."""
         async with self._db.session() as session:
             try:
                 query = select(func.count(MessageTemplate.id))
+
+                if global_only:
+                    query = query.where(MessageTemplate.chat_id.is_(None))
+                elif chat_id is not None:
+                    query = query.where(MessageTemplate.chat_id == chat_id)
+
+                if category_id is not None:
+                    query = query.where(MessageTemplate.category_id == category_id)
+
                 result = await session.execute(query)
                 return result.scalar_one()
             except Exception as e:
                 logger.error("Ошибка при получении количества шаблонов: %s", e)
                 raise
 
-    async def get_templates_by_category_paginated(
+    async def get_templates_paginated(
         self,
         offset: int = 0,
         limit: int = 5,
-        category_id: int = None,
+        category_id: Optional[int] = None,
+        chat_id: Optional[int] = None,
+        global_only: bool = False,
     ) -> List[MessageTemplate]:
+        """Получает список шаблонов с пагинацией и учетом фильтров."""
         async with self._db.session() as session:
-            query = (
-                select(MessageTemplate)
-                .options(
-                    selectinload(MessageTemplate.media_items),
-                    selectinload(MessageTemplate.category),
+            try:
+                query = (
+                    select(MessageTemplate)
+                    .options(
+                        selectinload(MessageTemplate.media_items),
+                        selectinload(MessageTemplate.category),
+                    )
+                    .order_by(MessageTemplate.title)
+                    .limit(limit)
+                    .offset(offset)
                 )
-                .where(MessageTemplate.category_id == category_id)
-                .order_by(MessageTemplate.title)
-                .limit(limit)
-                .offset(offset)
-            )
-            result = await session.execute(query)
-            return result.scalars().all()
+
+                if global_only:
+                    query = query.where(MessageTemplate.chat_id.is_(None))
+                elif chat_id is not None:
+                    query = query.where(MessageTemplate.chat_id == chat_id)
+
+                if category_id is not None:
+                    query = query.where(MessageTemplate.category_id == category_id)
+
+                result = await session.execute(query)
+                return result.scalars().all()
+            except Exception as e:
+                logger.error("Ошибка при получении списка шаблонов: %s", e)
+                raise
 
     async def get_template_by_id(self, template_id: int) -> Optional[MessageTemplate]:
         """Получаем быстрый ответ вместе с его медиа"""
@@ -312,59 +330,3 @@ class MessageTemplateRepository:
                 logger.error(f"Ошибка при обновлении содержимого шаблона: {e}")
                 await session.rollback()
                 raise
-
-    async def get_global_templates_paginated(
-        self, offset: int = 0, limit: int = 5
-    ) -> List[MessageTemplate]:
-        """Получает глобальные шаблоны (без привязки к чату)"""
-        async with self._db.session() as session:
-            query = (
-                select(MessageTemplate)
-                .options(
-                    selectinload(MessageTemplate.media_items),
-                    selectinload(MessageTemplate.category),
-                )
-                .where(MessageTemplate.chat_id.is_(None))
-                .order_by(MessageTemplate.title)
-                .limit(limit)
-                .offset(offset)
-            )
-            result = await session.execute(query)
-            return result.scalars().all()
-
-    async def get_global_templates_count(self) -> int:
-        """Получает количество глобальных шаблонов"""
-        async with self._db.session() as session:
-            query = select(func.count(MessageTemplate.id)).where(
-                MessageTemplate.chat_id.is_(None)
-            )
-            result = await session.execute(query)
-            return result.scalar_one()
-
-    async def get_chat_templates_paginated(
-        self, chat_id: int, offset: int = 0, limit: int = 5
-    ) -> List[MessageTemplate]:
-        """Получает шаблоны для конкретного чата"""
-        async with self._db.session() as session:
-            query = (
-                select(MessageTemplate)
-                .options(
-                    selectinload(MessageTemplate.media_items),
-                    selectinload(MessageTemplate.category),
-                )
-                .where(MessageTemplate.chat_id == chat_id)
-                .order_by(MessageTemplate.title)
-                .limit(limit)
-                .offset(offset)
-            )
-            result = await session.execute(query)
-            return result.scalars().all()
-
-    async def get_chat_templates_count(self, chat_id: int) -> int:
-        """Получает количество шаблонов для конкретного чата"""
-        async with self._db.session() as session:
-            query = select(func.count(MessageTemplate.id)).where(
-                MessageTemplate.chat_id == chat_id
-            )
-            result = await session.execute(query)
-            return result.scalar_one()
