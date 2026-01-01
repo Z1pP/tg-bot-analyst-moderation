@@ -6,6 +6,7 @@ from dto.daily_activity import ChatDailyStatsDTO
 from repositories import ChatRepository, MessageRepository, UserRepository
 from repositories.reaction_repository import MessageReactionRepository
 from services import AdminActionLogService, BotPermissionService
+from utils.date_utils import validate_and_normalize_period
 
 
 @dataclass
@@ -51,9 +52,7 @@ class GetDailyTopUsersUseCase:
         Returns:
             ChatDailyStatsDTO с топом пользователей и общей статистикой
         """
-        if date and not (start_date and end_date):
-            start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-            end_date = date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        start_date, end_date = validate_and_normalize_period(date, start_date, end_date)
 
         # Получаем информацию о чате
         chat = await self._chat_repository.get_chat_by_id(chat_id)
