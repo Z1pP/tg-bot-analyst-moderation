@@ -2,7 +2,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.base import BaseStorage
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.redis import RedisStorage
 from punq import Container
 
 from config import settings
@@ -146,7 +146,7 @@ class ContainerSetup:
                 default=DefaultBotProperties(parse_mode=ParseMode.HTML),
             ),
         )
-        storage = MemoryStorage()
+        storage = RedisStorage.from_url(settings.REDIS_URL)
         container.register(BaseStorage, instance=storage)
         container.register(Dispatcher, instance=Dispatcher(storage=storage))
 
