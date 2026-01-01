@@ -86,17 +86,22 @@ class PunishmentService:
 
         return punishment_text_template.format(username=punished_username)
 
-    async def get_punishment_count(self, user_id: int) -> int:
+    async def get_punishment_count(
+        self, user_id: int, chat_id: Optional[int] = None
+    ) -> int:
         """
         Получает количество наказаний пользователя.
 
         Args:
             user_id: ID пользователя в БД
+            chat_id: ID чата в БД (опционально)
 
         Returns:
             Количество наказаний
         """
-        return await self.punishment_repository.get_punishment_count(user_id)
+        return await self.punishment_repository.count_punishments(
+            user_id=user_id, chat_id=chat_id
+        )
 
     async def get_punishment(
         self,
