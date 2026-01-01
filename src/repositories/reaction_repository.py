@@ -11,6 +11,7 @@ from dto.buffer import BufferedReactionDTO
 from dto.daily_activity import PopularReactionDTO, UserReactionActivityDTO
 from dto.reaction import MessageReactionDTO
 from models import MessageReaction, User
+from utils.date_utils import validate_and_normalize_period
 
 logger = logging.getLogger(__name__)
 
@@ -123,16 +124,9 @@ class MessageReactionRepository:
         """
         async with self._db.session() as session:
             try:
-                if date and not (start_date and end_date):
-                    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-                    end_date = date.replace(
-                        hour=23, minute=59, second=59, microsecond=999999
-                    )
-
-                if not start_date or not end_date:
-                    raise ValueError(
-                        "Необходимо указать дату или период (start_date и end_date)"
-                    )
+                start_date, end_date = validate_and_normalize_period(
+                    date, start_date, end_date
+                )
 
                 query = (
                     select(
@@ -196,16 +190,9 @@ class MessageReactionRepository:
         """
         async with self._db.session() as session:
             try:
-                if date and not (start_date and end_date):
-                    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-                    end_date = date.replace(
-                        hour=23, minute=59, second=59, microsecond=999999
-                    )
-
-                if not start_date or not end_date:
-                    raise ValueError(
-                        "Необходимо указать дату или период (start_date и end_date)"
-                    )
+                start_date, end_date = validate_and_normalize_period(
+                    date, start_date, end_date
+                )
 
                 query = (
                     select(
