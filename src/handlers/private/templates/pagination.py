@@ -136,7 +136,7 @@ async def get_templates_by_category_page(
     )
 
     offset = (page - 1) * 5
-    templates = await template_repo.get_templates_by_category_paginated(
+    templates = await template_repo.get_templates_paginated(
         category_id=category_id,
         limit=5,
         offset=offset,
@@ -149,7 +149,7 @@ async def get_templates_count_by_category(category_id: int) -> int:
     template_repo: MessageTemplateRepository = container.resolve(
         MessageTemplateRepository
     )
-    return await template_repo.get_templates_count_by_category(category_id)
+    return await template_repo.get_templates_count(category_id=category_id)
 
 
 async def get_templates_by_chat_page(
@@ -161,7 +161,7 @@ async def get_templates_by_chat_page(
         MessageTemplateRepository
     )
     offset = (page - 1) * 5
-    templates = await template_repo.get_chat_templates_paginated(
+    templates = await template_repo.get_templates_paginated(
         chat_id=chat_id,
         limit=5,
         offset=offset,
@@ -174,7 +174,7 @@ async def get_templates_count_by_chat(chat_id: int) -> int:
     template_repo: MessageTemplateRepository = container.resolve(
         MessageTemplateRepository
     )
-    return await template_repo.get_chat_templates_count(chat_id)
+    return await template_repo.get_templates_count(chat_id=chat_id)
 
 
 async def get_global_templates(page: int = 1) -> List[MessageTemplate]:
@@ -183,9 +183,10 @@ async def get_global_templates(page: int = 1) -> List[MessageTemplate]:
         MessageTemplateRepository
     )
     offset = (page - 1) * 5
-    templates = await template_repo.get_global_templates_paginated(
+    templates = await template_repo.get_templates_paginated(
         limit=5,
         offset=offset,
+        global_only=True,
     )
     return templates
 
@@ -195,7 +196,7 @@ async def get_global_templates_count() -> int:
     template_repo: MessageTemplateRepository = container.resolve(
         MessageTemplateRepository
     )
-    return await template_repo.get_global_templates_count()
+    return await template_repo.get_templates_count(global_only=True)
 
 
 async def extract_state_data(state: FSMContext) -> StateDataExtractor:

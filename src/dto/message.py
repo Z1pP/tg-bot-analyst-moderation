@@ -1,12 +1,12 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel
 
 from models import ChatMessage
 
 
-@dataclass
-class CreateMessageDTO:
+class CreateMessageDTO(BaseModel):
     """DTO для создания нового сообщения"""
 
     chat_id: int
@@ -18,8 +18,7 @@ class CreateMessageDTO:
     text: Optional[str] = None
 
 
-@dataclass
-class ResultMessageDTO:
+class ResultMessageDTO(BaseModel):
     """Data Transfer Object для сообщения"""
 
     # Обязательные поля
@@ -41,7 +40,7 @@ class ResultMessageDTO:
             message: Модель сообщения
 
         Returns:
-            MessageDTO: DTO сообщения
+            ResultMessageDTO: DTO сообщения
         """
         return cls(
             id=message.id,

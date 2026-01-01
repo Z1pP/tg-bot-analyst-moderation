@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -10,6 +11,8 @@ from repositories import PunishmentLadderRepository, PunishmentRepository
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services.time_service import TimeZoneService
 from utils.formatter import format_duration
+
+logger = logging.getLogger(__name__)
 
 
 class PunishmentService:
@@ -86,44 +89,65 @@ class PunishmentService:
 
         return punishment_text_template.format(username=punished_username)
 
-    async def get_punishment_count(self, user_id: int) -> int:
+    async def get_punishment_count(
+        self, user_id: int, chat_id: Optional[int] = None
+    ) -> int:
         """
         Получает количество наказаний пользователя.
 
         Args:
             user_id: ID пользователя в БД
+            chat_id: ID чата в БД (опционально)
 
         Returns:
             Количество наказаний
         """
-        return await self.punishment_repository.get_punishment_count(user_id)
+        return await self.punishment_repository.count_punishments(
+            user_id=user_id, chat_id=chat_id
+        )
 
     async def get_punishment(
         self,
         warn_count: int,
         chat_id: str,
-    ) -> Optional[PunishmentLadder]:
+    ) -> PunishmentLadder:
         """
         Определяет наказание по текущему количеству предупреждений.
 
         Если количество предупреждений >= максимального шага,
         возвращает максимальное наказание.
+        Если лестница пуста, возвращает дефолтное предупреждение.
 
         Args:
             warn_count: Текущее количество предупреждений
             chat_id: Telegram ID чата
 
         Returns:
-            Объект наказания из PunishmentLadder или None
+            Объект наказания из PunishmentLadder
         """
         max_punishment = await self.get_max_punishment(chat_id=chat_id)
 
-        if max_punishment and warn_count >= max_punishment.step:
-            return max_punishment
+        if max_punishment:
+            if warn_count >= max_punishment.step:
+                return max_punishment
 
-        return await self.punishment_ladder_repository.get_punishment_by_step(
+            punishment = await self.punishment_ladder_repository.get_punishment_by_step(
+                step=warn_count + 1,
+                chat_id=chat_id,
+            )
+            if punishment:
+                return punishment
+
+        # Дефолтный фолбек, если лестница не настроена
+        logger.warning(
+            "Лестница наказаний не настроена для чата %s. Используется дефолтное предупреждение.",
+            chat_id,
+        )
+        return PunishmentLadder(
             step=warn_count + 1,
-            chat_id=chat_id,
+            punishment_type=PunishmentType.WARNING,
+            duration_seconds=0,
+            chat_id=None,
         )
 
     async def get_max_punishment(self, chat_id: str) -> Optional[PunishmentLadder]:
@@ -150,6 +174,27 @@ class PunishmentService:
 
         return None
 
+    def _format_punishment_period(
+        self, punishment_type: PunishmentType, duration_seconds: Optional[int]
+    ) -> str:
+        """Форматирует длительность наказания."""
+        if punishment_type == PunishmentType.BAN:
+            return "бессрочно"
+        if punishment_type == PunishmentType.MUTE and duration_seconds:
+            return format_duration(seconds=duration_seconds)
+        return ""
+
+    def _get_message_deletion_status(self, message_deleted: bool) -> str:
+        """Возвращает статус удаления сообщения."""
+        return "удалено" if message_deleted else "не удалено (старше 48ч)"
+
+    def _build_report_header(self, date: datetime, message_deleted: bool) -> str:
+        """Генерирует заголовок отчета."""
+        date_str = date.strftime("%d.%m.%Y")
+        time_str = date.strftime("%H:%M")
+        status = self._get_message_deletion_status(message_deleted)
+        return f"❌️ Сообщение {status} {date_str} в {time_str}"
+
     def generate_ban_report(
         self,
         dto: ModerationActionDTO,
@@ -167,17 +212,16 @@ class PunishmentService:
         Returns:
             Форматированный отчет
         """
-        date_str = date.strftime("%d.%m.%Y")
-        time_str = date.strftime("%H:%M")
+        header = self._build_report_header(date, message_deleted)
         reason = dto.reason or "Не указана"
-        status = "удалено" if message_deleted else "не удалено (старше 48ч)"
+        period = self._format_punishment_period(PunishmentType.BAN, None)
 
         return (
-            f"❌️ Сообщение {status} {date_str} в {time_str}\n\n"
+            f"{header}\n\n"
             f"• Юзер: @{dto.violator_username}\n"
             f"• ID: {dto.violator_tgid}\n"
             f"• Причина: {reason}\n"
-            "• Время бана: бессрочно\n"
+            f"• Время бана: {period}\n"
             f"• Выдал бан: @{dto.admin_username}\n"
             f"• Чат: {dto.chat_title}"
         )
@@ -201,21 +245,16 @@ class PunishmentService:
         Returns:
             Форматированный отчет
         """
-        date_str = date.strftime("%d.%m.%Y")
-        time_str = date.strftime("%H:%M")
+        header = self._build_report_header(date, message_deleted)
         reason = dto.reason or "Не указана"
-        period = ""
-
-        if punishment_ladder.punishment_type == PunishmentType.BAN:
-            period = "бессрочно"
-        elif punishment_ladder.punishment_type == PunishmentType.MUTE:
-            period = format_duration(seconds=punishment_ladder.duration_seconds)
+        period = self._format_punishment_period(
+            punishment_ladder.punishment_type, punishment_ladder.duration_seconds
+        )
 
         mute_line = f"• Время мута: {period}\n" if period else ""
-        status = "удалено" if message_deleted else "не удалено (старше 48ч)"
 
         return (
-            f"❌️ Сообщение {status} {date_str} в {time_str}\n\n"
+            f"{header}\n\n"
             f"• Юзер: @{dto.violator_username}\n"
             f"• ID: <code>{dto.violator_tgid}</code>\n"
             f"• Причина: {reason}\n"

@@ -1,12 +1,12 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel
 
 from models.reaction import ReactionAction
 
 
-@dataclass
-class MessageReactionDTO:
+class MessageReactionDTO(BaseModel):
     chat_id: int
     user_id: int
     message_id: str

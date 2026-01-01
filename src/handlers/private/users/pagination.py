@@ -1,16 +1,75 @@
+from typing import List, Tuple
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
-from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
 from container import container
-from keyboards.inline.users import users_inline_kb
+from keyboards.inline.users import remove_user_inline_kb, users_inline_kb
+from models import User
 from states import UserStateManager
 from usecases.user_tracking import GetListTrackedUsersUseCase
+from utils.pagination_handler import BasePaginationHandler
 
 router = Router(name=__name__)
+
+
+class UsersPaginationHandler(BasePaginationHandler):
+    def __init__(self):
+        super().__init__("пользователей")
+
+    async def get_page_data(
+        self,
+        page: int,
+        query: CallbackQuery,
+        state: FSMContext,
+    ) -> Tuple[List[User], int]:
+        users = await get_tracked_users(str(query.from_user.id))
+        return paginate_users(users, page)
+
+    async def build_keyboard(
+        self,
+        items: List[User],
+        page: int,
+        total_count: int,
+    ) -> InlineKeyboardMarkup:
+        return users_inline_kb(
+            users=items,
+            page=page,
+            total_count=total_count,
+        )
+
+
+class RemoveUsersPaginationHandler(BasePaginationHandler):
+    def __init__(self):
+        super().__init__("пользователей")
+
+    async def get_page_data(
+        self,
+        page: int,
+        query: CallbackQuery,
+        state: FSMContext,
+    ) -> Tuple[List[User], int]:
+        users = await get_tracked_users(str(query.from_user.id))
+        return paginate_users(users, page)
+
+    async def build_keyboard(
+        self,
+        items: List[User],
+        page: int,
+        total_count: int,
+    ) -> InlineKeyboardMarkup:
+        return remove_user_inline_kb(
+            users=items,
+            page=page,
+            total_count=total_count,
+        )
+
+
+users_handler = UsersPaginationHandler()
+remove_users_handler = RemoveUsersPaginationHandler()
 
 
 @router.callback_query(
@@ -19,31 +78,7 @@ router = Router(name=__name__)
 )
 async def prev_page_users_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик перехода на предыдущую страницу пользователей"""
-    current_page = int(
-        callback.data.replace(CallbackData.User.PREFIX_PREV_USERS_PAGE, "")
-    )
-    prev_page = max(1, current_page - 1)
-
-    usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
-    users = await usecase.execute(admin_tgid=str(callback.from_user.id))
-
-    if not users:
-        await callback.answer(Dialog.User.NO_USERS_TO_DISPLAY, show_alert=True)
-        return
-
-    total_count = len(users)
-    start_index = (prev_page - 1) * USERS_PAGE_SIZE
-    end_index = start_index + USERS_PAGE_SIZE
-    page_users = users[start_index:end_index]
-
-    await callback.message.edit_reply_markup(
-        reply_markup=users_inline_kb(
-            users=page_users,
-            page=prev_page,
-            total_count=total_count,
-        )
-    )
-    await callback.answer()
+    await users_handler.handle_prev_page(callback, state)
 
 
 @router.callback_query(
@@ -52,37 +87,7 @@ async def prev_page_users_handler(callback: CallbackQuery, state: FSMContext) ->
 )
 async def next_page_users_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик перехода на следующую страницу пользователей"""
-    current_page = int(
-        callback.data.replace(CallbackData.User.PREFIX_NEXT_USERS_PAGE, "")
-    )
-    next_page = current_page + 1
-
-    usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
-    users = await usecase.execute(admin_tgid=str(callback.from_user.id))
-
-    if not users:
-        await callback.answer(Dialog.User.NO_USERS_TO_DISPLAY, show_alert=True)
-        return
-
-    total_count = len(users)
-    max_pages = (total_count + USERS_PAGE_SIZE - 1) // USERS_PAGE_SIZE
-
-    if next_page > max_pages:
-        await callback.answer(Dialog.User.NO_MORE_USERS)
-        return
-
-    start_index = (next_page - 1) * USERS_PAGE_SIZE
-    end_index = start_index + USERS_PAGE_SIZE
-    page_users = users[start_index:end_index]
-
-    await callback.message.edit_reply_markup(
-        reply_markup=users_inline_kb(
-            users=page_users,
-            page=next_page,
-            total_count=total_count,
-        )
-    )
-    await callback.answer()
+    await users_handler.handle_next_page(callback, state)
 
 
 @router.callback_query(
@@ -93,34 +98,7 @@ async def prev_page_remove_users_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """Обработчик перехода на предыдущую страницу для удаления пользователей"""
-    current_page = int(
-        callback.data.replace(CallbackData.User.PREFIX_PREV_REMOVE_USERS_PAGE, "")
-    )
-    prev_page = max(1, current_page - 1)
-
-    from keyboards.inline.users import remove_user_inline_kb
-
-    usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
-    users = await usecase.execute(admin_tgid=str(callback.from_user.id))
-
-    if not users:
-        await callback.answer(Dialog.User.NO_USERS_TO_DISPLAY, show_alert=True)
-        return
-
-    total_count = len(users)
-    start_index = (prev_page - 1) * USERS_PAGE_SIZE
-    end_index = start_index + USERS_PAGE_SIZE
-    page_users = users[start_index:end_index]
-
-    await callback.message.edit_reply_markup(
-        reply_markup=remove_user_inline_kb(
-            users=page_users,
-            page=prev_page,
-            total_count=total_count,
-        )
-    )
-    await state.update_data(current_page=prev_page)
-    await callback.answer()
+    await remove_users_handler.handle_prev_page(callback, state)
 
 
 @router.callback_query(
@@ -131,37 +109,21 @@ async def next_page_remove_users_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """Обработчик перехода на следующую страницу для удаления пользователей"""
-    current_page = int(
-        callback.data.replace(CallbackData.User.PREFIX_NEXT_REMOVE_USERS_PAGE, "")
-    )
-    next_page = current_page + 1
+    await remove_users_handler.handle_next_page(callback, state)
 
-    from keyboards.inline.users import remove_user_inline_kb
 
+async def get_tracked_users(admin_tgid: str) -> List[User]:
+    """Получает всех отслеживаемых пользователей для администратора."""
     usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
-    users = await usecase.execute(admin_tgid=str(callback.from_user.id))
+    return await usecase.execute(admin_tgid=admin_tgid)
 
-    if not users:
-        await callback.answer(Dialog.User.NO_USERS_TO_DISPLAY, show_alert=True)
-        return
 
-    total_count = len(users)
-    max_pages = (total_count + USERS_PAGE_SIZE - 1) // USERS_PAGE_SIZE
-
-    if next_page > max_pages:
-        await callback.answer(Dialog.User.NO_MORE_USERS)
-        return
-
-    start_index = (next_page - 1) * USERS_PAGE_SIZE
-    end_index = start_index + USERS_PAGE_SIZE
-    page_users = users[start_index:end_index]
-
-    await callback.message.edit_reply_markup(
-        reply_markup=remove_user_inline_kb(
-            users=page_users,
-            page=next_page,
-            total_count=total_count,
-        )
-    )
-    await state.update_data(current_page=next_page)
-    await callback.answer()
+def paginate_users(
+    users: List[User],
+    page: int,
+    page_size: int = USERS_PAGE_SIZE,
+) -> Tuple[List[User], int]:
+    """Разбивает список пользователей на страницы."""
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    return users[start_idx:end_idx], len(users)

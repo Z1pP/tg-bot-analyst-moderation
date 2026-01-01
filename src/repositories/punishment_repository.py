@@ -13,22 +13,25 @@ class PunishmentRepository:
     def __init__(self, db_manager: DatabaseContextManager) -> None:
         self._db = db_manager
 
-    async def get_punishment_count(self, user_id: int) -> int:
+    async def count_punishments(self, user_id: int, chat_id: int | None = None) -> int:
+        """Подсчитывает количество наказаний пользователя (опционально в указанном чате)."""
         async with self._db.session() as session:
             try:
-                logger.info(f"Подсчет количества наказаний для пользователя {user_id}")
-                query = (
-                    select(func.count())
-                    .select_from(Punishment)
-                    .where(Punishment.user_id == user_id)
+                query = select(func.count(Punishment.id)).where(
+                    Punishment.user_id == user_id
                 )
+                if chat_id is not None:
+                    query = query.where(Punishment.chat_id == chat_id)
+
                 result = await session.execute(query)
-                count = result.scalar_one()
-                logger.info(f"Найдено {count} наказаний для пользователя {user_id}")
+                count = result.scalar() or 0
                 return count
             except Exception as e:
                 logger.error(
-                    f"Ошибка при подсчете наказаний для пользователя {user_id}: {e}"
+                    "Ошибка подсчета наказаний для user_id=%s (chat_id=%s): %s",
+                    user_id,
+                    chat_id,
+                    e,
                 )
                 raise
 
@@ -73,24 +76,6 @@ class PunishmentRepository:
                     e,
                 )
                 await session.rollback()
-                raise
-
-    async def count_punishments(self, user_id: int, chat_id: int) -> int:
-        """Подсчитывает количество наказаний пользователя в указанном чате."""
-        async with self._db.session() as session:
-            try:
-                query = select(func.count(Punishment.id)).where(
-                    Punishment.user_id == user_id, Punishment.chat_id == chat_id
-                )
-                result = await session.execute(query)
-                return result.scalar() or 0
-            except Exception as e:
-                logger.error(
-                    "Ошибка подсчета наказаний для user_id=%s в chat_id=%s: %s",
-                    user_id,
-                    chat_id,
-                    e,
-                )
                 raise
 
     async def delete_last_punishment(self, user_id: int, chat_id: int) -> bool:

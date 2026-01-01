@@ -5,16 +5,13 @@ from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from database.session import DatabaseContextManager
 from models.chat_session import ChatSession
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class ChatRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class ChatRepository(BaseRepository):
     async def get_chat_by_id(self, chat_id: int) -> Optional[ChatSession]:
         """Получает чат по идентификатору."""
         async with self._db.session() as session:
@@ -27,12 +24,7 @@ class ChatRepository:
                     )
                 )
                 if chat:
-                    # Явно загружаем archive_chat до выхода из сессии
-                    _ = chat.archive_chat
-                    # Отсоединяем объект от сессии, но сохраняем загруженные данные
-                    session.expunge(chat)
-                    if chat.archive_chat:
-                        session.expunge(chat.archive_chat)
+                    self._expunge_chat_with_archive(session, chat)
                     logger.info(
                         "Получен чат: chat_id=%s, title=%s",
                         chat.id,
@@ -57,12 +49,7 @@ class ChatRepository:
                     )
                 )
                 if chat:
-                    # Явно загружаем archive_chat до выхода из сессии
-                    _ = chat.archive_chat
-                    # Отсоединяем объект от сессии, но сохраняем загруженные данные
-                    session.expunge(chat)
-                    if chat.archive_chat:
-                        session.expunge(chat.archive_chat)
+                    self._expunge_chat_with_archive(session, chat)
                     logger.info(
                         "Получен чат: chat_id=%s, title=%s",
                         chat.chat_id,
@@ -203,12 +190,7 @@ class ChatRepository:
                         selectinload(ChatSession.archive_chat),
                     )
                 )
-                # Явно загружаем archive_chat до выхода из сессии
-                _ = work_chat.archive_chat
-                # Отсоединяем объект от сессии, но сохраняем загруженные данные
-                session.expunge(work_chat)
-                if work_chat.archive_chat:
-                    session.expunge(work_chat.archive_chat)
+                self._expunge_chat_with_archive(session, work_chat)
 
                 logger.info(
                     "Архивный чат %s привязан к рабочему чату %s",
@@ -282,3 +264,13 @@ class ChatRepository:
                 )
                 await session.rollback()
                 raise e
+
+    def _expunge_chat_with_archive(self, session, chat: ChatSession) -> None:
+        """Вспомогательный метод для отсоединения чата и его архива от сессии."""
+        if chat:
+            # Явно загружаем archive_chat до выхода из сессии
+            _ = chat.archive_chat
+            # Отсоединяем объект от сессии, но сохраняем загруженные данные
+            session.expunge(chat)
+            if chat.archive_chat:
+                session.expunge(chat.archive_chat)

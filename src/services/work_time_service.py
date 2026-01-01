@@ -1,10 +1,9 @@
 from datetime import datetime, time, timedelta
+from functools import lru_cache
 from typing import Optional, Tuple
 
 from constants.work_time import END_TIME, START_TIME, TOLERANCE
 from models import ChatMessage, MessageReply
-
-from .time_service import TimeZoneService
 
 
 class WorkTimeService:
@@ -32,29 +31,27 @@ class WorkTimeService:
 
         Args:
             current_time: Время для проверки
-            work_start: Начало рабочего времени (по умолчанию WORK_START)
-            work_end: Конец рабочего времени (по умолчанию WORK_END)
+            work_start: Начало рабочего времени (по умолчанию START_TIME)
+            work_end: Конец рабочего времени (по умолчанию END_TIME)
             tolerance: Допустимое отклонение в минутах (по умолчанию TOLERANCE)
 
         Returns:
             True, если время входит в рабочие часы с учетом допуска, иначе False
         """
+        _start = work_start or START_TIME
+        _end = work_end or END_TIME
+        _tolerance = tolerance or TOLERANCE
+
         # Вычисляем границы рабочего времени с учетом допуска
-        start_with_tolerance = WorkTimeService._adjust_time_with_tolerance(
-            base_time=work_start or START_TIME,
-            delta=-(tolerance or TOLERANCE),
-        )
-        end_with_tolerance = WorkTimeService._adjust_time_with_tolerance(
-            base_time=work_end or END_TIME,
-            delta=tolerance or TOLERANCE,
-        )
+        start_with_tolerance = cls._adjust_time_with_tolerance(_start, -_tolerance)
+        end_with_tolerance = cls._adjust_time_with_tolerance(_end, _tolerance)
 
         # Проверяем, входит ли время в диапазон
         return start_with_tolerance <= current_time <= end_with_tolerance
 
-    @classmethod
+    @staticmethod
+    @lru_cache(maxsize=128)
     def _adjust_time_with_tolerance(
-        cls,
         base_time: time,
         delta: timedelta | int,
     ) -> time:
@@ -72,7 +69,8 @@ class WorkTimeService:
             Скорректированное время
         """
         # Преобразуем time в datetime для выполнения арифметических операций
-        dt = datetime.combine(TimeZoneService.now().date(), base_time)
+        # Дата не важна, берем текущую
+        dt = datetime.combine(datetime.now().date(), base_time)
 
         # Проверяем тип delta и применяем смещение
         if isinstance(delta, timedelta):

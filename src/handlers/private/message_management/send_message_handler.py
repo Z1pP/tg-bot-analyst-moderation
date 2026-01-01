@@ -45,7 +45,9 @@ async def send_message_button_handler(
         return
 
     # Сохраняем список чатов в state
-    await state.update_data(user_chats=user_chats_dto.chats)
+    await state.update_data(
+        user_chats=[chat.model_dump(mode="json") for chat in user_chats_dto.chats]
+    )
 
     await callback.message.edit_text(
         Dialog.MessageManager.SELECT_CHAT,
@@ -70,9 +72,9 @@ async def chat_selected_handler(
 
     # Получаем чат из UseCase чтобы взять chat_id (Telegram ID)
     data = await state.get_data()
-    user_chats_dto = data.get("user_chats")
+    user_chats_data = data.get("user_chats")
 
-    if not user_chats_dto:
+    if not user_chats_data:
         logger.error("Отсутствуют данные о чатах в state")
         await callback.message.edit_text(
             Dialog.MessageManager.INVALID_STATE_DATA,
@@ -81,8 +83,12 @@ async def chat_selected_handler(
         await state.clear()
         return
 
+    from dto.chat_dto import ChatDTO
+
+    user_chats = [ChatDTO.model_validate(chat) for chat in user_chats_data]
+
     # Находим выбранный чат
-    selected_chat = next((chat for chat in user_chats_dto if chat.id == chat_id), None)
+    selected_chat = next((chat for chat in user_chats if chat.id == chat_id), None)
     if not selected_chat:
         logger.error("Чат с id %s не найден", chat_id)
         await callback.message.edit_text(

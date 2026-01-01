@@ -1,16 +1,18 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict
 
 
-@dataclass(frozen=True, slots=True)
-class UserTrackingDTO:
+class UserTrackingDTO(BaseModel):
     admin_username: str
     admin_tgid: str
     user_username: str
     user_tgid: str
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True, slots=True)
-class RemoveUserTrackingDTO:
+
+class RemoveUserTrackingDTO(BaseModel):
     admin_username: str
     admin_tgid: str
     user_id: int
+
+    model_config = ConfigDict(frozen=True)

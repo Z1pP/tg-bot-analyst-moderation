@@ -3,20 +3,16 @@ from datetime import datetime
 from typing import List
 
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import joinedload
 
-from database.session import DatabaseContextManager
 from dto.buffer import BufferedMessageReplyDTO
 from models import ChatMessage, MessageReply
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class MessageReplyRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class MessageReplyRepository(BaseRepository):
     async def get_replies_by_period_date(
         self,
         user_id: int,
@@ -188,27 +184,9 @@ class MessageReplyRepository:
                     )
                     return 0
 
-                # Используем PostgreSQL INSERT ... ON CONFLICT DO NOTHING
-                stmt = (
-                    insert(MessageReply.__table__)
-                    .values(mappings)
-                    .on_conflict_do_nothing()
+                return await self._bulk_upsert_on_conflict_nothing(
+                    MessageReply, mappings, "reply сообщений"
                 )
-
-                result = await session.execute(stmt)
-                await session.commit()
-
-                inserted_count = (
-                    result.rowcount if hasattr(result, "rowcount") else len(mappings)
-                )
-
-                logger.info(
-                    "Массово создано reply сообщений: %d из %d (пропущено %d из-за отсутствия ChatMessage)",
-                    inserted_count,
-                    len(mappings),
-                    len(dtos) - len(mappings),
-                )
-                return inserted_count
             except Exception as e:
                 logger.error(
                     "Ошибка при массовом создании reply сообщений: %s", e, exc_info=True

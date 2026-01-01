@@ -18,11 +18,11 @@ x-common-setup: &common-setup
 # 2. Шаблон переменных окружения для подключения к БД и Redis внутри сети Docker
 x-db-env: &db-env
   # Эти значения переопределяют то, что в .env, так как внутри Docker хосты называются 'db' и 'redis'
-  DEV_DATABASE_URL: postgresql+asyncpg://postgres:12345@db:5432/dev_analytics_bot
-  DEV_DB_URL_FOR_ALEMBIC: postgresql://postgres:12345@db:5432/dev_analytics_bot
-  PROD_DATABASE_URL: postgresql+asyncpg://postgres:12345@db:5432/prod_analytics_bot
-  PROD_DB_URL_FOR_ALEMBIC: postgresql://postgres:12345@db:5432/prod_analytics_bot
-  REDIS_URL: redis://redis:6379/0
+  DEV_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  DEV_DB_URL_FOR_ALEMBIC: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  PROD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  PROD_DB_URL_FOR_ALEMBIC: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  REDIS_URL: redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/${REDIS_DB:-0}
   PYTHONPATH: /app/src
 
 services:
@@ -52,10 +52,10 @@ services:
     image: postgres:14
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
-      POSTGRES_DB: dev_analytics_bot
-      TZ: Europe/Moscow
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TIMEZONE:-Europe/Moscow}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -64,7 +64,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5434:5432"
+      - "127.0.0.1:${POSTGRES_EXTERNAL_PORT:-5434}:5432"
     networks:
       - botnet
 

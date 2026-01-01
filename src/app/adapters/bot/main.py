@@ -6,6 +6,7 @@ import aiohttp
 import jwt
 from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command
+from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import Message
 from aiohttp import ClientTimeout
 
@@ -51,7 +52,8 @@ async def backend_handler(message: Message):
 
 async def start_bot() -> None:
     bot = Bot(token=bot_config.BOT_TOKEN)
-    dp = Dispatcher()
+    storage = RedisStorage.from_url(bot_config.REDIS_URL)
+    dp = Dispatcher(storage=storage)
     dp.include_router(router)
     await dp.start_polling(bot)
 

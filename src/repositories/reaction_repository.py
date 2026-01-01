@@ -3,22 +3,19 @@ from datetime import datetime
 from typing import List
 
 from sqlalchemy import func, select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import joinedload
 
-from database.session import DatabaseContextManager
 from dto.buffer import BufferedReactionDTO
 from dto.daily_activity import PopularReactionDTO, UserReactionActivityDTO
 from dto.reaction import MessageReactionDTO
 from models import MessageReaction, User
+from repositories.base import BaseRepository
+from utils.date_utils import validate_and_normalize_period
 
 logger = logging.getLogger(__name__)
 
 
-class MessageReactionRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class MessageReactionRepository(BaseRepository):
     async def add_reaction(self, dto: MessageReactionDTO) -> MessageReaction:
         async with self._db.session() as session:
             try:
@@ -123,16 +120,9 @@ class MessageReactionRepository:
         """
         async with self._db.session() as session:
             try:
-                if date and not (start_date and end_date):
-                    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-                    end_date = date.replace(
-                        hour=23, minute=59, second=59, microsecond=999999
-                    )
-
-                if not start_date or not end_date:
-                    raise ValueError(
-                        "Необходимо указать дату или период (start_date и end_date)"
-                    )
+                start_date, end_date = validate_and_normalize_period(
+                    date, start_date, end_date
+                )
 
                 query = (
                     select(
@@ -196,16 +186,9 @@ class MessageReactionRepository:
         """
         async with self._db.session() as session:
             try:
-                if date and not (start_date and end_date):
-                    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-                    end_date = date.replace(
-                        hour=23, minute=59, second=59, microsecond=999999
-                    )
-
-                if not start_date or not end_date:
-                    raise ValueError(
-                        "Необходимо указать дату или период (start_date и end_date)"
-                    )
+                start_date, end_date = validate_and_normalize_period(
+                    date, start_date, end_date
+                )
 
                 query = (
                     select(
@@ -288,45 +271,19 @@ class MessageReactionRepository:
         if not dtos:
             return 0
 
-        async with self._db.session() as session:
-            try:
-                # Подготавливаем данные для bulk insert
-                mappings = [
-                    {
-                        "chat_id": dto.chat_id,
-                        "user_id": dto.user_id,
-                        "message_id": dto.message_id,
-                        "action": dto.action,
-                        "emoji": dto.emoji,
-                        "message_url": dto.message_url,
-                        "created_at": dto.created_at,
-                    }
-                    for dto in dtos
-                ]
+        mappings = [
+            {
+                "chat_id": dto.chat_id,
+                "user_id": dto.user_id,
+                "message_id": dto.message_id,
+                "action": dto.action,
+                "emoji": dto.emoji,
+                "message_url": dto.message_url,
+                "created_at": dto.created_at,
+            }
+            for dto in dtos
+        ]
 
-                # Используем PostgreSQL INSERT ... ON CONFLICT DO NOTHING
-                stmt = (
-                    insert(MessageReaction.__table__)
-                    .values(mappings)
-                    .on_conflict_do_nothing()
-                )
-
-                result = await session.execute(stmt)
-                await session.commit()
-
-                inserted_count = (
-                    result.rowcount if hasattr(result, "rowcount") else len(dtos)
-                )
-
-                logger.info(
-                    "Массово создано реакций: %d из %d",
-                    inserted_count,
-                    len(dtos),
-                )
-                return inserted_count
-            except Exception as e:
-                logger.error(
-                    "Ошибка при массовом создании реакций: %s", e, exc_info=True
-                )
-                await session.rollback()
-                return 0
+        return await self._bulk_upsert_on_conflict_nothing(
+            MessageReaction, mappings, "реакций"
+        )

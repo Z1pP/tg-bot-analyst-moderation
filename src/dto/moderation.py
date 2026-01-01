@@ -1,12 +1,12 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 from constants.punishment import PunishmentActions as Actions
 
 
-@dataclass(frozen=True)
-class ModerationActionDTO:
+class ModerationActionDTO(BaseModel):
     action: Actions
     # ID и username нарушителя
     violator_tgid: str
@@ -27,3 +27,5 @@ class ModerationActionDTO:
     reason: Optional[str] = None
     # Флаг вызова из админ-панели (меняет логику отчетов и уведомлений)
     from_admin_panel: bool = False
+
+    model_config = ConfigDict(frozen=True)

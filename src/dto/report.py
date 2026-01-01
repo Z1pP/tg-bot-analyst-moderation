@@ -1,26 +1,24 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
 
+from pydantic import BaseModel, ConfigDict
 
-@dataclass
-class DailyReportDTO:
+
+class DailyReportDTO(BaseModel):
     username: str
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
 
 
-@dataclass
-class AVGReportDTO:
+class AVGReportDTO(BaseModel):
     username: str
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
 
 
-@dataclass
-class SingleUserReportDTO:
+class SingleUserReportDTO(BaseModel):
     user_id: int
     admin_tg_id: str
     start_date: datetime
@@ -28,25 +26,23 @@ class SingleUserReportDTO:
     selected_period: Optional[str] = None
 
 
-@dataclass
-class AllUsersReportDTO:
+class AllUsersReportDTO(BaseModel):
     user_tg_id: str
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
 
 
-@dataclass
-class ChatReportDTO:
+class ChatReportDTO(BaseModel):
     chat_id: int  # Database id
     admin_tg_id: str  # Telegram id
     selected_period: str
     start_date: Optional[datetime] = None  # Для кастомных дат из календаря
     end_date: Optional[datetime] = None  # Для кастомных дат из календаря
+    chat_tgid: Optional[str] = None  # Telegram id чата
 
 
-@dataclass(frozen=True)
-class UserDayStats:
+class UserDayStats(BaseModel):
     """Статистика пользователя за один день"""
 
     first_message_time: Optional[datetime]
@@ -54,9 +50,10 @@ class UserDayStats:
     avg_messages_per_hour: float
     total_messages: int
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class UserMultiDayStats:
+
+class UserMultiDayStats(BaseModel):
     """Статистика пользователя за несколько дней"""
 
     avg_first_message_time: Optional[str]  # "HH:MM"
@@ -65,9 +62,10 @@ class UserMultiDayStats:
     avg_messages_per_day: float
     total_messages: int
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class RepliesStats:
+
+class RepliesStats(BaseModel):
     """Статистика ответов пользователя"""
 
     total_count: int
@@ -76,9 +74,10 @@ class RepliesStats:
     avg_time_seconds: Optional[int]
     median_time_seconds: Optional[int]
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class UserStatsDTO:
+
+class UserStatsDTO(BaseModel):
     """Статистика одного пользователя"""
 
     user_id: int
@@ -88,9 +87,10 @@ class UserStatsDTO:
     replies_stats: RepliesStats
     breaks: List[str]  # уже отформатированные строки из BreakAnalysisService
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class SingleUserDayStats:
+
+class SingleUserDayStats(BaseModel):
     """Статистика пользователя за один день"""
 
     first_message_time: Optional[datetime]
@@ -100,9 +100,10 @@ class SingleUserDayStats:
     warns_count: int = 0
     bans_count: int = 0
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class SingleUserMultiDayStats:
+
+class SingleUserMultiDayStats(BaseModel):
     """Статистика пользователя за несколько дней"""
 
     avg_first_message_time: Optional[str]  # "HH:MM"
@@ -113,9 +114,10 @@ class SingleUserMultiDayStats:
     warns_count: int = 0
     bans_count: int = 0
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class SingleUserReportResultDTO:
+
+class SingleUserReportResultDTO(BaseModel):
     """Результат UseCase с сырыми данными отчета по пользователю"""
 
     username: str
@@ -129,9 +131,10 @@ class SingleUserReportResultDTO:
     breaks: List[str]  # уже отформатированные из BreakAnalysisService
     error_message: Optional[str] = None
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class AllUsersUserStatsResult:
+
+class AllUsersUserStatsResult(BaseModel):
     """Статистика одного пользователя в отчете по всем пользователям"""
 
     user_id: int
@@ -141,9 +144,10 @@ class AllUsersUserStatsResult:
     replies_stats: RepliesStats
     breaks: List[str]  # уже отформатированные из BreakAnalysisService
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class AllUsersReportResultDTO:
+
+class AllUsersReportResultDTO(BaseModel):
     """Результат UseCase с сырыми данными отчета по всем пользователям"""
 
     start_date: datetime
@@ -152,9 +156,10 @@ class AllUsersReportResultDTO:
     users_stats: List[AllUsersUserStatsResult]
     error_message: Optional[str] = None
 
+    model_config = ConfigDict(frozen=True)
 
-@dataclass(frozen=True)
-class ReportResultDTO:
+
+class ReportResultDTO(BaseModel):
     """Результат UseCase с сырыми данными отчета"""
 
     users_stats: List[UserStatsDTO]
@@ -164,3 +169,5 @@ class ReportResultDTO:
     is_single_day: bool
     working_hours: float
     error_message: Optional[str] = None
+
+    model_config = ConfigDict(frozen=True)

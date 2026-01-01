@@ -148,7 +148,9 @@ async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> No
         return
 
     text = config["text"](amnesy_dto.violator_username)
-    await state.update_data(chat_dtos=chat_dtos)
+    await state.update_data(
+        chat_dtos=[chat.model_dump(mode="json") for chat in chat_dtos]
+    )
     await callback.message.edit_text(
         text=text,
         reply_markup=tracked_chats_with_all_ikb(dtos=chat_dtos),
@@ -190,7 +192,11 @@ async def execute_amnesty_action(
 
     action = data.get("action")
     chat_id = callback.data.split("__")[1]
-    chat_dtos = data.get("chat_dtos")
+    chat_dtos_data = data.get("chat_dtos")
+
+    from dto.chat_dto import ChatDTO
+
+    chat_dtos = [ChatDTO.model_validate(chat) for chat in chat_dtos_data]
 
     violator = ViolatorData(
         id=data.get("id"),

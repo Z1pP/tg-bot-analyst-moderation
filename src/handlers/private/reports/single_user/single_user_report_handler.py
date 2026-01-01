@@ -238,7 +238,7 @@ async def _render_report_view(
 
         # Сохраняем report_dto для детализации (только для многодневных отчетов)
         if not result.is_single_day:
-            await state.update_data(report_dto=report_dto)
+            await state.update_data(report_dto=report_dto.model_dump(mode="json"))
 
         await state.set_state(SingleUserReportStates.selecting_period)
 
