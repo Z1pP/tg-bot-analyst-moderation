@@ -155,6 +155,27 @@ class PunishmentService:
 
         return None
 
+    def _format_punishment_period(
+        self, punishment_type: PunishmentType, duration_seconds: Optional[int]
+    ) -> str:
+        """Форматирует длительность наказания."""
+        if punishment_type == PunishmentType.BAN:
+            return "бессрочно"
+        if punishment_type == PunishmentType.MUTE and duration_seconds:
+            return format_duration(seconds=duration_seconds)
+        return ""
+
+    def _get_message_deletion_status(self, message_deleted: bool) -> str:
+        """Возвращает статус удаления сообщения."""
+        return "удалено" if message_deleted else "не удалено (старше 48ч)"
+
+    def _build_report_header(self, date: datetime, message_deleted: bool) -> str:
+        """Генерирует заголовок отчета."""
+        date_str = date.strftime("%d.%m.%Y")
+        time_str = date.strftime("%H:%M")
+        status = self._get_message_deletion_status(message_deleted)
+        return f"❌️ Сообщение {status} {date_str} в {time_str}"
+
     def generate_ban_report(
         self,
         dto: ModerationActionDTO,
@@ -172,17 +193,16 @@ class PunishmentService:
         Returns:
             Форматированный отчет
         """
-        date_str = date.strftime("%d.%m.%Y")
-        time_str = date.strftime("%H:%M")
+        header = self._build_report_header(date, message_deleted)
         reason = dto.reason or "Не указана"
-        status = "удалено" if message_deleted else "не удалено (старше 48ч)"
+        period = self._format_punishment_period(PunishmentType.BAN, None)
 
         return (
-            f"❌️ Сообщение {status} {date_str} в {time_str}\n\n"
+            f"{header}\n\n"
             f"• Юзер: @{dto.violator_username}\n"
             f"• ID: {dto.violator_tgid}\n"
             f"• Причина: {reason}\n"
-            "• Время бана: бессрочно\n"
+            f"• Время бана: {period}\n"
             f"• Выдал бан: @{dto.admin_username}\n"
             f"• Чат: {dto.chat_title}"
         )
@@ -206,21 +226,16 @@ class PunishmentService:
         Returns:
             Форматированный отчет
         """
-        date_str = date.strftime("%d.%m.%Y")
-        time_str = date.strftime("%H:%M")
+        header = self._build_report_header(date, message_deleted)
         reason = dto.reason or "Не указана"
-        period = ""
-
-        if punishment_ladder.punishment_type == PunishmentType.BAN:
-            period = "бессрочно"
-        elif punishment_ladder.punishment_type == PunishmentType.MUTE:
-            period = format_duration(seconds=punishment_ladder.duration_seconds)
+        period = self._format_punishment_period(
+            punishment_ladder.punishment_type, punishment_ladder.duration_seconds
+        )
 
         mute_line = f"• Время мута: {period}\n" if period else ""
-        status = "удалено" if message_deleted else "не удалено (старше 48ч)"
 
         return (
-            f"❌️ Сообщение {status} {date_str} в {time_str}\n\n"
+            f"{header}\n\n"
             f"• Юзер: @{dto.violator_username}\n"
             f"• ID: <code>{dto.violator_tgid}</code>\n"
             f"• Причина: {reason}\n"
