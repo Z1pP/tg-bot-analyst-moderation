@@ -27,12 +27,7 @@ class ChatRepository:
                     )
                 )
                 if chat:
-                    # Явно загружаем archive_chat до выхода из сессии
-                    _ = chat.archive_chat
-                    # Отсоединяем объект от сессии, но сохраняем загруженные данные
-                    session.expunge(chat)
-                    if chat.archive_chat:
-                        session.expunge(chat.archive_chat)
+                    self._expunge_chat_with_archive(session, chat)
                     logger.info(
                         "Получен чат: chat_id=%s, title=%s",
                         chat.id,
@@ -57,12 +52,7 @@ class ChatRepository:
                     )
                 )
                 if chat:
-                    # Явно загружаем archive_chat до выхода из сессии
-                    _ = chat.archive_chat
-                    # Отсоединяем объект от сессии, но сохраняем загруженные данные
-                    session.expunge(chat)
-                    if chat.archive_chat:
-                        session.expunge(chat.archive_chat)
+                    self._expunge_chat_with_archive(session, chat)
                     logger.info(
                         "Получен чат: chat_id=%s, title=%s",
                         chat.chat_id,
@@ -203,12 +193,7 @@ class ChatRepository:
                         selectinload(ChatSession.archive_chat),
                     )
                 )
-                # Явно загружаем archive_chat до выхода из сессии
-                _ = work_chat.archive_chat
-                # Отсоединяем объект от сессии, но сохраняем загруженные данные
-                session.expunge(work_chat)
-                if work_chat.archive_chat:
-                    session.expunge(work_chat.archive_chat)
+                self._expunge_chat_with_archive(session, work_chat)
 
                 logger.info(
                     "Архивный чат %s привязан к рабочему чату %s",
@@ -282,3 +267,13 @@ class ChatRepository:
                 )
                 await session.rollback()
                 raise e
+
+    def _expunge_chat_with_archive(self, session, chat: ChatSession) -> None:
+        """Вспомогательный метод для отсоединения чата и его архива от сессии."""
+        if chat:
+            # Явно загружаем archive_chat до выхода из сессии
+            _ = chat.archive_chat
+            # Отсоединяем объект от сессии, но сохраняем загруженные данные
+            session.expunge(chat)
+            if chat.archive_chat:
+                session.expunge(chat.archive_chat)
