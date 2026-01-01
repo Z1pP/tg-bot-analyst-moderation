@@ -1,25 +1,34 @@
-from dataclasses import dataclass
 from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict
+
 from constants.punishment import PunishmentType
 
-@dataclass(frozen=True)
-class PunishmentLadderStepDTO:
+
+class PunishmentLadderStepDTO(BaseModel):
     step: int
     punishment_type: PunishmentType
     duration_seconds: Optional[int] = None
 
-@dataclass(frozen=True)
-class PunishmentLadderResultDTO:
+    model_config = ConfigDict(frozen=True)
+
+
+class PunishmentLadderResultDTO(BaseModel):
     steps: List[PunishmentLadderStepDTO]
     formatted_text: str
 
-@dataclass(frozen=True)
-class UpdatePunishmentLadderDTO:
+    model_config = ConfigDict(frozen=True)
+
+
+class UpdatePunishmentLadderDTO(BaseModel):
     chat_db_id: int
     steps: List[PunishmentLadderStepDTO]
 
-@dataclass(frozen=True)
-class PunishmentCommandResultDTO:
+    model_config = ConfigDict(frozen=True)
+
+
+class PunishmentCommandResultDTO(BaseModel):
     success: bool
     error_message: Optional[str] = None
 
+    model_config = ConfigDict(frozen=True)
