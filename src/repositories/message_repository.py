@@ -3,22 +3,18 @@ from datetime import datetime
 from typing import List
 
 from sqlalchemy import func, select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import joinedload
 
-from database.session import DatabaseContextManager
 from dto.buffer import BufferedMessageDTO
 from dto.daily_activity import UserDailyActivityDTO
 from models import ChatMessage, User
+from repositories.base import BaseRepository
 from utils.date_utils import validate_and_normalize_period
 
 logger = logging.getLogger(__name__)
 
 
-class MessageRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class MessageRepository(BaseRepository):
     async def get_messages_for_summary(
         self,
         chat_id: int,
@@ -241,48 +237,19 @@ class MessageRepository:
         if not dtos:
             return 0
 
-        async with self._db.session() as session:
-            try:
-                # Подготавливаем данные для bulk insert
-                mappings = [
-                    {
-                        "chat_id": dto.chat_id,
-                        "user_id": dto.user_id,
-                        "message_id": dto.message_id,
-                        "message_type": dto.message_type,
-                        "content_type": dto.content_type,
-                        "text": dto.text,
-                        "created_at": dto.created_at,
-                    }
-                    for dto in dtos
-                ]
+        mappings = [
+            {
+                "chat_id": dto.chat_id,
+                "user_id": dto.user_id,
+                "message_id": dto.message_id,
+                "message_type": dto.message_type,
+                "content_type": dto.content_type,
+                "text": dto.text,
+                "created_at": dto.created_at,
+            }
+            for dto in dtos
+        ]
 
-                # Используем PostgreSQL INSERT ... ON CONFLICT DO NOTHING
-                stmt = (
-                    insert(ChatMessage.__table__)
-                    .values(mappings)
-                    .on_conflict_do_nothing()
-                )
-
-                result = await session.execute(stmt)
-                await session.commit()
-
-                # Подсчитываем количество вставленных записей
-                # PostgreSQL возвращает количество затронутых строк
-                inserted_count = (
-                    result.rowcount if hasattr(result, "rowcount") else len(dtos)
-                )
-
-                logger.info(
-                    "Массово создано сообщений: %d из %d",
-                    inserted_count,
-                    len(dtos),
-                )
-                return inserted_count
-            except Exception as e:
-                logger.error(
-                    "Ошибка при массовом создании сообщений: %s", e, exc_info=True
-                )
-                await session.rollback()
-                # При ошибке возвращаем 0, данные останутся в Redis для повторной попытки
-                return 0
+        return await self._bulk_upsert_on_conflict_nothing(
+            ChatMessage, mappings, "сообщений"
+        )
