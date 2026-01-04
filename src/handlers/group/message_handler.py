@@ -152,7 +152,7 @@ async def _get_sender_and_chat(message: Message) -> tuple[User, ChatSession]:
 
     if not username:
         logger.warning("Пользователь без username: %s", message.from_user.id)
-        return
+        return None, None
 
     sender = await user_service.get_or_create(username=username, tg_id=tg_id)
 
@@ -161,6 +161,6 @@ async def _get_sender_and_chat(message: Message) -> tuple[User, ChatSession]:
     )
     if not chat:
         logger.error("Не удалось получить или создать чат: %s", chat_id)
-        return
+        return None, None
 
     return sender, chat
