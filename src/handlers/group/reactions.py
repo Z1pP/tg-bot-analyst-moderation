@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 async def reaction_handler(event: types.MessageReactionUpdated, bot: Bot) -> None:
     try:
         sender, chat = await _get_sender_and_chat(event)
+        if not sender or not chat:
+            logger.error("Не удалось получить пользователя или чат")
+            return
 
         reaction_dto = MessageReactionDTO(
             chat_id=chat.id,
@@ -108,7 +111,7 @@ async def _get_sender_and_chat(
 
     if not username:
         logger.warning("Пользователь без username: %s", event.user.id)
-        return
+        return None, None
 
     sender = await user_service.get_or_create(username=username, tg_id=tg_id)
 
@@ -117,6 +120,6 @@ async def _get_sender_and_chat(
     )
     if not chat:
         logger.error("Не удалось получить или создать чат: %s", chat_id)
-        return
+        return None, None
 
     return sender, chat
