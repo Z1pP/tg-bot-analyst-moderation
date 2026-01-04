@@ -109,10 +109,6 @@ async def _get_sender_and_chat(
     tg_id = str(event.user.id)
     chat_id = str(event.chat.id)
 
-    if not username:
-        logger.warning("Пользователь без username: %s", event.user.id)
-        return None, None
-
     sender = await user_service.get_or_create(username=username, tg_id=tg_id)
 
     chat = await chat_service.get_or_create(
