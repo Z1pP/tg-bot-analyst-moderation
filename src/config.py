@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     # Общие настройки
     BOT_TOKEN: str
     IS_DEVELOPMENT: bool = False
+    USE_WEBHOOK: bool = (
+        False  # True - использовать webhook, False - использовать polling
+    )
     TIMEZONE: str = "Europe/Moscow"
     REDIS_URL: str
 
