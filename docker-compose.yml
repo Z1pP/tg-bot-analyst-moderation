@@ -37,6 +37,7 @@ services:
     environment:
       <<: *db-env
       SERVICE_NAME: bot
+      USE_WEBHOOK: "True"
     command: >
       bash -c "
         echo '⏳ Waiting for Cloudflare Tunnel...';
@@ -77,6 +78,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
