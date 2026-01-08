@@ -18,18 +18,11 @@ class CreateMessageDTO(BaseModel):
     text: Optional[str] = None
 
 
-class ResultMessageDTO(BaseModel):
+class ResultMessageDTO(CreateMessageDTO):
     """Data Transfer Object для сообщения"""
 
     # Обязательные поля
     id: int
-    db_chat_id: int
-    db_user_id: int
-    message_id: str
-    message_type: str
-    content_type: str
-    created_at: datetime
-    text: Optional[str] = None
 
     @classmethod
     def from_model(cls, message: "ChatMessage") -> "ResultMessageDTO":
@@ -44,11 +37,11 @@ class ResultMessageDTO(BaseModel):
         """
         return cls(
             id=message.id,
-            db_chat_id=message.chat_id,
-            db_user_id=message.user_id,
+            chat_id=message.chat_id,
+            user_id=message.user_id,
             message_id=message.message_id,
             message_type=message.message_type,
-            content_type=message.content_type,
+            content_type=message.content_type.value,
             text=message.text,
             created_at=message.created_at,
         )
