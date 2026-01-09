@@ -93,7 +93,7 @@ async def webhook_info():
 async def webhook(request: Request):
     """Обрабатывает входящие обновления от Telegram."""
     update = Update.model_validate(await request.json(), context={"bot": bot})
-    await dp.feed_update(bot, update)
+    asyncio.create_task(dp.feed_update(bot, update))
     return {"ok": True}
 
 
