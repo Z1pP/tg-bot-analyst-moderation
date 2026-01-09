@@ -1,4 +1,6 @@
+import html
 import logging
+import re
 from functools import wraps
 
 from aiogram import Bot, types
@@ -85,6 +87,73 @@ async def safe_edit_message_reply_markup(
     return True
 
 
+def sanitize_html_for_telegram(text: str) -> str:
+    """
+    Экранирует текст для Telegram HTML, сохраняя разрешенные теги.
+    Удаляет или экранирует все остальное.
+    """
+    if not text:
+        return text
+
+    # Список разрешенных тегов в Telegram
+    allowed_tags = [
+        "b",
+        "strong",
+        "i",
+        "em",
+        "u",
+        "ins",
+        "s",
+        "strike",
+        "del",
+        "a",
+        "code",
+        "pre",
+        "tg-spoiler",
+        "span",
+    ]
+
+    # 1. Предварительная обработка: превращаем некоторые популярные теги в разрешенные
+    # h1-h6 -> b
+    text = re.sub(r"<(h[1-6])([^>]*)>", r"<b>", text, flags=re.IGNORECASE)
+    text = re.sub(r"</(h[1-6])>", r"</b>", text, flags=re.IGNORECASE)
+    # li -> •
+    text = re.sub(r"<(li)([^>]*)>", r"• ", text, flags=re.IGNORECASE)
+    text = re.sub(r"</(li)>", r"\n", text, flags=re.IGNORECASE)
+    # p, div -> \n
+    text = re.sub(r"<(p|div)([^>]*)>", r"", text, flags=re.IGNORECASE)
+    text = re.sub(r"</(p|div)>", r"\n", text, flags=re.IGNORECASE)
+
+    # 2. Основная санитария
+    tag_re = re.compile(r"<(/?)(\w+)([^>]*)>")
+    parts = []
+    last_pos = 0
+
+    for match in tag_re.finditer(text):
+        # Текст перед тегом экранируем
+        before = text[last_pos : match.start()]
+        if before:
+            # unescape + escape чтобы не наплодить &amp;lt;
+            parts.append(html.escape(html.unescape(before)))
+
+        # Проверяем тег
+        tag_name = match.group(2).lower()
+        if tag_name in allowed_tags:
+            # Оставляем как есть (для <a> и <span> важны атрибуты, Telegram сам их проверит)
+            parts.append(match.group(0))
+        else:
+            # Экранируем неподдерживаемый тег
+            parts.append(html.escape(match.group(0)))
+
+        last_pos = match.end()
+
+    after = text[last_pos:]
+    if after:
+        parts.append(html.escape(html.unescape(after)))
+
+    return "".join(parts)
+
+
 async def send_split_html_message(
     bot: Bot,
     chat_id: int,
@@ -96,6 +165,9 @@ async def send_split_html_message(
     Старается разбивать по переходам строк.
     Возвращает список ID отправленных сообщений.
     """
+    # Санитизируем HTML перед отправкой
+    text = sanitize_html_for_telegram(text)
+
     if len(text) <= limit:
         msg = await bot.send_message(
             chat_id=chat_id, text=text, parse_mode=ParseMode.HTML
