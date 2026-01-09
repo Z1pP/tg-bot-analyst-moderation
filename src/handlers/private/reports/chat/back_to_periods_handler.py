@@ -34,3 +34,5 @@ async def back_to_periods_handler(callback: CallbackQuery, state: FSMContext) ->
         text=Dialog.Report.SELECT_PERIOD,
         reply_markup=time_period_ikb_chat(),
     )
+
+    await state.set_state(ChatStateManager.selecting_period)
