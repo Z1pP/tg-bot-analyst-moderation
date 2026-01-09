@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     )
     TIMEZONE: str = "Europe/Moscow"
     REDIS_URL: str
+    SUMMARY_CACHE_TTL_MINUTES: int = 60
+    SUMMARY_INVALIDATION_THRESHOLD: int = 50
 
     # Настройки нейросети
     OPEN_ROUTER_TOKEN: str
