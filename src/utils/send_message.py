@@ -195,10 +195,12 @@ async def send_split_html_message(
             )
             message_ids.append(msg.message_id)
         except Exception as e:
-            logger.error(f"Ошибка при отправке части сообщения: {e}")
-            # Пытаемся отправить без HTML, если ошибка в тегах
+            logger.error(f"Ошибка при отправке части сообщения с HTML: {e}")
+            # Пытаемся отправить без HTML, если ошибка в тегах (ЯВНО отключаем parse_mode)
             try:
-                msg = await bot.send_message(chat_id=chat_id, text=chunk)
+                msg = await bot.send_message(
+                    chat_id=chat_id, text=chunk, parse_mode=None
+                )
                 message_ids.append(msg.message_id)
             except Exception as e2:
                 logger.error(f"Критическая ошибка при отправке части сообщения: {e2}")
