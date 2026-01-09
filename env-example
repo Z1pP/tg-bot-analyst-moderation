@@ -22,6 +22,8 @@ REDIS_PORT=6379
 REDIS_DB=0
 # Для локального подключения вне Docker
 REDIS_URL=redis://localhost:6379/0
+SUMMARY_CACHE_TTL_MINUTES=60
+SUMMARY_INVALIDATION_THRESHOLD=50
 
 # --- База данных (Разработка) ---
 DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@localhost:5432/dev_analytics_bot
