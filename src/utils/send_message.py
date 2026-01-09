@@ -62,12 +62,23 @@ async def safe_edit_message(
     reply_markup: types.InlineKeyboardMarkup | None = None,
 ) -> bool:
     """Безопасное редактирование сообщения с обработкой типичных ошибок Telegram"""
-    await bot.edit_message_text(
-        chat_id=chat_id,
-        message_id=message_id,
-        text=text,
-        reply_markup=reply_markup,
-    )
+    try:
+        await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML,
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при редактировании сообщения с HTML: {e}")
+        await bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=None,
+        )
     return True
 
 
@@ -124,32 +135,49 @@ def sanitize_html_for_telegram(text: str) -> str:
     text = re.sub(r"<(p|div)([^>]*)>", r"", text, flags=re.IGNORECASE)
     text = re.sub(r"</(p|div)>", r"\n", text, flags=re.IGNORECASE)
 
-    # 2. Основная санитария
+    # 2. Основная санитария и балансировка тегов
     tag_re = re.compile(r"<(/?)(\w+)([^>]*)>")
     parts = []
     last_pos = 0
+    stack = []
 
     for match in tag_re.finditer(text):
         # Текст перед тегом экранируем
         before = text[last_pos : match.start()]
         if before:
-            # unescape + escape чтобы не наплодить &amp;lt;
             parts.append(html.escape(html.unescape(before)))
 
-        # Проверяем тег
+        is_closing = bool(match.group(1))
         tag_name = match.group(2).lower()
+        full_tag = match.group(0)
+
         if tag_name in allowed_tags:
-            # Оставляем как есть (для <a> и <span> важны атрибуты, Telegram сам их проверит)
-            parts.append(match.group(0))
+            if is_closing:
+                # Если это закрывающий тег, проверяем, есть ли он в стеке
+                if tag_name in stack:
+                    # Закрываем все теги до этого (включая этот)
+                    while stack:
+                        top = stack.pop()
+                        parts.append(f"</{top}>")
+                        if top == tag_name:
+                            break
+            else:
+                # Если это открывающий тег, добавляем в стек и в результат
+                stack.append(tag_name)
+                parts.append(full_tag)
         else:
             # Экранируем неподдерживаемый тег
-            parts.append(html.escape(match.group(0)))
+            parts.append(html.escape(full_tag))
 
         last_pos = match.end()
 
     after = text[last_pos:]
     if after:
         parts.append(html.escape(html.unescape(after)))
+
+    # Закрываем все оставшиеся в стеке теги
+    while stack:
+        parts.append(f"</{stack.pop()}>")
 
     return "".join(parts)
 
@@ -161,20 +189,28 @@ async def send_split_html_message(
     limit: int = 4096,
 ) -> list[int]:
     """
-    Разбивает длинный HTML текст на части и отправляет их.
-    Старается разбивать по переходам строк.
-    Возвращает список ID отправленных сообщений.
+    Разбивает длинный текст на части и отправляет их, соблюдая HTML-разметку в каждой части.
     """
-    # Санитизируем HTML перед отправкой
-    text = sanitize_html_for_telegram(text)
+    if not text:
+        return []
 
     if len(text) <= limit:
-        msg = await bot.send_message(
-            chat_id=chat_id, text=text, parse_mode=ParseMode.HTML
-        )
-        return [msg.message_id]
+        # Даже если текст короткий, прогоняем через санитизатор для балансировки тегов
+        safe_text = sanitize_html_for_telegram(text)
+        try:
+            msg = await bot.send_message(
+                chat_id=chat_id, text=safe_text, parse_mode=ParseMode.HTML
+            )
+            return [msg.message_id]
+        except Exception as e:
+            logger.error(f"Ошибка при отправке сообщения с HTML: {e}")
+            msg = await bot.send_message(
+                chat_id=chat_id, text=safe_text, parse_mode=None
+            )
+            return [msg.message_id]
 
     message_ids = []
+    # Работаем с исходным текстом, разбивая его на части
     while text:
         if len(text) <= limit:
             chunk = text
@@ -189,17 +225,19 @@ async def send_split_html_message(
             else:
                 text = text[limit:]
 
+        # Санитизируем и балансируем теги ОТДЕЛЬНО для каждого куска
+        safe_chunk = sanitize_html_for_telegram(chunk)
+
         try:
             msg = await bot.send_message(
-                chat_id=chat_id, text=chunk, parse_mode=ParseMode.HTML
+                chat_id=chat_id, text=safe_chunk, parse_mode=ParseMode.HTML
             )
             message_ids.append(msg.message_id)
         except Exception as e:
             logger.error(f"Ошибка при отправке части сообщения с HTML: {e}")
-            # Пытаемся отправить без HTML, если ошибка в тегах (ЯВНО отключаем parse_mode)
             try:
                 msg = await bot.send_message(
-                    chat_id=chat_id, text=chunk, parse_mode=None
+                    chat_id=chat_id, text=safe_chunk, parse_mode=None
                 )
                 message_ids.append(msg.message_id)
             except Exception as e2:
