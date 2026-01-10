@@ -1,7 +1,7 @@
 from datetime import time
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import ForeignKey, Index, Integer, String, Time
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from constants.work_time import END_TIME, START_TIME, TOLERANCE
@@ -24,11 +24,13 @@ class ChatSession(BaseModel):
         String(length=32),
         unique=True,
         nullable=False,
+        doc="ID of the chat in Telegram.",
     )
 
     title: Mapped[str] = mapped_column(
         String(),
         nullable=True,
+        doc="Title of the chat.",
     )
 
     archive_chat_id: Mapped[Optional[str]] = mapped_column(
@@ -54,6 +56,13 @@ class ChatSession(BaseModel):
         Integer,
         default=TOLERANCE,
         doc="Tolerance for report filtering. Default is global TOLERANCE.",
+    )
+
+    is_antibot_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        doc="Whether antibot verification is enabled for this chat.",
     )
 
     # Relationships
