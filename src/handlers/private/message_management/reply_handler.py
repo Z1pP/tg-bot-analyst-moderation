@@ -2,14 +2,15 @@ import logging
 
 from aiogram import Bot, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog
-from container import container
 from dto.message_action import MessageActionDTO
 from exceptions.moderation import MessageSendError
 from keyboards.inline.message_actions import send_message_ikb
 from states.message_management import MessageManagerState
 from usecases.admin_actions import ReplyToMessageUseCase
+from utils.send_message import safe_edit_message
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @router.message(MessageManagerState.waiting_reply_message)
 async def message_reply_handler(
-    message: types.Message, state: FSMContext, bot: Bot
+    message: types.Message, state: FSMContext, bot: Bot, container: Container
 ) -> None:
     """Обработчик получения контента для ответа."""
     data = await state.get_data()
@@ -52,21 +53,13 @@ async def message_reply_handler(
 
         # Редактируем существующее сообщение или отправляем новое
         if active_message_id:
-            try:
-                await bot.edit_message_text(
-                    chat_id=message.chat.id,
-                    message_id=active_message_id,
-                    text=success_text,
-                    reply_markup=send_message_ikb(),
-                )
-                # Сохраняем message_id для последующего редактирования
-                await state.update_data(active_message_id=active_message_id)
-            except Exception as e:
-                logger.error(f"Ошибка при редактировании сообщения: {e}")
-                sent_msg = await message.answer(
-                    success_text, reply_markup=send_message_ikb()
-                )
-                await state.update_data(active_message_id=sent_msg.message_id)
+            await safe_edit_message(
+                bot=bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=success_text,
+                reply_markup=send_message_ikb(),
+            )
         else:
             sent_msg = await message.answer(
                 success_text, reply_markup=send_message_ikb()
@@ -86,20 +79,13 @@ async def message_reply_handler(
             f"{e.get_user_message()}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
         )
         if active_message_id:
-            try:
-                await bot.edit_message_text(
-                    chat_id=message.chat.id,
-                    message_id=active_message_id,
-                    text=error_text,
-                    reply_markup=send_message_ikb(),
-                )
-                await state.update_data(active_message_id=active_message_id)
-            except Exception as e:
-                logger.error(f"Ошибка при редактировании сообщения: {e}")
-                sent_msg = await message.answer(
-                    error_text, reply_markup=send_message_ikb()
-                )
-                await state.update_data(active_message_id=sent_msg.message_id)
+            await safe_edit_message(
+                bot=bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=error_text,
+                reply_markup=send_message_ikb(),
+            )
         else:
             sent_msg = await message.answer(error_text, reply_markup=send_message_ikb())
             await state.update_data(active_message_id=sent_msg.message_id)
@@ -113,20 +99,13 @@ async def message_reply_handler(
         )
         error_text = f"{Dialog.MessageManager.REPLY_ERROR}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
         if active_message_id:
-            try:
-                await bot.edit_message_text(
-                    chat_id=message.chat.id,
-                    message_id=active_message_id,
-                    text=error_text,
-                    reply_markup=send_message_ikb(),
-                )
-                await state.update_data(active_message_id=active_message_id)
-            except Exception as e:
-                logger.error(f"Ошибка при редактировании сообщения: {e}")
-                sent_msg = await message.answer(
-                    error_text, reply_markup=send_message_ikb()
-                )
-                await state.update_data(active_message_id=sent_msg.message_id)
+            await safe_edit_message(
+                bot=bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=error_text,
+                reply_markup=send_message_ikb(),
+            )
         else:
             sent_msg = await message.answer(error_text, reply_markup=send_message_ikb())
             await state.update_data(active_message_id=sent_msg.message_id)
