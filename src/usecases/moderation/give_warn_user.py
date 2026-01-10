@@ -92,7 +92,7 @@ class GiveUserWarnUseCase(ModerationUseCase):
         )
 
         # Применяем наказание в чате для нарушителя
-        is_success = await self.bot_message_service.apply_punishmnet(
+        is_success = await self.bot_message_service.apply_punishment(
             chat_tg_id=context.chat.chat_id,
             user_tg_id=context.violator.tg_id,
             action=punishment_ladder.punishment_type,

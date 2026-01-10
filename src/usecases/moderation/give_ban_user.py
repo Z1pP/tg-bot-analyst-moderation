@@ -74,7 +74,7 @@ class GiveUserBanUseCase(ModerationUseCase):
         if not context:
             return
 
-        is_success = await self.bot_message_service.apply_punishmnet(
+        is_success = await self.bot_message_service.apply_punishment(
             chat_tg_id=context.chat.chat_id,
             user_tg_id=context.violator.tg_id,
             action=PunishmentType.BAN,
