@@ -2,10 +2,11 @@ import logging
 from datetime import time
 from typing import List, Optional
 
+import sqlalchemy as sa
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from models.chat_session import ChatSession
+from models import ChatSession, ChatSettings
 from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class ChatRepository(BaseRepository):
                     .where(ChatSession.id == chat_id)
                     .options(
                         selectinload(ChatSession.archive_chat),
+                        selectinload(ChatSession.settings),
                     )
                 )
                 if chat:
@@ -46,6 +48,7 @@ class ChatRepository(BaseRepository):
                     .where(ChatSession.chat_id == chat_tgid)
                     .options(
                         selectinload(ChatSession.archive_chat),
+                        selectinload(ChatSession.settings),
                     )
                 )
                 if chat:
@@ -68,8 +71,17 @@ class ChatRepository(BaseRepository):
         """Получает список всех чатов."""
         async with self._db.session() as session:
             try:
-                result = await session.execute(select(ChatSession))
+                result = await session.execute(
+                    select(ChatSession).options(selectinload(ChatSession.settings))
+                )
                 chats = result.scalars().all()
+
+                # Убеждаемся, что настройки подгружены
+                for chat in chats:
+                    _ = chat.settings
+
+                session.expunge_all()
+
                 logger.info("Получено %d чатов", len(chats))
                 return chats
             except Exception as e:
@@ -85,9 +97,23 @@ class ChatRepository(BaseRepository):
                     title=title,
                 )
                 session.add(chat)
+
+                await session.flush()
+
+                settings = ChatSettings(
+                    chat_id=chat.id,
+                )
+                session.add(settings)
+
                 await session.commit()
                 await session.refresh(chat)
-                logger.info("Создан новый чат: chat_id=%s, title=%s", chat_id, title)
+                self._expunge_chat_with_archive(session, chat)
+
+                logger.info(
+                    "Создан новый чат и его настройки: chat_id=%s, title=%s",
+                    chat_id,
+                    title,
+                )
                 return chat
             except Exception as e:
                 logger.error("Произошла ошибка при создании чата: %s, %s", chat_id, e)
@@ -103,6 +129,7 @@ class ChatRepository(BaseRepository):
                     chat.title = title
                     await session.commit()
                     await session.refresh(chat)
+                    self._expunge_chat_with_archive(session, chat)
                     logger.info(
                         "Обновлен чат: chat_id=%s, new_title=%s", chat_id, title
                     )
@@ -121,8 +148,16 @@ class ChatRepository(BaseRepository):
             try:
                 # Предполагаем, что все чаты отслеживаются для всех админов
                 # В реальности здесь должна быть связь admin -> tracked_chats
-                result = await session.execute(select(ChatSession))
+                result = await session.execute(
+                    select(ChatSession).options(selectinload(ChatSession.settings))
+                )
                 chats = result.scalars().all()
+
+                for chat in chats:
+                    _ = chat.settings
+
+                session.expunge_all()
+
                 logger.info(
                     f"Получено {len(chats)} отслеживаемых чатов для admin {admin_tg_id}"
                 )
@@ -182,12 +217,13 @@ class ChatRepository(BaseRepository):
                 # Обновляем привязку
                 work_chat.archive_chat_id = archive_chat.chat_id
                 await session.commit()
-                # Перезагружаем с selectinload для archive_chat
+                # Перезагружаем с selectinload для archive_chat и settings
                 work_chat = await session.scalar(
                     select(ChatSession)
                     .where(ChatSession.id == work_chat_id)
                     .options(
                         selectinload(ChatSession.archive_chat),
+                        selectinload(ChatSession.settings),
                     )
                 )
                 self._expunge_chat_with_archive(session, work_chat)
@@ -231,7 +267,11 @@ class ChatRepository(BaseRepository):
         """
         async with self._db.session() as session:
             try:
-                chat = await session.get(ChatSession, chat_id)
+                chat = await session.scalar(
+                    select(ChatSession)
+                    .where(ChatSession.id == chat_id)
+                    .options(selectinload(ChatSession.settings))
+                )
                 if not chat:
                     logger.error(
                         "Чат не найден для обновления рабочих часов: chat_id=%s",
@@ -239,15 +279,21 @@ class ChatRepository(BaseRepository):
                     )
                     return None
 
+                if not chat.settings:
+                    chat.settings = ChatSettings(chat_id=chat.id)
+                    session.add(chat.settings)
+
                 if start_time is not None:
-                    chat.start_time = start_time
+                    chat.settings.start_time = start_time
                 if end_time is not None:
-                    chat.end_time = end_time
+                    chat.settings.end_time = end_time
                 if tolerance is not None:
-                    chat.tolerance = tolerance
+                    chat.settings.tolerance = tolerance
 
                 await session.commit()
                 await session.refresh(chat)
+                self._expunge_chat_with_archive(session, chat)
+
                 logger.info(
                     "Обновлены рабочие часы чата: chat_id=%s, start_time=%s, end_time=%s, tolerance=%s",
                     chat_id,
@@ -277,15 +323,23 @@ class ChatRepository(BaseRepository):
         """
         async with self._db.session() as session:
             try:
-                chat = await session.get(ChatSession, chat_id)
+                chat = await session.scalar(
+                    select(ChatSession)
+                    .where(ChatSession.id == chat_id)
+                    .options(selectinload(ChatSession.settings))
+                )
                 if not chat:
                     logger.error(
                         "Чат не найден для переключения антибота: id=%s", chat_id
                     )
                     return None
 
-                chat.is_antibot_enabled = not chat.is_antibot_enabled
-                new_state = chat.is_antibot_enabled
+                if not chat.settings:
+                    chat.settings = ChatSettings(chat_id=chat.id)
+                    session.add(chat.settings)
+
+                chat.settings.is_antibot_enabled = not chat.settings.is_antibot_enabled
+                new_state = chat.settings.is_antibot_enabled
 
                 await session.commit()
                 logger.info(
@@ -302,12 +356,71 @@ class ChatRepository(BaseRepository):
                 await session.rollback()
                 raise e
 
+    async def update_welcome_text(
+        self, chat_id: int, welcome_text: str
+    ) -> Optional[ChatSession]:
+        """
+        Обновляет приветственный текст чата.
+
+        Args:
+            chat_id: ID чата из БД
+            welcome_text: Новый текст приветствия
+
+        Returns:
+            Обновленный чат или None если чат не найден
+        """
+        async with self._db.session() as session:
+            try:
+                chat = await session.scalar(
+                    select(ChatSession)
+                    .where(ChatSession.id == chat_id)
+                    .options(selectinload(ChatSession.settings))
+                )
+                if not chat:
+                    logger.error(
+                        "Чат не найден для обновления приветственного текста: chat_id=%s",
+                        chat_id,
+                    )
+                    return None
+
+                if not chat.settings:
+                    chat.settings = ChatSettings(chat_id=chat.id)
+                    session.add(chat.settings)
+
+                chat.settings.welcome_text = welcome_text
+
+                await session.commit()
+                await session.refresh(chat)
+                self._expunge_chat_with_archive(session, chat)
+
+                logger.info(
+                    "Обновлен приветственный текст чата: chat_id=%s",
+                    chat_id,
+                )
+                return chat
+            except Exception as e:
+                logger.error(
+                    "Ошибка при обновлении приветственного текста чата: chat_id=%s, %s",
+                    chat_id,
+                    e,
+                )
+                await session.rollback()
+                raise e
+
     def _expunge_chat_with_archive(self, session, chat: ChatSession) -> None:
         """Вспомогательный метод для отсоединения чата и его архива от сессии."""
-        if chat:
-            # Явно загружаем archive_chat до выхода из сессии
-            _ = chat.archive_chat
-            # Отсоединяем объект от сессии, но сохраняем загруженные данные
-            session.expunge(chat)
-            if chat.archive_chat:
-                session.expunge(chat.archive_chat)
+        if not chat:
+            return
+
+        # Загружаем в память, если еще нет (через dict для безопасности в async)
+        loaded_archive = chat.__dict__.get("archive_chat")
+        loaded_settings = chat.__dict__.get("settings")
+
+        # Отсоединяем только те объекты, которые реально есть в текущей сессии
+        for obj in [chat, loaded_archive, loaded_settings]:
+            if obj and obj != sa.orm.base.LoaderCallableStatus.NO_VALUE:
+                try:
+                    session.expunge(obj)
+                except (sa.exc.InvalidRequestError, KeyError):
+                    # Объект уже отсутствует в сессии - игнорируем
+                    pass
