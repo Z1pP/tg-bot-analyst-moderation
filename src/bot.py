@@ -12,11 +12,11 @@ async def configure_dispatcher() -> tuple[Bot, Dispatcher]:
     dp: Dispatcher = container.resolve(Dispatcher)
 
     user_service: UserService = container.resolve(UserService)
-    language_middleware = LanguageMiddleware(user_service)
+    language_middleware = LanguageMiddleware(user_service, container)
     dp.message.middleware(language_middleware)
     dp.callback_query.middleware(language_middleware)
 
-    registry_routers(dispatcher=dp)
-    registry_exceptions(dispatcher=dp)
+    registry_routers(dispatcher=dp, container=container)
+    registry_exceptions(dispatcher=dp, container=container)
 
     return bot, dp
