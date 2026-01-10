@@ -3,9 +3,9 @@ from typing import Optional
 
 from aiogram.filters import Filter
 from aiogram.types import CallbackQuery, InlineQuery, Message, MessageReactionUpdated
+from punq import Container
 
 from constants.enums import UserRole
-from container import container
 from models.user import User
 from repositories import UserRepository
 from services.caching import ICache
@@ -16,20 +16,17 @@ logger = logging.getLogger(__name__)
 class BaseUserFilter(Filter):
     """Базовый фильтр для работы с пользователями"""
 
-    def __init__(self):
-        self._cache: Optional[ICache] = None
-
-    async def get_user(self, tg_id: str, current_username: str) -> Optional[User]:
+    async def get_user(
+        self, tg_id: str, current_username: str, container: Container
+    ) -> Optional[User]:
         """Получает пользователя из кеша или БД с проверкой username"""
-        if self._cache is None:
-            self._cache = container.resolve(ICache)
-
-        user = await self._cache.get(key=tg_id)
+        cache: ICache = container.resolve(ICache)
+        user = await cache.get(key=tg_id)
 
         if not user:
-            user = await self._get_user_from_db(tg_id=tg_id)
+            user = await self._get_user_from_db(tg_id=tg_id, container=container)
             if user:
-                await self._cache.set(key=tg_id, value=user)
+                await cache.set(key=tg_id, value=user)
 
         # Проверяем username
         if user and current_username and user.username != current_username:
@@ -37,21 +34,27 @@ class BaseUserFilter(Filter):
                 user=user,
                 new_username=current_username,
                 tg_id=tg_id,
+                container=container,
             )
 
         return user
 
-    async def _get_user_from_db(self, tg_id: str) -> Optional[User]:
+    async def _get_user_from_db(
+        self, tg_id: str, container: Container
+    ) -> Optional[User]:
         try:
             user_repo: UserRepository = container.resolve(UserRepository)
             return await user_repo.get_user_by_tg_id(tg_id=tg_id)
         except Exception as e:
             logger.error(f"Ошибка при получении пользователя из БД: {e}")
 
-    async def _update_username(self, user: User, new_username: str, tg_id: str) -> User:
+    async def _update_username(
+        self, user: User, new_username: str, tg_id: str, container: Container
+    ) -> User:
         """Обновляет username в БД и кеше только при изменении"""
         try:
             user_repo: UserRepository = container.resolve(UserRepository)
+            cache: ICache = container.resolve(ICache)
             updated_user = await user_repo.update_user(
                 user_id=user.id,
                 username=new_username,
@@ -60,7 +63,7 @@ class BaseUserFilter(Filter):
 
             # Обновляем кеш только если обновление прошло успешно
             if updated_user:
-                await self._cache.set(key=tg_id, value=updated_user)
+                await cache.set(key=tg_id, value=updated_user)
                 logger.info(
                     f"Обновлен username для tg_id={tg_id}: {user.username} → {new_username}"
                 )
@@ -73,7 +76,9 @@ class BaseUserFilter(Filter):
 
 
 class AdminOnlyFilter(BaseUserFilter):
-    async def __call__(self, event: Message | CallbackQuery, *args, **kwds) -> bool:
+    async def __call__(
+        self, event: Message | CallbackQuery, container: Container
+    ) -> bool:
         if isinstance(event, Message):
             tg_id = str(event.from_user.id)
             current_username = event.from_user.username
@@ -83,7 +88,9 @@ class AdminOnlyFilter(BaseUserFilter):
         else:
             return False
 
-        user = await self.get_user(tg_id=tg_id, current_username=current_username)
+        user = await self.get_user(
+            tg_id=tg_id, current_username=current_username, container=container
+        )
 
         if user and user.role == UserRole.ADMIN:
             return True
@@ -92,31 +99,39 @@ class AdminOnlyFilter(BaseUserFilter):
 
 
 class StaffOnlyFilter(BaseUserFilter):
-    async def __call__(self, message: Message) -> bool:
+    async def __call__(self, message: Message, container: Container) -> bool:
         tg_id = str(message.from_user.id)
         current_username = message.from_user.username
 
-        user = await self.get_user(tg_id=tg_id, current_username=current_username)
+        user = await self.get_user(
+            tg_id=tg_id, current_username=current_username, container=container
+        )
         return user.role in (UserRole.ADMIN, UserRole.MODERATOR)
 
 
 class StaffOnlyInlineFilter(BaseUserFilter):
     """Фильтр только для администраторов"""
 
-    async def __call__(self, inline_query: InlineQuery) -> bool:
+    async def __call__(self, inline_query: InlineQuery, container: Container) -> bool:
         tg_id = str(inline_query.from_user.id)
         current_username = inline_query.from_user.username
 
-        user = await self.get_user(tg_id=tg_id, current_username=current_username)
+        user = await self.get_user(
+            tg_id=tg_id, current_username=current_username, container=container
+        )
         return user is not None and user.role in (UserRole.ADMIN, UserRole.MODERATOR)
 
 
 class StaffOnlyReactionFilter(BaseUserFilter):
     """Фильтр только для администраторов"""
 
-    async def __call__(self, event: MessageReactionUpdated) -> bool:
+    async def __call__(
+        self, event: MessageReactionUpdated, container: Container
+    ) -> bool:
         tg_id = str(event.user.id)
         current_username = event.user.username
 
-        user = await self.get_user(tg_id=tg_id, current_username=current_username)
+        user = await self.get_user(
+            tg_id=tg_id, current_username=current_username, container=container
+        )
         return user is not None and user.role in (UserRole.ADMIN, UserRole.MODERATOR)
