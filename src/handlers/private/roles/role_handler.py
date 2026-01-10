@@ -3,11 +3,11 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from punq import Container
 
 from constants import PROTECTED_USER_TG_ID, Dialog
 from constants.callback import CallbackData
 from constants.enums import UserRole
-from container import container
 from keyboards.inline.roles import cancel_role_select_ikb, role_select_ikb
 from repositories import UserRepository
 from services.user import UserService
@@ -42,7 +42,9 @@ async def input_user_data_handler(callback: CallbackQuery, state: FSMContext) ->
 
 
 @router.message(RoleState.waiting_user_input)
-async def process_user_data_input(message: Message, state: FSMContext) -> None:
+async def process_user_data_input(
+    message: Message, state: FSMContext, container: Container
+) -> None:
     """
     Обработчик ввода данных пользователя для изменения роли.
     """
@@ -52,7 +54,8 @@ async def process_user_data_input(message: Message, state: FSMContext) -> None:
 
     if not user_data:
         if active_message_id:
-            await message.bot.edit_message_text(
+            await safe_edit_message(
+                bot=message.bot,
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text=Dialog.User.INVALID_USERNAME_FORMAT,
@@ -70,7 +73,8 @@ async def process_user_data_input(message: Message, state: FSMContext) -> None:
 
     if not user:
         if active_message_id:
-            await message.bot.edit_message_text(
+            await safe_edit_message(
+                bot=message.bot,
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text=f"❌ Пользователь не найден.\n"
@@ -82,7 +86,8 @@ async def process_user_data_input(message: Message, state: FSMContext) -> None:
     # Защита от изменения роли для захардкоженного пользователя
     if user.tg_id == PROTECTED_USER_TG_ID:
         if active_message_id:
-            await message.bot.edit_message_text(
+            await safe_edit_message(
+                bot=message.bot,
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text="❌ Нельзя изменить роль этому пользователю",
@@ -106,7 +111,8 @@ async def process_user_data_input(message: Message, state: FSMContext) -> None:
     )
 
     if active_message_id:
-        await message.bot.edit_message_text(
+        await safe_edit_message(
+            bot=message.bot,
             chat_id=message.chat.id,
             message_id=active_message_id,
             text=text,
@@ -122,7 +128,9 @@ async def process_user_data_input(message: Message, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data.startswith(CallbackData.User.PREFIX_ROLE_SELECT))
-async def role_select_callback_handler(callback: CallbackQuery) -> None:
+async def role_select_callback_handler(
+    callback: CallbackQuery, container: Container
+) -> None:
     """
     Обработчик выбора роли из inline клавиатуры.
     Формат callback_data: role_select__{user_id}__{role}
@@ -146,7 +154,12 @@ async def role_select_callback_handler(callback: CallbackQuery) -> None:
 
         if len(parts) != 2:
             logger.error(f"Неверный формат callback_data: {callback.data}")
-            await callback.message.edit_text("❌ Ошибка: неверный формат данных")
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="❌ Ошибка: неверный формат данных",
+            )
             return
 
         user_id_str, role_str = parts
@@ -157,7 +170,12 @@ async def role_select_callback_handler(callback: CallbackQuery) -> None:
             new_role = UserRole(role_str)
         except ValueError:
             logger.error(f"Неверная роль: {role_str}")
-            await callback.message.edit_text(f"❌ Ошибка: неверная роль '{role_str}'")
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=f"❌ Ошибка: неверная роль '{role_str}'",
+            )
             return
 
         # Получаем пользователя
@@ -165,13 +183,21 @@ async def role_select_callback_handler(callback: CallbackQuery) -> None:
         user = await user_repo.get_user_by_id(user_id=user_id)
 
         if not user:
-            await callback.message.edit_text("❌ Пользователь не найден")
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="❌ Пользователь не найден",
+            )
             return
 
         # Защита от изменения роли для захардкоженного пользователя
         if user.tg_id == PROTECTED_USER_TG_ID:
-            await callback.message.edit_text(
-                "❌ Нельзя изменить роль этому пользователю"
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="❌ Нельзя изменить роль этому пользователю",
             )
             await callback.answer(
                 "❌ Этот пользователь защищен от изменения роли", show_alert=True
@@ -196,7 +222,10 @@ async def role_select_callback_handler(callback: CallbackQuery) -> None:
                 f"✅ Роль уже установлена на {role_display}"
             )
 
-            await callback.message.edit_text(
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
                 text=text,
                 reply_markup=role_select_ikb(),
             )
@@ -209,7 +238,12 @@ async def role_select_callback_handler(callback: CallbackQuery) -> None:
         )
 
         if not updated_user:
-            await callback.message.edit_text("❌ Не удалось обновить роль пользователя")
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text="❌ Не удалось обновить роль пользователя",
+            )
             return
 
         # Формируем текст подтверждения
@@ -234,7 +268,10 @@ async def role_select_callback_handler(callback: CallbackQuery) -> None:
         )
 
         # Обновляем сообщение с новой ролью
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=text,
             reply_markup=role_select_ikb(
                 user_id=updated_user.id, current_role=new_role
@@ -248,7 +285,17 @@ async def role_select_callback_handler(callback: CallbackQuery) -> None:
 
     except ValueError as e:
         logger.error(f"Ошибка парсинга данных в role_select_callback_handler: {e}")
-        await callback.message.edit_text("❌ Ошибка: неверный формат данных")
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="❌ Ошибка: неверный формат данных",
+        )
     except Exception as e:
         logger.error(f"Ошибка при изменении роли: {e}", exc_info=True)
-        await callback.message.edit_text("❌ Произошла ошибка при изменении роли")
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="❌ Произошла ошибка при изменении роли",
+        )

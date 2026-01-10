@@ -3,15 +3,16 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from container import container
 from keyboards.inline.time_period import time_period_ikb_single_user
 from keyboards.inline.users import user_actions_ikb
 from states.user import SingleUserReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from utils.exception_handler import handle_exception
+from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -23,12 +24,20 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
     Обработчик выбора пользователя из списка.
     """
     try:
-        user_id = int(callback.data.replace(CallbackData.User.PREFIX_USER, ""))
+        user_id_str = callback.data.replace(CallbackData.User.PREFIX_USER, "")
+        if not user_id_str.isdigit():
+            logger.error("Некорректный ID пользователя в callback: %s", callback.data)
+            return
+
+        user_id = int(user_id_str)
 
         await state.set_state(SingleUserReportStates.selected_single_user)
         await state.update_data(user_id=user_id)
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=Dialog.Report.SELECT_ACTION,
             reply_markup=user_actions_ikb(),
         )
@@ -45,7 +54,9 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
     F.data == CallbackData.Report.GET_USER_REPORT,
     SingleUserReportStates.selected_single_user,
 )
-async def get_user_report_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def get_user_report_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик запроса на создание отчета о времени ответа через callback."""
     try:
         await callback.answer()
@@ -57,7 +68,12 @@ async def get_user_report_handler(callback: CallbackQuery, state: FSMContext) ->
                 "Отсутствует user_id в state для пользователя %s",
                 callback.from_user.username,
             )
-            await callback.message.edit_text(Dialog.User.ERROR_SELECT_USER_AGAIN)
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=Dialog.User.ERROR_SELECT_USER_AGAIN,
+            )
             return
 
         logger.info(
@@ -75,7 +91,12 @@ async def get_user_report_handler(callback: CallbackQuery, state: FSMContext) ->
         )
 
         if not user_chats_dto.chats:
-            await callback.message.edit_text(Dialog.Report.NO_TRACKED_CHATS_FOR_REPORT)
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=Dialog.Report.NO_TRACKED_CHATS_FOR_REPORT,
+            )
             logger.warning(
                 "Админ %s пытается получить отчет без отслеживаемых чатов",
                 callback.from_user.username,
@@ -84,7 +105,10 @@ async def get_user_report_handler(callback: CallbackQuery, state: FSMContext) ->
 
         await state.set_state(SingleUserReportStates.selecting_period)
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=Dialog.Report.SELECT_PERIOD,
             reply_markup=time_period_ikb_single_user(),
         )

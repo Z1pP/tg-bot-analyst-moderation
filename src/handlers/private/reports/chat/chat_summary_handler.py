@@ -3,12 +3,12 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
 from constants.enums import SummaryType
 from constants.period import SummaryTimePeriod
-from container import container
 from keyboards.inline.chats import chat_actions_ikb, summary_type_ikb
 from keyboards.inline.report import hide_details_ikb
 from services.chat import ChatService
@@ -47,7 +47,7 @@ async def process_get_chat_summary_handler(
     ChatStateManager.selecting_chat,
 )
 async def process_summary_type_selection_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик выбора типа сводки и её генерации."""
     await callback.answer()

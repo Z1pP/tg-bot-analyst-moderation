@@ -4,14 +4,12 @@ import math
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from constants.i18n import DEFAULT_LANGUAGE
-from container import container
 from keyboards.inline.release_notes import release_notes_menu_ikb, select_language_ikb
 from services.release_note_service import ReleaseNoteService
-from services.user import UserService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
 
@@ -21,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data == CallbackData.ReleaseNotes.MENU)
 async def release_notes_menu_callback_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container, user_language: str
 ) -> None:
     """Обработчик меню релизных заметок"""
     from constants import RELEASE_NOTES_ADMIN_IDS
@@ -42,13 +40,6 @@ async def release_notes_menu_callback_handler(
         )
         await state.set_state(ReleaseNotesStateManager.selecting_language)
         return
-
-    # Для обычных пользователей используем их язык
-    user_service: UserService = container.resolve(UserService)
-    db_user = await user_service.get_user(tg_id=user_tg_id)
-    user_language = (
-        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
-    )
 
     release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
 
@@ -83,7 +74,7 @@ async def release_notes_menu_callback_handler(
     | F.data.startswith(CallbackData.ReleaseNotes.PREFIX_NEXT_PAGE)
 )
 async def release_notes_pagination_callback_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container, user_language: str
 ) -> None:
     """Обработчик пагинации релизных заметок"""
     await callback.answer()
@@ -96,22 +87,15 @@ async def release_notes_pagination_callback_handler(
 
     # Получаем язык из state или используем язык пользователя
     data = await state.get_data()
-    user_language = data.get("selected_language")
-
-    if not user_language:
-        user_service: UserService = container.resolve(UserService)
-        db_user = await user_service.get_user(tg_id=str(callback.from_user.id))
-        user_language = (
-            db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
-        )
+    selected_language = data.get("selected_language") or user_language
 
     release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
 
     limit = 10
     offset = (page - 1) * limit
 
-    notes = await release_note_service.get_notes(user_language, limit, offset)
-    total_count = await release_note_service.count_notes(user_language)
+    notes = await release_note_service.get_notes(selected_language, limit, offset)
+    total_count = await release_note_service.count_notes(selected_language)
     total_pages = math.ceil(total_count / limit)
 
     if not notes:
@@ -129,12 +113,12 @@ async def release_notes_pagination_callback_handler(
         ),
     )
 
-    await state.update_data(page=page, selected_language=user_language)
+    await state.update_data(page=page, selected_language=selected_language)
 
 
 @router.callback_query(F.data == CallbackData.ReleaseNotes.BACK)
 async def back_to_release_notes_menu_callback_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container, user_language: str
 ) -> None:
     """Обработчик возврата в меню релизных заметок"""
     from constants import RELEASE_NOTES_ADMIN_IDS
@@ -157,7 +141,7 @@ async def back_to_release_notes_menu_callback_handler(
         return
 
     # Для обычных пользователей используем их язык
-    await release_notes_menu_callback_handler(callback, state)
+    await release_notes_menu_callback_handler(callback, state, container, user_language)
 
 
 @router.callback_query(F.data == CallbackData.ReleaseNotes.PAGE_INFO)
@@ -170,7 +154,9 @@ async def page_info_callback_handler(callback: CallbackQuery) -> None:
     F.data.startswith(CallbackData.ReleaseNotes.PREFIX_SELECT_LANGUAGE),
     ReleaseNotesStateManager.selecting_language,
 )
-async def select_language_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def select_language_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик выбора языка для просмотра заметок"""
     await callback.answer()
 

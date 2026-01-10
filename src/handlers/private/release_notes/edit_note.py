@@ -4,11 +4,10 @@ import math
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from constants.i18n import DEFAULT_LANGUAGE
-from container import container
 from keyboards.inline.release_notes import (
     cancel_edit_release_note_ikb,
     edit_release_note_ikb,
@@ -16,7 +15,6 @@ from keyboards.inline.release_notes import (
     release_notes_menu_ikb,
 )
 from services.release_note_service import ReleaseNoteService
-from services.user import UserService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
 
@@ -25,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data.startswith(f"{CallbackData.ReleaseNotes.EDIT}__"))
-async def edit_note_start_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def edit_note_start_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик начала редактирования релизной заметки"""
     from constants import RELEASE_NOTES_ADMIN_IDS
 
@@ -87,7 +87,9 @@ async def edit_title_start_handler(callback: CallbackQuery, state: FSMContext) -
 
 
 @router.message(ReleaseNotesStateManager.editing_title)
-async def process_edit_title_handler(message: Message, state: FSMContext) -> None:
+async def process_edit_title_handler(
+    message: Message, state: FSMContext, container: Container, user_language: str
+) -> None:
     """Обработчик получения нового заголовка"""
     from constants import RELEASE_NOTES_ADMIN_IDS
 
@@ -124,13 +126,6 @@ async def process_edit_title_handler(message: Message, state: FSMContext) -> Non
 
     update_message = Dialog.ReleaseNotes.TITLE_UPDATED.format(
         old_title=old_title, new_title=new_title
-    )
-
-    # Возвращаемся к меню релизных заметок
-    user_service: UserService = container.resolve(UserService)
-    db_user = await user_service.get_user(tg_id=str(message.from_user.id))
-    user_language = (
-        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
     )
 
     page = 1
@@ -183,7 +178,9 @@ async def edit_content_start_handler(
 
 
 @router.message(ReleaseNotesStateManager.editing_content)
-async def process_edit_content_handler(message: Message, state: FSMContext) -> None:
+async def process_edit_content_handler(
+    message: Message, state: FSMContext, container: Container, user_language: str
+) -> None:
     """Обработчик получения нового содержимого"""
     from constants import RELEASE_NOTES_ADMIN_IDS
 
@@ -218,13 +215,6 @@ async def process_edit_content_handler(message: Message, state: FSMContext) -> N
 
     update_message = Dialog.ReleaseNotes.CONTENT_UPDATED
 
-    # Возвращаемся к меню релизных заметок
-    user_service: UserService = container.resolve(UserService)
-    db_user = await user_service.get_user(tg_id=str(message.from_user.id))
-    user_language = (
-        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
-    )
-
     page = 1
     limit = 10
     offset = (page - 1) * limit
@@ -255,7 +245,9 @@ async def process_edit_content_handler(message: Message, state: FSMContext) -> N
     F.data == CallbackData.ReleaseNotes.CANCEL_EDIT,
     ReleaseNotesStateManager.editing_note,
 )
-async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def cancel_edit_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик отмены редактирования"""
     await callback.answer()
 
@@ -307,7 +299,7 @@ async def cancel_edit_handler(callback: CallbackQuery, state: FSMContext) -> Non
     ReleaseNotesStateManager.editing_content,
 )
 async def cancel_edit_title_or_content_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик отмены редактирования заголовка или содержимого"""
     await callback.answer()

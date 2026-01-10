@@ -2,6 +2,7 @@ import logging
 
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
@@ -42,12 +43,14 @@ async def process_user_data_input(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
+    container: Container,
 ) -> None:
     """Обработчик для получения данных о пользователе."""
     await process_user_input_common(
         message=message,
         state=state,
         bot=bot,
+        container=container,
         dialog_texts={
             "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT,
             "user_not_found": Dialog.WarnUser.USER_NOT_FOUND,
@@ -63,6 +66,7 @@ async def process_reason_input(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
+    container: Container,
 ) -> None:
     """Обработка причины предупреждения (введённой вручную)."""
     reason = message.text.strip()
@@ -72,6 +76,7 @@ async def process_reason_input(
         sender=message,
         state=state,
         bot=bot,
+        container=container,
         is_callback=False,
         next_state=WarnUserStates.waiting_chat_select,
     )
@@ -85,6 +90,7 @@ async def process_no_reason(
     callback: types.CallbackQuery,
     state: FSMContext,
     bot: Bot,
+    container: Container,
 ) -> None:
     """Обработка нажатия кнопки 'Без причины'."""
     await callback.answer()
@@ -94,6 +100,7 @@ async def process_no_reason(
         sender=callback,
         state=state,
         bot=bot,
+        container=container,
         is_callback=True,
         next_state=WarnUserStates.waiting_chat_select,
     )
@@ -106,6 +113,7 @@ async def process_no_reason(
 async def process_chat_selection(
     callback: types.CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик для выбора чата для предупреждения."""
     await process_moderation_action(
@@ -116,4 +124,5 @@ async def process_chat_selection(
         success_text=Dialog.WarnUser.SUCCESS_WARN,
         partial_text=Dialog.WarnUser.PARTIAL_WARN,
         fail_text=Dialog.WarnUser.FAIL_WARN,
+        container=container,
     )

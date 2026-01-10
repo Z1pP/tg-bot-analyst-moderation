@@ -3,8 +3,8 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
-from container import container
 from handlers.private.templates.pagination import (
     extract_state_data,
     get_templates_and_count,
@@ -16,6 +16,7 @@ from keyboards.inline.templates import (
 )
 from states import TemplateStateManager
 from usecases.templates import DeleteTemplateUseCase
+from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 async def remove_template_handler(
     callback: CallbackQuery,
     state: FSMContext,
-):
+) -> None:
     """Обработчик начала удаления шаблона"""
     await callback.answer()
 
@@ -50,7 +51,10 @@ async def remove_template_handler(
         template_scope=current_data.get("template_scope"),
     )
 
-    await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text="Вы уверены, что хотите удалить шаблон?",
         reply_markup=conf_remove_template_kb(),
     )
@@ -65,6 +69,7 @@ async def remove_template_handler(
 async def confirmation_removing_template_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ):
     await callback.answer()
 
@@ -80,10 +85,13 @@ async def confirmation_removing_template_handler(
             if state_data.category_id:
                 # Возвращаемся к списку шаблонов категории
                 templates, total_count = await get_templates_and_count(
-                    data=state_data, page=1
+                    data=state_data, page=1, container=container
                 )
 
-                await callback.message.edit_text(
+                await safe_edit_message(
+                    bot=callback.bot,
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
                     text="❌ Удаление отменено\n\nВыберите шаблон:",
                     reply_markup=templates_inline_kb(
                         templates=templates,
@@ -96,10 +104,13 @@ async def confirmation_removing_template_handler(
             elif state_data.chat_id:
                 # Возвращаемся к списку шаблонов чата
                 templates, total_count = await get_templates_and_count(
-                    data=state_data, page=1
+                    data=state_data, page=1, container=container
                 )
 
-                await callback.message.edit_text(
+                await safe_edit_message(
+                    bot=callback.bot,
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
                     text=f"❌ Удаление отменено\n\nШаблоны для чата ({total_count}):",
                     reply_markup=templates_inline_kb(
                         templates=templates,
@@ -112,10 +123,13 @@ async def confirmation_removing_template_handler(
             elif state_data.template_scope == "global":
                 # Возвращаемся к списку глобальных шаблонов
                 templates, total_count = await get_templates_and_count(
-                    data=state_data, page=1
+                    data=state_data, page=1, container=container
                 )
 
-                await callback.message.edit_text(
+                await safe_edit_message(
+                    bot=callback.bot,
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
                     text=f"❌ Удаление отменено\n\nГлобальные шаблоны ({total_count}):",
                     reply_markup=templates_inline_kb(
                         templates=templates,
@@ -127,14 +141,20 @@ async def confirmation_removing_template_handler(
                 await state.set_state(TemplateStateManager.listing_templates)
             else:
                 # Если нет ни category_id, ни chat_id, ни global scope, возвращаемся в меню
-                await callback.message.edit_text(
+                await safe_edit_message(
+                    bot=callback.bot,
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
                     text="❌ Удаление отменено",
                     reply_markup=templates_menu_ikb(),
                 )
                 await state.set_state(TemplateStateManager.templates_menu)
         except Exception as e:
             logger.error("Ошибка при возврате к списку шаблонов: %s", e, exc_info=True)
-            await callback.message.edit_text(
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
                 text="❌ Удаление отменено",
                 reply_markup=templates_menu_ikb(),
             )
@@ -147,15 +167,21 @@ async def confirmation_removing_template_handler(
             template_id=template_id, admin_tg_id=str(callback.from_user.id)
         )
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text="✅ Шаблон успешно удален",
             reply_markup=templates_menu_ikb(),
         )
         await state.set_state(TemplateStateManager.templates_menu)
     except Exception as e:
         logger.error("Ошибка при удалении шаблона: %s", e, exc_info=True)
-        await callback.message.edit_text(
-            "⚠️ Произошла ошибка при удалении",
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text="⚠️ Произошла ошибка при удалении",
             reply_markup=templates_menu_ikb(),
         )
         await state.set_state(TemplateStateManager.templates_menu)

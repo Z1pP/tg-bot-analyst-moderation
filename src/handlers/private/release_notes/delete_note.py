@@ -4,17 +4,15 @@ import math
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from constants.i18n import DEFAULT_LANGUAGE
-from container import container
 from keyboards.inline.release_notes import (
     confirm_delete_release_note_ikb,
     release_notes_menu_ikb,
 )
 from services.release_note_service import ReleaseNoteService
-from services.user import UserService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
 
@@ -23,7 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data.startswith(f"{CallbackData.ReleaseNotes.DELETE}__"))
-async def delete_note_start_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def delete_note_start_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик начала удаления релизной заметки"""
     from constants import RELEASE_NOTES_ADMIN_IDS
 
@@ -61,7 +61,9 @@ async def delete_note_start_handler(callback: CallbackQuery, state: FSMContext) 
     F.data.startswith(CallbackData.ReleaseNotes.PREFIX_CONFIRM_DELETE),
     ReleaseNotesStateManager.deleting_note,
 )
-async def confirm_delete_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def confirm_delete_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container, user_language: str
+) -> None:
     """Обработчик подтверждения удаления"""
     from constants import RELEASE_NOTES_ADMIN_IDS
 
@@ -125,13 +127,6 @@ async def confirm_delete_handler(callback: CallbackQuery, state: FSMContext) -> 
                 text=Dialog.ReleaseNotes.DELETE_ERROR,
             )
             return
-
-        # Возвращаемся к меню релизных заметок
-        user_service: UserService = container.resolve(UserService)
-        db_user = await user_service.get_user(tg_id=str(callback.from_user.id))
-        user_language = (
-            db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
-        )
 
         page = 1
         limit = 10

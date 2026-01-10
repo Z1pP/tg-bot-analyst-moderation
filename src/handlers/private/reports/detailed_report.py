@@ -2,10 +2,10 @@ import logging
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from container import container
 from dto.report import AllUsersReportDTO, ChatReportDTO, SingleUserReportDTO
 from keyboards.inline.report import hide_details_ikb
 from usecases.report import (
@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 async def detailed_report_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     try:
         await callback.answer()
@@ -48,13 +49,13 @@ async def detailed_report_handler(
 
         if single_user_dto:
             dto = SingleUserReportDTO.model_validate(single_user_dto)
-            await _handle_single_user_details(callback, dto)
+            await _handle_single_user_details(callback, dto, container)
         elif all_users_dto:
             dto = AllUsersReportDTO.model_validate(all_users_dto)
-            await _handle_all_users_details(callback, dto)
+            await _handle_all_users_details(callback, dto, container)
         elif chat_dto:
             dto = ChatReportDTO.model_validate(chat_dto)
-            await _handle_chat_details(callback, dto)
+            await _handle_chat_details(callback, dto, container)
         else:
             await send_html_message_with_kb(
                 message=callback.message,
@@ -66,7 +67,7 @@ async def detailed_report_handler(
 
 
 async def _handle_single_user_details(
-    callback: types.CallbackQuery, report_dto
+    callback: types.CallbackQuery, report_dto, container: Container
 ) -> None:
     """Обрабатывает детализацию для одного пользователя"""
     usecase: GetBreaksDetailReportUseCase = container.resolve(
@@ -97,7 +98,9 @@ async def _handle_single_user_details(
     )
 
 
-async def _handle_all_users_details(callback: types.CallbackQuery, report_dto) -> None:
+async def _handle_all_users_details(
+    callback: types.CallbackQuery, report_dto, container: Container
+) -> None:
     """Обрабатывает детализацию для всех пользователей"""
     # Проверяем что это правильный тип DTO
     if not isinstance(report_dto, AllUsersReportDTO):
@@ -135,7 +138,9 @@ async def _handle_all_users_details(callback: types.CallbackQuery, report_dto) -
     )
 
 
-async def _handle_chat_details(callback: types.CallbackQuery, report_dto) -> None:
+async def _handle_chat_details(
+    callback: types.CallbackQuery, report_dto, container: Container
+) -> None:
     """Обрабатывает детализацию для отчета по чату"""
     # Проверяем что это правильный тип DTO
     if not isinstance(report_dto, ChatReportDTO):
