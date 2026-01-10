@@ -72,6 +72,7 @@ from usecases.chat import (
     GetAllChatsUseCase,
     GetChatsForUserActionUseCase,
     GetTrackedChatsUseCase,
+    ToggleAntibotUseCase,
     UpdateChatWorkHoursUseCase,
 )
 from usecases.chat_tracking import (
@@ -86,6 +87,8 @@ from usecases.message import (
 from usecases.moderation import (
     GiveUserBanUseCase,
     GiveUserWarnUseCase,
+    RestrictNewMemberUseCase,
+    VerifyMemberUseCase,
 )
 from usecases.punishment import (
     GetPunishmentLadderUseCase,
@@ -280,6 +283,7 @@ class ContainerSetup:
             GetTrackedChatsUseCase,
             GetChatsForUserActionUseCase,
             UpdateChatWorkHoursUseCase,
+            ToggleAntibotUseCase,
         ]
 
         for usecase in chat_usecases:
@@ -301,6 +305,8 @@ class ContainerSetup:
         """Регистрация use cases для модерации."""
         container.register(GiveUserWarnUseCase)
         container.register(GiveUserBanUseCase)
+        container.register(RestrictNewMemberUseCase)
+        container.register(VerifyMemberUseCase)
         container.register(CancelLastWarnUseCase)
         container.register(GetChatsWithAnyRestrictionUseCase)
         container.register(GetChatsWithBannedUserUseCase)
