@@ -2,8 +2,8 @@ import logging
 
 from aiogram import Router
 from aiogram.types import Message
+from punq import Container
 
-from container import container
 from dto.message import CreateMessageDTO
 from dto.message_reply import CreateMessageReplyDTO
 from models import ChatSession, User
@@ -28,29 +28,30 @@ def _get_message_type(message: Message) -> MessageType:
 
 
 @router.message()
-async def group_message_handler(message: Message):
+async def group_message_handler(message: Message, container: Container):
     """
     Сохраняет все сообщения и ответы от всех пользователей для построения метрик.
     """
     if message.from_user.is_bot:
         return
 
-    sender, chat = await _get_sender_and_chat(message)
+    sender, chat = await _get_sender_and_chat(message, container)
     if not sender or not chat:
         return
 
     msg_type = _get_message_type(message)
 
     if msg_type == MessageType.REPLY:
-        await process_reply_message(message, sender, chat)
+        await process_reply_message(message, sender, chat, container)
     else:
-        await process_message(message, sender, chat)
+        await process_message(message, sender, chat, container)
 
 
 async def process_reply_message(
     message: Message,
     sender: User,
     chat: ChatSession,
+    container: Container,
 ) -> None:
     """
     Сохраняет reply-сообщения и связь с оригинальным сообщением.
@@ -77,7 +78,7 @@ async def process_reply_message(
     try:
         # Сохраняем reply как обычное сообщение
         message_usecase: SaveMessageUseCase = container.resolve(SaveMessageUseCase)
-        saved_message = await message_usecase.execute(message_dto=msg_dto)
+        await message_usecase.execute(message_dto=msg_dto)
 
         # Создаем ссылку на оригинальное сообщение
         original_message_url = f"https://t.me/c/{chat.chat_id.lstrip('-')}/{message.reply_to_message.message_id}"
@@ -111,6 +112,7 @@ async def process_message(
     message: Message,
     sender: User,
     chat: ChatSession,
+    container: Container,
 ) -> None:
     """
     Сохраняет обычные сообщения от всех пользователей.
@@ -137,7 +139,9 @@ async def process_message(
         logger.error("Ошибка сохранения сообщения: %s", str(e))
 
 
-async def _get_sender_and_chat(message: Message) -> tuple[User, ChatSession]:
+async def _get_sender_and_chat(
+    message: Message, container: Container
+) -> tuple[User, ChatSession]:
     """
     Получает пользователя и чат из сообщения.
     """

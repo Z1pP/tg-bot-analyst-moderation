@@ -2,9 +2,9 @@ import logging
 from typing import Tuple
 
 from aiogram import Bot, Router, types
+from punq import Container
 
 from constants.enums import ReactionAction
-from container import container
 from dto import MessageReactionDTO
 from models import ChatSession, User
 from services.chat import ChatService
@@ -16,9 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 @router.message_reaction()
-async def reaction_handler(event: types.MessageReactionUpdated, bot: Bot) -> None:
+async def reaction_handler(
+    event: types.MessageReactionUpdated, bot: Bot, container: Container
+) -> None:
     try:
-        sender, chat = await _get_sender_and_chat(event)
+        sender, chat = await _get_sender_and_chat(event, container)
         if not sender or not chat:
             logger.error("Не удалось получить пользователя или чат")
             return
@@ -32,14 +34,14 @@ async def reaction_handler(event: types.MessageReactionUpdated, bot: Bot) -> Non
             message_url=_generate_message_url(event),
         )
 
-        await save_reacion(reaction_dto=reaction_dto)
+        await save_reacion(reaction_dto=reaction_dto, container=container)
 
     except Exception as e:
         logger.error(f"Ошибка при обработке реакции: {e}", exc_info=True)
         return
 
 
-async def save_reacion(reaction_dto: MessageReactionDTO) -> None:
+async def save_reacion(reaction_dto: MessageReactionDTO, container: Container) -> None:
     """
     Сохраняет реакцию в базу данных.
     """
@@ -96,6 +98,7 @@ def _generate_message_url(event: types.MessageReactionUpdated) -> str:
 
 async def _get_sender_and_chat(
     event: types.MessageReactionUpdated,
+    container: Container,
 ) -> Tuple[User, ChatSession]:
     """
     Получает пользователя и чат из сообщения.

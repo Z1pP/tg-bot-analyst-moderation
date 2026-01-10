@@ -2,8 +2,8 @@ import logging
 
 from aiogram import F, Router, types
 from aiogram.filters import Command
+from punq import Container
 
-from container import container
 from filters.admin_filter import StaffOnlyFilter
 from mappers import map_message_to_moderation_dto
 from usecases.moderation import GiveUserBanUseCase
@@ -17,7 +17,7 @@ router = Router(name=__name__)
     StaffOnlyFilter(),
     F.reply_to_message,
 )
-async def ban_user_handler(message: types.Message) -> None:
+async def ban_user_handler(message: types.Message, container: Container) -> None:
     """
     Обрабатывает команду /ban для бессрочной блокировки пользователя.
 

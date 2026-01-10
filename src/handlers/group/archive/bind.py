@@ -4,8 +4,8 @@ from typing import Optional
 
 from aiogram import Router
 from aiogram.types import Message
+from punq import Container
 
-from container import container
 from filters import ArchiveHashFilter
 from services.chat import ArchiveBindService, ChatService
 
@@ -17,7 +17,7 @@ HASH_PATTERN = re.compile(r"ARCHIVE-([A-Za-z0-9_-]+)")
 
 
 @router.message(ArchiveHashFilter())
-async def archive_bind_message_handler(message: Message) -> None:
+async def archive_bind_message_handler(message: Message, container: Container) -> None:
     """Обработчик сообщений в архивном чате для привязки по hash."""
 
     # Получаем текст из сообщения или подписи
