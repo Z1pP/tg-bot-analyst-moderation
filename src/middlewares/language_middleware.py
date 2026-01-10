@@ -5,9 +5,9 @@ from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
+from punq import Container
 
 from constants.i18n import DEFAULT_LANGUAGE
-from container import container
 from services.user import UserService
 
 logger = logging.getLogger(__name__)
@@ -23,8 +23,9 @@ class LanguageMiddleware(BaseMiddleware):
     3. DEFAULT_LANGUAGE, если язык не определен
     """
 
-    def __init__(self, user_service: UserService):
+    def __init__(self, user_service: UserService, container: Container):
         self.user_service = user_service
+        self.container = container
 
     async def __call__(
         self,
@@ -130,7 +131,7 @@ class LanguageMiddleware(BaseMiddleware):
             from database.session import DatabaseContextManager
             from repositories import UserRepository
 
-            db_manager: DatabaseContextManager = container.resolve(
+            db_manager: DatabaseContextManager = self.container.resolve(
                 DatabaseContextManager
             )
             user_repo = UserRepository(db_manager)
