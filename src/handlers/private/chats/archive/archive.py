@@ -2,10 +2,10 @@ import logging
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from container import container
 from keyboards.inline.chats import (
     archive_bind_instruction_ikb,
     archive_channel_setting_ikb,
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 async def archive_channel_setting_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик настроек архивного чата."""
     chat_id = await state.get_value("chat_id")
@@ -149,6 +150,7 @@ async def archive_channel_setting_handler(
 async def archive_toggle_schedule_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик переключения рассылки."""
     await callback.answer()
@@ -248,6 +250,7 @@ async def archive_toggle_schedule_handler(
 async def archive_bind_instruction_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик инструкции по привязке архивного канала."""
     chat_id = await state.get_value("chat_id")
@@ -301,6 +304,7 @@ async def archive_bind_instruction_handler(
 async def archive_back_to_chat_actions_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик возврата к меню действий чата из архива."""
     await callback.answer()
