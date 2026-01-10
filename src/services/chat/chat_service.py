@@ -108,3 +108,22 @@ class ChatService:
                     await self._cache.set(archive_chat.chat_id, archive_chat)
 
         return work_chat
+
+    async def toggle_antibot(self, chat_id: int) -> Optional[bool]:
+        """
+        Переключает статус антибота для чата и обновляет кеш.
+
+        Args:
+            chat_id: ID чата из БД
+
+        Returns:
+            Новое состояние или None
+        """
+        new_state = await self._chat_repository.toggle_antibot(chat_id)
+        if new_state is not None:
+            # Обновляем объект в кеше
+            chat = await self._chat_repository.get_chat_by_id(chat_id)
+            if chat:
+                await self._cache.set(chat.chat_id, chat)
+
+        return new_state
