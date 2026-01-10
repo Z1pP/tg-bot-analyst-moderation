@@ -2,8 +2,8 @@ import logging
 
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
-from container import container
 from dto import CreateCategoryDTO
 from exceptions.category import CategoryAlreadyExists
 from keyboards.inline.templates import templates_menu_ikb
@@ -23,6 +23,7 @@ async def confirm_category_creation_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
     bot: Bot,
+    container: Container,
 ) -> None:
     """Обработчик подтверждения создания категории"""
     await callback.answer()
