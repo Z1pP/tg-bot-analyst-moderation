@@ -290,6 +290,10 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             text=InlineButtons.ChatButtons.ANTIBOT_SETTING,
             callback_data=CallbackData.Chat.ANTIBOT_SETTING,
         ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.WELCOME_TEXT_SETTING,
+            callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
+        ),
     )
 
     builder.row(
@@ -299,8 +303,20 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
         ),
     )
 
-    builder.adjust(1, 2, 2, 2, 1)
+    builder.adjust(1, 2, 2, 2, 1, 1)
 
+    return builder.as_markup()
+
+
+def cancel_welcome_text_setting_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура с кнопкой отмены для настройки приветственного текста"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+        )
+    )
     return builder.as_markup()
 
 
