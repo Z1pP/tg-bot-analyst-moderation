@@ -1,13 +1,28 @@
+import asyncio
 import logging
 
 from aiogram import F, Router, types
 
+from constants import Dialog
 from container import container
+from usecases.moderation import RestrictNewMemberUseCase
 from usecases.user import GetOrCreateUserIfNotExistUserCase
 from utils.exception_handler import handle_exception
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
+
+
+async def delete_message_after_delay(message: types.Message, delay: int = 10) -> None:
+    """Удаляет сообщение через указанное время."""
+    await asyncio.sleep(delay)
+    try:
+        await message.delete()
+        logger.info(
+            f"Сообщение {message.message_id} в чате {message.chat.id} удалено по таймеру"
+        )
+    except Exception as e:
+        logger.debug(f"Не удалось удалить сообщение {message.message_id}: {e}")
 
 
 async def get_or_create_user(tg_id: str, username: str) -> None:
@@ -48,10 +63,27 @@ async def process_new_chat_members(message: types.Message):
                 logger.info(
                     f"Пользователь {username} (ID: {user.id}) добавлен в группу '{chat_title}'"
                 )
-                await get_or_create_user(
-                    tg_id=str(user.id),
-                    username=username,
+
+                # Проверка антиботом
+                restrict_usecase: RestrictNewMemberUseCase = container.resolve(
+                    RestrictNewMemberUseCase
                 )
+                bot_info = await message.bot.get_me()
+                verify_link = await restrict_usecase.execute(
+                    chat_tgid=str(message.chat.id),
+                    user_id=user.id,
+                    bot_username=bot_info.username,
+                )
+
+                if verify_link:
+                    sent_message = await message.answer(
+                        Dialog.Antibot.GREETING.format(
+                            username=user.username, link=verify_link
+                        ),
+                        parse_mode="HTML",
+                    )
+
+                    asyncio.create_task(delete_message_after_delay(sent_message))
 
         logger.info(
             f"Обработка {len(message.new_chat_members)} новых участников завершена"
