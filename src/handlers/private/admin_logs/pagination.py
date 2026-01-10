@@ -1,21 +1,24 @@
 import logging
+from typing import Optional
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog
-from constants.callback import CallbackData
 from constants.pagination import DEFAULT_PAGE_SIZE
-from container import container
 from keyboards.inline.admin_logs import admin_logs_ikb, format_action_type
 from repositories import AdminActionLogRepository
 from services.time_service import TimeZoneService
+from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-async def _get_logs_page(page: int, admin_id: int = None) -> tuple[list, int]:
+async def _get_logs_page(
+    container: Container, page: int, admin_id: Optional[int] = None
+) -> tuple[list, int]:
     """Получает страницу логов."""
     log_repository: AdminActionLogRepository = container.resolve(
         AdminActionLogRepository
@@ -30,7 +33,7 @@ async def _get_logs_page(page: int, admin_id: int = None) -> tuple[list, int]:
         )
 
 
-async def _format_logs_message(logs: list, admin_id: int = None) -> str:
+async def _format_logs_message(logs: list, admin_id: Optional[int] = None) -> str:
     """Форматирует список логов в текст сообщения."""
     if not logs:
         if admin_id:
@@ -68,7 +71,9 @@ async def _format_logs_message(logs: list, admin_id: int = None) -> str:
 
 @router.callback_query(F.data.startswith("prev_admin_logs_page__"))
 async def prev_admin_logs_page_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик перехода на предыдущую страницу логов."""
     await callback.answer()
@@ -80,11 +85,16 @@ async def prev_admin_logs_page_handler(
         admin_id = int(parts[2]) if len(parts) > 2 and parts[2] != "None" else None
         prev_page = max(1, current_page - 1)
 
-        logs, total_count = await _get_logs_page(prev_page, admin_id=admin_id)
+        logs, total_count = await _get_logs_page(
+            container, prev_page, admin_id=admin_id
+        )
         text = await _format_logs_message(logs, admin_id=admin_id)
 
-        await callback.message.edit_text(
-            text,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
             reply_markup=admin_logs_ikb(
                 logs=logs,
                 page=prev_page,
@@ -102,7 +112,9 @@ async def prev_admin_logs_page_handler(
 
 @router.callback_query(F.data.startswith("next_admin_logs_page__"))
 async def next_admin_logs_page_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик перехода на следующую страницу логов."""
     await callback.answer()
@@ -114,15 +126,20 @@ async def next_admin_logs_page_handler(
         admin_id = int(parts[2]) if len(parts) > 2 and parts[2] != "None" else None
         next_page = current_page + 1
 
-        logs, total_count = await _get_logs_page(next_page, admin_id=admin_id)
+        logs, total_count = await _get_logs_page(
+            container, next_page, admin_id=admin_id
+        )
         if not logs:
             await callback.answer(Dialog.AdminLogs.LAST_PAGE, show_alert=True)
             return
 
         text = await _format_logs_message(logs, admin_id=admin_id)
 
-        await callback.message.edit_text(
-            text,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
             reply_markup=admin_logs_ikb(
                 logs=logs,
                 page=next_page,
@@ -144,16 +161,3 @@ async def admin_logs_page_info_handler(
 ) -> None:
     """Обработчик информации о странице (не делает ничего, просто отвечает)."""
     await callback.answer()
-
-
-@router.callback_query(F.data == CallbackData.AdminLogs.MENU)
-async def hide_admin_logs_handler(
-    callback: types.CallbackQuery, state: FSMContext
-) -> None:
-    """Обработчик скрытия логов администраторов."""
-    await callback.answer()
-
-    try:
-        await callback.message.delete()
-    except Exception as e:
-        logger.warning("Не удалось удалить сообщение с логами: %s", e)
