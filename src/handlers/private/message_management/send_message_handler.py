@@ -2,9 +2,10 @@ import logging
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog
-from container import container
+from dto.chat_dto import ChatDTO
 from dto.message_action import SendMessageDTO
 from exceptions.moderation import MessageSendError
 from keyboards.inline.chats import select_chat_ikb
@@ -12,6 +13,7 @@ from keyboards.inline.message_actions import cancel_send_message_ikb, send_messa
 from states.message_management import MessageManagerState
 from usecases.admin_actions import SendMessageToChatUseCase
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
+from utils.send_message import safe_edit_message
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data == "send_message_to_chat")
 async def send_message_button_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик нажатия кнопки отправки сообщения."""
     await callback.answer()
@@ -33,8 +35,11 @@ async def send_message_button_handler(
     )
 
     if not user_chats_dto.chats:
-        await callback.message.edit_text(
-            Dialog.MessageManager.NO_TRACKED_CHATS,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.MessageManager.NO_TRACKED_CHATS,
             reply_markup=send_message_ikb(),
         )
         await state.clear()
@@ -49,8 +54,11 @@ async def send_message_button_handler(
         user_chats=[chat.model_dump(mode="json") for chat in user_chats_dto.chats]
     )
 
-    await callback.message.edit_text(
-        Dialog.MessageManager.SELECT_CHAT,
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.MessageManager.SELECT_CHAT,
         reply_markup=select_chat_ikb(user_chats_dto.chats),
     )
     await state.set_state(MessageManagerState.waiting_chat_select)
@@ -76,14 +84,15 @@ async def chat_selected_handler(
 
     if not user_chats_data:
         logger.error("Отсутствуют данные о чатах в state")
-        await callback.message.edit_text(
-            Dialog.MessageManager.INVALID_STATE_DATA,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.MessageManager.INVALID_STATE_DATA,
             reply_markup=send_message_ikb(),
         )
         await state.clear()
         return
-
-    from dto.chat_dto import ChatDTO
 
     user_chats = [ChatDTO.model_validate(chat) for chat in user_chats_data]
 
@@ -91,8 +100,11 @@ async def chat_selected_handler(
     selected_chat = next((chat for chat in user_chats if chat.id == chat_id), None)
     if not selected_chat:
         logger.error("Чат с id %s не найден", chat_id)
-        await callback.message.edit_text(
-            Dialog.MessageManager.INVALID_STATE_DATA,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.MessageManager.INVALID_STATE_DATA,
             reply_markup=send_message_ikb(),
         )
         await state.clear()
@@ -100,8 +112,11 @@ async def chat_selected_handler(
 
     await state.update_data(chat_tgid=selected_chat.tg_id)
 
-    await callback.message.edit_text(
-        Dialog.MessageManager.SEND_CONTENT_INPUT,
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.MessageManager.SEND_CONTENT_INPUT,
         reply_markup=cancel_send_message_ikb(),
     )
     await state.set_state(MessageManagerState.waiting_send_content)
@@ -113,7 +128,9 @@ async def chat_selected_handler(
 
 
 @router.message(MessageManagerState.waiting_send_content)
-async def send_content_handler(message: types.Message, state: FSMContext) -> None:
+async def send_content_handler(
+    message: types.Message, state: FSMContext, container: Container
+) -> None:
     """Обработчик получения контента для отправки в чат."""
     data = await state.get_data()
     chat_tgid = data.get("chat_tgid")
