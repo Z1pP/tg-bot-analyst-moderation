@@ -3,10 +3,10 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from container import container
 from keyboards.inline.chats import (
     cancel_work_hours_setting_ikb,
     chat_actions_ikb,
@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 async def work_hours_menu_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик открытия меню настройки времени сбора данных"""
     await callback.answer()
@@ -56,16 +57,21 @@ async def work_hours_menu_handler(
             )
             return
 
-        msg = await callback.message.edit_text(
-            text=Dialog.Chat.WORK_HOURS_MENU.format(
-                start_time=chat.start_time.strftime("%H:%M"),
-                end_time=chat.end_time.strftime("%H:%M"),
-                tolerance=chat.tolerance,
-            ),
+        msg_text = Dialog.Chat.WORK_HOURS_MENU.format(
+            start_time=chat.start_time.strftime("%H:%M"),
+            end_time=chat.end_time.strftime("%H:%M"),
+            tolerance=chat.tolerance,
+        )
+
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=msg_text,
             reply_markup=work_hours_menu_ikb(),
         )
 
-        await state.update_data(active_message_id=msg.message_id)
+        await state.update_data(active_message_id=callback.message.message_id)
 
     except Exception as e:
         logger.error("Ошибка при открытии меню настройки времени: %s", e, exc_info=True)
@@ -86,12 +92,15 @@ async def change_work_start_handler(
     """Обработчик выбора изменения времени начала"""
     await callback.answer()
 
-    msg = await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=Dialog.Chat.ENTER_WORK_START,
         reply_markup=cancel_work_hours_setting_ikb(),
     )
 
-    await state.update_data(active_message_id=msg.message_id)
+    await state.update_data(active_message_id=callback.message.message_id)
     await state.set_state(WorkHoursState.waiting_work_start_input)
 
 
@@ -103,12 +112,15 @@ async def change_work_end_handler(
     """Обработчик выбора изменения времени конца"""
     await callback.answer()
 
-    msg = await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=Dialog.Chat.ENTER_WORK_END,
         reply_markup=cancel_work_hours_setting_ikb(),
     )
 
-    await state.update_data(active_message_id=msg.message_id)
+    await state.update_data(active_message_id=callback.message.message_id)
     await state.set_state(WorkHoursState.waiting_work_end_input)
 
 
@@ -120,17 +132,22 @@ async def change_tolerance_handler(
     """Обработчик выбора изменения отклонения"""
     await callback.answer()
 
-    msg = await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=Dialog.Chat.ENTER_TOLERANCE,
         reply_markup=cancel_work_hours_setting_ikb(),
     )
 
-    await state.update_data(active_message_id=msg.message_id)
+    await state.update_data(active_message_id=callback.message.message_id)
     await state.set_state(WorkHoursState.waiting_tolerance_input)
 
 
 @router.message(WorkHoursState.waiting_work_start_input)
-async def work_start_input_handler(message: Message, state: FSMContext) -> None:
+async def work_start_input_handler(
+    message: Message, state: FSMContext, container: Container
+) -> None:
     """Обработчик ввода времени начала"""
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
@@ -219,7 +236,9 @@ async def work_start_input_handler(message: Message, state: FSMContext) -> None:
 
 
 @router.message(WorkHoursState.waiting_work_end_input)
-async def work_end_input_handler(message: Message, state: FSMContext) -> None:
+async def work_end_input_handler(
+    message: Message, state: FSMContext, container: Container
+) -> None:
     """Обработчик ввода времени конца"""
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
@@ -308,7 +327,9 @@ async def work_end_input_handler(message: Message, state: FSMContext) -> None:
 
 
 @router.message(WorkHoursState.waiting_tolerance_input)
-async def tolerance_input_handler(message: Message, state: FSMContext) -> None:
+async def tolerance_input_handler(
+    message: Message, state: FSMContext, container: Container
+) -> None:
     """Обработчик ввода отклонения"""
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
@@ -400,6 +421,7 @@ async def tolerance_input_handler(message: Message, state: FSMContext) -> None:
 async def cancel_work_hours_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик отмены настройки времени"""
     await callback.answer()
