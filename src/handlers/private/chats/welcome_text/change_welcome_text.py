@@ -3,10 +3,10 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from container import container
 from keyboards.inline.chats import (
     cancel_welcome_text_setting_ikb,
     chat_actions_ikb,
@@ -49,7 +49,9 @@ async def welcome_text_menu_handler(
 
 
 @router.message(WelcomeTextState.waiting_welcome_text_input)
-async def welcome_text_input_handler(message: Message, state: FSMContext) -> None:
+async def welcome_text_input_handler(
+    message: Message, state: FSMContext, container: Container
+) -> None:
     """Обработчик ввода нового приветственного текста"""
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
