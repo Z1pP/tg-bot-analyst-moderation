@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Tuple
 
 from services import ChatService
 from services.messaging.bot_message_service import BotMessageService
@@ -29,9 +29,9 @@ class RestrictNewMemberUseCase:
         chat_tgid: str,
         user_id: int,
         bot_username: str,
-    ) -> Optional[str]:
+    ) -> Tuple[Optional[str], Optional[str]]:
         """
-        Проверяет настройки чата, мьютит пользователя и возвращает ссылку для верификации.
+        Проверяет настройки чата, мьютит пользователя и возвращает ссылку для верификации и текст приветствия.
 
         Args:
             chat_tgid: Telegram ID чата
@@ -39,12 +39,12 @@ class RestrictNewMemberUseCase:
             bot_username: Username бота для генерации ссылки
 
         Returns:
-            Ссылка на верификацию или None, если антибот выключен
+            Кортеж (ссылка на верификацию, текст приветствия) или (None, None)
         """
         chat = await self.chat_service.get_chat(chat_tgid=chat_tgid)
 
         if not chat or not chat.is_antibot_enabled:
-            return None
+            return None, None
 
         # Проверяем права бота на модерацию
         can_moderate = await self.bot_permission_service.can_moderate(
@@ -56,7 +56,7 @@ class RestrictNewMemberUseCase:
                 "Бот не имеет прав модератора в чате %s. Антибот не может ограничить пользователя.",
                 chat_tgid,
             )
-            return None
+            return None, None
 
         # Мьютим пользователя (0 = бессрочно до ручного изменения)
         success = await self.bot_message_service.mute_chat_member(
@@ -71,8 +71,10 @@ class RestrictNewMemberUseCase:
                 user_id,
                 chat_tgid,
             )
-            return None
+            return None, None
 
         # Генерируем ссылку
         payload = encode_antibot_params(chat_tgid, user_id)
-        return f"https://t.me/{bot_username}?start={payload}"
+        verify_link = f"https://t.me/{bot_username}?start={payload}"
+
+        return verify_link, chat.welcome_text
