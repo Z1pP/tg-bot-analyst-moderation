@@ -3,9 +3,9 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from punq import Container
 
 from constants.callback import CallbackData
-from container import container
 from keyboards.inline.chats import cancel_archive_time_setting_ikb
 from services.report_schedule_service import ReportScheduleService
 from states import ChatArchiveState
@@ -30,18 +30,23 @@ async def change_sending_time_handler(
         "Например: 23:45"
     )
 
-    msg = await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=msg_text,
         reply_markup=cancel_archive_time_setting_ikb(),
     )
 
-    await state.update_data(active_message_id=msg.message_id)
+    await state.update_data(active_message_id=callback.message.message_id)
 
     await state.set_state(ChatArchiveState.waiting_time_input)
 
 
 @router.message(ChatArchiveState.waiting_time_input)
-async def time_input_handler(message: Message, state: FSMContext) -> None:
+async def time_input_handler(
+    message: Message, state: FSMContext, container: Container
+) -> None:
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
     chat_id = data.get("chat_id")
@@ -52,7 +57,7 @@ async def time_input_handler(message: Message, state: FSMContext) -> None:
         if active_message_id:
             text = (
                 "❌ Неверный формат времени!\n\n"
-                "Пожалуйста, пришлите время в&nbsp;формате HH:mm.\n\n"
+                "Пожалуйста, пришлите время в формате HH:mm.\n\n"
                 "Например: 23:45"
             )
             await safe_edit_message(
