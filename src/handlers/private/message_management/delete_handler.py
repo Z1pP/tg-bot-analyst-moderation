@@ -2,14 +2,15 @@ import logging
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog
-from container import container
 from dto.message_action import MessageActionDTO
 from exceptions.moderation import MessageDeleteError
 from keyboards.inline.message_actions import message_action_ikb, send_message_ikb
 from states.message_management import MessageManagerState
 from usecases.admin_actions import DeleteMessageUseCase
+from utils.send_message import safe_edit_message
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
     F.data.in_(["delete_message_confirm", "delete_message_cancel"]),
 )
 async def message_delete_confirm_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик подтверждения удаления сообщения."""
     await callback.answer()
@@ -34,7 +35,10 @@ async def message_delete_confirm_handler(
         if not chat_tgid or not message_id:
             logger.warning("Некорректные данные в state при отмене удаления: %s", data)
             # Если нет данных, возвращаемся в меню управления сообщениями
-            await callback.message.edit_text(
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
                 text=f"{Dialog.MessageManager.DELETE_CANCELLED}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}",
                 reply_markup=send_message_ikb(),
             )
@@ -42,7 +46,10 @@ async def message_delete_confirm_handler(
             await state.set_state(MessageManagerState.waiting_message_link)
             return
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=Dialog.MessageManager.MESSAGE_ACTIONS.format(
                 message_id=message_id,
                 chat_tgid=chat_tgid,
@@ -64,8 +71,11 @@ async def message_delete_confirm_handler(
 
     if not chat_tgid or not message_id:
         logger.error("Некорректные данные в state: %s", data)
-        await callback.message.edit_text(
-            Dialog.MessageManager.INVALID_STATE_DATA
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.MessageManager.INVALID_STATE_DATA,
         )
         await state.clear()
         return
@@ -83,7 +93,10 @@ async def message_delete_confirm_handler(
         await usecase.execute(dto)
         # После успешного удаления возвращаемся в меню управления сообщениями
         success_text = f"{Dialog.MessageManager.DELETE_SUCCESS}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=success_text,
             reply_markup=send_message_ikb(),
         )
@@ -98,8 +111,13 @@ async def message_delete_confirm_handler(
         )
     except MessageDeleteError as e:
         # При ошибке удаления также возвращаемся в меню управления сообщениями
-        error_text = f"{e.get_user_message()}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
-        await callback.message.edit_text(
+        error_text = (
+            f"{e.get_user_message()}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
+        )
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=error_text,
             reply_markup=send_message_ikb(),
         )
@@ -114,7 +132,10 @@ async def message_delete_confirm_handler(
         )
         # При ошибке также возвращаемся в меню управления сообщениями
         error_text = f"{Dialog.MessageManager.DELETE_ERROR}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=error_text,
             reply_markup=send_message_ikb(),
         )
