@@ -50,13 +50,7 @@ class GetChatsForUserActionUseCase:
 
                 # Проверяем что пользователь член группы и не забанен
                 if member.status not in ["kicked", "left"]:
-                    result_chats.append(
-                        ChatDTO(
-                            id=chat.id,
-                            title=chat.title,
-                            tg_id=chat.chat_id,
-                        )
-                    )
+                    result_chats.append(ChatDTO.from_model(chat))
             except Exception:
                 # Пользователь не найден в чате или ошибка API
                 continue
