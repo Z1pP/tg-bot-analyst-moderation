@@ -1,6 +1,7 @@
 from typing import List
-from repositories import ChatTrackingRepository, UserRepository
+
 from dto import ChatDTO
+from repositories import ChatTrackingRepository, UserRepository
 
 
 class GetTrackedChatsUseCase:
@@ -22,6 +23,4 @@ class GetTrackedChatsUseCase:
             admin_id=user.id
         )
 
-        return [
-            ChatDTO(id=chat.id, tg_id=chat.chat_id, title=chat.title) for chat in chats
-        ]
+        return [ChatDTO.from_model(chat) for chat in chats]
