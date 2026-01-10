@@ -122,7 +122,9 @@ async def toggle_antibot_handler(
     chat_service: ChatService = container.resolve(ChatService)
     chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
 
-    status_text = Dialog.Antibot.ENABLED if new_state else Dialog.Antibot.DISABLED
+    status_text = (
+        Dialog.Antibot.ENABLED if chat.is_antibot_enabled else Dialog.Antibot.DISABLED
+    )
     await callback.answer(
         Dialog.Antibot.TOGGLE_SUCCESS.format(chat_title=chat.title, status=status_text)
     )
