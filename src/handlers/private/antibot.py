@@ -3,9 +3,9 @@ import logging
 from aiogram import Router
 from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import Message
+from punq import Container
 
 from constants import Dialog
-from container import container
 from services import ChatService
 from usecases.moderation import VerifyMemberUseCase
 
@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.message(CommandStart(deep_link=True))
-async def antibot_start_handler(message: Message, command: CommandObject) -> None:
+async def antibot_start_handler(
+    message: Message, command: CommandObject, container: Container
+) -> None:
     """
     Обработчик антибот-верификации через deep link.
     Доступен всем пользователям (не только админам).
