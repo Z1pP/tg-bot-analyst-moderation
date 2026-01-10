@@ -265,6 +265,43 @@ class ChatRepository(BaseRepository):
                 await session.rollback()
                 raise e
 
+    async def toggle_antibot(self, chat_id: int) -> Optional[bool]:
+        """
+        Переключает статус антибота для чата.
+
+        Args:
+            chat_id: ID чата из БД
+
+        Returns:
+            Новый статус или None если чат не найден
+        """
+        async with self._db.session() as session:
+            try:
+                chat = await session.get(ChatSession, chat_id)
+                if not chat:
+                    logger.error(
+                        "Чат не найден для переключения антибота: id=%s", chat_id
+                    )
+                    return None
+
+                chat.is_antibot_enabled = not chat.is_antibot_enabled
+                new_state = chat.is_antibot_enabled
+
+                await session.commit()
+                logger.info(
+                    "Антибот для чата %s (ID: %s) переключен в состояние: %s",
+                    chat.title,
+                    chat.chat_id,
+                    new_state,
+                )
+                return new_state
+            except Exception as e:
+                logger.error(
+                    "Ошибка при переключении антибота для чата %s: %s", chat_id, e
+                )
+                await session.rollback()
+                raise e
+
     def _expunge_chat_with_archive(self, session, chat: ChatSession) -> None:
         """Вспомогательный метод для отсоединения чата и его архива от сессии."""
         if chat:
