@@ -70,10 +70,20 @@ def registry_public_private_routers(dispatcher: Dispatcher, container: Container
     dispatcher.include_router(public_private_router)
 
 
-def registry_group_routers(dispatcher: Dispatcher):
+def registry_group_routers(dispatcher: Dispatcher, container: Container):
     # Регистриуем групповой роутер
     public_router = Router(name="public_router")
     public_router.message.filter(GroupTypeFilter())
+
+    # Передаем контейнер в контекст через middleware для всех групповых обновлений
+    async def inject_container_to_event(handler, event, data):
+        data["container"] = container
+        return await handler(event, data)
+
+    public_router.message.outer_middleware(inject_container_to_event)
+    public_router.callback_query.outer_middleware(inject_container_to_event)
+    public_router.message_reaction.outer_middleware(inject_container_to_event)
+    public_router.chat_member.outer_middleware(inject_container_to_event)
 
     public_router.include_router(group_router)
 
@@ -83,4 +93,4 @@ def registry_group_routers(dispatcher: Dispatcher):
 def registry_routers(dispatcher: Dispatcher, container: Container):
     registry_public_private_routers(dispatcher, container)
     registry_admin_routers(dispatcher, container)
-    registry_group_routers(dispatcher)
+    registry_group_routers(dispatcher, container)
