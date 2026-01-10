@@ -1,7 +1,6 @@
-from datetime import time
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Time
+from sqlalchemy import ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from constants.work_time import END_TIME, START_TIME, TOLERANCE
@@ -10,6 +9,7 @@ from .base import BaseModel
 
 if TYPE_CHECKING:
     from .admin_chat_access import AdminChatAccess
+    from .chat_settings import ChatSettings
     from .message import ChatMessage
     from .message_reply import MessageReply
     from .message_templates import MessageTemplate
@@ -38,31 +38,6 @@ class ChatSession(BaseModel):
         ForeignKey("chat_sessions.chat_id", ondelete="SET NULL"),
         nullable=True,
         doc="ID of the chat to which moderation reports are sent.",
-    )
-
-    start_time: Mapped[time] = mapped_column(
-        Time,
-        default=START_TIME,
-        doc="Start work time for report filtering. Default is global START_TIME.",
-    )
-
-    end_time: Mapped[time] = mapped_column(
-        Time,
-        default=END_TIME,
-        doc="End work time for report filtering. Default is global END_TIME.",
-    )
-
-    tolerance: Mapped[int] = mapped_column(
-        Integer,
-        default=TOLERANCE,
-        doc="Tolerance for report filtering. Default is global TOLERANCE.",
-    )
-
-    is_antibot_enabled: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        nullable=False,
-        doc="Whether antibot verification is enabled for this chat.",
     )
 
     # Relationships
@@ -109,6 +84,33 @@ class ChatSession(BaseModel):
         back_populates="archive_chat",
         foreign_keys=[archive_chat_id],
     )
+
+    settings: Mapped["ChatSettings"] = relationship(
+        "ChatSettings",
+        back_populates="chat",
+        uselist=False,  # Указываем, что это связь 1-к-1
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def is_antibot_enabled(self) -> bool:
+        return self.settings.is_antibot_enabled if self.settings else False
+
+    @property
+    def start_time(self):
+        return self.settings.start_time if self.settings else START_TIME
+
+    @property
+    def end_time(self):
+        return self.settings.end_time if self.settings else END_TIME
+
+    @property
+    def tolerance(self) -> int:
+        return self.settings.tolerance if self.settings else TOLERANCE
+
+    @property
+    def welcome_text(self) -> Optional[str]:
+        return self.settings.welcome_text if self.settings else None
 
     __table_args__ = (
         Index("idx_chat_session_chat_id", "chat_id"),
