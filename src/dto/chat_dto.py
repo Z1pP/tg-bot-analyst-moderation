@@ -10,6 +10,7 @@ class ChatDTO(BaseModel):
     id: int
     tg_id: str
     title: str
+    is_antibot_enabled: bool
 
     model_config = ConfigDict(frozen=True)
 
@@ -20,6 +21,7 @@ class ChatDTO(BaseModel):
             id=chat.id,
             tg_id=chat.chat_id,
             title=chat.title,
+            is_antibot_enabled=chat.is_antibot_enabled,
         )
 
 
