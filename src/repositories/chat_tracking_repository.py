@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from sqlalchemy import delete, select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from database.session import DatabaseContextManager
 from models import AdminChatAccess, ChatSession
@@ -119,13 +119,24 @@ class ChatTrackingRepository:
                 query = (
                     select(ChatSession)
                     .join(AdminChatAccess, ChatSession.id == AdminChatAccess.chat_id)
-                    .options(joinedload(ChatSession.admin_access))
+                    .options(
+                        joinedload(ChatSession.admin_access),
+                        selectinload(ChatSession.settings),
+                    )
                     .where(AdminChatAccess.admin_id == admin_id)
                     .order_by(ChatSession.title)
                     .distinct()
                 )
                 result = await session.execute(query)
                 chats = result.unique().scalars().all()
+
+                # Предварительно обращаемся к свойствам, чтобы они точно были в памяти
+                for chat in chats:
+                    _ = chat.settings
+                    _ = chat.admin_access
+
+                # Отсоединяем всё разом. Это безопаснее, чем expunge по одному.
+                session.expunge_all()
 
                 logger.info(
                     "Получено %d чатов для администратора: %s", len(chats), admin_id
