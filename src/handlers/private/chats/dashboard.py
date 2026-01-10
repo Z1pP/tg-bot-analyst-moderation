@@ -54,7 +54,7 @@ async def chat_selected_handler(
             start_time=chat.start_time.strftime("%H:%M"),
             end_time=chat.end_time.strftime("%H:%M"),
         ),
-        reply_markup=chat_actions_ikb(is_antibot_enabled=chat.is_antibot_enabled),
+        reply_markup=chat_actions_ikb(),
     )
 
     await state.set_state(ChatStateManager.selecting_chat)
