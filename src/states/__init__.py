@@ -19,6 +19,7 @@ from .user import (
     UsernameStates,
     UserStateManager,
 )
+from .welcome_text import WelcomeTextState
 from .work_hours import WorkHoursState
 
 __all__ = [
@@ -40,4 +41,5 @@ __all__ = [
     "WorkHoursState",
     "RatingStateManager",
     "PunishmentState",
+    "WelcomeTextState",
 ]
