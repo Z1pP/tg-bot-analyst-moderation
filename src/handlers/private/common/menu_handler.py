@@ -6,14 +6,11 @@ from aiogram.types import CallbackQuery
 
 from constants import Dialog
 from constants.callback import CallbackData
-from constants.i18n import DEFAULT_LANGUAGE
-from container import container
-from keyboards.inline.chats import chats_management_ikb
-from keyboards.inline.menu import admin_menu_ikb
 from keyboards.inline.users import users_menu_ikb
-from services.user import UserService
-from states import MenuStates, UserStateManager
+from states import UserStateManager
 from utils.send_message import safe_edit_message
+
+from .navigation import show_chats_menu, show_main_menu
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -21,34 +18,11 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data == CallbackData.Menu.MAIN_MENU)
 async def main_menu_callback_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, user_language: str
 ) -> None:
     """Обработчик возврата в главное меню через callback"""
     await callback.answer()
-    await state.clear()
-
-    username = callback.from_user.first_name
-    menu_text = Dialog.Menu.MENU_TEXT.format(username=username)
-
-    # Получаем язык пользователя из БД (LanguageMiddleware уже сохранил его)
-    user_service: UserService = container.resolve(UserService)
-    db_user = await user_service.get_user(tg_id=str(callback.from_user.id))
-    user_language = (
-        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
-    )
-
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=menu_text,
-        reply_markup=admin_menu_ikb(
-            user_language=user_language,
-            admin_tg_id=str(callback.from_user.id),
-        ),
-    )
-
-    await state.set_state(MenuStates.main_menu)
+    await show_main_menu(callback, state, user_language)
 
 
 @router.callback_query(F.data == CallbackData.Menu.USERS_MENU)
@@ -75,17 +49,7 @@ async def chats_menu_callback_handler(
 ) -> None:
     """Обработчик меню чатов через callback"""
     await callback.answer()
-    await state.clear()
-
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=Dialog.Chat.CHAT_MANAGEMENT,
-        reply_markup=chats_management_ikb(),
-    )
-
-    await state.set_state(MenuStates.chats_menu)
+    await show_chats_menu(callback, state)
 
 
 @router.callback_query(F.data == CallbackData.Menu.MESSAGE_MANAGEMENT)
