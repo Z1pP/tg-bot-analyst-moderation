@@ -4,11 +4,11 @@ from datetime import datetime
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
 from constants.period import TimePeriod
-from container import container
 from keyboards.inline.calendar_kb import CalendarKeyboard
 from keyboards.inline.chats import chat_actions_ikb, rating_report_ikb
 from keyboards.inline.time_period import time_period_ikb_chat
@@ -43,7 +43,7 @@ async def chat_daily_rating_handler(callback: CallbackQuery, state: FSMContext) 
     F.data.startswith(CallbackData.Report.PREFIX_PERIOD),
 )
 async def process_period_selection_callback(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обрабатывает выбор периода для рейтинга чата через callback."""
     await callback.answer()
@@ -100,6 +100,7 @@ async def process_period_selection_callback(
         chat_id=chat_id,
         start_date=start_date,
         end_date=end_date,
+        container=container,
     )
 
 
@@ -109,6 +110,7 @@ async def _render_rating_view(
     chat_id: int,
     start_date: datetime,
     end_date: datetime,
+    container: Container,
 ) -> None:
     """Рендерит представление рейтинга чата."""
     if not chat_id:
