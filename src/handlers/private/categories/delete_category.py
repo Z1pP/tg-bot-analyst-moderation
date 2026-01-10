@@ -3,9 +3,9 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
-from container import container
 from exceptions.category import CategoryNotFoundError
 from keyboards.inline.categories import categories_inline_ikb, conf_remove_category_kb
 from keyboards.inline.templates import templates_menu_ikb
@@ -68,6 +68,7 @@ async def remove_category_handler(
 async def confirm_removing_category_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик подтверждения удаления категории"""
     await callback.answer()
@@ -158,6 +159,7 @@ async def confirm_removing_category_handler(
 async def cancel_removing_category_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик отмены удаления категории"""
     await callback.answer()
