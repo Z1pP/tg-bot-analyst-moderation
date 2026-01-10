@@ -4,11 +4,8 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
-from constants.i18n import DEFAULT_LANGUAGE
-from container import container
 from keyboards.inline.menu import admin_menu_ikb
 from keyboards.inline.message_actions import send_message_ikb
-from services.user import UserService
 from states import MenuStates, MessageManagerState
 from utils.send_message import safe_edit_message
 
@@ -28,7 +25,10 @@ async def message_management_menu_handler(
         callback.from_user.username,
     )
 
-    await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=Dialog.MessageManager.INPUT_MESSAGE_LINK,
         reply_markup=send_message_ikb(),
     )
@@ -41,7 +41,7 @@ async def message_management_menu_handler(
 
 @router.callback_query(F.data == "back_to_main_menu_from_message_management")
 async def back_to_main_menu_from_message_management_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery, state: FSMContext, user_language: str
 ) -> None:
     """Обработчик возврата в главное меню из меню управления сообщениями"""
     await callback.answer()
@@ -49,13 +49,6 @@ async def back_to_main_menu_from_message_management_handler(
 
     username = callback.from_user.first_name
     menu_text = Dialog.Menu.MENU_TEXT.format(username=username)
-
-    # Получаем язык пользователя из БД
-    user_service: UserService = container.resolve(UserService)
-    db_user = await user_service.get_user(tg_id=str(callback.from_user.id))
-    user_language = (
-        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
-    )
 
     await safe_edit_message(
         bot=callback.bot,
