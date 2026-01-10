@@ -41,12 +41,6 @@ class BaseGetChatsUseCase:
         filtered_chats = []
         for chat in tracked_chats:
             if await filter_func(chat):
-                filtered_chats.append(
-                    ChatDTO(
-                        id=chat.id,
-                        tg_id=chat.chat_id,
-                        title=chat.title,
-                    )
-                )
+                filtered_chats.append(ChatDTO.from_model(chat))
 
         return filtered_chats if filtered_chats else None

@@ -31,8 +31,8 @@ class SaveMessageUseCase:
         # Возвращаем заглушку (ID будет присвоен после обработки воркером)
         return ResultMessageDTO(
             id=0,  # Временное значение, будет обновлено после сохранения в БД
-            db_chat_id=message_dto.chat_id,
-            db_user_id=message_dto.user_id,
+            chat_id=message_dto.chat_id,
+            user_id=message_dto.user_id,
             message_id=message_dto.message_id,
             message_type=message_dto.message_type,
             content_type=message_dto.content_type,

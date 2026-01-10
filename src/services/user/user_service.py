@@ -87,7 +87,7 @@ class UserService:
         return user
 
     async def get_or_create(
-        self, username: str, tg_id: str, language: str = "ru"
+        self, tg_id: str, username: Optional[str] = None, language: str = "ru"
     ) -> User:
         user = await self.get_user(tg_id=tg_id, username=username)
 

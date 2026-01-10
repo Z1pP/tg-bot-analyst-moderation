@@ -1,6 +1,8 @@
 from .get_all_chats import GetAllChatsUseCase
 from .get_chats_for_user_action import GetChatsForUserActionUseCase
 from .get_tracked_chats import GetTrackedChatsUseCase
+from .toggle_antibot_use_case import ToggleAntibotUseCase
+from .update_chat_welcome_text import UpdateChatWelcomeTextUseCase
 from .update_chat_work_hours import UpdateChatWorkHoursUseCase
 
 __all__ = [
@@ -8,4 +10,6 @@ __all__ = [
     "GetTrackedChatsUseCase",
     "GetChatsForUserActionUseCase",
     "UpdateChatWorkHoursUseCase",
+    "ToggleAntibotUseCase",
+    "UpdateChatWelcomeTextUseCase",
 ]

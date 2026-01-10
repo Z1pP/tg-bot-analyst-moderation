@@ -8,6 +8,7 @@ from services.caching import ICache
 
 from .group import router as group_router
 from .private import router as private_router
+from .private.antibot import router as antibot_router
 
 
 def registry_admin_routers(dispatcher: Dispatcher):
@@ -35,6 +36,16 @@ def registry_admin_routers(dispatcher: Dispatcher):
     dispatcher.include_router(only_admin_router)
 
 
+def registry_public_private_routers(dispatcher: Dispatcher):
+    # Роутеры для приватных чатов, доступные всем (не только админам)
+    public_private_router = Router(name="public_private_router")
+    public_private_router.message.filter(ChatTypeFilter(chat_type=[ChatType.PRIVATE]))
+
+    public_private_router.include_router(antibot_router)
+
+    dispatcher.include_router(public_private_router)
+
+
 def registry_group_routers(dispatcher: Dispatcher):
     # Регистриуем групповой роутер
     public_router = Router(name="public_router")
@@ -46,5 +57,6 @@ def registry_group_routers(dispatcher: Dispatcher):
 
 
 def registry_routers(dispatcher: Dispatcher):
+    registry_public_private_routers(dispatcher)
     registry_admin_routers(dispatcher)
     registry_group_routers(dispatcher)

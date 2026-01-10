@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 
 from bot import configure_dispatcher
 from commands.start_commands import set_bot_commands
+from config import settings
 from container import ContainerSetup
 from database.session import engine
 from utils.logger_config import setup_logger
@@ -92,7 +93,7 @@ async def webhook_info():
 async def webhook(request: Request):
     """Обрабатывает входящие обновления от Telegram."""
     update = Update.model_validate(await request.json(), context={"bot": bot})
-    await dp.feed_update(bot, update)
+    asyncio.create_task(dp.feed_update(bot, update))
     return {"ok": True}
 
 
@@ -148,8 +149,9 @@ async def shutdown(bot, dp):
 
 async def main():
     """Точка входа: выбирает режим запуска (webhook/polling)."""
+    webhook_url = args.webhook_url or settings.USE_WEBHOOK
     try:
-        if args.webhook_url:
+        if webhook_url:
             await run_webhook()
         else:
             await run_polling()

@@ -287,10 +287,60 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.PUNISHMENT_SETTING,
         ),
         InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.ANTIBOT_SETTING,
+            callback_data=CallbackData.Chat.ANTIBOT_SETTING,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.WELCOME_TEXT_SETTING,
+            callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
+        ),
+    )
+
+    builder.row(
+        InlineKeyboardButton(
             text=InlineButtons.ChatButtons.BACK_TO_SELECTION_CHAT,
             callback_data=CallbackData.Chat.SELECT_CHAT,
         ),
-        width=1,
+    )
+
+    builder.adjust(1, 2, 2, 2, 1, 1)
+
+    return builder.as_markup()
+
+
+def cancel_welcome_text_setting_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура с кнопкой отмены для настройки приветственного текста"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+        )
+    )
+    return builder.as_markup()
+
+
+def antibot_setting_ikb(is_enabled: bool = False) -> InlineKeyboardMarkup:
+    """Клавиатура раздела Антибот"""
+    builder = InlineKeyboardBuilder()
+
+    toggle_text = (
+        InlineButtons.ChatButtons.ANTIBOT_DISABLE
+        if is_enabled
+        else InlineButtons.ChatButtons.ANTIBOT_ENABLE
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=toggle_text,
+            callback_data=CallbackData.Chat.ANTIBOT_TOGGLE,
+        )
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+        )
     )
 
     return builder.as_markup()

@@ -1,6 +1,7 @@
 from .dialogs import (
     AdminLogsDialogs,
     AmnestyUserDialogs,
+    AntibotDialogs,
     BanUserDialogs,
     CalendarDialogs,
     ChatDialogs,
@@ -117,6 +118,10 @@ class InlineButtons:
         PUNISHMENT_SETTING = "⚖️ Настройка наказаний"
         PUNISHMENT_CREATE_NEW = "🆕 Создать новую"
         PUNISHMENT_SET_DEFAULT = "🔄 Установить по умолчанию"
+        ANTIBOT_SETTING = "🛡️ Антибот"
+        ANTIBOT_ENABLE = "🤖 Включить Антибот"
+        ANTIBOT_DISABLE = "🤖 Выключить Антибот"
+        WELCOME_TEXT_SETTING = "👋 Приветствие"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
@@ -189,6 +194,8 @@ class Dialog:
     Chat = ChatDialogs
     # Templates
     Template = TemplateDialogs
+    # Antibot
+    Antibot = AntibotDialogs
     # Admin Logs
     AdminLogs = AdminLogsDialogs
     # Release Notes

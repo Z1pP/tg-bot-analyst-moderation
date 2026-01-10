@@ -3,6 +3,7 @@ from .admin_chat_access import AdminChatAccess
 from .associations import admin_user_tracking
 from .base import Base
 from .chat_session import ChatSession
+from .chat_settings import ChatSettings
 from .message import ChatMessage
 from .message_reply import MessageReply
 from .message_templates import MessageTemplate, TemplateCategory, TemplateMedia
@@ -32,4 +33,5 @@ __all__ = [
     "UserChatStatus",
     "ReleaseNote",
     "ReportSchedule",
+    "ChatSettings",
 ]

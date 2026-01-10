@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -10,16 +10,27 @@ class ChatDTO(BaseModel):
     id: int
     tg_id: str
     title: str
+    is_antibot_enabled: bool
+    welcome_text: Optional[str] = None
 
     model_config = ConfigDict(frozen=True)
 
     @classmethod
     def from_model(cls, chat: ChatSession) -> "ChatDTO":
         """Создает DTO из доменной модели"""
+        is_antibot_enabled = False
+        welcome_text = None
+
+        if chat.settings:
+            is_antibot_enabled = chat.settings.is_antibot_enabled
+            welcome_text = chat.settings.welcome_text
+
         return cls(
             id=chat.id,
             tg_id=chat.chat_id,
             title=chat.title,
+            is_antibot_enabled=is_antibot_enabled,
+            welcome_text=welcome_text,
         )
 
 

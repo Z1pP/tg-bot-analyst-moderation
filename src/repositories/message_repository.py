@@ -253,3 +253,24 @@ class MessageRepository(BaseRepository):
         return await self._bulk_upsert_on_conflict_nothing(
             ChatMessage, mappings, "сообщений"
         )
+
+    async def get_max_message_id(self, chat_id: int) -> int | None:
+        """Возвращает максимальный ID сообщения в чате."""
+        async with self._db.session() as session:
+            query = select(func.max(ChatMessage.id)).where(
+                ChatMessage.chat_id == chat_id
+            )
+            result = await session.execute(query)
+            return result.scalar()
+
+    async def count_messages_since(self, chat_id: int, last_id: int) -> int:
+        """Считает количество новых текстовых сообщений после указанного ID."""
+        async with self._db.session() as session:
+            query = select(func.count(ChatMessage.id)).where(
+                ChatMessage.chat_id == chat_id,
+                ChatMessage.id > last_id,
+                ChatMessage.content_type == "text",
+                ChatMessage.text.is_not(None),
+            )
+            result = await session.execute(query)
+            return result.scalar() or 0

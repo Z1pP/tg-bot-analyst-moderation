@@ -4,8 +4,7 @@ from typing import Optional
 
 from constants.enums import AdminActionType
 from models.chat_session import ChatSession
-from repositories import ChatRepository
-from services import AdminActionLogService
+from services import AdminActionLogService, ChatService
 
 logger = logging.getLogger(__name__)
 
@@ -13,10 +12,10 @@ logger = logging.getLogger(__name__)
 class UpdateChatWorkHoursUseCase:
     def __init__(
         self,
-        chat_repository: ChatRepository,
+        chat_service: ChatService,
         admin_action_log_service: AdminActionLogService,
     ):
-        self._chat_repository = chat_repository
+        self._chat_service = chat_service
         self._admin_action_log_service = admin_action_log_service
 
     async def execute(
@@ -27,7 +26,7 @@ class UpdateChatWorkHoursUseCase:
         end_time: Optional[time] = None,
         tolerance: Optional[int] = None,
     ) -> Optional[ChatSession]:
-        updated_chat = await self._chat_repository.update_work_hours(
+        updated_chat = await self._chat_service.update_work_hours(
             chat_id=chat_id,
             start_time=start_time,
             end_time=end_time,

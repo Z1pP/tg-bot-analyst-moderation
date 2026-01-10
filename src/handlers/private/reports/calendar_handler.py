@@ -106,7 +106,9 @@ async def handle_day_selection(
     current_state = await state.get_state()
 
     if not cal_start or cal_end:
-        await state.update_data(cal_start_date=selected_date, cal_end_date=None)
+        await state.update_data(
+            cal_start_date=selected_date.isoformat(), cal_end_date=None
+        )
 
         calendar_kb = _create_calendar_by_state(
             current_state=current_state,
@@ -124,7 +126,9 @@ async def handle_day_selection(
     if cal_start and selected_date < cal_start:
         cal_start, selected_date = selected_date, cal_start
 
-    await state.update_data(cal_start_date=cal_start, cal_end_date=selected_date)
+    await state.update_data(
+        cal_start_date=cal_start.isoformat(), cal_end_date=selected_date.isoformat()
+    )
 
     calendar_kb = _create_calendar_by_state(
         current_state=current_state,
@@ -299,6 +303,15 @@ async def calendar_handler(callback: CallbackQuery, state: FSMContext) -> None:
         user_data = await state.get_data()
         cal_start = user_data.get("cal_start_date")
         cal_end = user_data.get("cal_end_date")
+
+        cal_start = (
+            datetime.fromisoformat(cal_start)
+            if isinstance(cal_start, str)
+            else cal_start
+        )
+        cal_end = (
+            datetime.fromisoformat(cal_end) if isinstance(cal_end, str) else cal_end
+        )
 
         if action == "ignore":
             return

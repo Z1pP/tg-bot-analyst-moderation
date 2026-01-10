@@ -1,3 +1,4 @@
+from datetime import time
 from typing import Optional
 
 from models import ChatSession
@@ -108,3 +109,68 @@ class ChatService:
                     await self._cache.set(archive_chat.chat_id, archive_chat)
 
         return work_chat
+
+    async def toggle_antibot(self, chat_id: int) -> Optional[bool]:
+        """
+        Переключает статус антибота для чата и обновляет кеш.
+
+        Args:
+            chat_id: ID чата из БД
+
+        Returns:
+            Новое состояние или None
+        """
+        # Сначала получаем текущий чат, чтобы точно знать его Telegram ID (ключ в кеше)
+        current_chat = await self._chat_repository.get_chat_by_id(chat_id)
+        if current_chat:
+            await self._cache.delete(current_chat.chat_id)
+
+        new_state = await self._chat_repository.toggle_antibot(chat_id)
+        if new_state is not None:
+            # Обновляем объект в кеше
+            chat = await self._chat_repository.get_chat_by_id(chat_id)
+            if chat:
+                await self._cache.set(chat.chat_id, chat)
+
+        return new_state
+
+    async def update_welcome_text(
+        self, chat_id: int, welcome_text: str
+    ) -> Optional[ChatSession]:
+        """
+        Обновляет приветственный текст чата и обновляет кеш.
+        """
+        current_chat = await self._chat_repository.get_chat_by_id(chat_id)
+        if current_chat:
+            await self._cache.delete(current_chat.chat_id)
+
+        chat = await self._chat_repository.update_welcome_text(
+            chat_id=chat_id, welcome_text=welcome_text
+        )
+        if chat:
+            await self._cache.set(chat.chat_id, chat)
+        return chat
+
+    async def update_work_hours(
+        self,
+        chat_id: int,
+        start_time: Optional[time] = None,
+        end_time: Optional[time] = None,
+        tolerance: Optional[int] = None,
+    ) -> Optional[ChatSession]:
+        """
+        Обновляет рабочие часы чата и обновляет кеш.
+        """
+        current_chat = await self._chat_repository.get_chat_by_id(chat_id)
+        if current_chat:
+            await self._cache.delete(current_chat.chat_id)
+
+        chat = await self._chat_repository.update_work_hours(
+            chat_id=chat_id,
+            start_time=start_time,
+            end_time=end_time,
+            tolerance=tolerance,
+        )
+        if chat:
+            await self._cache.set(chat.chat_id, chat)
+        return chat
