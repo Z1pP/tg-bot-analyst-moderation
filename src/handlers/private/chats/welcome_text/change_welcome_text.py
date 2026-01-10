@@ -67,7 +67,7 @@ async def welcome_text_input_handler(message: Message, state: FSMContext) -> Non
         updated_chat = await usecase.execute(
             chat_id=chat_id,
             admin_tg_id=str(message.from_user.id),
-            welcome_text=message.text,
+            welcome_text=message.html_text,
         )
 
         if not updated_chat:
