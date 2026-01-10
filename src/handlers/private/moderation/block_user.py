@@ -2,6 +2,7 @@ import logging
 
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
@@ -44,6 +45,7 @@ async def process_user_data_input(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
+    container: Container,
 ) -> None:
     """
     Обработчик для получения данных о пользователе.
@@ -52,6 +54,7 @@ async def process_user_data_input(
         message=message,
         state=state,
         bot=bot,
+        container=container,
         dialog_texts={
             "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT,
             "user_not_found": Dialog.BanUser.USER_NOT_FOUND,
@@ -68,6 +71,7 @@ async def process_reason_input(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
+    container: Container,
 ) -> None:
     """Обработка причины блокировки (введённой вручную)."""
     reason = message.text.strip()
@@ -77,6 +81,7 @@ async def process_reason_input(
         sender=message,
         state=state,
         bot=bot,
+        container=container,
         is_callback=False,
         next_state=BanUserStates.waiting_chat_select,
     )
@@ -90,6 +95,7 @@ async def process_no_reason(
     callback: types.CallbackQuery,
     state: FSMContext,
     bot: Bot,
+    container: Container,
 ) -> None:
     """Обработка нажатия кнопки 'Без причины'."""
     await callback.answer()
@@ -99,6 +105,7 @@ async def process_no_reason(
         sender=callback,
         state=state,
         bot=bot,
+        container=container,
         is_callback=True,
         next_state=BanUserStates.waiting_chat_select,
     )
@@ -111,6 +118,7 @@ async def process_no_reason(
 async def process_chat_selection(
     callback: types.CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """
     Обработчик для выбора чата для блокировки.
@@ -123,4 +131,5 @@ async def process_chat_selection(
         success_text=Dialog.BanUser.SUCCESS_BAN,
         partial_text=Dialog.BanUser.PARTIAL_BAN,
         fail_text=Dialog.BanUser.FAIL_BAN,
+        container=container,
     )

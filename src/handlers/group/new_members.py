@@ -1,9 +1,9 @@
 import logging
 
 from aiogram import F, Router, types
+from punq import Container
 
 from constants import Dialog
-from container import container
 from usecases.moderation import RestrictNewMemberUseCase
 from usecases.user import GetOrCreateUserIfNotExistUserCase
 from utils.exception_handler import handle_exception
@@ -12,7 +12,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-async def get_or_create_user(tg_id: str, username: str) -> None:
+async def get_or_create_user(tg_id: str, username: str, container: Container) -> None:
     """Создает или получает пользователя из базы данных."""
     try:
         usecase: GetOrCreateUserIfNotExistUserCase = container.resolve(
@@ -28,7 +28,7 @@ async def get_or_create_user(tg_id: str, username: str) -> None:
 
 
 @router.message(F.new_chat_members)
-async def process_new_chat_members(message: types.Message):
+async def process_new_chat_members(message: types.Message, container: Container):
     """Обработчик добавления новых участников в группу."""
     try:
         chat_title = message.chat.title or "Неизвестная группа"

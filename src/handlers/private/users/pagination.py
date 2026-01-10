@@ -3,10 +3,10 @@ from typing import List, Tuple
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from punq import Container
 
 from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
-from container import container
 from keyboards.inline.users import remove_user_inline_kb, users_inline_kb
 from models import User
 from states import UserStateManager
@@ -25,8 +25,9 @@ class UsersPaginationHandler(BasePaginationHandler):
         page: int,
         query: CallbackQuery,
         state: FSMContext,
+        container: Container,
     ) -> Tuple[List[User], int]:
-        users = await get_tracked_users(str(query.from_user.id))
+        users = await get_tracked_users(str(query.from_user.id), container)
         return paginate_users(users, page)
 
     async def build_keyboard(
@@ -51,8 +52,9 @@ class RemoveUsersPaginationHandler(BasePaginationHandler):
         page: int,
         query: CallbackQuery,
         state: FSMContext,
+        container: Container,
     ) -> Tuple[List[User], int]:
-        users = await get_tracked_users(str(query.from_user.id))
+        users = await get_tracked_users(str(query.from_user.id), container)
         return paginate_users(users, page)
 
     async def build_keyboard(
@@ -76,18 +78,22 @@ remove_users_handler = RemoveUsersPaginationHandler()
     UserStateManager.listing_users,
     F.data.startswith(CallbackData.User.PREFIX_PREV_USERS_PAGE),
 )
-async def prev_page_users_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def prev_page_users_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик перехода на предыдущую страницу пользователей"""
-    await users_handler.handle_prev_page(callback, state)
+    await users_handler.handle_prev_page(callback, state, container)
 
 
 @router.callback_query(
     UserStateManager.listing_users,
     F.data.startswith(CallbackData.User.PREFIX_NEXT_USERS_PAGE),
 )
-async def next_page_users_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def next_page_users_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик перехода на следующую страницу пользователей"""
-    await users_handler.handle_next_page(callback, state)
+    await users_handler.handle_next_page(callback, state, container)
 
 
 @router.callback_query(
@@ -95,10 +101,10 @@ async def next_page_users_handler(callback: CallbackQuery, state: FSMContext) ->
     F.data.startswith(CallbackData.User.PREFIX_PREV_REMOVE_USERS_PAGE),
 )
 async def prev_page_remove_users_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик перехода на предыдущую страницу для удаления пользователей"""
-    await remove_users_handler.handle_prev_page(callback, state)
+    await remove_users_handler.handle_prev_page(callback, state, container)
 
 
 @router.callback_query(
@@ -106,13 +112,13 @@ async def prev_page_remove_users_handler(
     F.data.startswith(CallbackData.User.PREFIX_NEXT_REMOVE_USERS_PAGE),
 )
 async def next_page_remove_users_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик перехода на следующую страницу для удаления пользователей"""
-    await remove_users_handler.handle_next_page(callback, state)
+    await remove_users_handler.handle_next_page(callback, state, container)
 
 
-async def get_tracked_users(admin_tgid: str) -> List[User]:
+async def get_tracked_users(admin_tgid: str, container: Container) -> List[User]:
     """Получает всех отслеживаемых пользователей для администратора."""
     usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
     return await usecase.execute(admin_tgid=admin_tgid)

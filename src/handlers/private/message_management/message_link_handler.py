@@ -7,6 +7,7 @@ from constants import Dialog
 from keyboards.inline.message_actions import message_action_ikb, send_message_ikb
 from states.message_management import MessageManagerState
 from utils.data_parser import MESSAGE_LINK_PATTERN, parse_message_link
+from utils.send_message import safe_edit_message
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -22,22 +23,20 @@ async def message_link_handler(
     """Обработчик ссылки на сообщение."""
     result = parse_message_link(message.text)
 
-    if not result:
-        # Если ссылка неверная, удаляем сообщение пользователя и показываем ошибку через edit_text
-        data = await state.get_data()
-        active_message_id = data.get("active_message_id")
+    # Получаем message_id активного сообщения для редактирования
+    data = await state.get_data()
+    active_message_id = data.get("active_message_id")
 
+    if not result:
+        # Если ссылка неверная, удаляем сообщение пользователя и показываем ошибку
         if active_message_id:
-            try:
-                await bot.edit_message_text(
-                    chat_id=message.chat.id,
-                    message_id=active_message_id,
-                    text=f"{Dialog.MessageManager.INVALID_LINK}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}",
-                    reply_markup=send_message_ikb(),
-                )
-            except Exception as e:
-                logger.error(f"Ошибка при редактировании сообщения: {e}")
-                await message.reply(Dialog.MessageManager.INVALID_LINK)
+            await safe_edit_message(
+                bot=bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=f"{Dialog.MessageManager.INVALID_LINK}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}",
+                reply_markup=send_message_ikb(),
+            )
         else:
             await message.reply(Dialog.MessageManager.INVALID_LINK)
 
@@ -62,10 +61,6 @@ async def message_link_handler(
         message_id=message_id,
     )
 
-    # Получаем message_id активного сообщения для редактирования
-    data = await state.get_data()
-    active_message_id = data.get("active_message_id")
-
     # Удаляем сообщение пользователя со ссылкой
     try:
         await message.delete()
@@ -73,35 +68,25 @@ async def message_link_handler(
         logger.warning(f"Не удалось удалить сообщение: {e}")
 
     # Редактируем существующее сообщение вместо создания нового
+    text = Dialog.MessageManager.MESSAGE_ACTIONS.format(
+        message_id=message_id,
+        chat_tgid=chat_tgid,
+    )
+
     if active_message_id:
-        try:
-            await bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=active_message_id,
-                text=Dialog.MessageManager.MESSAGE_ACTIONS.format(
-                    message_id=message_id,
-                    chat_tgid=chat_tgid,
-                ),
-                reply_markup=message_action_ikb(),
-            )
-        except Exception as e:
-            logger.error(f"Ошибка при редактировании сообщения: {e}")
-            # Если не удалось отредактировать, отправляем новое сообщение
-            await message.answer(
-                Dialog.MessageManager.MESSAGE_ACTIONS.format(
-                    message_id=message_id,
-                    chat_tgid=chat_tgid,
-                ),
-                reply_markup=message_action_ikb(),
-            )
-    else:
-        # Если нет active_message_id, отправляем новое сообщение
-        await message.answer(
-            Dialog.MessageManager.MESSAGE_ACTIONS.format(
-                message_id=message_id,
-                chat_tgid=chat_tgid,
-            ),
+        await safe_edit_message(
+            bot=bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            text=text,
             reply_markup=message_action_ikb(),
         )
+    else:
+        # Если нет active_message_id, отправляем новое сообщение
+        sent_msg = await message.answer(
+            text,
+            reply_markup=message_action_ikb(),
+        )
+        await state.update_data(active_message_id=sent_msg.message_id)
 
     await state.set_state(MessageManagerState.waiting_action_select)

@@ -4,8 +4,8 @@ from typing import List, Optional, Tuple
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
-from container import container
 from keyboards.inline.templates import templates_inline_kb
 from models import MessageTemplate
 from repositories import MessageTemplateRepository
@@ -27,7 +27,7 @@ class StateDataExtractor:
     F.data.startswith("prev_page__"),
 )
 async def prev_page_templates_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик перехода на предыдущую страницу шаблонов"""
     current_page = int(callback.data.split("__")[1])
@@ -37,6 +37,7 @@ async def prev_page_templates_handler(
     templates, total_count = await get_templates_and_count(
         data=state_data,
         page=prev_page,
+        container=container,
     )
 
     await callback.message.edit_reply_markup(
@@ -55,7 +56,7 @@ async def prev_page_templates_handler(
     F.data.startswith("next_page__"),
 )
 async def next_page_templates_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик перехода на следующую страницу шаблонов"""
     current_page = int(callback.data.split("__")[1])
@@ -65,6 +66,7 @@ async def next_page_templates_handler(
     templates, total_count = await get_templates_and_count(
         data=state_data,
         page=next_page,
+        container=container,
     )
 
     if not templates:
@@ -74,6 +76,7 @@ async def next_page_templates_handler(
         prev_templates, total_count = await get_templates_and_count(
             data=state_data,
             page=current_page,
+            container=container,
         )
         await safe_edit_message(
             bot=callback.bot,
@@ -103,32 +106,38 @@ async def next_page_templates_handler(
 
 async def get_templates_and_count(
     data: StateDataExtractor,
+    container: Container,
     page: int = 1,
 ) -> Tuple[List[MessageTemplate], int]:
     if data.chat_id:
         templates = await get_templates_by_chat_page(
+            container=container,
             page=page,
             chat_id=data.chat_id,
         )
-        total_count = await get_templates_count_by_chat(chat_id=data.chat_id)
+        total_count = await get_templates_count_by_chat(
+            container=container, chat_id=data.chat_id
+        )
     elif data.category_id:
         templates = await get_templates_by_category_page(
+            container=container,
             page=page,
             category_id=data.category_id,
         )
         total_count = await get_templates_count_by_category(
-            category_id=data.category_id
+            container=container, category_id=data.category_id
         )
     else:
-        templates = await get_global_templates(page)
-        total_count = await get_global_templates_count()
+        templates = await get_global_templates(container=container, page=page)
+        total_count = await get_global_templates_count(container=container)
 
     return templates, total_count
 
 
 async def get_templates_by_category_page(
+    container: Container,
     page: int = 1,
-    category_id: int = None,
+    category_id: Optional[int] = None,
 ) -> List[MessageTemplate]:
     """Получает шаблоны для указанной страницы и категории"""
     template_repo: MessageTemplateRepository = container.resolve(
@@ -144,7 +153,9 @@ async def get_templates_by_category_page(
     return templates
 
 
-async def get_templates_count_by_category(category_id: int) -> int:
+async def get_templates_count_by_category(
+    container: Container, category_id: int
+) -> int:
     """Получает общее количество шаблонов по категории"""
     template_repo: MessageTemplateRepository = container.resolve(
         MessageTemplateRepository
@@ -153,8 +164,9 @@ async def get_templates_count_by_category(category_id: int) -> int:
 
 
 async def get_templates_by_chat_page(
+    container: Container,
     page: int = 1,
-    chat_id: int = None,
+    chat_id: Optional[int] = None,
 ) -> List[MessageTemplate]:
     """Получает шаблоны для указанной страницы и чата"""
     template_repo: MessageTemplateRepository = container.resolve(
@@ -169,7 +181,7 @@ async def get_templates_by_chat_page(
     return templates
 
 
-async def get_templates_count_by_chat(chat_id: int) -> int:
+async def get_templates_count_by_chat(container: Container, chat_id: int) -> int:
     """Получает общее количество шаблонов по чату"""
     template_repo: MessageTemplateRepository = container.resolve(
         MessageTemplateRepository
@@ -177,7 +189,9 @@ async def get_templates_count_by_chat(chat_id: int) -> int:
     return await template_repo.get_templates_count(chat_id=chat_id)
 
 
-async def get_global_templates(page: int = 1) -> List[MessageTemplate]:
+async def get_global_templates(
+    container: Container, page: int = 1
+) -> List[MessageTemplate]:
     """Получает глобальные шаблоны для указанной страницы"""
     template_repo: MessageTemplateRepository = container.resolve(
         MessageTemplateRepository
@@ -191,7 +205,7 @@ async def get_global_templates(page: int = 1) -> List[MessageTemplate]:
     return templates
 
 
-async def get_global_templates_count() -> int:
+async def get_global_templates_count(container: Container) -> int:
     """Получает общее количество глобальных шаблонов"""
     template_repo: MessageTemplateRepository = container.resolve(
         MessageTemplateRepository

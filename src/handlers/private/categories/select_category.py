@@ -3,9 +3,9 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
-from container import container
 from keyboards.inline.categories import categories_inline_ikb
 from keyboards.inline.chats import template_scope_selector_ikb
 from keyboards.inline.templates import templates_inline_kb, templates_menu_ikb
@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 async def select_category_for_template_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик выбора категории при создании нового шаблона"""
     await callback.answer()
@@ -44,7 +45,10 @@ async def select_category_for_template_handler(
     try:
         usecase: GetTrackedChatsUseCase = container.resolve(GetTrackedChatsUseCase)
         chats = await usecase.execute(tg_id=str(callback.from_user.id))
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text="Выбери группу для шаблона:",
             reply_markup=template_scope_selector_ikb(chats=chats),
         )
@@ -68,6 +72,7 @@ async def select_category_for_template_handler(
 async def show_templates_by_category_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик выбора категории при просмотре шаблонов"""
     await callback.answer()
@@ -87,7 +92,10 @@ async def show_templates_by_category_handler(
         templates = await service.get_by_category(category_id=category_id)
         total_count = await service.get_count_by_category(category_id=category_id)
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text="Выберите шаблон:",
             reply_markup=templates_inline_kb(
                 templates=templates,

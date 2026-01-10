@@ -3,10 +3,10 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from di import container
 from keyboards.inline.chats import chat_actions_ikb
 from services.chat import ChatService
 from states import ChatStateManager, RatingStateManager
@@ -29,8 +29,7 @@ logger = logging.getLogger(__name__)
     RatingStateManager.selecting_custom_period,
 )
 async def back_to_chat_actions_handler(
-    callback: CallbackQuery,
-    state: FSMContext,
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик возврата к меню чатов."""
     await callback.answer()

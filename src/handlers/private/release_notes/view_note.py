@@ -3,10 +3,10 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from container import container
 from keyboards.inline.release_notes import release_note_detail_ikb
 from services.release_note_service import ReleaseNoteService
 from services.time_service import TimeZoneService
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data.startswith(CallbackData.ReleaseNotes.PREFIX_SELECT))
 async def view_note_callback_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик просмотра детализации релизной заметки"""
     await callback.answer()

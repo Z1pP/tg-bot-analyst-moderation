@@ -4,11 +4,11 @@ from datetime import datetime
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
 from constants.period import TimePeriod
-from container import container
 from dto.report import ChatReportDTO
 from keyboards.inline import CalendarKeyboard
 from keyboards.inline.chats import chat_actions_ikb
@@ -53,7 +53,7 @@ async def get_chat_statistics_handler(
     F.data.startswith(CallbackData.Report.PREFIX_PERIOD),
 )
 async def process_period_selection_callback(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обрабатывает выбор периода для отчета по чату через callback."""
     await callback.answer()
@@ -95,6 +95,7 @@ async def process_period_selection_callback(
         state=state,
         chat_id=chat_id,
         period_text=period_text,
+        container=container,
     )
 
 
@@ -102,6 +103,7 @@ async def _render_report_view(
     callback: CallbackQuery,
     state: FSMContext,
     chat_id: int,
+    container: Container,
     period_text: str | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
@@ -114,6 +116,7 @@ async def _render_report_view(
         callback: Callback query
         state: FSM context
         chat_id: ID чата
+        container: Контейнер зависимостей
         period_text: Текстовый период (например, "today", "yesterday")
         start_date: Начальная дата для кастомного периода (из календаря)
         end_date: Конечная дата для кастомного периода (из календаря)

@@ -3,11 +3,11 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
 from constants.i18n import DEFAULT_LANGUAGE
-from container import container
 from keyboards.inline.release_notes import (
     confirm_broadcast_release_note_ikb,
     release_note_detail_ikb,
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data.startswith(f"{CallbackData.ReleaseNotes.BROADCAST}__"))
 async def broadcast_note_start_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик начала рассылки релизной заметки"""
     from constants import RELEASE_NOTES_ADMIN_IDS
@@ -62,7 +62,9 @@ async def broadcast_note_start_handler(
     F.data.startswith(CallbackData.ReleaseNotes.PREFIX_CONFIRM_BROADCAST),
     ReleaseNotesStateManager.broadcasting_note,
 )
-async def confirm_broadcast_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def confirm_broadcast_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик подтверждения рассылки"""
     from constants import RELEASE_NOTES_ADMIN_IDS
 

@@ -10,9 +10,9 @@ from aiogram.types import (
     InputMediaVideo,
     Message,
 )
+from punq import Container
 
 from constants import Dialog
-from container import container
 from keyboards.inline.message_actions import hide_album_ikb, hide_template_ikb
 from models import MessageTemplate, TemplateMedia
 from repositories import MessageTemplateRepository
@@ -31,9 +31,15 @@ async def select_template_handler(
     query: CallbackQuery,
     bot: Bot,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик выбора шаблона"""
-    template_id = query.data.split("__")[1]
+    template_id_str = query.data.split("__")[1]
+    if not template_id_str.isdigit():
+        logger.error("Некорректный ID шаблона в callback: %s", query.data)
+        return
+
+    template_id = int(template_id_str)
 
     logger.info(
         f"Был выбран шаблон c ID={template_id} пользователем - {query.from_user.username}"
@@ -42,7 +48,8 @@ async def select_template_handler(
     await send_template_handler(
         bot=bot,
         message=query.message,
-        template_id=int(template_id),
+        template_id=template_id,
+        container=container,
     )
 
     await query.answer()
@@ -52,6 +59,7 @@ async def send_template_handler(
     bot: Bot,
     message: Message,
     template_id: int,
+    container: Container,
 ) -> None:
     """Отправляет шаблон быстрого ответа пользователю"""
     template_repo: MessageTemplateRepository = container.resolve(

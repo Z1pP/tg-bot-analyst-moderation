@@ -7,6 +7,16 @@ from services.caching import ICache
 
 
 class ChatService:
+    """
+    Сервис для управления настройками чатов и их сессиями.
+
+    Обеспечивает:
+    - Поиск и создание чатов
+    - Привязку архивных каналов
+    - Управление настройками (антибот, приветствие, рабочие часы)
+    - Автоматическую инвалидацию и обновление кеша
+    """
+
     def __init__(self, chat_repository: ChatRepository, cache: ICache):
         self._chat_repository = chat_repository
         self._cache = cache
@@ -16,6 +26,17 @@ class ChatService:
         chat_tgid: str,
         title: Optional[str] = None,
     ) -> Optional[ChatSession]:
+        """
+        Получает информацию о чате по его Telegram ID.
+        Если название изменилось, обновляет его в БД и кеше.
+
+        Args:
+            chat_tgid: Telegram ID чата
+            title: Текущее название чата (для синхронизации)
+
+        Returns:
+            Объект ChatSession или None
+        """
         chat = await self._cache.get(chat_tgid)
         if chat:
             if title and chat.title != title:
@@ -38,6 +59,16 @@ class ChatService:
         return chat or None
 
     async def create_chat(self, chat_id: str, title: str) -> ChatSession:
+        """
+        Создает новую запись чата в БД и кеширует её.
+
+        Args:
+            chat_id: Telegram ID чата
+            title: Название чата
+
+        Returns:
+            Созданный объект ChatSession
+        """
         chat = await self._chat_repository.create_chat(
             chat_id=str(chat_id), title=title
         )
@@ -47,6 +78,16 @@ class ChatService:
         return chat
 
     async def get_or_create(self, chat_id: str, title: str) -> ChatSession:
+        """
+        Получает существующий чат или создает новый, если он не найден.
+
+        Args:
+            chat_id: Telegram ID чата
+            title: Название чата
+
+        Returns:
+            Объект ChatSession
+        """
         chat = await self.get_chat(chat_tgid=chat_id, title=title)
         if chat:
             return chat
@@ -55,6 +96,29 @@ class ChatService:
 
         await self._cache.set(chat_id, new_chat)
         return new_chat
+
+    async def _update_and_sync_cache(
+        self, chat_id: int, update_func, **kwargs
+    ) -> Optional[ChatSession]:
+        """
+        Вспомогательный метод для обновления данных чата в БД и синхронизации кеша.
+
+        Args:
+            chat_id: ID чата из БД
+            update_func: Метод репозитория для обновления
+            **kwargs: Аргументы для update_func
+
+        Returns:
+            Обновленный объект ChatSession или None
+        """
+        current_chat = await self._chat_repository.get_chat_by_id(chat_id)
+        if current_chat:
+            await self._cache.delete(current_chat.chat_id)
+
+        chat = await update_func(chat_id=chat_id, **kwargs)
+        if chat:
+            await self._cache.set(chat.chat_id, chat)
+        return chat
 
     async def get_chat_with_archive(
         self,
@@ -120,36 +184,29 @@ class ChatService:
         Returns:
             Новое состояние или None
         """
-        # Сначала получаем текущий чат, чтобы точно знать его Telegram ID (ключ в кеше)
-        current_chat = await self._chat_repository.get_chat_by_id(chat_id)
-        if current_chat:
-            await self._cache.delete(current_chat.chat_id)
-
-        new_state = await self._chat_repository.toggle_antibot(chat_id)
-        if new_state is not None:
-            # Обновляем объект в кеше
-            chat = await self._chat_repository.get_chat_by_id(chat_id)
-            if chat:
-                await self._cache.set(chat.chat_id, chat)
-
-        return new_state
+        chat = await self._update_and_sync_cache(
+            chat_id=chat_id, update_func=self._chat_repository.toggle_antibot
+        )
+        return chat.is_antibot_enabled if chat else None
 
     async def update_welcome_text(
         self, chat_id: int, welcome_text: str
     ) -> Optional[ChatSession]:
         """
         Обновляет приветственный текст чата и обновляет кеш.
-        """
-        current_chat = await self._chat_repository.get_chat_by_id(chat_id)
-        if current_chat:
-            await self._cache.delete(current_chat.chat_id)
 
-        chat = await self._chat_repository.update_welcome_text(
-            chat_id=chat_id, welcome_text=welcome_text
+        Args:
+            chat_id: ID чата из БД
+            welcome_text: Новый текст приветствия
+
+        Returns:
+            Обновленный объект ChatSession или None
+        """
+        return await self._update_and_sync_cache(
+            chat_id=chat_id,
+            update_func=self._chat_repository.update_welcome_text,
+            welcome_text=welcome_text,
         )
-        if chat:
-            await self._cache.set(chat.chat_id, chat)
-        return chat
 
     async def update_work_hours(
         self,
@@ -160,17 +217,20 @@ class ChatService:
     ) -> Optional[ChatSession]:
         """
         Обновляет рабочие часы чата и обновляет кеш.
-        """
-        current_chat = await self._chat_repository.get_chat_by_id(chat_id)
-        if current_chat:
-            await self._cache.delete(current_chat.chat_id)
 
-        chat = await self._chat_repository.update_work_hours(
+        Args:
+            chat_id: ID чата из БД
+            start_time: Время начала работы
+            end_time: Время окончания работы
+            tolerance: Допустимое отклонение
+
+        Returns:
+            Обновленный объект ChatSession или None
+        """
+        return await self._update_and_sync_cache(
             chat_id=chat_id,
+            update_func=self._chat_repository.update_work_hours,
             start_time=start_time,
             end_time=end_time,
             tolerance=tolerance,
         )
-        if chat:
-            await self._cache.set(chat.chat_id, chat)
-        return chat

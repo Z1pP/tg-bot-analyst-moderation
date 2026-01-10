@@ -5,11 +5,11 @@ from aiogram import F, Router
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
 from constants.period import TimePeriod
-from container import container
 from dto.report import AllUsersReportDTO
 from keyboards.inline import CalendarKeyboard, all_users_actions_ikb
 from keyboards.inline.report import order_details_kb_all_users
@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 async def get_all_users_report_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик запроса на создание отчета по всем пользователям"""
     await callback.answer()
@@ -94,7 +95,7 @@ async def get_all_users_report_handler(
     F.data.startswith(CallbackData.Report.PREFIX_PERIOD),
 )
 async def process_period_selection_callback(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обрабатывает выбор периода для отчета через callback."""
     await callback.answer()
@@ -135,6 +136,7 @@ async def process_period_selection_callback(
             start_date=start_date,
             end_date=end_date,
             selected_period=period_text,
+            container=container,
         )
     except Exception as e:
         logger.error(
@@ -157,6 +159,7 @@ async def _render_all_users_report(
     state: FSMContext,
     start_date: datetime,
     end_date: datetime,
+    container: Container,
     selected_period: str | None = None,
 ) -> None:
     """
@@ -168,6 +171,7 @@ async def _render_all_users_report(
         state: FSM context
         start_date: Начальная дата
         end_date: Конечная дата
+        container: Контейнер зависимостей
         selected_period: Текстовый период (например, "today", "yesterday")
     """
     try:
@@ -212,10 +216,13 @@ async def _render_all_users_report(
 
         await state.set_state(AllUsersReportStates.selecting_period)
 
-        # Объединяем все части отчета в один текст
+        # Объединяем все части отчета в один text
         full_report = "\n\n".join(report_parts)
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=full_report,
             parse_mode=ParseMode.HTML,
             reply_markup=order_details_kb_all_users(

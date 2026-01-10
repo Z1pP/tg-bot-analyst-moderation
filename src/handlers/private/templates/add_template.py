@@ -4,11 +4,11 @@ from typing import Any, Dict
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import CATEGORIES_PAGE_SIZE
-from container import container
 from keyboards.inline.categories import categories_select_only_ikb
 from keyboards.inline.templates import cancel_template_ikb, templates_menu_ikb
 from middlewares import AlbumMiddleware
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
     TemplateStateManager.templates_menu,
 )
 async def add_template_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик добавления нового шаблона"""
     await callback.answer()
@@ -41,7 +41,10 @@ async def add_template_handler(
 
         if not categories:
             msg_text = Dialog.Template.CREATE_CATEGORY_FIRST
-            await callback.message.edit_text(
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
                 text=msg_text,
                 reply_markup=templates_menu_ikb(),
             )
@@ -49,7 +52,10 @@ async def add_template_handler(
 
         first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=Dialog.Template.SELECT_CATEGORY,
             reply_markup=categories_select_only_ikb(
                 categories=first_page_categories,
@@ -62,7 +68,10 @@ async def add_template_handler(
 
     except Exception as e:
         logger.error(f"Ошибка при начале создания шаблона: {e}")
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=Dialog.Template.ERROR_CREATE_TEMPLATE,
             reply_markup=templates_menu_ikb(),
         )
@@ -125,6 +134,7 @@ async def process_template_content_handler(
     message: Message,
     state: FSMContext,
     bot: Bot,
+    container: Container,
     album_messages: list[Message] | None = None,
 ):
     """Обработчик получения контента шаблона"""
@@ -180,7 +190,7 @@ async def process_template_content_handler(
     TemplateStateManager.process_template_category,
 )
 async def prev_categories_page_for_template_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик перехода на предыдущую страницу категорий при добавлении шаблона"""
     await callback.answer()
@@ -215,7 +225,7 @@ async def prev_categories_page_for_template_handler(
     TemplateStateManager.process_template_category,
 )
 async def next_categories_page_for_template_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик перехода на следующую страницу категорий при добавлении шаблона"""
     await callback.answer()
@@ -262,12 +272,17 @@ async def process_template_chat_handler(
     """
     await callback.answer()
 
-    chat_id = int(callback.data.replace(CallbackData.Chat.PREFIX_TEMPLATE_SCOPE, ""))
+    chat_id_str = callback.data.replace(CallbackData.Chat.PREFIX_TEMPLATE_SCOPE, "")
+    if not chat_id_str.lstrip("-").isdigit():
+        logger.error("Некорректный ID чата в callback: %s", callback.data)
+        return
+
+    chat_id = int(chat_id_str)
 
     if chat_id == -1:
         await state.update_data(chat_id=None)
     else:
-        await state.update_data(chat_id=int(chat_id))
+        await state.update_data(chat_id=chat_id)
 
     text = Dialog.Chat.ENTER_TEMPLATE_NAME
 

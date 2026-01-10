@@ -4,11 +4,10 @@ import math
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from constants.i18n import DEFAULT_LANGUAGE
-from container import container
 from keyboards.inline.release_notes import (
     cancel_add_release_note_ikb,
     change_title_or_cancel_add_ikb,
@@ -80,21 +79,13 @@ async def add_note_title_handler(message: Message, state: FSMContext) -> None:
     # Редактируем предыдущее сообщение или отправляем новое с кнопками
     content_input_text = Dialog.ReleaseNotes.CONTENT_INPUT.format(title=title)
     if active_message_id:
-        try:
-            await safe_edit_message(
-                bot=message.bot,
-                chat_id=message.chat.id,
-                message_id=active_message_id,
-                text=content_input_text,
-                reply_markup=change_title_or_cancel_add_ikb(),
-            )
-        except Exception:
-            # Если не удалось отредактировать, отправляем новое сообщение
-            sent_msg = await message.answer(
-                content_input_text,
-                reply_markup=change_title_or_cancel_add_ikb(),
-            )
-            await state.update_data(active_message_id=sent_msg.message_id)
+        await safe_edit_message(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            text=content_input_text,
+            reply_markup=change_title_or_cancel_add_ikb(),
+        )
     else:
         sent_msg = await message.answer(
             content_input_text,
@@ -106,7 +97,9 @@ async def add_note_title_handler(message: Message, state: FSMContext) -> None:
 
 
 @router.message(ReleaseNotesStateManager.waiting_for_content)
-async def add_note_content_handler(message: Message, state: FSMContext) -> None:
+async def add_note_content_handler(
+    message: Message, state: FSMContext, container: Container
+) -> None:
     """Обработчик ввода содержимого релизной заметки и сохранение"""
     from constants import RELEASE_NOTES_ADMIN_IDS
 
@@ -169,32 +162,24 @@ async def add_note_content_handler(message: Message, state: FSMContext) -> None:
         text = Dialog.ReleaseNotes.RELEASE_NOTES_MENU
 
     # Используем active_message_id для редактирования сообщения бота
+    final_text = f"{Dialog.ReleaseNotes.NOTE_ADDED}\n\n{text}"
+    final_markup = release_notes_menu_ikb(
+        notes, page, total_pages, user_tg_id=str(message.from_user.id)
+    )
+
     if active_message_id:
-        try:
-            await safe_edit_message(
-                bot=message.bot,
-                chat_id=message.chat.id,
-                message_id=active_message_id,
-                text=f"{Dialog.ReleaseNotes.NOTE_ADDED}\n\n{text}",
-                reply_markup=release_notes_menu_ikb(
-                    notes, page, total_pages, user_tg_id=str(message.from_user.id)
-                ),
-            )
-        except Exception:
-            # Если не удалось отредактировать, отправляем новое сообщение
-            await message.answer(
-                f"{Dialog.ReleaseNotes.NOTE_ADDED}\n\n{text}",
-                reply_markup=release_notes_menu_ikb(
-                    notes, page, total_pages, user_tg_id=str(message.from_user.id)
-                ),
-            )
+        await safe_edit_message(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            text=final_text,
+            reply_markup=final_markup,
+        )
     else:
         # Если active_message_id не найден, отправляем новое сообщение
         await message.answer(
-            f"{Dialog.ReleaseNotes.NOTE_ADDED}\n\n{text}",
-            reply_markup=release_notes_menu_ikb(
-                notes, page, total_pages, user_tg_id=str(message.from_user.id)
-            ),
+            final_text,
+            reply_markup=final_markup,
         )
 
     await state.clear()
@@ -212,15 +197,11 @@ async def add_note_content_handler(message: Message, state: FSMContext) -> None:
     F.data == CallbackData.ReleaseNotes.CANCEL_ADD,
     ReleaseNotesStateManager.waiting_for_content,
 )
-async def cancel_add_note_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def cancel_add_note_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container, user_language: str
+) -> None:
     """Обработчик отмены добавления релизной заметки"""
     await callback.answer()
-
-    user_service: UserService = container.resolve(UserService)
-    db_user = await user_service.get_user(tg_id=str(callback.from_user.id))
-    user_language = (
-        db_user.language if db_user and db_user.language else DEFAULT_LANGUAGE
-    )
 
     # Возвращаемся к списку заметок
     release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
@@ -249,6 +230,69 @@ async def cancel_add_note_handler(callback: CallbackQuery, state: FSMContext) ->
     )
 
     await state.set_state(ReleaseNotesStateManager.menu)
+
+
+@router.callback_query(
+    F.data.startswith(CallbackData.ReleaseNotes.PREFIX_SELECT_ADD_LANGUAGE),
+    ReleaseNotesStateManager.selecting_add_language,
+)
+async def select_add_language_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик выбора языка для новой заметки"""
+    from constants import RELEASE_NOTES_ADMIN_IDS
+
+    await callback.answer()
+
+    # Проверка прав доступа
+    user_tg_id = str(callback.from_user.id)
+    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
+        await callback.answer("У вас нет прав для добавления заметок", show_alert=True)
+        await state.clear()
+        return
+
+    # Извлекаем язык из callback_data
+    lang_code = callback.data.split(
+        CallbackData.ReleaseNotes.PREFIX_SELECT_ADD_LANGUAGE
+    )[1]
+
+    await state.update_data(
+        active_message_id=callback.message.message_id,
+        note_language=lang_code,
+    )
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.ReleaseNotes.TITLE_INPUT,
+        reply_markup=cancel_add_release_note_ikb(),
+    )
+
+    await state.set_state(ReleaseNotesStateManager.waiting_for_title)
+
+
+@router.callback_query(
+    F.data == CallbackData.ReleaseNotes.CHANGE_TITLE_WHILE_ADDING,
+    ReleaseNotesStateManager.waiting_for_content,
+)
+async def change_title_while_adding_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
+    """Обработчик изменения заголовка при добавлении релизной заметки"""
+    await callback.answer()
+
+    await state.update_data(active_message_id=callback.message.message_id)
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.ReleaseNotes.TITLE_INPUT,
+        reply_markup=cancel_add_release_note_ikb(),
+    )
+
+    await state.set_state(ReleaseNotesStateManager.waiting_for_title)
 
 
 @router.callback_query(

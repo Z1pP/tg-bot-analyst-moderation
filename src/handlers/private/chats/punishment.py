@@ -3,10 +3,10 @@ import logging
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from container import container
 from keyboards.inline.chats import chat_actions_ikb
 from keyboards.inline.punishments import (
     punishment_action_ikb,
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 async def punishment_setting_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ):
     """Меню настройки наказаний"""
     await callback.answer()
@@ -67,6 +68,7 @@ async def punishment_setting_handler(
 async def set_default_punishments_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ):
     """Сброс до настроек по умолчанию"""
     data = await state.get_data()
@@ -82,7 +84,7 @@ async def set_default_punishments_handler(
         )
         if result.success:
             await callback.answer(Dialog.Punishment.SUCCESS_SET_DEFAULT)
-            await punishment_setting_handler(callback, state)
+            await punishment_setting_handler(callback, state, container)
         else:
             await callback.answer(
                 result.error_message or Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED
@@ -117,13 +119,15 @@ async def start_create_ladder_handler(callback: CallbackQuery, state: FSMContext
 @router.callback_query(
     PunishmentState.waiting_for_action_type, F.data.startswith("punish_action_")
 )
-async def process_action_type_handler(callback: CallbackQuery, state: FSMContext):
+async def process_action_type_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+):
     """Обработка выбора типа наказания для ступени"""
     action = callback.data.split("_")[-1]
 
     if action == "cancel":
         await state.set_state(ChatStateManager.selecting_chat)
-        await punishment_setting_handler(callback, state)
+        await punishment_setting_handler(callback, state, container)
         return
 
     await callback.answer()
@@ -238,6 +242,7 @@ async def next_step_handler(callback: CallbackQuery, state: FSMContext):
 async def save_ladder_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ):
     """Сохранение всей лестницы в БД"""
     data = await state.get_data()
@@ -259,7 +264,7 @@ async def save_ladder_handler(
         if result.success:
             await callback.answer(Dialog.Punishment.LADDER_SAVED)
             await state.set_state(ChatStateManager.selecting_chat)
-            await punishment_setting_handler(callback, state)
+            await punishment_setting_handler(callback, state, container)
         else:
             await callback.answer(
                 result.error_message or Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED
@@ -270,8 +275,10 @@ async def save_ladder_handler(
 
 
 @router.callback_query(F.data == "punish_step_cancel")
-async def cancel_creation_handler(callback: CallbackQuery, state: FSMContext):
+async def cancel_creation_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+):
     """Отмена создания"""
     await callback.answer()
     await state.set_state(ChatStateManager.selecting_chat)
-    await punishment_setting_handler(callback, state)
+    await punishment_setting_handler(callback, state, container)

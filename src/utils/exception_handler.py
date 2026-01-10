@@ -3,8 +3,8 @@ from typing import Any, Awaitable, Callable, Dict, Optional
 
 from aiogram import BaseMiddleware, Dispatcher
 from aiogram.types import CallbackQuery, Message, TelegramObject
+from punq import Container
 
-from container import container
 from exceptions.base import BotBaseException
 from exceptions.moderation import PrivateModerationError, PublicModerationError
 from services import BotMessageService
@@ -43,7 +43,7 @@ async def handle_exception(
         )
 
 
-def registry_exceptions(dispatcher: Dispatcher) -> None:
+def registry_exceptions(dispatcher: Dispatcher, container: Container) -> None:
     # Messages
     dispatcher.message.middleware(container.resolve(AsyncErrorHandler))
     # Callbacks

@@ -3,10 +3,10 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
-from container import container
 from keyboards.inline.chats import (
     chat_actions_ikb,
     chats_management_ikb,
@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 async def show_tracked_chats_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик возврата к выбору чата из действий с чатом."""
     await callback.answer()

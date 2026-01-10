@@ -3,10 +3,10 @@ from dataclasses import dataclass
 
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentType
-from container import container
 from dto import AmnestyUserDTO
 from exceptions import AmnestyError
 from keyboards.inline.amnesty import confirm_action_ikb
@@ -25,6 +25,7 @@ from usecases.amnesty import (
     UnmuteUserUseCase,
 )
 from utils.formatter import format_duration
+from utils.send_message import safe_edit_message
 
 from .common import process_user_handler_common, process_user_input_common
 
@@ -54,6 +55,7 @@ async def waiting_user_data_input(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
+    container: Container,
 ) -> None:
     """
     Обработчик для обработки введенной информации о пользователе
@@ -62,6 +64,7 @@ async def waiting_user_data_input(
         message=message,
         state=state,
         bot=bot,
+        container=container,
         dialog_texts={
             "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT,
             "user_not_found": Dialog.BanUser.USER_NOT_FOUND,
@@ -107,7 +110,9 @@ async def amnsesy_action_handler(
     F.data == block_buttons.CONFIRM_ACTION,
     AmnestyStates.waiting_confirmation_action,
 )
-async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> None:
+async def confirm_action(
+    callback: types.CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """
     Обработчик для подтверждения действия по амнистии пользователя
     """
@@ -129,7 +134,10 @@ async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> No
     config = ACTION_CONFIG.get(action)
     if not config:
         text = "❗️Неизвестное действие. Попробуйте еще раз."
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=text,
             reply_markup=moderation_menu_ikb(),
         )
@@ -151,7 +159,10 @@ async def confirm_action(callback: types.CallbackQuery, state: FSMContext) -> No
     await state.update_data(
         chat_dtos=[chat.model_dump(mode="json") for chat in chat_dtos]
     )
-    await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=text,
         reply_markup=tracked_chats_with_all_ikb(dtos=chat_dtos),
     )
@@ -182,8 +193,7 @@ async def cancel_action(callback: types.CallbackQuery, state: FSMContext) -> Non
     F.data.startswith("chat__"),
 )
 async def execute_amnesty_action(
-    callback: types.CallbackQuery,
-    state: FSMContext,
+    callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Выполняет выбранное действие амнистии в указанном чате"""
     await callback.answer()
@@ -191,7 +201,7 @@ async def execute_amnesty_action(
     data = await state.get_data()
 
     action = data.get("action")
-    chat_id = callback.data.split("__")[1]
+    chat_id_from_callback = callback.data.split("__")[1]
     chat_dtos_data = data.get("chat_dtos")
 
     from dto.chat_dto import ChatDTO
@@ -204,8 +214,10 @@ async def execute_amnesty_action(
         tg_id=data.get("tg_id"),
     )
 
-    if chat_id != "all" and chat_id.isdigit():
-        chat_dtos = [chat for chat in chat_dtos if chat.id != chat_id]
+    if chat_id_from_callback != "all":
+        chat_dtos = [
+            chat for chat in chat_dtos if chat.id == int(chat_id_from_callback)
+        ]
 
     amnesty_dto = AmnestyUserDTO(
         admin_tgid=str(callback.from_user.id),
@@ -216,47 +228,16 @@ async def execute_amnesty_action(
         chat_dtos=chat_dtos,
     )
 
-    if action == Dialog.AmnestyUser.UNBAN:
-        unban_usecase: UnbanUserUseCase = container.resolve(UnbanUserUseCase)
+    if action == block_buttons.CANCEL_WARN:
+        usecase: CancelLastWarnUseCase = container.resolve(CancelLastWarnUseCase)
         try:
-            await unban_usecase.execute(dto=amnesty_dto)
-        except AmnestyError as e:
-            logger.error("Ошибка амнистии: %s", e, exc_info=True)
-            await callback.message.edit_text(
-                text=e.get_user_message(),
-                reply_markup=moderation_menu_ikb(),
-            )
-            return
-
-        text = (
-            f"✅ @{amnesty_dto.violator_username} полностью амнистирован!\n\n"
-            "Все ограничения (бан, мут) сняты, а лестница наказаний обнулена."
-        )
-    elif action == Dialog.AmnestyUser.UNMUTE:
-        unmute_usecase: UnmuteUserUseCase = container.resolve(UnmuteUserUseCase)
-        try:
-            await unmute_usecase.execute(dto=amnesty_dto)
-        except AmnestyError as e:
-            logger.error("Ошибка амнистии: %s", e, exc_info=True)
-            await callback.message.edit_text(
-                text=e.get_user_message(),
-                reply_markup=moderation_menu_ikb(),
-            )
-            return
-
-        text = (
-            f"✅ @{amnesty_dto.violator_username} размучен!\n\n"
-            "❗Все предыдущие предупреждения для пользователя сохранены."
-        )
-    elif action == Dialog.AmnestyUser.CANCEL_WARN:
-        cancel_warn_usecase: CancelLastWarnUseCase = container.resolve(
-            CancelLastWarnUseCase
-        )
-        try:
-            result = await cancel_warn_usecase.execute(dto=amnesty_dto)
+            result = await usecase.execute(dto=amnesty_dto)
         except AmnestyError as e:
             logger.error("Ошибка отмены предупреждения: %s", e, exc_info=True)
-            await callback.message.edit_text(
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
                 text=e.get_user_message(),
                 reply_markup=moderation_menu_ikb(),
             )
@@ -283,12 +264,59 @@ async def execute_amnesty_action(
                 f"Обработано чатов: <b>{len(amnesty_dto.chat_dtos)}</b>\n"
                 f"Пользователь: @{amnesty_dto.violator_username}"
             )
+    elif action == block_buttons.UNMUTE:
+        usecase: UnmuteUserUseCase = container.resolve(UnmuteUserUseCase)
+        try:
+            await usecase.execute(dto=amnesty_dto)
+        except AmnestyError as e:
+            logger.error("Ошибка амнистии: %s", e, exc_info=True)
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=e.get_user_message(),
+                reply_markup=moderation_menu_ikb(),
+            )
+            return
+
+        text = (
+            f"✅ @{amnesty_dto.violator_username} размучен!\n\n"
+            "❗Все предыдущие предупреждения для пользователя сохранены."
+        )
+    elif action == block_buttons.UNBAN:
+        usecase: UnbanUserUseCase = container.resolve(UnbanUserUseCase)
+        try:
+            await usecase.execute(dto=amnesty_dto)
+        except AmnestyError as e:
+            logger.error("Ошибка амнистии: %s", e, exc_info=True)
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=e.get_user_message(),
+                reply_markup=moderation_menu_ikb(),
+            )
+            return
+
+        text = (
+            f"✅ @{amnesty_dto.violator_username} полностью амнистирован!\n\n"
+            "Все ограничения (бан, мут) сняты, а лестница наказаний обнулена."
+        )
     else:
         text = "❗️Неизвестное действие. Попробуйте еще раз."
-        await callback.message.edit_text(text=text, reply_markup=moderation_menu_ikb())
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
+            reply_markup=moderation_menu_ikb(),
+        )
         return
 
-    await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=text,
         reply_markup=amnesty_actions_ikb(),
     )

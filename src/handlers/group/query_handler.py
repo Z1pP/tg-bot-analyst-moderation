@@ -14,8 +14,8 @@ from aiogram.types import (
     InputTextMessageContent,
     Message,
 )
+from punq import Container
 
-from container import container
 from dto import TemplateDTO
 from filters import StaffOnlyInlineFilter
 from models import MessageTemplate
@@ -33,10 +33,10 @@ logger = logging.getLogger(__name__)
     F.query,
     StaffOnlyInlineFilter(),
 )
-async def handle_inline_query(query: InlineQuery) -> None:
+async def handle_inline_query(query: InlineQuery, container: Container) -> None:
     """Обработчик inline запросов"""
     try:
-        variants = await get_variants(query.query)
+        variants = await get_variants(query.query, container)
         results = []
 
         for variant in variants:
@@ -75,7 +75,7 @@ def short_the_text(text: str, length: int = 75) -> str:
 
 
 @router.message(F.text.startswith("🔸TEMPLATE__"))
-async def handle_template_message(message: Message) -> None:
+async def handle_template_message(message: Message, container: Container) -> None:
     """Обработчик сообщений с маркером шаблона"""
     try:
         # Извлекаем ID шаблона
@@ -87,7 +87,7 @@ async def handle_template_message(message: Message) -> None:
         )
 
         # Сохраняем сообщение модератора
-        await save_moderator_message(message)
+        await save_moderator_message(message, container)
 
         # Удаляем сообщение с маркером
         await message.delete()
@@ -98,6 +98,7 @@ async def handle_template_message(message: Message) -> None:
             template_id=template_id,
             reply_message_id=reply_message_id,
             chat_id=chat_id,
+            container=container,
         )
 
     except Exception as e:
@@ -109,6 +110,7 @@ async def send_template(
     template_id: int,
     chat_id: str,
     reply_message_id: Optional[int],
+    container: Container,
 ) -> None:
     """Отправляет ответ по шаблону"""
     usecase: GetTemplateAndIncreaseUsageUseCase = container.resolve(
@@ -196,18 +198,18 @@ async def send_media_group(
         )
 
 
-async def get_variants(query: str) -> List[TemplateDTO]:
+async def get_variants(query: str, container: Container) -> List[TemplateDTO]:
     """Получает варианты шаблонов по запросу"""
     usecase: GetTemplatesByQueryUseCase = container.resolve(GetTemplatesByQueryUseCase)
     result = await usecase.execute(query=query)
     return result.templates
 
 
-async def save_moderator_message(message: Message) -> None:
+async def save_moderator_message(message: Message, container: Container) -> None:
     """Сохраняет сообщение модератора в БД"""
-    from .message_handler import group_message_handler
+    from .new_message import group_message_handler
 
-    await group_message_handler(message)
+    await group_message_handler(message, container)
 
 
 @router.callback_query(F.data.startswith("hide_template_"))

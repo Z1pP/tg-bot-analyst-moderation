@@ -3,10 +3,10 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from container import container
 from keyboards.inline.chats import (
     antibot_setting_ikb,
     chat_actions_ikb,
@@ -25,13 +25,19 @@ logger = logging.getLogger(__name__)
 async def chat_selected_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """
     Обработчик выбора чата из списка чатов.
     """
     await callback.answer()
 
-    chat_id = int(callback.data.replace(CallbackData.Chat.PREFIX_CHAT, ""))
+    chat_id_str = callback.data.replace(CallbackData.Chat.PREFIX_CHAT, "")
+    if not chat_id_str.isdigit():
+        logger.error("Некорректный ID чата в callback: %s", callback.data)
+        return
+
+    chat_id = int(chat_id_str)
 
     chat_service: ChatService = container.resolve(ChatService)
     chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
@@ -48,7 +54,10 @@ async def chat_selected_handler(
 
     await state.update_data(chat_id=chat_id)
 
-    await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=Dialog.Chat.CHAT_ACTIONS.format(
             title=chat.title,
             start_time=chat.start_time.strftime("%H:%M"),
@@ -64,12 +73,12 @@ async def chat_selected_handler(
 async def antibot_menu_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """
     Обработчик перехода в меню настройки антибота.
     """
-    data = await state.get_data()
-    chat_id = data.get("chat_id")
+    chat_id = await state.get_value("chat_id")
 
     if not chat_id:
         await callback.answer("Ошибка: чат не выбран", show_alert=True)
@@ -101,12 +110,12 @@ async def antibot_menu_handler(
 async def toggle_antibot_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """
     Обработчик переключения системы антибота.
     """
-    data = await state.get_data()
-    chat_id = data.get("chat_id")
+    chat_id = await state.get_value("chat_id")
 
     if not chat_id:
         await callback.answer("Ошибка: чат не выбран", show_alert=True)

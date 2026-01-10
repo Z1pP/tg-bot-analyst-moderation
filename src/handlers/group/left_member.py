@@ -1,13 +1,14 @@
 import logging
 
 from aiogram import F, Router, types
+from punq import Container
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
 @router.message(F.left_chat_member)
-async def process_left_chat_member(message: types.Message):
+async def process_left_chat_member(message: types.Message, container: Container):
     """Обработчик выхода участника из группы."""
     try:
         chat_title = message.chat.title or "Неизвестная группа"

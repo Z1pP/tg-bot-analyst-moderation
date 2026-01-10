@@ -27,7 +27,7 @@ async def common_process_template_title_handler(
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text="❗Название должно содержать от 3 до 50 символов.",
-                reply_markup=cancel_template_handler(),
+                reply_markup=cancel_template_ikb(),
             )
             return
 

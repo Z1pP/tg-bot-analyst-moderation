@@ -3,21 +3,24 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
-from container import container
 from keyboards.inline.users import users_inline_kb, users_menu_ikb
 from states import UserStateManager
 from usecases.user_tracking import GetListTrackedUsersUseCase
 from utils.exception_handler import handle_exception
+from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == CallbackData.User.SELECT_USER)
-async def users_list_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def users_list_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик команды для отображения списка пользователей через inline клавиатуру"""
     await callback.answer()
     await state.clear()
@@ -37,7 +40,10 @@ async def users_list_handler(callback: CallbackQuery, state: FSMContext) -> None
                 "❗Чтобы получать отчёты по пользователям, "
                 "необходимо добавить пользователя в отслеживаемые"
             )
-            await callback.message.edit_text(
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
                 text=message_text,
                 reply_markup=users_menu_ikb(),
             )
@@ -48,7 +54,10 @@ async def users_list_handler(callback: CallbackQuery, state: FSMContext) -> None
         # Показываем первую страницу
         first_page_users = users[:USERS_PAGE_SIZE]
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=f"Всего {len(users)} пользователей",
             reply_markup=users_inline_kb(
                 users=first_page_users,

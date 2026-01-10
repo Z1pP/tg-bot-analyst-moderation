@@ -3,8 +3,8 @@ import logging
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
-from container import container
 from exceptions.category import CategoryNotFoundError
 from keyboards.inline.categories import (
     cancel_category_ikb,
@@ -21,7 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data.startswith(("add_category", "edit_category__")))
-async def request_category_name_handler(callback: CallbackQuery, state: FSMContext):
+async def request_category_name_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+):
     await callback.answer()
 
     if callback.data.startswith("add_category"):

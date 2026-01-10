@@ -2,8 +2,8 @@ import logging
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
-from container import container
 from exceptions.category import CategoryNotFoundError
 from keyboards.inline.templates import templates_menu_ikb
 from states import CategoryStateManager, TemplateStateManager
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
     F.data == "conf_edit_category",
 )
 async def confirm_category_edit_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery, state: FSMContext, container: Container
 ):
     await callback.answer()
 

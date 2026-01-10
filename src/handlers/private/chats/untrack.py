@@ -3,11 +3,11 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
-from container import container
 from keyboards.inline.chats import (
     chats_management_ikb,
     conf_remove_chat_ikb,
@@ -28,6 +28,7 @@ router = Router(name=__name__)
 async def untrack_chat_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Хендлер для команды удаления чата из отслеживания через callback"""
     await callback.answer()
@@ -120,6 +121,7 @@ async def process_untracking_chat_handler(
 async def confirmation_untracking_chat_handler(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик подтверждения удаления чата из отслеживания"""
     await callback.answer()

@@ -2,11 +2,11 @@ import logging
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import DEFAULT_PAGE_SIZE
-from container import container
 from keyboards.inline.admin_logs import (
     admin_logs_ikb,
     admin_select_ikb,
@@ -22,7 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == CallbackData.AdminLogs.MENU)
-async def admin_logs_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
+async def admin_logs_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    container: Container,
+    user_language: str,
+) -> None:
     """Обработчик просмотра логов действий администраторов - показывает список администраторов."""
     await callback.answer()
 
@@ -59,6 +64,7 @@ async def admin_logs_handler(callback: types.CallbackQuery, state: FSMContext) -
             message_id=callback.message.message_id,
             text=Dialog.AdminLogs.ERROR_GET_ADMINS,
             reply_markup=admin_menu_ikb(
+                user_language=user_language,
                 admin_tg_id=str(callback.from_user.id),
             ),
         )
@@ -66,7 +72,7 @@ async def admin_logs_handler(callback: types.CallbackQuery, state: FSMContext) -
 
 @router.callback_query(lambda c: c.data.startswith("admin_logs__"))
 async def admin_logs_select_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик выбора администратора для просмотра логов."""
     await callback.answer()
@@ -110,8 +116,11 @@ async def admin_logs_select_handler(
                 )
 
         if not logs:
-            await callback.message.edit_text(
-                f"{header_text}\n{Dialog.AdminLogs.NO_LOGS}",
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=f"{header_text}\n{Dialog.AdminLogs.NO_LOGS}",
                 reply_markup=admin_logs_ikb(
                     page=1,
                     total_count=total_count,
@@ -140,8 +149,11 @@ async def admin_logs_select_handler(
 
         text = "\n".join(text_parts)
 
-        await callback.message.edit_text(
-            text,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
             reply_markup=admin_logs_ikb(
                 page=1,
                 total_count=total_count,
@@ -157,7 +169,7 @@ async def admin_logs_select_handler(
 
 @router.callback_query(F.data == "admin_logs_select_admin")
 async def admin_logs_select_admin_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик возврата к выбору администратора."""
     await callback.answer()
@@ -171,18 +183,22 @@ async def admin_logs_select_admin_handler(
         admins = await log_repository.get_admins_with_logs()
 
         if not admins:
-            await callback.message.edit_text(
-                f"{Dialog.AdminLogs.ADMIN_LOGS_TITLE}\n\n{Dialog.AdminLogs.NO_LOGS}",
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=f"{Dialog.AdminLogs.ADMIN_LOGS_TITLE}\n\n{Dialog.AdminLogs.NO_LOGS}",
             )
             return
 
         # Формируем текст сообщения
         text = Dialog.AdminLogs.SELECT_ADMIN
 
-        from keyboards.inline.admin_logs import admin_select_ikb
-
-        await callback.message.edit_text(
-            text,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=text,
             reply_markup=admin_select_ikb(admins),
         )
 

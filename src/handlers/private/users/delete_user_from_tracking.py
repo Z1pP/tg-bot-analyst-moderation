@@ -3,10 +3,10 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
-from container import container
 from dto import RemoveUserTrackingDTO
 from keyboards.inline.users import (
     conf_remove_user_kb,
@@ -20,6 +20,7 @@ from usecases.user_tracking import (
     RemoveUserFromTrackingUseCase,
 )
 from utils.exception_handler import handle_exception
+from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data == CallbackData.User.REMOVE)
 async def remove_user_from_tracking_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """
     Обработчик для удаления пользователя из списка отслеживания.
@@ -51,7 +52,10 @@ async def remove_user_from_tracking_handler(
                 "⚠ Удаление невозможно, так как в отслеживание "
                 "ещё не добавлен ни один пользователь."
             )
-            await callback.message.edit_text(
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
                 text=message_text,
                 reply_markup=users_menu_ikb(),
             )
@@ -62,7 +66,10 @@ async def remove_user_from_tracking_handler(
         # Показываем первую страницу
         first_page_users = tracked_users[:USERS_PAGE_SIZE]
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=f"Всего {len(tracked_users)} пользователей",
             reply_markup=remove_user_inline_kb(
                 users=first_page_users,
@@ -85,12 +92,18 @@ async def remove_user_from_tracking_handler(
 async def process_removing_user(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """
     Обработчик для получения ID выбранного пользователя на удаление.
     """
     try:
-        user_id = int(callback.data.replace(CallbackData.User.PREFIX_REMOVE_USER, ""))
+        user_id_str = callback.data.replace(CallbackData.User.PREFIX_REMOVE_USER, "")
+        if not user_id_str.isdigit():
+            logger.error("Некорректный ID пользователя в callback: %s", callback.data)
+            return
+
+        user_id = int(user_id_str)
         logger.info(f"Запрос на удаление пользователя с ID: {user_id}")
 
         # Сохраняем текущую страницу из state (если есть)
@@ -116,7 +129,10 @@ async def process_removing_user(
             f"❗Вы уверены, что хотите удалить @{user.username} из отслеживаемых?"
         )
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=message_text,
             reply_markup=conf_remove_user_kb(),
         )
@@ -130,6 +146,7 @@ async def process_removing_user(
 async def confirmation_removing_user(
     callback: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
     """
     Обработчик подтверждения удаления пользователя из отслеживания
@@ -163,14 +180,20 @@ async def confirmation_removing_user(
                     "❗️Вы всегда можете вернуть пользователя "
                     "в отслеживаемые и продолжить собирать статистику"
                 )
-                await callback.message.edit_text(
+                await safe_edit_message(
+                    bot=callback.bot,
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
                     text=text,
                     reply_markup=users_menu_ikb(),
                 )
             else:
                 logger.warning(f"Не удалось удалить пользователя ID {user_id}")
                 text = "❌ Пользователь не найден среди отслеживаемых или уже удален."
-                await callback.message.edit_text(
+                await safe_edit_message(
+                    bot=callback.bot,
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
                     text=text,
                     reply_markup=users_menu_ikb(),
                 )
@@ -186,7 +209,10 @@ async def confirmation_removing_user(
             tracked_users = await usecase.execute(admin_tgid=str(callback.from_user.id))
 
             if not tracked_users:
-                await callback.message.edit_text(
+                await safe_edit_message(
+                    bot=callback.bot,
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
                     text="⚠ Удаление невозможно, так как в отслеживание "
                     "ещё не добавлен ни один пользователь.",
                     reply_markup=users_menu_ikb(),
@@ -202,7 +228,10 @@ async def confirmation_removing_user(
             end_index = start_index + USERS_PAGE_SIZE
             page_users = tracked_users[start_index:end_index]
 
-            await callback.message.edit_text(
+            await safe_edit_message(
+                bot=callback.bot,
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
                 text=f"Всего {total_count} пользователей",
                 reply_markup=remove_user_inline_kb(
                     users=page_users,

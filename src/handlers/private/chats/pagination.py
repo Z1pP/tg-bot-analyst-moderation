@@ -3,10 +3,10 @@ from typing import List, Tuple
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from punq import Container
 
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
-from container import container
 from keyboards.inline.chats import remove_chat_ikb, tracked_chats_ikb
 from models import ChatSession
 from usecases.chat import GetTrackedChatsUseCase
@@ -24,8 +24,9 @@ class ChatsPaginationHandler(BasePaginationHandler):
         page: int,
         callback: CallbackQuery,
         state: FSMContext,
+        container: Container,
     ) -> Tuple[List[ChatSession], int]:
-        chats = await get_tracked_chats(callback.from_user.username)
+        chats = await get_tracked_chats(callback.from_user.username, container)
         chats_page, total_count = paginate_chats(chats, page)
         return chats_page, total_count
 
@@ -51,8 +52,9 @@ class RemoveChatsPaginationHandler(BasePaginationHandler):
         page: int,
         callback: CallbackQuery,
         state: FSMContext,
+        container: Container,
     ) -> Tuple[List[ChatSession], int]:
-        chats = await get_tracked_chats(callback.from_user.username)
+        chats = await get_tracked_chats(callback.from_user.username, container)
         chats_page, total_count = paginate_chats(chats, page)
         return chats_page, total_count
 
@@ -74,34 +76,40 @@ remove_chats_handler = RemoveChatsPaginationHandler()
 
 
 @router.callback_query(F.data.startswith(CallbackData.Chat.PREFIX_PREV_CHATS_PAGE))
-async def prev_chats_page_handler(callback: CallbackQuery, state: FSMContext) -> None:
-    await chats_handler.handle_prev_page(callback, state)
+async def prev_chats_page_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
+    await chats_handler.handle_prev_page(callback, state, container)
 
 
 @router.callback_query(F.data.startswith(CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE))
-async def next_chats_page_handler(callback: CallbackQuery, state: FSMContext) -> None:
-    await chats_handler.handle_next_page(callback, state)
+async def next_chats_page_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
+    await chats_handler.handle_next_page(callback, state, container)
 
 
 @router.callback_query(
     F.data.startswith(CallbackData.Chat.PREFIX_PREV_REMOVE_CHATS_PAGE)
 )
 async def prev_remove_chats_page_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
-    await remove_chats_handler.handle_prev_page(callback, state)
+    await remove_chats_handler.handle_prev_page(callback, state, container)
 
 
 @router.callback_query(
     F.data.startswith(CallbackData.Chat.PREFIX_NEXT_REMOVE_CHATS_PAGE)
 )
 async def next_remove_chats_page_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
-    await remove_chats_handler.handle_next_page(callback, state)
+    await remove_chats_handler.handle_next_page(callback, state, container)
 
 
-async def get_tracked_chats(admin_username: str) -> List[ChatSession]:
+async def get_tracked_chats(
+    admin_username: str, container: Container
+) -> List[ChatSession]:
     """Получает все отслеживаемые чаты."""
     usecase: GetTrackedChatsUseCase = container.resolve(GetTrackedChatsUseCase)
     return await usecase.execute(username=admin_username)

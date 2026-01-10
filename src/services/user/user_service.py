@@ -11,14 +11,42 @@ logger = logging.getLogger(__name__)
 
 
 class UserService:
+    """
+    Сервис для работы с пользователями системы.
+
+    Обеспечивает:
+    - Поиск пользователей по ID, Telegram ID и username
+    - Автоматическое кеширование в Redis
+    - Создание новых пользователей
+    - Синхронизацию username при изменениях
+    """
+
     def __init__(self, user_repository: UserRepository, cache: ICache):
         self._user_repository = user_repository
         self._cache = cache
 
     async def get_by_username(self, username: str) -> Optional[User]:
+        """
+        Получает пользователя по его username.
+
+        Args:
+            username: Telegram username пользователя
+
+        Returns:
+            Объект User или None
+        """
         return await self._user_repository.get_user_by_username(username=username)
 
     async def get_user_by_id(self, user_id: int) -> Optional[User]:
+        """
+        Получает пользователя по его внутреннему ID в БД.
+
+        Args:
+            user_id: ID записи в БД
+
+        Returns:
+            Объект User или None
+        """
         # Проверяем кеш
         user = await self._cache.get(f"user:id:{user_id}")
         if user:
@@ -31,6 +59,16 @@ class UserService:
         return user
 
     async def get_user(self, tg_id: str = None, username: str = None) -> Optional[User]:
+        """
+        Получает пользователя по Telegram ID или username с проверкой кеша.
+
+        Args:
+            tg_id: Telegram ID пользователя
+            username: Telegram username пользователя
+
+        Returns:
+            Объект User или None
+        """
         # Проверяем кеш по tg_id
         if tg_id:
             user = await self._cache.get(f"user:tg_id:{tg_id}")
@@ -50,6 +88,7 @@ class UserService:
                 return user
 
         # Ищем в БД
+        user = None
         if tg_id:
             user = await self._user_repository.get_user_by_tg_id(tg_id=tg_id)
 
@@ -78,6 +117,17 @@ class UserService:
     async def create_user(
         self, tg_id: str = None, username: str = None, language: str = "ru"
     ) -> User:
+        """
+        Создает нового пользователя в системе.
+
+        Args:
+            tg_id: Telegram ID
+            username: Username
+            language: Код языка (по умолчанию 'ru')
+
+        Returns:
+            Созданный объект User
+        """
         user = await self._user_repository.create_user(
             tg_id=tg_id, username=username, language=language
         )
@@ -89,6 +139,17 @@ class UserService:
     async def get_or_create(
         self, tg_id: str, username: Optional[str] = None, language: str = "ru"
     ) -> User:
+        """
+        Получает существующего пользователя или создает нового.
+
+        Args:
+            tg_id: Telegram ID
+            username: Username
+            language: Код языка
+
+        Returns:
+            Объект User
+        """
         user = await self.get_user(tg_id=tg_id, username=username)
 
         if not user:
@@ -112,6 +173,15 @@ class UserService:
         return user
 
     async def get_admins_for_chat(self, chat_tg_id: str) -> list[User]:
+        """
+        Получает список администраторов для указанного чата.
+
+        Args:
+            chat_tg_id: Telegram ID чата
+
+        Returns:
+            Список объектов User
+        """
         return await self._user_repository.get_admins_for_chat(
             chat_tg_id=chat_tg_id,
         )

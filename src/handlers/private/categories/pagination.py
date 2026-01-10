@@ -1,11 +1,11 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from punq import Container
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
-from container import container
 from keyboards.inline.categories import categories_inline_ikb
 from models import TemplateCategory
 from usecases.categories import GetCategoriesPaginatedUseCase
@@ -23,6 +23,7 @@ class CategoriesPaginationHandler(BasePaginationHandler):
         page: int,
         query: CallbackQuery,
         state: FSMContext,
+        container: Optional[Container] = None,
     ) -> Tuple[List[TemplateCategory], int]:
         usecase: GetCategoriesPaginatedUseCase = container.resolve(
             GetCategoriesPaginatedUseCase
@@ -50,13 +51,15 @@ handler = CategoriesPaginationHandler()
 async def prev_categories_page_callback(
     query: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
-    await handler.handle_prev_page(query, state)
+    await handler.handle_prev_page(query, state, container)
 
 
 @router.callback_query(F.data.startswith("next_categories_page__"))
 async def next_categories_page_callback(
     query: CallbackQuery,
     state: FSMContext,
+    container: Container,
 ) -> None:
-    await handler.handle_next_page(query, state)
+    await handler.handle_next_page(query, state, container)

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from aiogram import Bot
+from aiogram.exceptions import TelegramAPIError
 from aiogram.types import ChatIdUnion, ChatPermissions
 
 from constants.punishment import PunishmentType
@@ -48,16 +49,17 @@ class BotMessageService:
                 text=text,
                 parse_mode="HTML",
             )
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
-                (
-                    "Произошла ошибка при отправке сообщения отправить сообщение "
-                    "пользователю с Telegram ID %s: %s"
-                ),
+                "Ошибка Telegram API при отправке сообщения пользователю %s: %s",
                 user_tgid,
                 e,
             )
-            return None
+        except Exception:
+            logger.exception(
+                "Неожиданная ошибка при отправке сообщения пользователю %s",
+                user_tgid,
+            )
 
     async def send_chat_message(self, chat_tgid: ChatIdUnion, text: str) -> None:
         """
@@ -72,10 +74,10 @@ class BotMessageService:
         can_post = await self.permission_service.can_post_messages(chat_tgid=chat_tgid)
         if not can_post:
             logger.warning(
-                "Bot cannot post messages in chat %s. Skipping message send.",
+                "Бот не может отправлять сообщения в чат %s. Пропуск отправки.",
                 chat_tgid,
             )
-            return None
+            return
 
         try:
             await self.bot.send_message(
@@ -83,13 +85,17 @@ class BotMessageService:
                 text=text,
                 parse_mode="HTML",
             )
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
-                "Произошла ошибка при отправке сообщения в чат с Telegram ID %s: %s",
+                "Ошибка Telegram API при отправке сообщения в чат %s: %s",
                 chat_tgid,
                 e,
             )
-            return None
+        except Exception:
+            logger.exception(
+                "Неожиданная ошибка при отправке сообщения в чат %s",
+                chat_tgid,
+            )
 
     async def copy_message(
         self,
@@ -232,7 +238,7 @@ class BotMessageService:
             logger.error("Не удалось удалить сообщение в чате %s: %s", chat_id, e)
             return False
 
-    async def apply_punishmnet(
+    async def apply_punishment(
         self,
         chat_tg_id: ChatIdUnion,
         user_tg_id: ChatIdUnion,

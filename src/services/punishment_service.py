@@ -174,25 +174,54 @@ class PunishmentService:
 
         return None
 
+    @staticmethod
     def _format_punishment_period(
-        self, punishment_type: PunishmentType, duration_seconds: Optional[int]
+        punishment_type: PunishmentType, duration_seconds: Optional[int]
     ) -> str:
-        """Форматирует длительность наказания."""
+        """
+        Форматирует длительность наказания в понятную строку.
+
+        Args:
+            punishment_type: Тип наказания
+            duration_seconds: Длительность в секундах
+
+        Returns:
+            Строка с описанием длительности
+        """
         if punishment_type == PunishmentType.BAN:
             return "бессрочно"
         if punishment_type == PunishmentType.MUTE and duration_seconds:
             return format_duration(seconds=duration_seconds)
         return ""
 
-    def _get_message_deletion_status(self, message_deleted: bool) -> str:
-        """Возвращает статус удаления сообщения."""
+    @staticmethod
+    def _get_message_deletion_status(message_deleted: bool) -> str:
+        """
+        Возвращает текстовый статус удаления сообщения.
+
+        Args:
+            message_deleted: Флаг удаления
+
+        Returns:
+            Текстовое описание статуса
+        """
         return "удалено" if message_deleted else "не удалено (старше 48ч)"
 
-    def _build_report_header(self, date: datetime, message_deleted: bool) -> str:
-        """Генерирует заголовок отчета."""
+    @classmethod
+    def _build_report_header(cls, date: datetime, message_deleted: bool) -> str:
+        """
+        Генерирует заголовок отчета с датой и статусом сообщения.
+
+        Args:
+            date: Дата события
+            message_deleted: Флаг удаления сообщения
+
+        Returns:
+            Строка заголовка
+        """
         date_str = date.strftime("%d.%m.%Y")
         time_str = date.strftime("%H:%M")
-        status = self._get_message_deletion_status(message_deleted)
+        status = cls._get_message_deletion_status(message_deleted)
         return f"❌️ Сообщение {status} {date_str} в {time_str}"
 
     def generate_ban_report(
@@ -346,19 +375,29 @@ class PunishmentService:
             )
 
     async def delete_user_punishments(self, user_id: int, chat_id: int) -> int:
+        """
+        Удаляет все наказания пользователя в конкретном чате.
+
+        Args:
+            user_id: ID пользователя в БД
+            chat_id: ID чата в БД
+
+        Returns:
+            Количество удаленных записей
+        """
         return await self.punishment_repository.delete_user_punishments(
             user_id, chat_id
         )
 
     def format_ladder_text(self, ladder: List[PunishmentLadder]) -> str:
         """
-        Форматирует лестницу наказаний в текст.
+        Форматирует лестницу наказаний в текст для вывода в интерфейс.
 
         Args:
-            ladder: Список ступеней лестницы
+            ladder: Список ступеней лестницы наказаний
 
         Returns:
-            Форматированный текст
+            Форматированный текст (HTML)
         """
         if not ladder:
             return Dialog.Punishment.LADDER_EMPTY

@@ -1,14 +1,13 @@
 import logging
-from typing import Optional, Union
+from typing import Optional, Type, Union
 
 from aiogram import Bot, types
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
+from punq import Container
 
 from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
-from container import container
 from dto import ModerationActionDTO
 from dto.chat_dto import ChatDTO
 from keyboards.inline.banhammer import back_to_block_menu_ikb, moderation_menu_ikb
@@ -17,6 +16,7 @@ from services import UserService
 from states.moderation import ModerationStates
 from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
+from utils.send_message import safe_edit_message
 from utils.user_data_parser import parse_data_from_text
 
 ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
@@ -36,7 +36,10 @@ async def process_user_handler_common(
     await callback.answer()
     await state.update_data(message_to_edit_id=callback.message.message_id)
 
-    await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=dialog_text,
         reply_markup=back_to_block_menu_ikb(),
     )
@@ -47,23 +50,26 @@ async def process_moderation_action(
     callback: types.CallbackQuery,
     state: FSMContext,
     action: Actions,
-    usecase_cls: ModerationUsecase,
+    usecase_cls: Type[ModerationUsecase],
     success_text: str,
     partial_text: str,
     fail_text: str,
+    container: Container,
 ) -> None:
-    pass
     """Общая логика для выдачи бана/предупреждения пользователю"""
 
     data = await state.get_data()
-    chat_id = callback.data.split("__")[1]
+    chat_id_from_callback = callback.data.split("__")[1]
     chat_dtos_data = data.get("chat_dtos")
     username = data.get("username")
     user_tgid = data.get("tg_id")
 
     if not chat_dtos_data or not username or not user_tgid:
         logger.error("Некорректные данные в state: %s", data)
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text="❌ Ошибка: некорректные данные. Попробуйте снова.",
             reply_markup=moderation_menu_ikb(),
         )
@@ -71,8 +77,10 @@ async def process_moderation_action(
 
     chat_dtos = [ChatDTO.model_validate(chat) for chat in chat_dtos_data]
 
-    if chat_id != "all":
-        chat_dtos = [chat for chat in chat_dtos if chat.id == int(chat_id)]
+    if chat_id_from_callback != "all":
+        chat_dtos = [
+            chat for chat in chat_dtos if chat.id == int(chat_id_from_callback)
+        ]
 
     logger.info(
         "Начало действия %s пользователя %s в %s чатах",
@@ -129,7 +137,10 @@ async def process_moderation_action(
     else:
         response_text = fail_text.format(username=username)
 
-    await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=response_text,
         reply_markup=moderation_menu_ikb(),
     )
@@ -141,6 +152,7 @@ async def process_user_input_common(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
+    container: Container,
     *,
     dialog_texts: dict[str, str],
     success_keyboard: types.InlineKeyboardMarkup,
@@ -166,7 +178,7 @@ async def process_user_input_common(
         if show_block_actions_on_error:
             kwargs["reply_markup"] = moderation_menu_ikb()
 
-        await bot.edit_message_text(**kwargs)
+        await safe_edit_message(bot=bot, **kwargs)
 
         if error_state:
             await state.set_state(error_state)
@@ -195,7 +207,7 @@ async def process_user_input_common(
         if show_block_actions_on_error:
             kwargs["reply_markup"] = moderation_menu_ikb()
 
-        await bot.edit_message_text(**kwargs)
+        await safe_edit_message(bot=bot, **kwargs)
 
         if error_state:
             await state.set_state(error_state)
@@ -208,18 +220,16 @@ async def process_user_input_common(
     )
 
     if message_to_edit_id:
-        try:
-            await bot.edit_message_text(
-                text=dialog_texts["user_info"].format(
-                    username=user.username,
-                    tg_id=user.tg_id,
-                ),
-                chat_id=message.chat.id,
-                message_id=message_to_edit_id,
-                reply_markup=success_keyboard(),
-            )
-        except TelegramBadRequest as e:
-            logger.error("Ошибка редактирования сообщения: %s", e, exc_info=True)
+        await safe_edit_message(
+            bot=bot,
+            text=dialog_texts["user_info"].format(
+                username=user.username,
+                tg_id=user.tg_id,
+            ),
+            chat_id=message.chat.id,
+            message_id=message_to_edit_id,
+            reply_markup=success_keyboard(),
+        )
 
     await state.set_state(next_state)
 
@@ -229,6 +239,7 @@ async def process_reason_common(
     sender: types.Message | types.CallbackQuery,
     state: FSMContext,
     bot: Bot,
+    container: Container,
     is_callback: bool,
     next_state: State,
 ) -> None:
@@ -262,7 +273,8 @@ async def process_reason_common(
     chat_dtos = await usecase.execute(admin_tgid=str(from_user_id), user_tgid=user_tgid)
 
     if not chat_dtos:
-        await bot.edit_message_text(
+        await safe_edit_message(
+            bot=bot,
             chat_id=chat_id,
             message_id=message_to_edit_id,
             text=Dialog.WarnUser.NO_CHATS.format(username=username),
@@ -281,14 +293,12 @@ async def process_reason_common(
         chat_dtos=[chat.model_dump(mode="json") for chat in chat_dtos],
     )
 
-    try:
-        await bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_to_edit_id,
-            text=Dialog.WarnUser.SELECT_CHAT.format(username=username),
-            reply_markup=tracked_chats_with_all_ikb(dtos=chat_dtos),
-        )
-    except TelegramBadRequest as e:
-        logger.error("Ошибка при редактировании сообщения: %s", e, exc_info=True)
+    await safe_edit_message(
+        bot=bot,
+        chat_id=chat_id,
+        message_id=message_to_edit_id,
+        text=Dialog.WarnUser.SELECT_CHAT.format(username=username),
+        reply_markup=tracked_chats_with_all_ikb(dtos=chat_dtos),
+    )
 
     await state.set_state(next_state)

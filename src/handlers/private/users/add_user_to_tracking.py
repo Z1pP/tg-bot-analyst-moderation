@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from container import container
 from dto import UserTrackingDTO
 from keyboards.inline.users import cancel_add_user_ikb, users_menu_ikb
 from states import UserStateManager
@@ -42,7 +42,10 @@ async def add_user_to_tracking_handler(
             "нового пользователя в отслеживание"
         )
 
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=Dialog.User.INPUT_USERNAME,
             reply_markup=cancel_add_user_ikb(),
         )
@@ -60,7 +63,10 @@ async def cancel_add_user_handler(callback: CallbackQuery, state: FSMContext) ->
     await callback.answer()
     await state.clear()
 
-    await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=Dialog.User.ACTION_CANCELLED,
         reply_markup=users_menu_ikb(),
     )
@@ -69,7 +75,9 @@ async def cancel_add_user_handler(callback: CallbackQuery, state: FSMContext) ->
 
 
 @router.message(UsernameStates.waiting_user_data_input)
-async def process_adding_user(message: Message, state: FSMContext) -> None:
+async def process_adding_user(
+    message: Message, state: FSMContext, container: Container
+) -> None:
     """
     Обработчик для получения @username и ID пользователя.
     """

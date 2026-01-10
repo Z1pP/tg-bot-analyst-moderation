@@ -3,8 +3,8 @@ import logging
 from aiogram import Bot, Router
 from aiogram.filters import Command
 from aiogram.types import Message
+from punq import Container
 
-from container import container
 from filters.admin_filter import AdminOnlyFilter
 from filters.group_filter import GroupTypeFilter
 from models import ChatSession, User
@@ -17,15 +17,17 @@ router = Router(name=__name__)
 
 
 @router.message(Command("track"), GroupTypeFilter(), AdminOnlyFilter())
-async def chat_added_to_tracking_handler(message: Message) -> None:
+async def chat_added_to_tracking_handler(
+    message: Message, container: Container
+) -> None:
     """Обработчик команды /track для добавления чата в отслеживание."""
 
     logger.info(
         f"Получена команда /track от {message.from_user.username} "
-        "в чате '{message.chat.title}' (ID: {message.chat.id})"
+        f"в чате '{message.chat.title}' (ID: {message.chat.id})"
     )
 
-    admin, chat = await _get_admin_and_chat(message=message)
+    admin, chat = await _get_admin_and_chat(message=message, container=container)
 
     if not admin or not chat:
         logger.error("Не удалось получить данные о пользователе или чате")
@@ -42,7 +44,7 @@ async def chat_added_to_tracking_handler(message: Message) -> None:
         if not bot_status["is_admin"]:
             logger.warning(
                 f"Недостаточно прав бота в чате '{chat.title}'. "
-                "Статус: {bot_status['status']}"
+                f"Статус: {bot_status['status']}"
             )
             await send_permission_error(message, admin, chat, bot_status)
             await message.delete()
@@ -79,7 +81,9 @@ async def chat_added_to_tracking_handler(message: Message) -> None:
 
 
 @router.message(Command("untrack"), GroupTypeFilter(), AdminOnlyFilter())
-async def chat_removed_from_tracking_handler(message: Message) -> None:
+async def chat_removed_from_tracking_handler(
+    message: Message, container: Container
+) -> None:
     """Обработчик команды /untrack для удаления чата из отслеживания."""
 
     logger.info(
@@ -87,7 +91,7 @@ async def chat_removed_from_tracking_handler(message: Message) -> None:
         f"в чате '{message.chat.title}' (ID: {message.chat.id})"
     )
 
-    admin, chat = await _get_admin_and_chat(message=message)
+    admin, chat = await _get_admin_and_chat(message=message, container=container)
 
     if not admin or not chat:
         logger.error("Не удалось получить данные о пользователе или чате")
@@ -311,7 +315,9 @@ async def check_bot_permissions(bot: Bot, chat_id: str) -> dict:
         }
 
 
-async def _get_admin_and_chat(message: Message) -> tuple[User, ChatSession]:
+async def _get_admin_and_chat(
+    message: Message, container: Container
+) -> tuple[User, ChatSession]:
     """Получает пользователя и чат из сообщения."""
 
     logger.debug(f"Получение данных админа и чата для {message.from_user.username}")

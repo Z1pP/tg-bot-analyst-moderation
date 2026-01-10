@@ -11,6 +11,7 @@ from keyboards.inline.message_actions import (
     send_message_ikb,
 )
 from states.message_management import MessageManagerState
+from utils.send_message import safe_edit_message
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -27,8 +28,11 @@ async def message_action_select_handler(
     await callback.answer()
 
     if callback.data == "delete_message":
-        await callback.message.edit_text(
-            Dialog.MessageManager.DELETE_CONFIRM,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.MessageManager.DELETE_CONFIRM,
             reply_markup=confirm_delete_ikb(),
         )
         await state.set_state(MessageManagerState.waiting_delete_confirm)
@@ -37,8 +41,11 @@ async def message_action_select_handler(
     elif callback.data == "reply_message":
         # Сохраняем message_id для последующего возврата к окну действий
         await state.update_data(active_message_id=callback.message.message_id)
-        await callback.message.edit_text(
-            Dialog.MessageManager.REPLY_INPUT,
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.MessageManager.REPLY_INPUT,
             reply_markup=cancel_reply_ikb(),
         )
         await state.set_state(MessageManagerState.waiting_reply_message)
@@ -46,7 +53,10 @@ async def message_action_select_handler(
 
     elif callback.data == "cancel":
         # Возвращаем меню управления сообщениями
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=f"{Dialog.MessageManager.ACTION_CANCELLED}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}",
             reply_markup=send_message_ikb(),
         )
@@ -76,7 +86,10 @@ async def cancel_reply_handler(
     if not chat_tgid or not message_id:
         logger.warning("Некорректные данные в state при отмене ответа: %s", data)
         # Если нет данных, возвращаемся в меню управления сообщениями
-        await callback.message.edit_text(
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
             text=Dialog.MessageManager.INPUT_MESSAGE_LINK,
             reply_markup=send_message_ikb(),
         )
@@ -85,7 +98,10 @@ async def cancel_reply_handler(
         return
 
     # Возвращаемся к окну действий с сообщением
-    await callback.message.edit_text(
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
         text=Dialog.MessageManager.MESSAGE_ACTIONS.format(
             message_id=message_id,
             chat_tgid=chat_tgid,
