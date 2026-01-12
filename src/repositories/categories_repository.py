@@ -69,11 +69,12 @@ class TemplateCategoryRepository:
                 )
 
                 category = result.scalars().first()
-                logger.info("Получена категория по имени: %s", category.name)
+                if category:
+                    logger.info("Получена категория по имени: %s", category.name)
 
                 return category
             except Exception as e:
-                logger.error("Ошибка при получении категории c id: %d", str(e))
+                logger.error("Ошибка при получении категории c id: %s", str(e))
                 return None
 
     async def create_category(self, name: str) -> Optional[TemplateCategory]:
