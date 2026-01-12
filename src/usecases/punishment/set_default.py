@@ -31,10 +31,10 @@ class SetDefaultPunishmentLadderUseCase:
 
         # Логируем действие администратора
         chat_title = chat.title if chat else f"ID: {chat_db_id}"
-        details = f"Чат: {chat_title} ({chat_db_id}), Действие: сброс до настроек по умолчанию"
+        details = f"Чат: {chat_title}, Действие: сброс до настроек по умолчанию"
         await self._admin_action_log_service.log_action(
             admin_tg_id=admin_tg_id,
-            action_type=AdminActionType.PUNISHMENT_SETTING,
+            action_type=AdminActionType.SET_DEFAULT_PUNISHMENT_LADDER,
             details=details,
         )
 
