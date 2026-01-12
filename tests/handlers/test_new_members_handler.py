@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from punq import Container
 from aiogram.types import Chat, Message, User
 
 from constants import Dialog
@@ -9,7 +10,15 @@ from usecases.moderation import RestrictNewMemberUseCase
 
 
 @pytest.mark.asyncio
-async def test_process_new_chat_members_human_with_antibot(mock_container):
+async def test_process_new_chat_members_human_with_antibot(mock_container: Container) -> None:
+    """
+    Тестирует вход нового участника (человека) в группу при включенном антиботе.
+
+    Проверяет:
+    1. Вызов RestrictNewMemberUseCase для ограничения прав пользователя.
+    2. Формирование приветственного сообщения с ссылкой на верификацию.
+    3. Использование кастомного текста приветствия.
+    """
     # 1. Настройка моков
     restrict_usecase = AsyncMock(spec=RestrictNewMemberUseCase)
     mock_container.resolve.return_value = restrict_usecase
@@ -63,7 +72,14 @@ async def test_process_new_chat_members_human_with_antibot(mock_container):
 
 
 @pytest.mark.asyncio
-async def test_process_new_chat_members_bot_joining(mock_container):
+async def test_process_new_chat_members_bot_joining(mock_container: Container) -> None:
+    """
+    Тестирует вход нового бота в группу.
+
+    Проверяет:
+    1. Что антибот не вызывается для участников-ботов.
+    2. Что бот не отправляет приветствие при входе другого бота.
+    """
     # 1. Настройка моков
     restrict_usecase = AsyncMock(spec=RestrictNewMemberUseCase)
     mock_container.resolve.return_value = restrict_usecase
