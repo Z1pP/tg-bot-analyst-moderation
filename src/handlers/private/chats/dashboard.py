@@ -122,7 +122,9 @@ async def toggle_antibot_handler(
         return
 
     toggle_usecase: ToggleAntibotUseCase = container.resolve(ToggleAntibotUseCase)
-    new_state = await toggle_usecase.execute(chat_id=chat_id)
+    new_state = await toggle_usecase.execute(
+        chat_id=chat_id, admin_tg_id=str(callback.from_user.id)
+    )
 
     if new_state is None:
         await callback.answer("Ошибка: чат не найден", show_alert=True)

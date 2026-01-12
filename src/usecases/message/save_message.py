@@ -1,5 +1,5 @@
 from dto.buffer import BufferedMessageDTO
-from dto.message import CreateMessageDTO, ResultMessageDTO
+from dto.message import CreateMessageDTO
 from services.analytics_buffer_service import AnalyticsBufferService
 
 
@@ -7,7 +7,7 @@ class SaveMessageUseCase:
     def __init__(self, buffer_service: AnalyticsBufferService):
         self.buffer_service = buffer_service
 
-    async def execute(self, message_dto: CreateMessageDTO) -> ResultMessageDTO:
+    async def execute(self, message_dto: CreateMessageDTO) -> None:
         """
         Сохраняет сообщение в буфер Redis для последующей батч-обработки.
 
@@ -27,15 +27,3 @@ class SaveMessageUseCase:
 
         # Добавляем в буфер Redis
         await self.buffer_service.add_message(buffered_dto)
-
-        # Возвращаем заглушку (ID будет присвоен после обработки воркером)
-        return ResultMessageDTO(
-            id=0,  # Временное значение, будет обновлено после сохранения в БД
-            chat_id=message_dto.chat_id,
-            user_id=message_dto.user_id,
-            message_id=message_dto.message_id,
-            message_type=message_dto.message_type,
-            content_type=message_dto.content_type,
-            text=message_dto.text,
-            created_at=message_dto.created_at,
-        )

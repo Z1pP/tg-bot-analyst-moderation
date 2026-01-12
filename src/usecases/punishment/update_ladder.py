@@ -46,12 +46,10 @@ class UpdatePunishmentLadderUseCase:
 
         # Логируем действие администратора
         chat_title = chat.title if chat else f"ID: {dto.chat_db_id}"
-        details = (
-            f"Чат: {chat_title} ({dto.chat_db_id}), Действие: сохранение новой лестницы"
-        )
+        details = f"Чат: {chat_title}, Действие: сохранение новой лестницы"
         await self._admin_action_log_service.log_action(
             admin_tg_id=admin_tg_id,
-            action_type=AdminActionType.PUNISHMENT_SETTING,
+            action_type=AdminActionType.UPDATE_PUNISHMENT_LADDER,
             details=details,
         )
 

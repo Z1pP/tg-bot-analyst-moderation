@@ -311,7 +311,7 @@ class ChatRepository(BaseRepository):
                 await session.rollback()
                 raise e
 
-    async def toggle_antibot(self, chat_id: int) -> Optional[bool]:
+    async def toggle_antibot(self, chat_id: int) -> Optional[ChatSession]:
         """
         Переключает статус антибота для чата.
 
@@ -319,7 +319,7 @@ class ChatRepository(BaseRepository):
             chat_id: ID чата из БД
 
         Returns:
-            Новый статус или None если чат не найден
+            Обновленный чат или None если чат не найден
         """
         async with self._db.session() as session:
             try:
@@ -339,16 +339,19 @@ class ChatRepository(BaseRepository):
                     session.add(chat.settings)
 
                 chat.settings.is_antibot_enabled = not chat.settings.is_antibot_enabled
-                new_state = chat.settings.is_antibot_enabled
 
                 await session.commit()
+                await session.refresh(chat, ["settings"])
+
                 logger.info(
                     "Антибот для чата %s (ID: %s) переключен в состояние: %s",
                     chat.title,
                     chat.chat_id,
-                    new_state,
+                    chat.is_antibot_enabled,
                 )
-                return new_state
+
+                self._expunge_chat_with_archive(session, chat)
+                return chat
             except Exception as e:
                 logger.error(
                     "Ошибка при переключении антибота для чата %s: %s", chat_id, e

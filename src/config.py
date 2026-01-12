@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # Базы данных
     DEV_DATABASE_URL: str
     PROD_DATABASE_URL: str
+    TEST_DATABASE_URL: str
     DEV_DB_URL_FOR_ALEMBIC: str
     PROD_DB_URL_FOR_ALEMBIC: str
 
