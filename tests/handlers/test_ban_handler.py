@@ -2,6 +2,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from punq import Container
 from aiogram.enums import ChatType
 from aiogram.types import Chat, Message, User
 
@@ -11,7 +12,15 @@ from usecases.moderation import GiveUserBanUseCase
 
 
 @pytest.mark.asyncio
-async def test_ban_user_handler_success(mock_container):
+async def test_ban_user_handler_success(mock_container: Container) -> None:
+    """
+    Тестирует хендлер команды /ban в группе.
+
+    Проверяет:
+    1. Получение UseCase из DI-контейнера.
+    2. Корректное маппинг сообщения в ModerationActionDTO.
+    3. Вызов бизнес-логики бана с правильными ID нарушителя и администратора.
+    """
     # 1. Создаем мок UseCase
     mock_usecase = AsyncMock(spec=GiveUserBanUseCase)
     # Настраиваем контейнер возвращать наш мок при запросе GiveUserBanUseCase
