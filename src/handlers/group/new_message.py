@@ -92,9 +92,9 @@ async def process_reply_message(
             reply_user_id=sender.id,
             original_message_date=message_date,
             reply_message_date=reply_to_message_date,
-            response_time_seconds=(
-                message_date - reply_to_message_date
-            ).total_seconds(),
+            response_time_seconds=int(
+                (message_date - reply_to_message_date).total_seconds()
+            ),
         )
         # Сохраняем message_id для использования в воркере
         reply_dto.reply_message_id_str = str(message.message_id)
