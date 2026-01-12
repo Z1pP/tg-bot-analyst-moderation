@@ -33,11 +33,11 @@ class UpdateChatWelcomeTextUseCase:
 
         if updated_chat:
             # Логируем действие администратора
-            details = f"Чат: {updated_chat.title} ({updated_chat.chat_id}), приветствие изменено"
+            details = f"Чат: {updated_chat.title}, приветствие изменено"
 
             await self._admin_action_log_service.log_action(
                 admin_tg_id=admin_tg_id,
-                action_type=AdminActionType.REPORT_TIME_SETTING,  # Можно использовать существующий или добавить новый тип
+                action_type=AdminActionType.SET_WELCOME_TEXT,
                 details=details,
             )
 
