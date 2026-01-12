@@ -133,5 +133,9 @@ def format_action_type(action_type: str | AdminActionType) -> str:
         "punishment_setting": "⚙️ Настройка наказаний",
         "add_user": "👤 Отслеживание пользователя",
         "remove_user": "🗑 Удаление пользователя",
+        "antibot_toggle": "🛡️ Переключение Антибота",
+        "set_welcome_text": "👋 Установка приветствия",
+        "update_punishment_ladder": "🪜 Обновление лестницы",
+        "set_default_punishment_ladder": "🪜 Сброс лестницы (дефолт)",
     }
     return action_names.get(action_type_str, action_type_str)
