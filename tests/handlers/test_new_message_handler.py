@@ -5,6 +5,7 @@ import pytest
 from aiogram.enums import ContentType
 from aiogram.types import Chat, Message
 from aiogram.types import User as TGUser
+from punq import Container
 
 from handlers.group.new_message import group_message_handler
 from models import ChatSession
@@ -16,7 +17,8 @@ from usecases.message import SaveMessageUseCase, SaveReplyMessageUseCase
 
 
 @pytest.fixture
-def mock_services(mock_container):
+def mock_services(mock_container: Container) -> dict:
+    """Фикстура для настройки моков сервисов в контейнере."""
     # Мокаем сервисы
     user_service = AsyncMock(spec=UserService)
     chat_service = AsyncMock(spec=ChatService)
@@ -46,7 +48,17 @@ def mock_services(mock_container):
 
 
 @pytest.mark.asyncio
-async def test_group_message_handler_regular(mock_container, mock_services):
+async def test_group_message_handler_regular(
+    mock_container: Container, mock_services: dict
+) -> None:
+    """
+    Тестирует сохранение обычного текстового сообщения в группе.
+
+    Проверяет:
+    1. Получение/создание пользователя и чата через сервисы.
+    2. Вызов SaveMessageUseCase с типом MESSAGE.
+    3. Корректность текста и ID сообщения в DTO.
+    """
     # 1. Данные для моков
     db_user = MagicMock(spec=DBUser)
     db_user.id = 1
@@ -87,7 +99,17 @@ async def test_group_message_handler_regular(mock_container, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_group_message_handler_reply(mock_container, mock_services):
+async def test_group_message_handler_reply(
+    mock_container: Container, mock_services: dict
+) -> None:
+    """
+    Тестирует сохранение сообщения-ответа (reply) в группе.
+
+    Проверяет:
+    1. Вызов SaveMessageUseCase с типом REPLY.
+    2. Вызов SaveReplyMessageUseCase для сохранения связи.
+    3. Расчет времени ответа (response_time_seconds) между сообщениями.
+    """
     # 1. Данные для моков
     db_user = MagicMock(spec=DBUser)
     db_user.id = 1
@@ -143,7 +165,15 @@ async def test_group_message_handler_reply(mock_container, mock_services):
 
 
 @pytest.mark.asyncio
-async def test_group_message_handler_ignore_bot(mock_container, mock_services):
+async def test_group_message_handler_ignore_bot(
+    mock_container: Container, mock_services: dict
+) -> None:
+    """
+    Проверяет, что сообщения от ботов игнорируются.
+
+    Проверяет:
+    1. Что сервисы сохранения не вызываются, если is_bot=True.
+    """
     # 1. Мок сообщения от бота
     message = AsyncMock(spec=Message)
     message.from_user = MagicMock(spec=TGUser)
