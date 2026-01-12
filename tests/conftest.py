@@ -1,9 +1,11 @@
 import asyncio
 from contextlib import asynccontextmanager
+from unittest.mock import MagicMock
 from urllib.parse import urlparse, urlunparse
 
 import pytest
 import sqlalchemy
+from punq import Container
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -73,3 +75,9 @@ async def db_manager(db_session: AsyncSession):
             yield self._session
 
     return MockDBManager(db_session)
+
+
+@pytest.fixture(scope="function")
+def mock_container():
+    """Фикстура для создания мока контейнера punq"""
+    return MagicMock(spec=Container)
