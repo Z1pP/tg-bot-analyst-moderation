@@ -51,10 +51,15 @@ class AdminActionType(str, Enum):
     GET_CHAT_DAILY_RATING = "get_chat_daily_rating"
     GET_CHAT_SUMMARY_24H = "get_chat_summary_24h"
     REPORT_TIME_SETTING = "report_time_setting"
-    PUNISHMENT_SETTING = "punishment_setting"
     # ADMIN ACTIONS
     ADD_USER = "add_user"
     REMOVE_USER = "remove_user"
+
+    # SETTINGS ACTIONS
+    ANTIBOT_TOGGLE = "antibot_toggle"
+    SET_WELCOME_TEXT = "set_welcome_text"
+    UPDATE_PUNISHMENT_LADDER = "update_punishment_ladder"
+    SET_DEFAULT_PUNISHMENT_LADDER = "set_default_punishment_ladder"
 
 
 class SummaryType(str, Enum):
