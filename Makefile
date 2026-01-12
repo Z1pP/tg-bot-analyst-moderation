@@ -17,6 +17,7 @@ help:
 	@echo "  bot       - Open bot container shell"
 	@echo "  db        - Open db container shell"
 	@echo "  redis-clear - Clear redis data"
+	@echo "  prune     - Prune unused containers"
 
 up:
 	$(DOCKER_COMPOSE) up -d
@@ -48,4 +49,6 @@ db:
 redis-clear:
 	${DOCKER_COMPOSE} exec redis redis-cli flushall
 
+prune:
+	${DOCKER_COMPOSE} prune -f
 
