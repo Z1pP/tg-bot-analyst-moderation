@@ -341,8 +341,7 @@ class ChatRepository(BaseRepository):
                 chat.settings.is_antibot_enabled = not chat.settings.is_antibot_enabled
 
                 await session.commit()
-                await session.refresh(chat)
-                self._expunge_chat_with_archive(session, chat)
+                await session.refresh(chat, ["settings"])
 
                 logger.info(
                     "Антибот для чата %s (ID: %s) переключен в состояние: %s",
@@ -350,6 +349,8 @@ class ChatRepository(BaseRepository):
                     chat.chat_id,
                     chat.is_antibot_enabled,
                 )
+
+                self._expunge_chat_with_archive(session, chat)
                 return chat
             except Exception as e:
                 logger.error(
