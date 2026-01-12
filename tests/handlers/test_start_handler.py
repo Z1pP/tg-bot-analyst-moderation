@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from aiogram.enums import ChatType
 from aiogram.types import Chat, Message, User
+from punq import Container
 
 from constants import Dialog
 from handlers.private.common.start_handler import start_handler
@@ -10,7 +11,15 @@ from keyboards.inline.menu import admin_menu_ikb
 
 
 @pytest.mark.asyncio
-async def test_start_handler(mock_container):
+async def test_start_handler(mock_container: Container) -> None:
+    """
+    Тестирует базовый хендлер команды /start.
+
+    Проверяет:
+    1. Формирование приветственного текста с именем пользователя.
+    2. Генерацию правильной инлайн-клавиатуры для администратора.
+    3. Вызов метода answer у сообщения.
+    """
     # 1. Настраиваем данные пользователя
     user_id = 12345678
     full_name = "Test User"
