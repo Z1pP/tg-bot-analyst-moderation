@@ -96,7 +96,6 @@ async def prev_admin_logs_page_handler(
             message_id=callback.message.message_id,
             text=text,
             reply_markup=admin_logs_ikb(
-                logs=logs,
                 page=prev_page,
                 total_count=total_count,
                 page_size=DEFAULT_PAGE_SIZE,
@@ -141,7 +140,6 @@ async def next_admin_logs_page_handler(
             message_id=callback.message.message_id,
             text=text,
             reply_markup=admin_logs_ikb(
-                logs=logs,
                 page=next_page,
                 total_count=total_count,
                 page_size=DEFAULT_PAGE_SIZE,
