@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     DEV_DB_URL_FOR_ALEMBIC: str
     PROD_DB_URL_FOR_ALEMBIC: str
 
+    # Настройки сервиса бота
+    SERVICE_BOT_PUBLIC_KEY_PATH: str
+    SERVICE_BOT_PRIVATE_KEY_PATH: str
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:
