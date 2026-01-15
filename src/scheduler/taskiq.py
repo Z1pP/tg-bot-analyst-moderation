@@ -9,9 +9,9 @@ from utils.logger_config import setup_logger
 setup_logger(log_level=logging.INFO)
 
 result_backend = RedisAsyncResultBackend(
-    redis_url=settings.REDIS_URL,
+    redis_url=f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}",
 )
 
 broker = RedisStreamBroker(
-    url=settings.REDIS_URL,
+    url=f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}",
 ).with_result_backend(result_backend)

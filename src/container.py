@@ -150,7 +150,9 @@ class ContainerSetup:
                 default=DefaultBotProperties(parse_mode=ParseMode.HTML),
             ),
         )
-        storage = RedisStorage.from_url(settings.REDIS_URL)
+        storage = RedisStorage.from_url(
+            f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+        )
         container.register(BaseStorage, instance=storage)
         container.register(Dispatcher, instance=Dispatcher(storage=storage))
 
@@ -193,7 +195,12 @@ class ContainerSetup:
     @staticmethod
     def _register_services(container: Container) -> None:
         """Регистрация сервисов."""
-        container.register(ICache, lambda: RedisCache(settings.REDIS_URL))
+        container.register(
+            ICache,
+            lambda: RedisCache(
+                f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+            ),
+        )
         container.register(
             IAIService,
             lambda: OpenRouterService(
@@ -215,7 +222,10 @@ class ContainerSetup:
         container.register(ReportScheduleService)
         container.register(TaskiqSchedulerService)
         container.register(
-            AnalyticsBufferService, lambda: AnalyticsBufferService(settings.REDIS_URL)
+            AnalyticsBufferService,
+            lambda: AnalyticsBufferService(
+                f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+            ),
         )
 
     @staticmethod

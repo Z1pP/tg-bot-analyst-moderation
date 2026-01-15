@@ -20,7 +20,10 @@ class AnalyticsBufferService:
     REDIS_KEY_REPLIES = "buffer:replies"
 
     def __init__(self, redis_url: str = None):
-        self.redis_url = redis_url or settings.REDIS_URL
+        self.redis_url = (
+            redis_url
+            or f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+        )
         self._redis: redis.Redis | None = None
         self._connected = False
 
