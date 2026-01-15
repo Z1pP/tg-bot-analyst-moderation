@@ -19,7 +19,11 @@ class Settings(BaseSettings):
         False  # True - использовать webhook, False - использовать polling
     )
     TIMEZONE: str = "Europe/Moscow"
-    REDIS_URL: str
+    # Настройки Redis
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_DB: int
+    # Настройки кэширования
     SUMMARY_CACHE_TTL_MINUTES: int = 60
     SUMMARY_INVALIDATION_THRESHOLD: int = 50
 
