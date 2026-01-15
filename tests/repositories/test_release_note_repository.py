@@ -1,8 +1,9 @@
-import pytest
 from typing import Any
+
+import pytest
 from sqlalchemy import delete, select
 
-from models import User, ReleaseNote
+from models import ReleaseNote, User
 from repositories.release_note_repository import ReleaseNoteRepository
 
 
@@ -28,15 +29,15 @@ async def test_create_release_note(db_manager: Any) -> None:
     """Тестирует создание релизной заметки."""
     async with db_manager.session() as session:
         user = await create_test_user(session, "123", "author")
-        
+
         repo = ReleaseNoteRepository(db_manager)
         title = "New Update"
         content = "Detailed changelog"
         language = "en"
-        
+
         # Act
         note = await repo.create(title, content, language, user.id)
-        
+
         # Assert
         assert note.id is not None
         assert note.title == title
@@ -52,10 +53,10 @@ async def test_get_release_note_by_id(db_manager: Any) -> None:
         user = await create_test_user(session, "123", "author")
         repo = ReleaseNoteRepository(db_manager)
         note = await repo.create("Title", "Content", "ru", user.id)
-        
+
         # Act
         found_note = await repo.get_by_id(note.id)
-        
+
         # Assert
         assert found_note is not None
         assert found_note.id == note.id
@@ -66,10 +67,10 @@ async def test_get_release_note_by_id(db_manager: Any) -> None:
 async def test_get_by_id_not_found(db_manager: Any) -> None:
     """Тестирует получение несуществующей заметки."""
     repo = ReleaseNoteRepository(db_manager)
-    
+
     # Act
     found_note = await repo.get_by_id(999)
-    
+
     # Assert
     assert found_note is None
 
@@ -80,16 +81,16 @@ async def test_get_all_release_notes(db_manager: Any) -> None:
     async with db_manager.session() as session:
         user = await create_test_user(session, "1", "author")
         repo = ReleaseNoteRepository(db_manager)
-        
+
         # Create 3 notes in RU, 1 in EN
         await repo.create("RU 1", "C1", "ru", user.id)
         await repo.create("RU 2", "C2", "ru", user.id)
         await repo.create("RU 3", "C3", "ru", user.id)
         await repo.create("EN 1", "C4", "en", user.id)
-        
+
         # Act
         ru_notes = await repo.get_all(language="ru", limit=2, offset=0)
-        
+
         # Assert
         assert len(ru_notes) == 2
         assert all(n.language == "ru" for n in ru_notes)
@@ -104,11 +105,11 @@ async def test_count_release_notes(db_manager: Any) -> None:
     async with db_manager.session() as session:
         user = await create_test_user(session, "1", "author")
         repo = ReleaseNoteRepository(db_manager)
-        
+
         await repo.create("RU 1", "C1", "ru", user.id)
         await repo.create("RU 2", "C2", "ru", user.id)
         await repo.create("EN 1", "C1", "en", user.id)
-        
+
         # Act & Assert
         assert await repo.count(language="ru") == 2
         assert await repo.count(language="en") == 1
@@ -122,15 +123,15 @@ async def test_update_release_note(db_manager: Any) -> None:
         user = await create_test_user(session, "1", "author")
         repo = ReleaseNoteRepository(db_manager)
         note = await repo.create("Old Title", "Old Content", "ru", user.id)
-        
+
         # Act
         title_updated = await repo.update_title(note.id, "New Title")
         content_updated = await repo.update_content(note.id, "New Content")
-        
+
         # Assert
         assert title_updated is True
         assert content_updated is True
-        
+
         async with db_manager.session() as s:
             res = await s.execute(select(ReleaseNote).where(ReleaseNote.id == note.id))
             updated_note = res.scalar_one()
@@ -142,7 +143,7 @@ async def test_update_release_note(db_manager: Any) -> None:
 async def test_update_not_found(db_manager: Any) -> None:
     """Тестирует обновление несуществующей заметки."""
     repo = ReleaseNoteRepository(db_manager)
-    
+
     assert await repo.update_title(999, "Title") is False
     assert await repo.update_content(999, "Content") is False
 
@@ -154,13 +155,13 @@ async def test_delete_release_note(db_manager: Any) -> None:
         user = await create_test_user(session, "1", "author")
         repo = ReleaseNoteRepository(db_manager)
         note = await repo.create("Title", "Content", "ru", user.id)
-        
+
         # Act
         deleted = await repo.delete(note.id)
-        
+
         # Assert
         assert deleted is True
         assert await repo.get_by_id(note.id) is None
-        
+
         # Test delete non-existent
         assert await repo.delete(999) is False
