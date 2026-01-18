@@ -19,7 +19,17 @@ class Settings(BaseSettings):
         False  # True - использовать webhook, False - использовать polling
     )
     TIMEZONE: str = "Europe/Moscow"
-    REDIS_URL: str
+
+    # Настройки api
+    API_PORT: str
+    API_HOST: str
+
+    # Настройки Redis
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_DB: int
+
+    # Настройки кэширования
     SUMMARY_CACHE_TTL_MINUTES: int = 60
     SUMMARY_INVALIDATION_THRESHOLD: int = 50
 
@@ -33,6 +43,15 @@ class Settings(BaseSettings):
     TEST_DATABASE_URL: str
     DEV_DB_URL_FOR_ALEMBIC: str
     PROD_DB_URL_FOR_ALEMBIC: str
+
+    # Настройки сервиса бота
+    SERVICE_BOT_PUBLIC_KEY_PATH: str
+    SERVICE_BOT_PRIVATE_KEY_PATH: str
+
+    @computed_field
+    @property
+    def API_BASE_URL(self) -> str:
+        return f"http://{self.API_HOST}:{self.API_PORT}"
 
     @computed_field
     @property

@@ -1,28 +1,43 @@
 from dto.buffer import BufferedMessageReplyDTO
 from dto.message_reply import CreateMessageReplyDTO
+from services import ChatService, UserService
 from services.analytics_buffer_service import AnalyticsBufferService
 from services.work_time_service import WorkTimeService
 
 
 class SaveReplyMessageUseCase:
-    def __init__(self, buffer_service: AnalyticsBufferService):
+    def __init__(
+        self,
+        buffer_service: AnalyticsBufferService,
+        user_service: UserService,
+        chat_service: ChatService,
+    ):
         self.buffer_service = buffer_service
+        self.user_service = user_service
+        self.chat_service = chat_service
 
     async def execute(self, reply_message_dto: CreateMessageReplyDTO):
         """
         Сохраняет связь между reply-сообщением и оригинальным сообщением в буфер Redis,
         если сообщения созданы в один день и в рабочее время.
         """
+
+        reply_user = await self.user_service.get_or_create(
+            tg_id=reply_message_dto.reply_user_tgid,
+        )
+        chat = await self.chat_service.get_or_create(
+            chat_tgid=reply_message_dto.chat_tgid,
+        )
         if self._should_save_reply(reply_message_dto):
             # Конвертируем CreateMessageReplyDTO в BufferedMessageReplyDTO
             # Используем reply_message_id_str (Telegram message_id) вместо reply_message_id (DB id)
             # В воркере будем искать ChatMessage по message_id для получения DB id
             buffered_dto = BufferedMessageReplyDTO(
-                chat_id=reply_message_dto.chat_id,
+                chat_id=chat.id,
+                reply_user_id=reply_user.id,
                 original_message_url=reply_message_dto.original_message_url,
                 reply_message_id_str=reply_message_dto.reply_message_id_str
                 or str(reply_message_dto.reply_message_id),
-                reply_user_id=reply_message_dto.reply_user_id,
                 response_time_seconds=reply_message_dto.response_time_seconds,
                 created_at=reply_message_dto.reply_message_date,
             )

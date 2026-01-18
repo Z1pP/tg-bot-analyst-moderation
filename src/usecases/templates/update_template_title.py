@@ -1,14 +1,14 @@
 import logging
 
 from dto import UpdateTemplateTitleDTO
-from repositories import MessageTemplateRepository
+from services.templates.template_service import TemplateService
 
 logger = logging.getLogger(__name__)
 
 
 class UpdateTemplateTitleUseCase:
-    def __init__(self, template_repository: MessageTemplateRepository):
-        self.template_repository = template_repository
+    def __init__(self, template_service: TemplateService):
+        self._template_service = template_service
 
     async def execute(self, update_dto: UpdateTemplateTitleDTO) -> bool:
         """
@@ -21,7 +21,7 @@ class UpdateTemplateTitleUseCase:
             bool: True если обновление успешно
         """
         try:
-            success = await self.template_repository.update_template_title(
+            success = await self._template_service.update_template_title(
                 update_dto.template_id, update_dto.new_title
             )
 

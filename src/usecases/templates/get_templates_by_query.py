@@ -1,14 +1,14 @@
 import logging
 
 from dto import TemplateDTO, TemplateSearchResultDTO
-from repositories import MessageTemplateRepository
+from services.templates.template_service import TemplateService
 
 logger = logging.getLogger(__name__)
 
 
 class GetTemplatesByQueryUseCase:
-    def __init__(self, template_repository: MessageTemplateRepository):
-        self.template_repository = template_repository
+    def __init__(self, template_service: TemplateService):
+        self._template_service = template_service
 
     async def execute(self, query: str) -> TemplateSearchResultDTO:
         """
@@ -21,9 +21,7 @@ class GetTemplatesByQueryUseCase:
             TemplateSearchResultDTO: Результат поиска шаблонов
         """
         try:
-            templates = await self.template_repository.get_templates_by_query(
-                query=query
-            )
+            templates = await self._template_service.get_templates_by_query(query=query)
 
             # Сортируем по количеству использований от большего к меньшему
             sorted_templates = sorted(templates, key=lambda x: -x.usage_count)

@@ -38,8 +38,13 @@ def registry_admin_routers(dispatcher: Dispatcher, container: Container):
         data["container"] = container
         return await handler(event, data)
 
+    async def inject_container_to_inline(handler, event, data):
+        data["container"] = container
+        return await handler(event, data)
+
     only_admin_router.message.outer_middleware(inject_container_to_message)
     only_admin_router.callback_query.outer_middleware(inject_container_to_callback)
+    only_admin_router.inline_query.outer_middleware(inject_container_to_inline)
 
     # Регистрируем приватный роутер
     only_admin_router.include_router(private_router)
@@ -62,8 +67,13 @@ def registry_public_private_routers(dispatcher: Dispatcher, container: Container
         data["container"] = container
         return await handler(event, data)
 
+    async def inject_container_to_inline(handler, event, data):
+        data["container"] = container
+        return await handler(event, data)
+
     public_private_router.message.outer_middleware(inject_container_to_message)
     public_private_router.callback_query.outer_middleware(inject_container_to_callback)
+    public_private_router.inline_query.outer_middleware(inject_container_to_inline)
 
     public_private_router.include_router(antibot_router)
 
@@ -84,6 +94,7 @@ def registry_group_routers(dispatcher: Dispatcher, container: Container):
     public_router.callback_query.outer_middleware(inject_container_to_event)
     public_router.message_reaction.outer_middleware(inject_container_to_event)
     public_router.chat_member.outer_middleware(inject_container_to_event)
+    public_router.inline_query.outer_middleware(inject_container_to_event)
 
     public_router.include_router(group_router)
 

@@ -1,9 +1,9 @@
-from repositories.user_repository import UserRepository
+from services import UserService
 
 
 class DeleteUserUseCase:
-    def __init__(self, user_repository: UserRepository):
-        self.user_repository = user_repository
+    def __init__(self, user_service: UserService):
+        self._user_service = user_service
 
     async def execute(self, user_id: int) -> bool:
-        return await self.user_repository.delete_user(user_id=user_id)
+        return await self._user_service.delete_user(user_id=user_id)

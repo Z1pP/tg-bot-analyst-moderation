@@ -2,14 +2,14 @@ import logging
 from typing import Optional
 
 from models import MessageTemplate
-from repositories import MessageTemplateRepository
+from services.templates.template_service import TemplateService
 
 logger = logging.getLogger(__name__)
 
 
 class GetTemplateAndIncreaseUsageUseCase:
-    def __init__(self, template_repository: MessageTemplateRepository):
-        self.template_repository = template_repository
+    def __init__(self, template_service: TemplateService):
+        self._template_service = template_service
 
     async def execute(
         self, template_id: int, chat_id: str
@@ -25,10 +25,8 @@ class GetTemplateAndIncreaseUsageUseCase:
             Optional[MessageTemplate]: Шаблон или None
         """
         try:
-            template = (
-                await self.template_repository.get_template_and_increase_usage_count(
-                    template_id=template_id, chat_id=chat_id
-                )
+            template = await self._template_service.get_template_and_increase_usage(
+                template_id=template_id, chat_id=chat_id
             )
 
             if template:
