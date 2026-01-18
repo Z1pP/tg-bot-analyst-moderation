@@ -4,7 +4,8 @@ from aiogram.fsm.state import State, StatesGroup
 class UsernameStates(StatesGroup):
     """Состояние для задавания имени пользователя"""
 
-    waiting_user_data_input = State()
+    waiting_add_user_data_input = State()
+    waiting_remove_user_data_input = State()
 
 
 class SingleUserReportStates(StatesGroup):
