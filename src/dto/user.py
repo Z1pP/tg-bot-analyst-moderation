@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -16,14 +17,16 @@ class UserDTO(BaseModel):
     # Опциональные поля
     tg_id: Optional[str] = None
     username: Optional[str] = None
+    added_at: Optional[datetime] = None
 
     @classmethod
-    def from_model(cls, user: "User") -> "UserDTO":
+    def from_model(cls, user: "User", added_at: Optional[datetime] = None) -> "UserDTO":
         """
         Создает DTO из модели User
 
         Args:
             user: Модель пользователя
+            added_at: Дата добавления (опционально)
 
         Returns:
             UserDTO: DTO пользователя
@@ -34,4 +37,5 @@ class UserDTO(BaseModel):
             username=user.username,
             role=user.role,
             is_active=user.is_active,
+            added_at=added_at,
         )
