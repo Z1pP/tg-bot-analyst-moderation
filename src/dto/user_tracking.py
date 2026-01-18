@@ -15,6 +15,7 @@ class UserTrackingDTO(BaseModel):
 class RemoveUserTrackingDTO(BaseModel):
     admin_username: Optional[str]
     admin_tgid: str
-    user_id: int
+    user_tgid: Optional[str] = None
+    user_username: Optional[str] = None
 
     model_config = ConfigDict(frozen=True)
