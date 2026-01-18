@@ -28,26 +28,24 @@ from repositories import (
 )
 from services import (
     AdminActionLogService,
+    AnalyticsBufferService,
     ArchiveBindService,
     BotMessageService,
     BotPermissionService,
+    CategoryService,
     ChatService,
     PunishmentService,
+    ReleaseNoteService,
     ReportScheduleService,
+    TaskiqSchedulerService,
+    TemplateContentService,
+    TemplateService,
     UserService,
 )
-from services.analytics_buffer_service import AnalyticsBufferService
 from services.caching import ICache, RedisCache
-from services.categories import CategoryService
 from services.chat.summarize import IAIService
 from services.chat.summarize.open_router_service import OpenRouterService
 from services.client import ApiClient
-from services.release_note_service import ReleaseNoteService
-from services.scheduler import TaskiqSchedulerService
-from services.templates import (
-    TemplateContentService,
-    TemplateService,
-)
 from usecases.admin_actions import (
     DeleteMessageUseCase,
     ReplyToMessageUseCase,
