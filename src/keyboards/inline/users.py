@@ -9,30 +9,40 @@ from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
 
 
-def users_menu_ikb() -> InlineKeyboardMarkup:
+def users_menu_ikb(has_tracked_users: bool = True) -> InlineKeyboardMarkup:
     """Клавиатура меню пользователей"""
     builder = InlineKeyboardBuilder()
 
+    if has_tracked_users:
+        builder.row(
+            InlineKeyboardButton(
+                text=InlineButtons.UserButtons.SHOW_TRACKED_USERS_LIST,
+                callback_data=CallbackData.User.SHOW_TRACKED_USERS_LIST,
+            )
+        )
+
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.UserButtons.SELECT_USER,
-            callback_data=CallbackData.User.SELECT_USER,
-        ),
-        InlineKeyboardButton(
-            text=InlineButtons.UserButtons.ADD_USER,
+            text=InlineButtons.UserButtons.ADD,
             callback_data=CallbackData.User.ADD,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.UserButtons.REMOVE_USER,
+            text=InlineButtons.UserButtons.REMOVE,
             callback_data=CallbackData.User.REMOVE,
         ),
+    )
+
+    builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
             callback_data=CallbackData.User.BACK_TO_MAIN_MENU_FROM_USERS,
         ),
     )
 
-    builder.adjust(1, 2, 1)
+    if has_tracked_users:
+        builder.adjust(1, 2, 1)
+    else:
+        builder.adjust(2, 1)
 
     return builder.as_markup()
 
@@ -69,9 +79,13 @@ def users_inline_kb(
     # Кнопки пользователей
     start_index = (page - 1) * page_size
     for index, user in enumerate(users):
+        added_date_str = ""
+        if user.added_at:
+            added_date_str = f" - доб. {user.added_at.strftime('%d.%m.%Y')}"
+
         builder.row(
             InlineKeyboardButton(
-                text=f"{start_index + index + 1}. {user.username}",
+                text=f"{start_index + index + 1}. {user.username}{added_date_str}",
                 callback_data=f"{CallbackData.User.PREFIX_USER}{user.id}",
             )
         )
@@ -116,7 +130,7 @@ def users_inline_kb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data=CallbackData.User.USERS_MENU,
+            callback_data=CallbackData.User.MENU,
         )
     )
 
@@ -181,7 +195,7 @@ def remove_user_inline_kb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data=CallbackData.User.USERS_MENU,
+            callback_data=CallbackData.User.MENU,
         )
     )
 
@@ -216,11 +230,11 @@ def user_actions_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=Dialog.User.SELECT_USER,
-            callback_data=CallbackData.User.SELECT_USER,
+            callback_data=CallbackData.User.SHOW_TRACKED_USERS_LIST,
         ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data=CallbackData.User.USERS_MENU,
+            callback_data=CallbackData.User.MENU,
         ),
         width=1,
     )
@@ -240,11 +254,11 @@ def all_users_actions_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=Dialog.User.SELECT_USER,
-            callback_data=CallbackData.User.SELECT_USER,
+            callback_data=CallbackData.User.SHOW_TRACKED_USERS_LIST,
         ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data=CallbackData.User.USERS_MENU,
+            callback_data=CallbackData.User.MENU,
         ),
         width=1,
     )
