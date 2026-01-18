@@ -8,7 +8,7 @@ from punq import Container
 from constants import Dialog
 from constants.callback import CallbackData
 from dto import UserTrackingDTO
-from keyboards.inline.users import cancel_add_user_ikb, users_menu_ikb
+from keyboards.inline.users import back_to_users_menu_ikb, users_menu_ikb
 from states import UserStateManager
 from states.user import UsernameStates
 from usecases.user_tracking import AddUserToTrackingUseCase, HasTrackedUsersUseCase
@@ -39,16 +39,16 @@ async def add_user_to_tracking_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.User.INPUT_USERNAME,
-        reply_markup=cancel_add_user_ikb(),
+        text=Dialog.User.ADD_USER_INFO,
+        reply_markup=back_to_users_menu_ikb(),
     )
 
     await state.update_data(active_message_id=callback.message.message_id)
 
-    await state.set_state(UsernameStates.waiting_user_data_input)
+    await state.set_state(UsernameStates.waiting_add_user_data_input)
 
 
-@router.message(UsernameStates.waiting_user_data_input)
+@router.message(UsernameStates.waiting_add_user_data_input)
 async def process_adding_user(
     message: Message,
     state: FSMContext,
@@ -77,7 +77,7 @@ async def process_adding_user(
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text=Dialog.User.INVALID_USERNAME_FORMAT,
-                reply_markup=cancel_add_user_ikb(),
+                reply_markup=back_to_users_menu_ikb(),
             )
         return
 
