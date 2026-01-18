@@ -3,11 +3,13 @@ import logging
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
+from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.users import users_menu_ikb
 from states import UserStateManager
+from usecases.user_tracking import HasTrackedUsersUseCase
 from utils.send_message import safe_edit_message
 
 from .navigation import show_chats_menu, show_main_menu
@@ -27,17 +29,20 @@ async def main_menu_callback_handler(
 
 @router.callback_query(F.data == CallbackData.Menu.USERS_MENU)
 async def users_menu_callback_handler(
-    callback: CallbackQuery, state: FSMContext
+    callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик меню пользователей через callback"""
     await callback.answer()
     await state.clear()
 
+    usecase: HasTrackedUsersUseCase = container.resolve(HasTrackedUsersUseCase)
+    has_tracked_users = await usecase.execute(admin_tgid=str(callback.from_user.id))
+
     message_text = Dialog.User.SELECT_ACTION
 
     await callback.message.edit_text(
         text=message_text,
-        reply_markup=users_menu_ikb(),
+        reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
     )
 
     await state.set_state(UserStateManager.users_menu)
