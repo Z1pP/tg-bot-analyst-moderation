@@ -10,8 +10,8 @@ from models.message import MessageType
 class CreateMessageDTO(BaseModel):
     """DTO для создания нового сообщения"""
 
-    chat_id: int
-    user_id: int
+    chat_tgid: str
+    user_tgid: str
     message_id: str
     message_type: str
     content_type: str
