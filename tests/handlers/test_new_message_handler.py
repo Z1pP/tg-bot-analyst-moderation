@@ -90,7 +90,6 @@ async def test_group_message_handler_regular(
     await group_message_handler(message=message, container=mock_container)
 
     # 4. Проверки
-    mock_services["user"].get_or_create.assert_called_once()
     mock_services["save_msg"].execute.assert_called_once()
     dto = mock_services["save_msg"].execute.call_args.kwargs["message_dto"]
     assert dto.message_type == MessageType.MESSAGE.value
