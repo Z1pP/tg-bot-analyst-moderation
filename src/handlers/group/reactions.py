@@ -53,12 +53,17 @@ def _get_emoji(event: types.MessageReactionUpdated) -> str:
     """
     Получает эмодзи из сообщения.
     """
-    if event.new_reaction:
-        return event.new_reaction[0].emoji
-    elif event.old_reaction:
-        return event.old_reaction[0].emoji
-    else:
+    reactions = event.new_reaction or event.old_reaction
+    if not reactions:
         return "Неизвестно"
+
+    reaction = reactions[0]
+    if reaction.type == "emoji":
+        return reaction.emoji
+    elif reaction.type == "custom_emoji":
+        return reaction.custom_emoji_id
+
+    return "Неизвестно"
 
 
 def _get_reaction_action(event: types.MessageReactionUpdated) -> ReactionAction:
@@ -107,9 +112,13 @@ async def _get_sender_and_chat(
     user_service: UserService = container.resolve(UserService)
     chat_service: ChatService = container.resolve(ChatService)
 
-    # Получаем пользователя и чат
-    username = event.user.username
-    tg_id = str(event.user.id)
+    # Получаем пользователя или чат-актора (для анонимных реакций)
+    user = event.user or event.actor_chat
+    if not user:
+        return None, None
+
+    username = getattr(user, "username", None)
+    tg_id = str(user.id)
     chat_id = str(event.chat.id)
 
     sender = await user_service.get_or_create(username=username, tg_id=tg_id)
