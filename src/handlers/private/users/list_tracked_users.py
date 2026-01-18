@@ -10,8 +10,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
-from keyboards.inline.users import users_inline_kb, users_menu_ikb
-from states import UserStateManager
+from keyboards.inline.users import back_to_users_menu_ikb, users_menu_ikb
 from usecases.user_tracking import GetListTrackedUsersUseCase
 from utils.send_message import safe_edit_message
 
@@ -59,25 +58,28 @@ async def _display_tracked_users_page(
             )
             return
 
-        page_users, total_count = paginate_users(users, page)
+        # Формируем текстовый список пользователей
+        lines = [Dialog.User.LIST_TRACKED_USERS, ""]
+        for i, user in enumerate(users, 1):
+            user_ident = (
+                f"@{user.username}"
+                if user.username
+                else f"ID: <code>{user.tg_id}</code>"
+            )
+            added_date = (
+                user.added_at.strftime("%d.%m.%Y") if user.added_at else "неизвестно"
+            )
+            lines.append(f"{i}. {user_ident} - доб. {added_date}")
 
-        if not page_users and page > 1:
-            # Если страница пуста (например, после удаления), показываем предыдущую
-            await _display_tracked_users_page(callback, state, container, page - 1)
-            return
+        message_text = "\n".join(lines)
 
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.User.LIST_TRACKED_USERS,
-            reply_markup=users_inline_kb(
-                users=page_users,
-                page=page,
-                total_count=total_count,
-            ),
+            text=message_text,
+            reply_markup=back_to_users_menu_ikb(),
         )
-        await state.set_state(UserStateManager.listing_users)
 
     except Exception as e:
         logger.error(
@@ -112,31 +114,3 @@ async def users_list_handler(
         callback.from_user.username or "неизвестно",
     )
     await _display_tracked_users_page(callback, state, container, page=1)
-
-
-@router.callback_query(
-    UserStateManager.listing_users,
-    F.data.startswith(CallbackData.User.PREFIX_PREV_USERS_PAGE),
-)
-async def prev_page_users_handler(
-    callback: CallbackQuery, state: FSMContext, container: Container
-) -> None:
-    """Обработчик перехода на предыдущую страницу пользователей."""
-    await callback.answer()
-    current_page = int(callback.data.split("__")[1])
-    prev_page = max(1, current_page - 1)
-    await _display_tracked_users_page(callback, state, container, page=prev_page)
-
-
-@router.callback_query(
-    UserStateManager.listing_users,
-    F.data.startswith(CallbackData.User.PREFIX_NEXT_USERS_PAGE),
-)
-async def next_page_users_handler(
-    callback: CallbackQuery, state: FSMContext, container: Container
-) -> None:
-    """Обработчик перехода на следующую страницу пользователей."""
-    await callback.answer()
-    current_page = int(callback.data.split("__")[1])
-    next_page = current_page + 1
-    await _display_tracked_users_page(callback, state, container, page=next_page)
