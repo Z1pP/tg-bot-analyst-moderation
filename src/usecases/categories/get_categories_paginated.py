@@ -2,14 +2,14 @@ import logging
 from typing import List, Tuple
 
 from models import TemplateCategory
-from repositories import TemplateCategoryRepository
+from services import CategoryService
 
 logger = logging.getLogger(__name__)
 
 
 class GetCategoriesPaginatedUseCase:
-    def __init__(self, category_repository: TemplateCategoryRepository):
-        self.category_repository = category_repository
+    def __init__(self, category_service: CategoryService):
+        self._category_service = category_service
 
     async def execute(
         self, limit: int, offset: int
@@ -25,10 +25,10 @@ class GetCategoriesPaginatedUseCase:
             Tuple[List[TemplateCategory], int]: Категории и общее количество
         """
         try:
-            categories = await self.category_repository.get_categories_paginated(
+            categories = await self._category_service.get_categories_paginated(
                 limit=limit, offset=offset
             )
-            total_count = await self.category_repository.get_categories_count()
+            total_count = await self._category_service.get_categories_count()
 
             logger.debug(f"Получено {len(categories)} категорий из {total_count}")
             return categories, total_count
