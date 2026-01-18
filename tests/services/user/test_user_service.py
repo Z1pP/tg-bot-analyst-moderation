@@ -170,7 +170,7 @@ async def test_create_user(
     # Assert
     assert result == sample_user
     mock_repo.create_user.assert_called_once_with(
-        tg_id=tg_id, username=username, language="ru"
+        tg_id=tg_id, username=username, role=UserRole.USER, language="ru"
     )
     assert mock_cache.set.call_count == 3
 
