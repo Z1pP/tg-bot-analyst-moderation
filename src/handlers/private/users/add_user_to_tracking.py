@@ -1,5 +1,4 @@
 import logging
-from dataclasses import dataclass
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -13,18 +12,11 @@ from keyboards.inline.users import cancel_add_user_ikb, users_menu_ikb
 from states import UserStateManager
 from states.user import UsernameStates
 from usecases.user_tracking import AddUserToTrackingUseCase, HasTrackedUsersUseCase
-from utils.exception_handler import handle_exception
 from utils.send_message import safe_edit_message
 from utils.user_data_parser import parse_data_from_text
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class ParsedData:
-    username: str
-    user_tgid: str
 
 
 @router.callback_query(F.data == CallbackData.User.ADD)
@@ -36,127 +28,105 @@ async def add_user_to_tracking_handler(
     """
     await callback.answer()
 
-    try:
-        logger.info(
-            f"Пользователь {callback.from_user.id} начал добавление "
-            "нового пользователя в отслеживание"
-        )
-
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.User.INPUT_USERNAME,
-            reply_markup=cancel_add_user_ikb(),
-        )
-
-        await state.update_data(active_message_id=callback.message.message_id)
-
-        await state.set_state(UsernameStates.waiting_user_data_input)
-    except Exception as e:
-        await handle_exception(callback.message, e, "add_user_to_tracking_handler")
-
-
-@router.callback_query(F.data == CallbackData.User.CANCEL_ADD)
-async def cancel_add_user_handler(
-    callback: CallbackQuery, state: FSMContext, container: Container
-) -> None:
-    """Обработчик отмены добавления пользователя"""
-    await callback.answer()
-    await state.clear()
-
-    usecase: HasTrackedUsersUseCase = container.resolve(HasTrackedUsersUseCase)
-    has_tracked_users = await usecase.execute(admin_tgid=str(callback.from_user.id))
+    logger.info(
+        "Администратор tg_id: %s username: %s начал добавление "
+        "нового пользователя в отслеживание",
+        callback.from_user.id,
+        callback.from_user.username,
+    )
 
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.User.ACTION_CANCELLED,
-        reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
+        text=Dialog.User.INPUT_USERNAME,
+        reply_markup=cancel_add_user_ikb(),
     )
 
-    await state.set_state(UserStateManager.users_menu)
+    await state.update_data(active_message_id=callback.message.message_id)
+
+    await state.set_state(UsernameStates.waiting_user_data_input)
 
 
 @router.message(UsernameStates.waiting_user_data_input)
 async def process_adding_user(
-    message: Message, state: FSMContext, container: Container
+    message: Message,
+    state: FSMContext,
+    container: Container,
 ) -> None:
-    """
-    Обработчик для получения @username и ID пользователя.
-    """
-    try:
-        admin_username = message.from_user.username
-        logger.info(f"Обработка добавления пользователя от {admin_username}")
+    """Обработчик для получения @username и ID пользователя."""
+    admin_id = message.from_user.id
+    admin_username = message.from_user.username or "неизвестно"
 
-        data = await state.get_data()
-        active_message_id = data.get("active_message_id")
+    logger.info(
+        "Обработка добавления пользователя от администратора tg_id: %s username: %s",
+        admin_id,
+        admin_username,
+    )
 
-        try:
-            user_data = parse_data_from_text(text=message.text)
-        except ValueError:
-            if active_message_id:
-                await safe_edit_message(
-                    bot=message.bot,
-                    chat_id=message.chat.id,
-                    message_id=active_message_id,
-                    text=Dialog.User.INVALID_USERNAME_FORMAT,
-                    reply_markup=cancel_add_user_ikb(),
-                )
-            await message.delete()
-            return
+    data = await state.get_data()
+    active_message_id = data.get("active_message_id")
 
-        if user_data is None:
-            text = Dialog.User.INVALID_FORMAT_RETRY
-            if active_message_id:
-                await safe_edit_message(
-                    bot=message.bot,
-                    chat_id=message.chat.id,
-                    message_id=active_message_id,
-                    text=text,
-                    reply_markup=cancel_add_user_ikb(),
-                )
-            await message.delete()
-            return
+    user_data = parse_data_from_text(text=message.text)
+    await message.delete()
 
-        tracking_dto = UserTrackingDTO(
-            admin_username=admin_username,
-            admin_tgid=str(message.from_user.id),
-            user_username=user_data.username,
-            user_tgid=user_data.tg_id,
-        )
-
-        usecase: AddUserToTrackingUseCase = container.resolve(AddUserToTrackingUseCase)
-        result = await usecase.execute(dto=tracking_dto)
-
-        await message.delete()
-
-        has_tracked_users_usecase: HasTrackedUsersUseCase = container.resolve(
-            HasTrackedUsersUseCase
-        )
-        has_tracked_users = await has_tracked_users_usecase.execute(
-            admin_tgid=str(message.from_user.id)
-        )
-
-        if not result.success:
-            logger.info(
-                f"Ошибка добавления пользователя {user_data.username} в отслеживание"
+    if user_data is None:
+        if active_message_id:
+            await safe_edit_message(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=Dialog.User.INVALID_USERNAME_FORMAT,
+                reply_markup=cancel_add_user_ikb(),
             )
-            if active_message_id:
-                await safe_edit_message(
-                    bot=message.bot,
-                    chat_id=message.chat.id,
-                    message_id=active_message_id,
-                    text=result.message,
-                    reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
-                )
-            return
+        return
 
-        logger.info(
-            f"Пользователь {user_data.username} успешно добавлен администратором {admin_username}"
+    tracking_dto = UserTrackingDTO(
+        admin_username=admin_username,
+        admin_tgid=str(admin_id),
+        user_username=user_data.username,
+        user_tgid=user_data.tg_id,
+    )
+
+    usecase: AddUserToTrackingUseCase = container.resolve(AddUserToTrackingUseCase)
+    has_tracked_users_usecase: HasTrackedUsersUseCase = container.resolve(
+        HasTrackedUsersUseCase
+    )
+
+    try:
+        result = await usecase.execute(dto=tracking_dto)
+    except Exception as e:
+        logger.error(
+            "Критическая ошибка при добавлении пользователя %s администратором %s: %s",
+            user_data.username or user_data.tg_id,
+            admin_username,
+            e,
+            exc_info=True,
         )
+        if active_message_id:
+            has_tracked_users = await has_tracked_users_usecase.execute(
+                admin_tgid=str(admin_id)
+            )
+            await safe_edit_message(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=Dialog.UserTracking.ERROR_ADD_USER_TO_TRACKING,
+                reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
+            )
+        return
 
+    has_tracked_users = await has_tracked_users_usecase.execute(
+        admin_tgid=str(admin_id)
+    )
+
+    if not result.success:
+        logger.info(
+            "Ошибка добавления пользователя %s в отслеживание администратором %s: %s",
+            user_data.username or user_data.tg_id,
+            admin_username,
+            result.message,
+        )
         if active_message_id:
             await safe_edit_message(
                 bot=message.bot,
@@ -165,7 +135,21 @@ async def process_adding_user(
                 text=result.message,
                 reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
             )
+        return
 
-        await state.set_state(UserStateManager.users_menu)
-    except Exception as e:
-        await handle_exception(message, e, "process_adding_user")
+    logger.info(
+        "Пользователь %s успешно добавлен администратором %s в отслеживание",
+        user_data.username or user_data.tg_id,
+        admin_username,
+    )
+
+    if active_message_id:
+        await safe_edit_message(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            text=result.message,
+            reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
+        )
+
+    await state.set_state(UserStateManager.users_menu)
