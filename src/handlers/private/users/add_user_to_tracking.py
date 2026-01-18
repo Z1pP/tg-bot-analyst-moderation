@@ -12,7 +12,7 @@ from dto import UserTrackingDTO
 from keyboards.inline.users import cancel_add_user_ikb, users_menu_ikb
 from states import UserStateManager
 from states.user import UsernameStates
-from usecases.user_tracking import AddUserToTrackingUseCase
+from usecases.user_tracking import AddUserToTrackingUseCase, HasTrackedUsersUseCase
 from utils.exception_handler import handle_exception
 from utils.send_message import safe_edit_message
 from utils.user_data_parser import parse_data_from_text
@@ -58,17 +58,22 @@ async def add_user_to_tracking_handler(
 
 
 @router.callback_query(F.data == CallbackData.User.CANCEL_ADD)
-async def cancel_add_user_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def cancel_add_user_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Обработчик отмены добавления пользователя"""
     await callback.answer()
     await state.clear()
+
+    usecase: HasTrackedUsersUseCase = container.resolve(HasTrackedUsersUseCase)
+    has_tracked_users = await usecase.execute(admin_tgid=str(callback.from_user.id))
 
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=Dialog.User.ACTION_CANCELLED,
-        reply_markup=users_menu_ikb(),
+        reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
     )
 
     await state.set_state(UserStateManager.users_menu)
@@ -127,6 +132,13 @@ async def process_adding_user(
 
         await message.delete()
 
+        has_tracked_users_usecase: HasTrackedUsersUseCase = container.resolve(
+            HasTrackedUsersUseCase
+        )
+        has_tracked_users = await has_tracked_users_usecase.execute(
+            admin_tgid=str(message.from_user.id)
+        )
+
         if not result.success:
             logger.info(
                 f"Ошибка добавления пользователя {user_data.username} в отслеживание"
@@ -137,7 +149,7 @@ async def process_adding_user(
                     chat_id=message.chat.id,
                     message_id=active_message_id,
                     text=result.message,
-                    reply_markup=users_menu_ikb(),
+                    reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
                 )
             return
 
@@ -151,7 +163,7 @@ async def process_adding_user(
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text=result.message,
-                reply_markup=users_menu_ikb(),
+                reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
             )
 
         await state.set_state(UserStateManager.users_menu)
