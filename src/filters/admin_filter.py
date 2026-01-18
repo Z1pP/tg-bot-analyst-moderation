@@ -7,8 +7,6 @@ from punq import Container
 
 from constants.enums import UserRole
 from models.user import User
-from repositories import UserRepository
-from services.caching import ICache
 
 logger = logging.getLogger(__name__)
 
@@ -19,60 +17,11 @@ class BaseUserFilter(Filter):
     async def get_user(
         self, tg_id: str, current_username: str, container: Container
     ) -> Optional[User]:
-        """Получает пользователя из кеша или БД с проверкой username"""
-        cache: ICache = container.resolve(ICache)
-        user = await cache.get(key=tg_id)
+        """Получает пользователя из кеша или БД через UserService"""
+        from services.user.user_service import UserService
 
-        if not user:
-            user = await self._get_user_from_db(tg_id=tg_id, container=container)
-            if user:
-                await cache.set(key=tg_id, value=user)
-
-        # Проверяем username
-        if user and current_username and user.username != current_username:
-            user = await self._update_username(
-                user=user,
-                new_username=current_username,
-                tg_id=tg_id,
-                container=container,
-            )
-
-        return user
-
-    async def _get_user_from_db(
-        self, tg_id: str, container: Container
-    ) -> Optional[User]:
-        try:
-            user_repo: UserRepository = container.resolve(UserRepository)
-            return await user_repo.get_user_by_tg_id(tg_id=tg_id)
-        except Exception as e:
-            logger.error(f"Ошибка при получении пользователя из БД: {e}")
-
-    async def _update_username(
-        self, user: User, new_username: str, tg_id: str, container: Container
-    ) -> User:
-        """Обновляет username в БД и кеше только при изменении"""
-        try:
-            user_repo: UserRepository = container.resolve(UserRepository)
-            cache: ICache = container.resolve(ICache)
-            updated_user = await user_repo.update_user(
-                user_id=user.id,
-                username=new_username,
-                check_changes=True,
-            )
-
-            # Обновляем кеш только если обновление прошло успешно
-            if updated_user:
-                await cache.set(key=tg_id, value=updated_user)
-                logger.info(
-                    f"Обновлен username для tg_id={tg_id}: {user.username} → {new_username}"
-                )
-                return updated_user
-
-            return user
-        except Exception as e:
-            logger.error(f"Ошибка обновления username для tg_id={tg_id}: {e}")
-            return user
+        user_service: UserService = container.resolve(UserService)
+        return await user_service.get_user(tg_id=tg_id, username=current_username)
 
 
 class AdminOnlyFilter(BaseUserFilter):
