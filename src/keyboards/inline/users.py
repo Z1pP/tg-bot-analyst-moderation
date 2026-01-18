@@ -47,6 +47,24 @@ def users_menu_ikb(has_tracked_users: bool = True) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def move_to_analytics_ikb(user_id: int) -> InlineKeyboardMarkup:
+    """Клавиатура для перехода в раздел аналитики или назад в меню пользователей"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.MOVE_TO_ANALYTICS,
+            callback_data=CallbackData.User.PREFIX_USER + str(user_id),
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.COME_BACK,
+            callback_data=CallbackData.User.MENU,
+        ),
+        width=1,
+    )
+    return builder.as_markup()
+
+
 def back_to_users_menu_ikb() -> InlineKeyboardMarkup:
     """Клавиатура для возврата в меню пользователей"""
     builder = InlineKeyboardBuilder()
@@ -57,83 +75,6 @@ def back_to_users_menu_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.User.MENU,
         )
     )
-    return builder.as_markup()
-
-
-def users_inline_kb(
-    users: List[UserDTO],
-    page: int = 1,
-    total_count: int = 0,
-    page_size: int = USERS_PAGE_SIZE,
-) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-
-    # Кнопка "Все пользователи"
-    builder.row(
-        InlineKeyboardButton(
-            text="Все пользователи",
-            callback_data=CallbackData.User.ALL_USERS,
-        )
-    )
-
-    # Кнопки пользователей
-    start_index = (page - 1) * page_size
-    for index, user in enumerate(users):
-        added_date_str = ""
-        if user.added_at:
-            added_date_str = f" - доб. {user.added_at.strftime('%d.%m.%Y')}"
-
-        builder.row(
-            InlineKeyboardButton(
-                text=f"{start_index + index + 1}. {user.username}{added_date_str}",
-                callback_data=f"{CallbackData.User.PREFIX_USER}{user.id}",
-            )
-        )
-
-    # Пагинация (только если больше одной страницы)
-    if total_count > page_size:
-        max_pages = (total_count + page_size - 1) // page_size
-        pagination_buttons = []
-
-        # Кнопка "Назад"
-        if page > 1:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="◀️",
-                    callback_data=f"{CallbackData.User.PREFIX_PREV_USERS_PAGE}{page}",
-                )
-            )
-
-        # Информация о странице
-        start_item = (page - 1) * page_size + 1
-        end_item = min(page * page_size, total_count)
-        pagination_buttons.append(
-            InlineKeyboardButton(
-                text=f"{start_item}-{end_item} из {total_count}",
-                callback_data=CallbackData.User.USERS_PAGE_INFO,
-            )
-        )
-
-        # Кнопка "Вперед"
-        if page < max_pages:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="▶️",
-                    callback_data=f"{CallbackData.User.PREFIX_NEXT_USERS_PAGE}{page}",
-                )
-            )
-
-        if pagination_buttons:
-            builder.row(*pagination_buttons)
-
-    # Кнопка возврата в меню (в самом низу)
-    builder.row(
-        InlineKeyboardButton(
-            text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data=CallbackData.User.MENU,
-        )
-    )
-
     return builder.as_markup()
 
 
@@ -228,10 +169,10 @@ def user_actions_ikb() -> InlineKeyboardMarkup:
             text=Dialog.Report.GET_REPORT,
             callback_data=CallbackData.Report.GET_USER_REPORT,
         ),
-        InlineKeyboardButton(
-            text=Dialog.User.SELECT_USER,
-            callback_data=CallbackData.User.SHOW_TRACKED_USERS_LIST,
-        ),
+        # InlineKeyboardButton(
+        #     text=Dialog.User.SELECT_USER,
+        #     callback_data=CallbackData.User.SHOW_TRACKED_USERS_LIST,
+        # ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
             callback_data=CallbackData.User.MENU,
@@ -252,10 +193,10 @@ def all_users_actions_ikb() -> InlineKeyboardMarkup:
             text=Dialog.Report.GET_REPORT,
             callback_data=CallbackData.Report.GET_ALL_USERS_REPORT,
         ),
-        InlineKeyboardButton(
-            text=Dialog.User.SELECT_USER,
-            callback_data=CallbackData.User.SHOW_TRACKED_USERS_LIST,
-        ),
+        # InlineKeyboardButton(
+        #     text=Dialog.User.SELECT_USER,
+        #     callback_data=CallbackData.User.SHOW_TRACKED_USERS_LIST,
+        # ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
             callback_data=CallbackData.User.MENU,
