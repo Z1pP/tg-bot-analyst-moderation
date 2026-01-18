@@ -10,7 +10,8 @@ from repositories import (
     TemplateMediaRepository,
     UserRepository,
 )
-from services import AdminActionLogService
+from services.admin_action_log_service import AdminActionLogService
+from services.caching import ICache
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,13 @@ class TemplateContentService:
         user_repository: UserRepository,
         template_repository: MessageTemplateRepository,
         media_repository: TemplateMediaRepository,
+        cache: ICache,
         admin_action_log_service: AdminActionLogService = None,
     ):
         self._user_repository = user_repository
         self._template_repository = template_repository
         self._media_repository = media_repository
+        self._cache = cache
         self._admin_action_log_service = admin_action_log_service
 
     def extract_media_content(self, messages: list[Message]) -> Dict[str, Any]:
@@ -95,6 +98,12 @@ class TemplateContentService:
                     action_type=AdminActionType.ADD_TEMPLATE,
                 )
 
+            # Инвалидируем кеш категории
+            category_id = content.get("category_id")
+            if category_id:
+                for page in range(1, 11):
+                    await self._cache.delete(f"tpl:cat:{category_id}:page:{page}")
+
             return new_template
         except Exception as e:
             logger.error(f"Ошибка сохранения шаблона: {e}", exc_info=True)
@@ -153,9 +162,21 @@ class TemplateContentService:
 
             content_data = {"text": content.get("text", ""), "media_items": media_items}
 
-            return await self._template_repository.update_template_content(
+            result = await self._template_repository.update_template_content(
                 template_id, content_data
             )
+
+            if result:
+                template = await self._template_repository.get_template_by_id(
+                    template_id
+                )
+                if template and template.category_id:
+                    for page in range(1, 11):
+                        await self._cache.delete(
+                            f"tpl:cat:{template.category_id}:page:{page}"
+                        )
+
+            return result
 
         except Exception as e:
             logger.error(f"Ошибка обновления содержимого шаблона: {e}", exc_info=True)
