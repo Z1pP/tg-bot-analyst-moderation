@@ -37,14 +37,16 @@ class ChatService:
         Returns:
             Объект ChatSession или None
         """
-        chat = await self._cache.get(chat_tgid)
+        cache_key = f"chat:tg_id:{chat_tgid}"
+        chat = await self._cache.get(cache_key)
         if chat:
             if title and chat.title != title:
                 chat = await self._chat_repository.update_chat(
                     chat_id=chat.id,
                     title=title,
                 )
-                await self._cache.set(chat_tgid, chat)
+                await self._cache.set(cache_key, chat)
+                await self._cache.set(f"chat:archive:{chat_tgid}", chat)
             return chat
 
         chat = await self._chat_repository.get_chat_by_tgid(chat_tgid)
@@ -54,7 +56,8 @@ class ChatService:
                     chat_id=chat.id,
                     title=title,
                 )
-            await self._cache.set(chat_tgid, chat)
+            await self._cache.set(cache_key, chat)
+            await self._cache.set(f"chat:archive:{chat_tgid}", chat)
 
         return chat or None
 
@@ -74,7 +77,8 @@ class ChatService:
         )
 
         if chat:
-            await self._cache.set(chat_id, chat)
+            await self._cache.set(f"chat:tg_id:{chat_id}", chat)
+            await self._cache.set(f"chat:archive:{chat_id}", chat)
         return chat
 
     async def get_or_create(
@@ -96,7 +100,6 @@ class ChatService:
 
         new_chat = await self.create_chat(chat_tgid, title)
 
-        await self._cache.set(chat_tgid, new_chat)
         return new_chat
 
     async def _update_and_sync_cache(
@@ -115,11 +118,13 @@ class ChatService:
         """
         current_chat = await self._chat_repository.get_chat_by_id(chat_id)
         if current_chat:
-            await self._cache.delete(current_chat.chat_id)
+            await self._cache.delete(f"chat:tg_id:{current_chat.chat_id}")
+            await self._cache.delete(f"chat:archive:{current_chat.chat_id}")
 
         chat = await update_func(chat_id=chat_id, **kwargs)
         if chat:
-            await self._cache.set(chat.chat_id, chat)
+            await self._cache.set(f"chat:tg_id:{chat.chat_id}", chat)
+            await self._cache.set(f"chat:archive:{chat.chat_id}", chat)
         return chat
 
     async def get_chat_with_archive(
@@ -127,16 +132,30 @@ class ChatService:
         chat_tgid: Optional[str] = None,
         chat_id: Optional[int] = None,
     ) -> Optional[ChatSession]:
-        """Получает чат и его архивный чат если есть."""
+        """
+        Получает чат и его архивный чат если есть.
+        Сначала проверяет кеш, затем БД.
+        """
         if not chat_tgid and not chat_id:
             raise ValueError("Необходимо передать chat_tgid или chat_id")
 
-        # Всегда загружаем из репозитория с selectinload для archive_chat
-        # чтобы избежать проблем с detached объектами из кеша
+        # Пробуем получить из кеша
+        if chat_tgid:
+            cache_key = f"chat:archive:{chat_tgid}"
+            chat = await self._cache.get(cache_key)
+            if chat:
+                return chat
+
+        # Если в кеше нет или ищем по id, загружаем из репозитория
         if chat_id:
             chat = await self._chat_repository.get_chat_by_id(chat_id=chat_id)
         else:
             chat = await self._chat_repository.get_chat_by_tgid(chat_tgid)
+
+        # Кешируем результат если он найден и искали по tgid
+        if chat and chat_tgid:
+            await self._cache.set(f"chat:archive:{chat_tgid}", chat)
+            await self._cache.set(f"chat:tg_id:{chat_tgid}", chat)
 
         return chat or None
 
@@ -165,14 +184,20 @@ class ChatService:
 
         if work_chat:
             # Обновляем кеш для рабочего чата
-            await self._cache.set(work_chat.chat_id, work_chat)
+            await self._cache.set(f"chat:tg_id:{work_chat.chat_id}", work_chat)
+            await self._cache.set(f"chat:archive:{work_chat.chat_id}", work_chat)
             # Обновляем кеш для архивного чата если он был создан
             if work_chat.archive_chat_id:
                 archive_chat = await self._chat_repository.get_chat_by_tgid(
                     work_chat.archive_chat_id
                 )
                 if archive_chat:
-                    await self._cache.set(archive_chat.chat_id, archive_chat)
+                    await self._cache.set(
+                        f"chat:tg_id:{archive_chat.chat_id}", archive_chat
+                    )
+                    await self._cache.set(
+                        f"chat:archive:{archive_chat.chat_id}", archive_chat
+                    )
 
         return work_chat
 
