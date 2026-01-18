@@ -3,8 +3,7 @@ from typing import Optional
 
 from constants.enums import UserRole
 from models import User
-from repositories.user_repository import UserRepository
-from services.caching import ICache
+from services import UserService
 
 
 @dataclass
@@ -16,11 +15,9 @@ class UserResult:
 class GetOrCreateUserIfNotExistUserCase:
     def __init__(
         self,
-        user_repository: UserRepository,
-        cache_service: ICache,
+        user_service: UserService,
     ):
-        self.user_repository = user_repository
-        self.cache_service = cache_service
+        self._user_service = user_service
 
     async def execute(
         self,
@@ -45,50 +42,15 @@ class GetOrCreateUserIfNotExistUserCase:
         if not tg_id and not username:
             raise ValueError("Either tg_id or username must be provided")
 
-        user = await self._get_user(tg_id=tg_id, username=username)
+        user = await self._user_service.get_user(tg_id=tg_id, username=username)
 
         if user:
             return UserResult(user=user, is_existed=True)
 
+        new_user = await self._user_service.create_user(
+            tg_id=tg_id, username=username, role=role
+        )
         return UserResult(
-            user=await self._create_user(tg_id, username, role),
+            user=new_user,
             is_existed=False,
         )
-
-    async def _get_user(
-        self,
-        tg_id: Optional[str],
-        username: Optional[str],
-    ) -> Optional[User]:
-        """
-        Получает пользователя по tg_id или username
-        """
-        if tg_id:
-            user = await self.cache_service.get(key=tg_id)
-            if user:
-                return user
-
-            user = await self.user_repository.get_user_by_tg_id(tg_id)
-            if user:
-                await self.cache_service.set(key=tg_id, value=user)
-                return user
-        if username:
-            return await self.user_repository.get_user_by_username(username)
-        return None
-
-    async def _create_user(
-        self,
-        tg_id: Optional[str],
-        username: Optional[str],
-        role: Optional[UserRole] = None,
-    ) -> User:
-        """
-        Создает нового пользователя
-        """
-        user = await self.user_repository.create_user(
-            tg_id=tg_id,
-            username=username,
-            role=role,
-        )
-        await self.cache_service.set(key=tg_id, value=user)
-        return user
