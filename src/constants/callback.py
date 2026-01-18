@@ -70,7 +70,6 @@ class UserCallbackData:
     REMOVE = "remove_user"
     MENU = "users_menu"
     BACK_TO_MAIN_MENU_FROM_USERS = "back_to_main_menu_from_users"
-    CANCEL_ADD = "cancel_add_user"
     ALL_USERS = "all_users"
     USERS_PAGE_INFO = "users_page_info"
     REMOVE_USERS_PAGE_INFO = "remove_users_page_info"
