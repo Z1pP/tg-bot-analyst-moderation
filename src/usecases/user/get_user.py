@@ -17,4 +17,4 @@ class GetUserByIdUseCase:
         self._user_service = user_service
 
     async def execute(self, user_id: int) -> Optional[User]:
-        return await self._user_service.get_user_by_id(user_id)
+        return await self._user_service.get_user_by_id(user_id=user_id)
