@@ -18,7 +18,7 @@ from .time_period import (
 )
 from .users import (
     all_users_actions_ikb,
-    cancel_add_user_ikb,
+    back_to_users_menu_ikb,
     remove_user_inline_kb,
     user_actions_ikb,
     users_inline_kb,
@@ -30,7 +30,7 @@ __all__ = [
     "users_inline_kb",
     "remove_user_inline_kb",
     "users_menu_ikb",
-    "cancel_add_user_ikb",
+    "back_to_users_menu_ikb",
     "user_actions_ikb",
     "all_users_actions_ikb",
     "order_details_kb_single_user",
