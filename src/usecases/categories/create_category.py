@@ -3,8 +3,7 @@ import logging
 from constants.enums import AdminActionType
 from dto import CategoryDTO, CreateCategoryDTO
 from exceptions.category import CategoryAlreadyExists
-from repositories import TemplateCategoryRepository
-from services import AdminActionLogService
+from services import AdminActionLogService, CategoryService
 
 logger = logging.getLogger(__name__)
 
@@ -12,10 +11,10 @@ logger = logging.getLogger(__name__)
 class CreateCategoryUseCase:
     def __init__(
         self,
-        category_repository: TemplateCategoryRepository,
+        category_service: CategoryService,
         admin_action_log_service: AdminActionLogService = None,
     ):
-        self.category_repository = category_repository
+        self._category_service = category_service
         self._admin_action_log_service = admin_action_log_service
 
     async def execute(
@@ -31,13 +30,14 @@ class CreateCategoryUseCase:
         Returns:
             CategoryDTO: Созданная категория
         """
-        existing = await self.category_repository.get_category_by_name(name=dto.name)
+        categories = await self._category_service.get_categories()
+        existing = next((c for c in categories if c.name == dto.name), None)
 
         if existing:
             logger.warning(f"Категория с именем '{dto.name}' уже существует")
             raise CategoryAlreadyExists(name=dto.name)
 
-        category = await self.category_repository.create_category(name=dto.name)
+        category = await self._category_service.create_category(name=dto.name)
 
         logger.info(f"Создана новая категория: '{category.name}'")
 
