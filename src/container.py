@@ -125,6 +125,7 @@ from usecases.user import (
 from usecases.user_tracking import (
     AddUserToTrackingUseCase,
     GetListTrackedUsersUseCase,
+    HasTrackedUsersUseCase,
     RemoveUserFromTrackingUseCase,
 )
 from utils.exception_handler import AsyncErrorHandler
@@ -357,6 +358,7 @@ class ContainerSetup:
         tracking_usecases = [
             AddUserToTrackingUseCase,
             GetListTrackedUsersUseCase,
+            HasTrackedUsersUseCase,
             RemoveUserFromTrackingUseCase,
             AddChatToTrackUseCase,
             GetUserTrackedChatsUseCase,
