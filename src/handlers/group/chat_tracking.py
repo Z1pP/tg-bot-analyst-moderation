@@ -340,7 +340,7 @@ async def _get_admin_and_chat(
         return None, None
 
     chat = await chat_service.get_or_create(
-        chat_id=chat_id, title=message.chat.title or "Без названия"
+        chat_tgid=chat_id, title=message.chat.title or "Без названия"
     )
     if not chat:
         logger.error("Не удалось получить или создать чат: %s", chat_id)
