@@ -4,20 +4,14 @@ import pytest
 
 from constants.enums import UserRole
 from models import User
-from repositories.user_repository import UserRepository
 from services import AdminActionLogService
-from services.caching import ICache
+from services.user.user_service import UserService
 from usecases.user.update_user_role import UpdateUserRoleUseCase
 
 
 @pytest.fixture
-def mock_user_repo() -> AsyncMock:
-    return AsyncMock(spec=UserRepository)
-
-
-@pytest.fixture
-def mock_cache() -> AsyncMock:
-    return AsyncMock(spec=ICache)
+def mock_user_service() -> AsyncMock:
+    return AsyncMock(spec=UserService)
 
 
 @pytest.fixture
@@ -27,13 +21,11 @@ def mock_admin_action_log_service() -> AsyncMock:
 
 @pytest.fixture
 def use_case(
-    mock_user_repo: AsyncMock,
-    mock_cache: AsyncMock,
+    mock_user_service: AsyncMock,
     mock_admin_action_log_service: AsyncMock,
 ) -> UpdateUserRoleUseCase:
     return UpdateUserRoleUseCase(
-        user_repository=mock_user_repo,
-        cache=mock_cache,
+        user_service=mock_user_service,
         admin_action_log_service=mock_admin_action_log_service,
     )
 
@@ -41,8 +33,7 @@ def use_case(
 @pytest.mark.asyncio
 async def test_update_user_role_success(
     use_case: UpdateUserRoleUseCase,
-    mock_user_repo: AsyncMock,
-    mock_cache: AsyncMock,
+    mock_user_service: AsyncMock,
     mock_admin_action_log_service: AsyncMock,
 ) -> None:
     # Arrange
@@ -53,8 +44,8 @@ async def test_update_user_role_success(
     user = User(id=user_id, tg_id="123", username="test_user", role=old_role)
     updated_user = User(id=user_id, tg_id="123", username="test_user", role=new_role)
 
-    mock_user_repo.get_user_by_id.return_value = user
-    mock_user_repo.update_user_role.return_value = updated_user
+    mock_user_service.get_user_by_id.return_value = user
+    mock_user_service.update_user_role.return_value = updated_user
 
     # Act
     result = await use_case.execute(
@@ -63,14 +54,10 @@ async def test_update_user_role_success(
 
     # Assert
     assert result == updated_user
-    mock_user_repo.get_user_by_id.assert_called_once_with(user_id=user_id)
-    mock_user_repo.update_user_role.assert_called_once_with(
+    mock_user_service.get_user_by_id.assert_called_once_with(user_id=user_id)
+    mock_user_service.update_user_role.assert_called_once_with(
         user_id=user_id, new_role=new_role
     )
-
-    # Check cache interaction
-    assert mock_cache.delete.call_count >= 2
-    assert mock_cache.set.call_count >= 2
 
     # Check admin action logging
     mock_admin_action_log_service.log_action.assert_called_once()
@@ -79,10 +66,10 @@ async def test_update_user_role_success(
 @pytest.mark.asyncio
 async def test_update_user_role_not_found(
     use_case: UpdateUserRoleUseCase,
-    mock_user_repo: AsyncMock,
+    mock_user_service: AsyncMock,
 ) -> None:
     # Arrange
-    mock_user_repo.get_user_by_id.return_value = None
+    mock_user_service.get_user_by_id.return_value = None
 
     # Act
     result = await use_case.execute(
@@ -91,5 +78,5 @@ async def test_update_user_role_not_found(
 
     # Assert
     assert result is None
-    mock_user_repo.get_user_by_id.assert_called_once()
-    mock_user_repo.update_user_role.assert_not_called()
+    mock_user_service.get_user_by_id.assert_called_once()
+    mock_user_service.update_user_role.assert_not_called()
