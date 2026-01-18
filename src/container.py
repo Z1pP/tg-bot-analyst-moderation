@@ -3,7 +3,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.base import BaseStorage
 from aiogram.fsm.storage.redis import RedisStorage
-from punq import Container
+from punq import Container, Scope
 
 from config import settings
 from database.session import DatabaseContextManager, async_session
@@ -41,6 +41,7 @@ from services.caching import ICache, RedisCache
 from services.categories import CategoryService
 from services.chat.summarize import IAIService
 from services.chat.summarize.open_router_service import OpenRouterService
+from services.client import ApiClient
 from services.release_note_service import ReleaseNoteService
 from services.scheduler import TaskiqSchedulerService
 from services.templates import (
@@ -226,6 +227,11 @@ class ContainerSetup:
             lambda: AnalyticsBufferService(
                 f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
             ),
+        )
+        container.register(
+            ApiClient,
+            factory=lambda: ApiClient(base_url=settings.API_BASE_URL),
+            scope=Scope.singleton,
         )
 
     @staticmethod
