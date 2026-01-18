@@ -34,7 +34,7 @@ def users_menu_ikb(has_tracked_users: bool = True) -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
+            text=InlineButtons.UserButtons.COME_BACK,
             callback_data=CallbackData.User.BACK_TO_MAIN_MENU_FROM_USERS,
         ),
     )

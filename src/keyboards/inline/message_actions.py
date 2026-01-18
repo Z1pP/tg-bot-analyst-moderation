@@ -57,7 +57,7 @@ def send_message_ikb() -> types.InlineKeyboardMarkup:
     )
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.UserButtons.BACK_TO_MAIN_MENU,
+            text=InlineButtons.UserButtons.COME_BACK,
             callback_data="back_to_main_menu_from_message_management",
         )
     )

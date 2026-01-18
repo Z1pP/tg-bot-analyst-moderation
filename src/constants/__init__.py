@@ -79,7 +79,7 @@ class InlineButtons:
         ADD = "➕ Добавить"
         REMOVE = "🗑 Удалить"
         BACK_TO_USERS_MENU = "⬅️ Назад в меню пользователей"
-        BACK_TO_MAIN_MENU = "◀️ Вернуться"
+        COME_BACK = "◀️ Вернуться"
         CANCEL = "❌ Отмена"
 
     class ChatButtons:
