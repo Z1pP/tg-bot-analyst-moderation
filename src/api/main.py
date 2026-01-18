@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.v1.routers import router as v1_router
+from api.v1 import router as v1_router
 from container import ContainerSetup
 from utils.logger_config import setup_logger
 
