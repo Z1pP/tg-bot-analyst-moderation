@@ -8,10 +8,9 @@ from punq import Container
 from constants import Dialog
 from constants.callback import CallbackData
 from dto import UserTrackingDTO
-from keyboards.inline.users import back_to_users_menu_ikb, users_menu_ikb
-from states import UserStateManager
+from keyboards.inline.users import back_to_users_menu_ikb, move_to_analytics_ikb
 from states.user import UsernameStates
-from usecases.user_tracking import AddUserToTrackingUseCase, HasTrackedUsersUseCase
+from usecases.user_tracking import AddUserToTrackingUseCase
 from utils.send_message import safe_edit_message
 from utils.user_data_parser import parse_data_from_text
 
@@ -88,12 +87,8 @@ async def process_adding_user(
         user_tgid=user_data.tg_id,
     )
 
-    usecase: AddUserToTrackingUseCase = container.resolve(AddUserToTrackingUseCase)
-    has_tracked_users_usecase: HasTrackedUsersUseCase = container.resolve(
-        HasTrackedUsersUseCase
-    )
-
     try:
+        usecase: AddUserToTrackingUseCase = container.resolve(AddUserToTrackingUseCase)
         result = await usecase.execute(dto=tracking_dto)
     except Exception as e:
         logger.error(
@@ -104,21 +99,14 @@ async def process_adding_user(
             exc_info=True,
         )
         if active_message_id:
-            has_tracked_users = await has_tracked_users_usecase.execute(
-                admin_tgid=str(admin_id)
-            )
             await safe_edit_message(
                 bot=message.bot,
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text=Dialog.UserTracking.ERROR_ADD_USER_TO_TRACKING,
-                reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
+                reply_markup=back_to_users_menu_ikb(),
             )
         return
-
-    has_tracked_users = await has_tracked_users_usecase.execute(
-        admin_tgid=str(admin_id)
-    )
 
     if not result.success:
         logger.info(
@@ -128,12 +116,18 @@ async def process_adding_user(
             result.message,
         )
         if active_message_id:
+            # Если пользователь уже отслеживается, предлагаем перейти к аналитике
+            reply_markup = (
+                move_to_analytics_ikb(user_id=result.user_id)
+                if result.user_id
+                else back_to_users_menu_ikb()
+            )
             await safe_edit_message(
                 bot=message.bot,
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text=result.message,
-                reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
+                reply_markup=reply_markup,
             )
         return
 
@@ -149,7 +143,5 @@ async def process_adding_user(
             chat_id=message.chat.id,
             message_id=active_message_id,
             text=result.message,
-            reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
+            reply_markup=move_to_analytics_ikb(user_id=result.user_id),
         )
-
-    await state.set_state(UserStateManager.users_menu)
