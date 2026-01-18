@@ -3,8 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from models import User
-from repositories.user_repository import UserRepository
-from services.caching import ICache
+from services.user.user_service import UserService
 from usecases.user.get_or_create_user import (
     GetOrCreateUserIfNotExistUserCase,
     UserResult,
@@ -12,84 +11,51 @@ from usecases.user.get_or_create_user import (
 
 
 @pytest.fixture
-def mock_user_repo() -> AsyncMock:
-    return AsyncMock(spec=UserRepository)
+def mock_user_service() -> AsyncMock:
+    return AsyncMock(spec=UserService)
 
 
 @pytest.fixture
-def mock_cache() -> AsyncMock:
-    return AsyncMock(spec=ICache)
-
-
-@pytest.fixture
-def use_case(
-    mock_user_repo: AsyncMock, mock_cache: AsyncMock
-) -> GetOrCreateUserIfNotExistUserCase:
-    return GetOrCreateUserIfNotExistUserCase(
-        user_repository=mock_user_repo, cache_service=mock_cache
-    )
+def use_case(mock_user_service: AsyncMock) -> GetOrCreateUserIfNotExistUserCase:
+    return GetOrCreateUserIfNotExistUserCase(user_service=mock_user_service)
 
 
 @pytest.mark.asyncio
-async def test_get_or_create_cache_hit(
-    use_case: GetOrCreateUserIfNotExistUserCase, mock_cache: AsyncMock
+async def test_get_or_create_success(
+    use_case: GetOrCreateUserIfNotExistUserCase, mock_user_service: AsyncMock
 ) -> None:
     # Arrange
     tg_id = "123"
-    user = User(id=1, tg_id=tg_id)
-    mock_cache.get.return_value = user
+    username = "test_user"
+    user = User(id=1, tg_id=tg_id, username=username)
+    mock_user_service.get_user.return_value = user
 
     # Act
-    result = await use_case.execute(tg_id=tg_id)
+    result = await use_case.execute(tg_id=tg_id, username=username)
 
     # Assert
     assert result == UserResult(user=user, is_existed=True)
-    mock_cache.get.assert_called_once_with(key=tg_id)
-
-
-@pytest.mark.asyncio
-async def test_get_or_create_db_hit(
-    use_case: GetOrCreateUserIfNotExistUserCase,
-    mock_cache: AsyncMock,
-    mock_user_repo: AsyncMock,
-) -> None:
-    # Arrange
-    tg_id = "123"
-    user = User(id=1, tg_id=tg_id)
-    mock_cache.get.return_value = None
-    mock_user_repo.get_user_by_tg_id.return_value = user
-
-    # Act
-    result = await use_case.execute(tg_id=tg_id)
-
-    # Assert
-    assert result == UserResult(user=user, is_existed=True)
-    mock_user_repo.get_user_by_tg_id.assert_called_once_with(tg_id)
-    mock_cache.set.assert_called_once_with(key=tg_id, value=user)
+    mock_user_service.get_user.assert_called_once_with(tg_id=tg_id, username=username)
 
 
 @pytest.mark.asyncio
 async def test_get_or_create_creation(
-    use_case: GetOrCreateUserIfNotExistUserCase,
-    mock_cache: AsyncMock,
-    mock_user_repo: AsyncMock,
+    use_case: GetOrCreateUserIfNotExistUserCase, mock_user_service: AsyncMock
 ) -> None:
     # Arrange
     tg_id = "123"
-    user = User(id=1, tg_id=tg_id)
-    mock_cache.get.return_value = None
-    mock_user_repo.get_user_by_tg_id.return_value = None
-    mock_user_repo.create_user.return_value = user
+    username = "test_user"
+    user = User(id=1, tg_id=tg_id, username=username)
+    mock_user_service.get_user.return_value = None
+    mock_user_service.create_user.return_value = user
 
     # Act
-    result = await use_case.execute(tg_id=tg_id)
+    result = await use_case.execute(tg_id=tg_id, username=username)
 
     # Assert
     assert result == UserResult(user=user, is_existed=False)
-    mock_user_repo.create_user.assert_called_once_with(
-        tg_id=tg_id, username=None, role=None
-    )
-    mock_cache.set.assert_called_once_with(key=tg_id, value=user)
+    mock_user_service.get_user.assert_called_once()
+    mock_user_service.create_user.assert_called_once()
 
 
 @pytest.mark.asyncio
