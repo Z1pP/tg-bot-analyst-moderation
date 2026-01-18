@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Response, status
 from fastapi.exceptions import HTTPException
 
 from api.dependencies.message import get_save_message_usecase
-from dto.message import CreateMessageDTO
+from dto.message import CreateMessageDTO as CreateMessageSchema
 from usecases.message import SaveMessageUseCase
 
 router = APIRouter()
@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.post("/create", status_code=status.HTTP_202_ACCEPTED)
 async def create_message(
-    message: CreateMessageDTO,
+    message: CreateMessageSchema,
     usecase: SaveMessageUseCase = Depends(get_save_message_usecase),
 ) -> Response:
     try:
