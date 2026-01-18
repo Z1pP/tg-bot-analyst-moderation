@@ -47,8 +47,8 @@ def users_menu_ikb(has_tracked_users: bool = True) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def cancel_add_user_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура для отмены добавления пользователя"""
+def back_to_users_menu_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура для возврата в меню пользователей"""
     builder = InlineKeyboardBuilder()
 
     builder.row(
