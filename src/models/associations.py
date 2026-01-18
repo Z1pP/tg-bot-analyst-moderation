@@ -1,6 +1,6 @@
-from sqlalchemy import Column, ForeignKey, Integer, Table
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Table
 
-from .base import Base
+from .base import Base, get_current_time
 
 admin_user_tracking = Table(
     "admin_user_tracking",
@@ -16,5 +16,11 @@ admin_user_tracking = Table(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
+    ),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        default=get_current_time,
+        nullable=False,
     ),
 )
