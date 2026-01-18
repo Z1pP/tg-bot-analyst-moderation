@@ -1,8 +1,8 @@
 import logging
 
 from constants.enums import AdminActionType
-from repositories import MessageTemplateRepository
-from services import AdminActionLogService
+from services.admin_action_log_service import AdminActionLogService
+from services.templates.template_service import TemplateService
 
 logger = logging.getLogger(__name__)
 
@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 class DeleteTemplateUseCase:
     def __init__(
         self,
-        template_repository: MessageTemplateRepository,
+        template_service: TemplateService,
         admin_action_log_service: AdminActionLogService = None,
     ):
-        self.template_repository = template_repository
+        self._template_service = template_service
         self._admin_action_log_service = admin_action_log_service
 
     async def execute(self, template_id: int, admin_tg_id: str = None) -> bool:
@@ -28,7 +28,12 @@ class DeleteTemplateUseCase:
             bool: True если удаление успешно
         """
         try:
-            await self.template_repository.delete_template(template_id=template_id)
+            result = await self._template_service.delete_template(
+                template_id=template_id
+            )
+            if not result:
+                return False
+
             logger.info(f"Шаблон с ID={template_id} успешно удален")
 
             # Логируем действие после успешного удаления шаблона
