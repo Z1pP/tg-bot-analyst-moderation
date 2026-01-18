@@ -159,7 +159,7 @@ class UserRepository(BaseRepository):
                         User.id == admin_user_tracking.c.tracked_user_id,
                     )
                     .where(admin_user_tracking.c.admin_id == admin.id)
-                    .order_by(User.username)
+                    .order_by(func.coalesce(User.username, User.tg_id))
                 )
                 result = await session.execute(query)
 
