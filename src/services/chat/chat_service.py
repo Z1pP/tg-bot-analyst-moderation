@@ -77,7 +77,9 @@ class ChatService:
             await self._cache.set(chat_id, chat)
         return chat
 
-    async def get_or_create(self, chat_id: str, title: str) -> ChatSession:
+    async def get_or_create(
+        self, chat_tgid: str, title: Optional[str] = None
+    ) -> ChatSession:
         """
         Получает существующий чат или создает новый, если он не найден.
 
@@ -88,13 +90,13 @@ class ChatService:
         Returns:
             Объект ChatSession
         """
-        chat = await self.get_chat(chat_tgid=chat_id, title=title)
+        chat = await self.get_chat(chat_tgid=chat_tgid, title=title)
         if chat:
             return chat
 
-        new_chat = await self.create_chat(chat_id, title)
+        new_chat = await self.create_chat(chat_tgid, title)
 
-        await self._cache.set(chat_id, new_chat)
+        await self._cache.set(chat_tgid, new_chat)
         return new_chat
 
     async def _update_and_sync_cache(
