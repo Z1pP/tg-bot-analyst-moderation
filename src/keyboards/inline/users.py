@@ -53,8 +53,8 @@ def cancel_add_user_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.UserButtons.CANCEL,
-            callback_data=CallbackData.User.CANCEL_ADD,
+            text=InlineButtons.UserButtons.COME_BACK,
+            callback_data=CallbackData.User.MENU,
         )
     )
     return builder.as_markup()
