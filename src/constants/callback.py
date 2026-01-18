@@ -65,10 +65,10 @@ class UserCallbackData:
     """Класс для хранения callback данных пользователей"""
 
     # Commands
-    SELECT_USER = "select_user"
+    SHOW_TRACKED_USERS_LIST = "show_tracked_users_list"
     ADD = "add_user"
     REMOVE = "remove_user"
-    USERS_MENU = "users_menu"
+    MENU = "users_menu"
     BACK_TO_MAIN_MENU_FROM_USERS = "back_to_main_menu_from_users"
     CANCEL_ADD = "cancel_add_user"
     ALL_USERS = "all_users"
