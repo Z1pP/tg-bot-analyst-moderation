@@ -17,6 +17,7 @@ from states import UserStateManager
 from usecases.user import GetUserByIdUseCase
 from usecases.user_tracking import (
     GetListTrackedUsersUseCase,
+    HasTrackedUsersUseCase,
     RemoveUserFromTrackingUseCase,
 )
 from utils.exception_handler import handle_exception
@@ -57,7 +58,7 @@ async def remove_user_from_tracking_handler(
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
                 text=message_text,
-                reply_markup=users_menu_ikb(),
+                reply_markup=users_menu_ikb(has_tracked_users=False),
             )
             return
 
@@ -171,6 +172,13 @@ async def confirmation_removing_user(
             )
             success = await usecase.execute(dto=dto)
 
+            has_tracked_users_usecase: HasTrackedUsersUseCase = container.resolve(
+                HasTrackedUsersUseCase
+            )
+            has_tracked_users = await has_tracked_users_usecase.execute(
+                admin_tgid=str(callback.from_user.id)
+            )
+
             if success:
                 user_username = data.get("user_username", "")
                 logger.info(f"Пользователь ID {user_id} успешно удален из отслеживания")
@@ -185,7 +193,7 @@ async def confirmation_removing_user(
                     chat_id=callback.message.chat.id,
                     message_id=callback.message.message_id,
                     text=text,
-                    reply_markup=users_menu_ikb(),
+                    reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
                 )
             else:
                 logger.warning(f"Не удалось удалить пользователя ID {user_id}")
@@ -195,7 +203,7 @@ async def confirmation_removing_user(
                     chat_id=callback.message.chat.id,
                     message_id=callback.message.message_id,
                     text=text,
-                    reply_markup=users_menu_ikb(),
+                    reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
                 )
 
             await state.set_state(UserStateManager.users_menu)
@@ -208,6 +216,13 @@ async def confirmation_removing_user(
             )
             tracked_users = await usecase.execute(admin_tgid=str(callback.from_user.id))
 
+            has_tracked_users_usecase: HasTrackedUsersUseCase = container.resolve(
+                HasTrackedUsersUseCase
+            )
+            has_tracked_users = await has_tracked_users_usecase.execute(
+                admin_tgid=str(callback.from_user.id)
+            )
+
             if not tracked_users:
                 await safe_edit_message(
                     bot=callback.bot,
@@ -215,7 +230,7 @@ async def confirmation_removing_user(
                     message_id=callback.message.message_id,
                     text="⚠ Удаление невозможно, так как в отслеживание "
                     "ещё не добавлен ни один пользователь.",
-                    reply_markup=users_menu_ikb(),
+                    reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
                 )
                 await state.set_state(UserStateManager.users_menu)
                 return
