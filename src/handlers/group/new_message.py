@@ -6,11 +6,8 @@ from punq import Container
 
 from dto.message import CreateMessageDTO
 from dto.message_reply import CreateMessageReplyDTO
-from models import ChatSession, User
 from models.message import MessageType
-from services.chat import ChatService
 from services.time_service import TimeZoneService
-from services.user import UserService
 from usecases.message import (
     SaveMessageUseCase,
     SaveReplyMessageUseCase,
@@ -35,22 +32,20 @@ async def group_message_handler(message: Message, container: Container):
     if message.from_user.is_bot:
         return
 
-    sender, chat = await _get_sender_and_chat(message, container)
-    if not sender or not chat:
-        return
+    # sender, chat = await _get_sender_and_chat(message, container)
+    # if not sender or not chat:
+    #     return
 
     msg_type = _get_message_type(message)
 
     if msg_type == MessageType.REPLY:
-        await process_reply_message(message, sender, chat, container)
+        await process_reply_message(message, container)
     else:
-        await process_message(message, sender, chat, container)
+        await process_message(message, container)
 
 
 async def process_reply_message(
     message: Message,
-    sender: User,
-    chat: ChatSession,
     container: Container,
 ) -> None:
     """
@@ -66,8 +61,8 @@ async def process_reply_message(
 
     # Создаем DTO для сохранения сообщения
     msg_dto = CreateMessageDTO(
-        chat_id=chat.id,
-        user_id=sender.id,
+        chat_tgid=str(message.chat.id),
+        user_tgid=str(message.from_user.id),
         message_id=str(message.message_id),
         message_type=MessageType.REPLY.value,
         content_type=message.content_type.value,
@@ -81,15 +76,15 @@ async def process_reply_message(
         await message_usecase.execute(message_dto=msg_dto)
 
         # Создаем ссылку на оригинальное сообщение
-        original_message_url = f"https://t.me/c/{chat.chat_id.lstrip('-')}/{message.reply_to_message.message_id}"
+        original_message_url = _get_original_message_url(message)
 
         # DTO для связи reply с оригинальным сообщением
         # Используем message_id (Telegram string) вместо DB id, так как сообщение еще не сохранено
         reply_dto = CreateMessageReplyDTO(
-            chat_id=chat.id,
+            chat_tgid=str(message.chat.id),
+            reply_user_tgid=str(message.from_user.id),
             original_message_url=original_message_url,
             reply_message_id=0,  # Временное значение, будет заменено в воркере по message_id
-            reply_user_id=sender.id,
             original_message_date=message_date,
             reply_message_date=reply_to_message_date,
             response_time_seconds=int(
@@ -110,8 +105,6 @@ async def process_reply_message(
 
 async def process_message(
     message: Message,
-    sender: User,
-    chat: ChatSession,
     container: Container,
 ) -> None:
     """
@@ -123,8 +116,8 @@ async def process_message(
     )
 
     msg_dto = CreateMessageDTO(
-        chat_id=chat.id,
-        user_id=sender.id,
+        chat_tgid=str(message.chat.id),
+        user_tgid=str(message.from_user.id),
         message_id=str(message.message_id),
         message_type=MessageType.MESSAGE.value,
         content_type=message.content_type.value,
@@ -135,32 +128,28 @@ async def process_message(
     try:
         usecase: SaveMessageUseCase = container.resolve(SaveMessageUseCase)
         await usecase.execute(message_dto=msg_dto)
+        # client_service: ApiClient = container.resolve(ApiClient)
+        # await client_service.message.create_message(msg_dto)
+
     except Exception as e:
         logger.error("Ошибка сохранения сообщения: %s", str(e))
 
 
-async def _get_sender_and_chat(
-    message: Message, container: Container
-) -> tuple[User, ChatSession]:
+def _get_original_message_url(message: Message) -> str:
     """
-    Получает пользователя и чат из сообщения.
+    Генерирует ссылку на оригинальное сообщение.
     """
-    # Получаем сервисы
-    user_service: UserService = container.resolve(UserService)
-    chat_service: ChatService = container.resolve(ChatService)
-
-    # Получаем пользователя и чат
-    username = message.from_user.username
-    tg_id = str(message.from_user.id)
     chat_id = str(message.chat.id)
+    message_id = message.reply_to_message.message_id
 
-    sender = await user_service.get_or_create(username=username, tg_id=tg_id)
+    if chat_id.startswith("-100"):
+        # Супергруппы: убираем -100
+        clean_chat_id = chat_id[4:]
+    elif chat_id.startswith("-"):
+        # Обычные группы: убираем только -
+        clean_chat_id = chat_id[1:]
+    else:
+        # Личные чаты или каналы
+        clean_chat_id = chat_id
 
-    chat = await chat_service.get_or_create(
-        chat_id=chat_id, title=message.chat.title or "Без названия"
-    )
-    if not chat:
-        logger.error("Не удалось получить или создать чат: %s", chat_id)
-        return None, None
-
-    return sender, chat
+    return f"https://t.me/c/{clean_chat_id}/{message_id}"
