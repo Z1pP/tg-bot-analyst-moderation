@@ -1,6 +1,6 @@
 from typing import Optional
 
-from constants.endponts import CREATE_MESSAGE
+from constants.endpoints import CREATE_MESSAGE
 from dto.message import CreateMessageDTO, ResultMessageDTO
 
 from .base import BaseApiClient
