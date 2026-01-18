@@ -21,13 +21,11 @@ from .users import (
     back_to_users_menu_ikb,
     remove_user_inline_kb,
     user_actions_ikb,
-    users_inline_kb,
     users_menu_ikb,
 )
 
 __all__ = [
     "admin_menu_ikb",
-    "users_inline_kb",
     "remove_user_inline_kb",
     "users_menu_ikb",
     "back_to_users_menu_ikb",
