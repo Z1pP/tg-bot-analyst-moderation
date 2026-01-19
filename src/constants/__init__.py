@@ -92,7 +92,7 @@ class InlineButtons:
         SELECT_CHAT = "📋 Выбрать чат"
         ADD = "➕ Добавить"
         REMOVE = "🗑 Удалить"
-        BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
+        COME_BACK = "◀️ Вернуться"
         # List of chats
         BACK_TO_CHATS_MANAGEMENT = "⬅️ Вернуться к упр. чатами"
         # Actions with chat
