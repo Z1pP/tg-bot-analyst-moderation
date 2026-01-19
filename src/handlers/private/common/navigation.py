@@ -38,7 +38,7 @@ async def show_chats_menu(callback: CallbackQuery, state: FSMContext) -> None:
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Chat.CHAT_MANAGEMENT,
+        text=Dialog.Chat.SELECT_ACTION,
         reply_markup=chats_management_ikb(),
     )
     await state.set_state(MenuStates.chats_menu)
