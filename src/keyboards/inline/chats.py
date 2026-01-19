@@ -10,6 +10,17 @@ from dto import ChatDTO
 from models import ChatSession
 
 
+def back_to_chats_menu_ikb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.COME_BACK,
+            callback_data=CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT,
+        )
+    )
+    return builder.as_markup()
+
+
 def remove_chat_ikb(
     chats: List[ChatSession],
     page: int = 1,
@@ -378,7 +389,7 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.REMOVE,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_MAIN_MENU,
+            text=InlineButtons.ChatButtons.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
         ),
     )
