@@ -35,11 +35,9 @@ async def send_permission_error(
     bot: Bot,
     admin_telegram_id: int,
     admin_username: str,
-    chat_title: str,
-    chat_tg_id: str,
     bot_status_is_member: bool,
-    bot_status_text: str,
     reply_markup: Optional[InlineKeyboardMarkup] = None,
+    error_text: Optional[str] = None,
 ) -> None:
     """Отправляет сообщение об ошибке прав в приватный чат"""
     try:
@@ -47,16 +45,11 @@ async def send_permission_error(
             f"Отправка уведомления об ошибке прав админу {admin_username} (ID: {admin_telegram_id})"
         )
 
-        if not bot_status_is_member:
-            error_text = Dialog.Chat.ERROR_ADD_CHAT_NOT_MEMBER.format(
-                chat_title=chat_title, chat_tg_id=chat_tg_id
-            )
-        else:
-            error_text = Dialog.Chat.ERROR_ADD_CHAT_INSUFFICIENT_PERMISSIONS.format(
-                chat_title=chat_title,
-                chat_tg_id=chat_tg_id,
-                bot_status_text=bot_status_text,
-            )
+        if not error_text:
+            if not bot_status_is_member:
+                error_text = Dialog.Chat.ERROR_ADD_CHAT_NOT_MEMBER
+            else:
+                error_text = Dialog.Chat.ERROR_ADD_CHAT_INSUFFICIENT_PERMISSIONS
 
         await bot.send_message(
             chat_id=admin_telegram_id,
