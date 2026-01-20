@@ -124,6 +124,7 @@ class InlineButtons:
         ANTIBOT_ENABLE = "🤖 Включить Антибот"
         ANTIBOT_DISABLE = "🤖 Выключить Антибот"
         WELCOME_TEXT_SETTING = "👋 Приветствие"
+        HIDE_NOTIFICATION = "⬆️ Скрыть"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
