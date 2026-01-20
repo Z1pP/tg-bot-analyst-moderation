@@ -57,11 +57,24 @@ def move_to_analytics_ikb(user_id: int) -> InlineKeyboardMarkup:
             callback_data=CallbackData.User.PREFIX_USER + str(user_id),
         ),
         InlineKeyboardButton(
-            text=InlineButtons.UserButtons.COME_BACK,
-            callback_data=CallbackData.User.MENU,
+            text=InlineButtons.UserButtons.HIDE_NOTIFICATION,
+            callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
         ),
         width=1,
     )
+    return builder.as_markup()
+
+
+def hide_notification_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура для закрытия уведомления"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.HIDE_NOTIFICATION,
+            callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
+        )
+    )
+
     return builder.as_markup()
 
 
