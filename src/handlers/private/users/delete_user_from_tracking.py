@@ -10,6 +10,7 @@ from constants.callback import CallbackData
 from dto import RemoveUserTrackingDTO
 from keyboards.inline.users import (
     back_to_users_menu_ikb,
+    hide_notification_ikb,
 )
 from states import UsernameStates
 from usecases.user_tracking import (
@@ -24,7 +25,9 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data == CallbackData.User.REMOVE)
 async def remove_user_from_tracking_handler(
-    callback: CallbackQuery, state: FSMContext, container: Container
+    callback: CallbackQuery,
+    state: FSMContext,
+    container: Container,
 ) -> None:
     """
     Обработчик для удаления пользователя из списка отслеживания.
@@ -46,8 +49,6 @@ async def remove_user_from_tracking_handler(
         text=Dialog.User.REMOVE_USER_INFO,
         reply_markup=back_to_users_menu_ikb(),
     )
-
-    await state.update_data(active_message_id=callback.message.message_id)
 
     await state.set_state(UsernameStates.waiting_remove_user_data_input)
 
@@ -71,21 +72,14 @@ async def process_removing_user(
         admin_username,
     )
 
-    data = await state.get_data()
-    active_message_id = data.get("active_message_id")
-
     user_data = parse_data_from_text(text=message.text)
     await message.delete()
 
     if user_data is None:
-        if active_message_id:
-            await safe_edit_message(
-                bot=message.bot,
-                chat_id=message.chat.id,
-                message_id=active_message_id,
-                text=Dialog.User.INVALID_USERNAME_FORMAT,
-                reply_markup=back_to_users_menu_ikb(),
-            )
+        await message.answer(
+            text=Dialog.User.INVALID_USERNAME_FORMAT_REMOVE,
+            reply_markup=hide_notification_ikb(),
+        )
         return
 
     dto = RemoveUserTrackingDTO(
@@ -108,29 +102,19 @@ async def process_removing_user(
             e,
             exc_info=True,
         )
-        if active_message_id:
-            await safe_edit_message(
-                bot=message.bot,
-                chat_id=message.chat.id,
-                message_id=active_message_id,
-                text=Dialog.UserTracking.ERROR_REMOVE_USER_FROM_TRACKING,
-                reply_markup=back_to_users_menu_ikb(),
-            )
+        await message.answer(
+            text=Dialog.UserTracking.ERROR_REMOVE_USER_FROM_TRACKING,
+            reply_markup=hide_notification_ikb(),
+        )
         return
 
     if success:
-        await safe_edit_message(
-            bot=message.bot,
-            chat_id=message.chat.id,
-            message_id=active_message_id,
+        await message.answer(
             text=Dialog.User.USER_REMOVED,
-            reply_markup=back_to_users_menu_ikb(),
+            reply_markup=hide_notification_ikb(),
         )
     else:
-        await safe_edit_message(
-            bot=message.bot,
-            chat_id=message.chat.id,
-            message_id=active_message_id,
+        await message.answer(
             text=Dialog.UserTracking.USER_NOT_FOUND_OR_ALREADY_REMOVED,
-            reply_markup=back_to_users_menu_ikb(),
+            reply_markup=hide_notification_ikb(),
         )
