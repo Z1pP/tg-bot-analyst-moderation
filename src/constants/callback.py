@@ -95,6 +95,7 @@ class MenuCallbackData:
     LOCK_MENU = "lock_menu"
     ADMIN_LOGS = "admin_logs"
     MAIN_MENU = "main_menu"
+    HIDE_NOTIFICATION = "hide_notification"
 
 
 class AdminLogsCallbackData:
