@@ -82,6 +82,7 @@ class InlineButtons:
         COME_BACK = "◀️ Вернуться"
         CANCEL = "❌ Отмена"
         MOVE_TO_ANALYTICS = "🔗 Перейти в Аналитику"
+        HIDE_NOTIFICATION = "⬆️ Скрыть"
 
     class ChatButtons:
         """Кнопки для действий с чатами"""
