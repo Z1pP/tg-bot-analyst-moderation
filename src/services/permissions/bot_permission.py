@@ -34,6 +34,8 @@ class BotPermissionsCheck:
     is_admin: bool
     missing_permissions: List[str]
     has_all_permissions: bool
+    is_member: bool = True
+    status: str = "member"
 
 
 class BotPermissionService:
@@ -219,7 +221,11 @@ class BotPermissionService:
 
         if not member:
             return BotPermissionsCheck(
-                False, ["Не удалось получить статус бота"], False
+                is_admin=False,
+                missing_permissions=["Не удалось получить статус бота"],
+                has_all_permissions=False,
+                is_member=False,
+                status="not_member",
             )
 
         try:
@@ -239,10 +245,17 @@ class BotPermissionService:
         }
 
         is_admin = isinstance(member, (ChatMemberOwner, ChatMemberAdministrator))
+        is_member = member.status not in ("left", "kicked")
         missing_permissions = []
 
         if isinstance(member, ChatMemberOwner):
-            return BotPermissionsCheck(True, [], True)
+            return BotPermissionsCheck(
+                is_admin=True,
+                missing_permissions=[],
+                has_all_permissions=True,
+                is_member=is_member,
+                status=member.status,
+            )
 
         if isinstance(member, ChatMemberAdministrator):
             # Проверяем атрибуты динамически, так как они могут отсутствовать в разных версиях API/типах чата
@@ -260,4 +273,6 @@ class BotPermissionService:
             is_admin=is_admin,
             missing_permissions=missing_permissions,
             has_all_permissions=len(missing_permissions) == 0,
+            is_member=is_member,
+            status=member.status,
         )
