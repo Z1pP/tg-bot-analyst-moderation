@@ -8,104 +8,94 @@ from punq import Container
 from constants import Dialog
 from filters.admin_filter import AdminOnlyFilter
 from filters.group_filter import GroupTypeFilter
-from handlers.group.common import send_notification
-from keyboards.inline.menu import close_ikb
-from models import ChatSession, User
-from services.chat import ChatService
-from services.user import UserService
-from usecases.chat_tracking import RemoveChatFromTrackingUseCase
+from handlers.group.common import send_notification, send_permission_error
+from keyboards.inline.chats import hide_notification_ikb
+from usecases.chat_tracking import (
+    RemoveChatFromTrackingResult,
+    RemoveChatFromTrackingUseCase,
+)
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
 @router.message(Command("untrack"), GroupTypeFilter(), AdminOnlyFilter())
-async def chat_removed_from_tracking_handler(
+async def remove_chat_from_tracking_handler(
     message: Message,
     container: Container,
 ) -> None:
     """Обработчик команды /untrack для удаления чата из отслеживания."""
+    admin_user = message.from_user
+    chat = message.chat
 
     logger.info(
-        f"Получена команда /untrack от {message.from_user.username} "
-        f"в чате '{message.chat.title}' (ID: {message.chat.id})"
+        "Команда /untrack от %s (ID: %s) в чате '%s' (ID: %s)",
+        admin_user.username,
+        admin_user.id,
+        chat.title,
+        chat.id,
     )
-
-    admin, chat = await _get_admin_and_chat(message=message, container=container)
-
-    if not admin or not chat:
-        logger.error("Не удалось получить данные о пользователе или чате")
-        return
 
     try:
         usecase: RemoveChatFromTrackingUseCase = container.resolve(
             RemoveChatFromTrackingUseCase
         )
 
-        success, _ = await usecase.execute(user_id=admin.id, chat_id=chat.id)
-
-        if success:
-            logger.info(
-                f"Чат '{chat.title}' успешно удален "
-                f"из отслеживания админом {admin.username}"
-            )
-
-            notification_text = Dialog.Chat.SUCCESS_REMOVE_CHAT_FROM_TRACKING.format(
-                chat_title=chat.title,
-                chat_tg_id=chat.chat_id,
-                admin_username=admin.username,
-            )
-        else:
-            logger.warning(f"Чат '{chat.title}' не найден в отслеживании")
-
-            notification_text = Dialog.Chat.CHAT_NOT_TRACKED.format(
-                chat_title=chat.title,
-                chat_tg_id=chat.chat_id,
-            )
-
-        await send_notification(
-            bot=message.bot,
-            chat_id=message.from_user.id,
-            message_text=notification_text,
-            reply_markup=close_ikb(),
+        result = await usecase.execute(
+            admin_tg_id=str(admin_user.id),
+            chat_tg_id=str(chat.id),
+            chat_title=chat.title,
+            admin_username=admin_user.username,
         )
 
+        if not result.success:
+            await _handle_error(message, result)
+            return
+
+        await _send_success_notification(message, result.chat.title)
+
     except Exception as e:
-        logger.error(f"Ошибка при обработке команды /untrack: {e}", exc_info=True)
+        logger.error("Ошибка в remove_chat_from_tracking_handler: %s", e, exc_info=True)
     finally:
         await message.delete()
 
 
-async def _get_admin_and_chat(
-    message: Message, container: Container
-) -> tuple[User, ChatSession]:
-    """Получает пользователя и чат из сообщения."""
+async def _handle_error(message: Message, result: RemoveChatFromTrackingResult) -> None:
+    """Обработка ошибок при удалении чата."""
+    if result.permissions_check and not result.permissions_check.has_all_permissions:
+        error_text = (
+            Dialog.Chat.ERROR_REMOVE_CHAT_NOT_MEMBER
+            if not result.permissions_check.is_member
+            else Dialog.Chat.ERROR_REMOVE_CHAT_INSUFFICIENT_PERMISSIONS
+        )
+        await send_permission_error(
+            bot=message.bot,
+            admin_telegram_id=message.from_user.id,
+            admin_username=message.from_user.username or "Admin",
+            bot_status_is_member=result.permissions_check.is_member,
+            reply_markup=hide_notification_ikb(),
+            error_text=error_text,
+        )
+    elif result.is_chat_not_tracked:
+        await send_notification(
+            bot=message.bot,
+            chat_id=message.from_user.id,
+            message_text=Dialog.Chat.CHAT_NOT_TRACKED,
+            reply_markup=hide_notification_ikb(),
+        )
+    else:
+        logger.error(
+            "Ошибка при удалении чата из отслеживания: %s", result.error_message
+        )
 
-    logger.debug(f"Получение данных админа и чата для {message.from_user.username}")
 
-    # Получаем сервисы
-    user_service: UserService = container.resolve(UserService)
-    chat_service: ChatService = container.resolve(ChatService)
-
-    # Получаем пользователя и чат
-    user_tg_id = str(message.from_user.id)
-    chat_id = str(message.chat.id)
-
-    if not user_tg_id:
-        logger.warning("Пользователь без tg_id: %s", message.from_user.id)
-        return None, None
-
-    admin = await user_service.get_user(user_tg_id)
-    if not admin:
-        logger.warning("Пользователь не найден в базе данных: %s", user_tg_id)
-        return None, None
-
-    chat = await chat_service.get_or_create(
-        chat_tgid=chat_id, title=message.chat.title or "Без названия"
+async def _send_success_notification(message: Message, chat_title: str) -> None:
+    """Уведомление об успешном удалении чата."""
+    await send_notification(
+        bot=message.bot,
+        chat_id=message.from_user.id,
+        message_text=Dialog.Chat.SUCCESS_REMOVE_CHAT_FROM_TRACKING.format(
+            chat_title=chat_title
+        ),
+        reply_markup=hide_notification_ikb(),
     )
-    if not chat:
-        logger.error("Не удалось получить или создать чат: %s", chat_id)
-        return None, None
-
-    logger.debug(f"Данные получены: админ {admin.username}, чат '{chat.title}'")
-    return admin, chat
