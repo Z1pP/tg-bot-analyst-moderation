@@ -246,6 +246,18 @@ def conf_remove_chat_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def hide_notification_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура для закрытия уведомления"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.HIDE_NOTIFICATION,
+            callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
+        )
+    )
+    return builder.as_markup()
+
+
 def move_to_chat_analytics_ikb(chat_id: int) -> InlineKeyboardMarkup:
     """Клавиатура для перехода в раздел аналитики чата"""
     builder = InlineKeyboardBuilder()
@@ -256,8 +268,8 @@ def move_to_chat_analytics_ikb(chat_id: int) -> InlineKeyboardMarkup:
             callback_data=f"{CallbackData.Chat.PREFIX_CHAT}{chat_id}",
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
-            callback_data=CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT,
+            text=InlineButtons.ChatButtons.HIDE_NOTIFICATION,
+            callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
         ),
         width=1,
     )
