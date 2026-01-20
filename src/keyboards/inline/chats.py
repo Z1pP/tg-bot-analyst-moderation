@@ -246,6 +246,24 @@ def conf_remove_chat_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def move_to_chat_analytics_ikb(chat_id: int) -> InlineKeyboardMarkup:
+    """Клавиатура для перехода в раздел аналитики чата"""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.UserButtons.MOVE_TO_ANALYTICS,
+            callback_data=f"{CallbackData.Chat.PREFIX_CHAT}{chat_id}",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.COME_BACK,
+            callback_data=CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT,
+        ),
+        width=1,
+    )
+    return builder.as_markup()
+
+
 def select_chat_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
     """Клавиатура для выбора чата для отправки сообщения."""
     builder = InlineKeyboardBuilder()
