@@ -56,7 +56,7 @@ async def process_user_data_input(
         bot=bot,
         container=container,
         dialog_texts={
-            "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT,
+            "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT_ADD,
             "user_not_found": Dialog.BanUser.USER_NOT_FOUND,
             "user_info": Dialog.BanUser.USER_INFO,
         },
