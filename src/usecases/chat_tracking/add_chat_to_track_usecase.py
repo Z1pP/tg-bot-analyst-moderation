@@ -1,63 +1,135 @@
 import logging
-from typing import Tuple
+from dataclasses import dataclass
+from typing import Optional
 
 from constants.enums import AdminActionType
 from models import AdminChatAccess, ChatSession, User
-from repositories import ChatRepository, ChatTrackingRepository
-from services import AdminActionLogService
+from repositories import ChatTrackingRepository
+from services import (
+    AdminActionLogService,
+    BotPermissionService,
+    ChatService,
+    UserService,
+)
+from services.permissions.bot_permission import BotPermissionsCheck
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class AddChatToTrackResult:
+    """Результат выполнения UseCase добавления чата в отслеживание."""
+
+    admin: Optional[User] = None
+    chat: Optional[ChatSession] = None
+    access: Optional[AdminChatAccess] = None
+    is_already_tracked: bool = False
+    permissions_check: Optional[BotPermissionsCheck] = None
+    success: bool = False
+    error_message: Optional[str] = None
+
+
 class AddChatToTrackUseCase:
     """
-    UseCase для добавления чата в список для отслеживания
+    UseCase для добавления чата в список для отслеживания.
+    Теперь сам получает админа, чат и проверяет права бота.
     """
 
     def __init__(
         self,
-        chat_repository: ChatRepository,
         chat_tracking_repository: ChatTrackingRepository,
         admin_action_log_service: AdminActionLogService,
+        user_service: UserService,
+        chat_service: ChatService,
+        bot_permission_service: BotPermissionService,
     ):
-        self._chat_repository = chat_repository
         self._chat_tracking_repository = chat_tracking_repository
         self._admin_action_log_service = admin_action_log_service
+        self._user_service = user_service
+        self._chat_service = chat_service
+        self._bot_permission_service = bot_permission_service
 
     async def execute(
         self,
-        chat: ChatSession,
-        admin: User,
-    ) -> Tuple[AdminChatAccess, bool]:
+        admin_tg_id: str,
+        chat_tg_id: str,
+        chat_title: str,
+        admin_username: Optional[str] = None,
+    ) -> AddChatToTrackResult:
         """
-        Проверяет отслеживается уже чат. Если нет, то заносит в список для
-        отслеживания
+        Выполняет процесс добавления чата в отслеживание.
 
         Args:
-            chat: Объект ChatSession
-            admin: Объект User
+            admin_tg_id: Telegram ID администратора
+            chat_tg_id: Telegram ID чата
+            chat_title: Название чата
+            admin_username: Username администратора
 
         Returns:
-            Объекты AdminChatAccess, bool
+            AddChatToTrackResult: Результат выполнения
         """
+        result = AddChatToTrackResult()
+
         try:
-            # Проверяем чтобы чат уже не отслеживался
+            # 1. Получаем администратора
+            admin = await self._user_service.get_user(
+                tg_id=admin_tg_id, username=admin_username
+            )
+            if not admin:
+                logger.warning("Администратор не найден в БД: %s", admin_tg_id)
+                result.error_message = "Администратор не найден"
+                return result
+            result.admin = admin
+
+            # 2. Получаем или создаем чат
+            chat = await self._chat_service.get_or_create(
+                chat_tgid=chat_tg_id, title=chat_title or "Без названия"
+            )
+            if not chat:
+                logger.error("Не удалось получить или создать чат: %s", chat_tg_id)
+                result.error_message = "Не удалось получить чат"
+                return result
+            result.chat = chat
+
+            # 3. Проверяем права бота в чате
+            permissions_check = (
+                await self._bot_permission_service.check_archive_permissions(
+                    chat_tgid=chat_tg_id
+                )
+            )
+            result.permissions_check = permissions_check
+
+            if (
+                not permissions_check.is_admin
+                or not permissions_check.has_all_permissions
+            ):
+                logger.warning(
+                    "Недостаточно прав бота в чате '%s' (%s)", chat.title, chat.chat_id
+                )
+                return result
+
+            # 4. Проверяем, отслеживается ли уже чат
             existing_access = await self._chat_tracking_repository.get_access(
                 admin_id=admin.id,
                 chat_id=chat.id,
             )
             if existing_access:
-                return existing_access, True
+                result.access = existing_access
+                result.is_already_tracked = True
+                result.success = True
+                return result
 
-            # Добавляем чат в список отслеживаемых
+            # 5. Добавляем чат в список отслеживаемых
             chat_access = await self._chat_tracking_repository.add_chat_to_tracking(
                 admin_id=admin.id,
                 chat_id=chat.id,
                 is_source=False,
                 is_target=False,
             )
+            result.access = chat_access
+            result.success = True
 
-            # Логируем действие администратора
+            # 6. Логируем действие администратора
             details = f"Чат: {chat.title} ({chat.chat_id})"
             await self._admin_action_log_service.log_action(
                 admin_tg_id=admin.tg_id,
@@ -65,9 +137,13 @@ class AddChatToTrackUseCase:
                 details=details,
             )
 
-            return chat_access, False
+            return result
+
         except Exception as e:
             logger.error(
-                "Произошла ошибка при добавлении чата в список для отслеживания: %s", e
+                "Произошла ошибка при добавлении чата в список для отслеживания: %s",
+                e,
+                exc_info=True,
             )
-            raise e
+            result.error_message = str(e)
+            return result
