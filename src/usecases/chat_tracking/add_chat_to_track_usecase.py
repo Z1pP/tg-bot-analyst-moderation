@@ -99,12 +99,12 @@ class AddChatToTrackUseCase:
             )
             result.permissions_check = permissions_check
 
-            if (
-                not permissions_check.is_admin
-                or not permissions_check.has_all_permissions
-            ):
+            if not permissions_check.has_all_permissions:
                 logger.warning(
-                    "Недостаточно прав бота в чате '%s' (%s)", chat.title, chat.chat_id
+                    "Недостаточно прав бота в чате '%s' (%s): %s",
+                    chat.title,
+                    chat.chat_id,
+                    permissions_check.missing_permissions,
                 )
                 return result
 
@@ -126,22 +126,30 @@ class AddChatToTrackUseCase:
                 is_source=False,
                 is_target=False,
             )
+            if not chat_access:
+                result.error_message = "Не удалось добавить чат в отслеживание"
+                return result
+
             result.access = chat_access
             result.success = True
 
             # 6. Логируем действие администратора
-            details = f"Чат: {chat.title} ({chat.chat_id})"
             await self._admin_action_log_service.log_action(
                 admin_tg_id=admin.tg_id,
                 action_type=AdminActionType.ADD_CHAT,
-                details=details,
+                details=f"Чат: {chat.title} ({chat.chat_id})",
             )
 
+            logger.info(
+                "Чат '%s' успешно добавлен в отслеживание админом %s",
+                chat.title,
+                admin.username,
+            )
             return result
 
         except Exception as e:
             logger.error(
-                "Произошла ошибка при добавлении чата в список для отслеживания: %s",
+                "Ошибка при выполнении UseCase AddChatToTrackUseCase: %s",
                 e,
                 exc_info=True,
             )
