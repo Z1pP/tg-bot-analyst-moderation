@@ -339,7 +339,7 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_SELECTION_CHAT,
+            text=InlineButtons.ChatButtons.COME_BACK,
             callback_data=CallbackData.Chat.SELECT_CHAT,
         ),
     )
