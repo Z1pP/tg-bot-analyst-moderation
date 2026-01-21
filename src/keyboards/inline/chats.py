@@ -137,7 +137,7 @@ def tracked_chats_ikb(
     # Кнопка возврата в меню (в самом низу)
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MANAGEMENT,
+            text=InlineButtons.ChatButtons.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT,
         )
     )
