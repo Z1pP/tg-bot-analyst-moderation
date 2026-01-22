@@ -36,6 +36,15 @@ async def archive_channel_setting_handler(
     """Обработчик настроек архивного чата."""
     chat_id = await state.get_value("chat_id")
 
+    if chat_id is None:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_SELECTED,
+            reply_markup=chats_management_ikb(),
+        )
+
     try:
         chat_service: ChatService = container.resolve(ChatService)
         chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
