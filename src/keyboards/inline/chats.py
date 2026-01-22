@@ -396,6 +396,52 @@ def antibot_setting_ikb(is_enabled: bool = False) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def welcome_text_setting_ikb(
+    welcome_text_enabled: bool = False,
+    auto_delete_enabled: bool = False,
+) -> InlineKeyboardMarkup:
+    """Клавиатура раздела Приветственный текст"""
+    builder = InlineKeyboardBuilder()
+
+    auto_delete_text = (
+        InlineButtons.ChatButtons.AUTO_DELETE_DISABLE
+        if auto_delete_enabled
+        else InlineButtons.ChatButtons.AUTO_DELETE_ENABLE
+    )
+    welcome_text_text = (
+        InlineButtons.ChatButtons.WELCOME_TEXT_DISABLE
+        if welcome_text_enabled
+        else InlineButtons.ChatButtons.WELCOME_TEXT_ENABLE
+    )
+
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.CHANGE_WELCOME_TEXT,
+            callback_data=CallbackData.Chat.CHANGE_WELCOME_TEXT,
+        ),
+        InlineKeyboardButton(
+            text=welcome_text_text,
+            callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
+        ),
+        InlineKeyboardButton(
+            text=auto_delete_text,
+            callback_data=CallbackData.Chat.AUTO_DELETE_SETTING,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.ANTIBOT_SETTING,
+            callback_data=CallbackData.Chat.ANTIBOT_SETTING,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.COME_BACK,
+            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+        ),
+    )
+
+    builder.adjust(1, 2, 1, 1)
+
+    return builder.as_markup()
+
+
 def rating_report_ikb() -> InlineKeyboardMarkup:
     """Клавиатура для отчета по рейтингу"""
     builder = InlineKeyboardBuilder()
