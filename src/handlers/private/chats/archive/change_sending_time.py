@@ -61,7 +61,7 @@ async def change_sending_time_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.Chat.ARCHIVE_TIME_CHAT_NOT_FOUND,
+            text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=cancel_archive_time_setting_ikb(),
         )
         return
@@ -104,6 +104,13 @@ async def time_input_handler(
     if chat_id is None:
         logger.error("chat_id не найден в state")
         await _safe_delete_message(message)
+        await safe_edit_message(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            text=Dialog.Chat.CHAT_NOT_SELECTED,
+            reply_markup=cancel_archive_time_setting_ikb(),
+        )
         return
 
     try:
