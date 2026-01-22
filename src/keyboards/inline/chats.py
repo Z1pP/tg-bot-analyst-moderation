@@ -516,7 +516,7 @@ def archive_channel_setting_ikb(
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            text=InlineButtons.ChatButtons.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
