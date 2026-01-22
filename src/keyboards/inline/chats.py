@@ -421,11 +421,11 @@ def welcome_text_setting_ikb(
         ),
         InlineKeyboardButton(
             text=welcome_text_text,
-            callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
+            callback_data=CallbackData.Chat.WELCOME_TEXT_TOGGLE,
         ),
         InlineKeyboardButton(
             text=auto_delete_text,
-            callback_data=CallbackData.Chat.AUTO_DELETE_SETTING,
+            callback_data=CallbackData.Chat.AUTO_DELETE_TOGGLE,
         ),
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.ANTIBOT_SETTING,
