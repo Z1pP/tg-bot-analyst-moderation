@@ -63,6 +63,28 @@ def parse_tolerance(text: str) -> Optional[int]:
         return None
 
 
+def parse_breaks_time(text: str) -> Optional[int]:
+    """
+    Парсит интервал паузы в минутах из строки.
+
+    Args:
+        text: Строка с числом (минуты)
+
+    Returns:
+        Неотрицательное целое число или None при ошибке
+    """
+    if not text or not text.strip():
+        return None
+
+    try:
+        value = int(text.strip())
+        if value >= 0:
+            return value
+        return None
+    except ValueError:
+        return None
+
+
 def parse_duration(text: str) -> Optional[int]:
     """
     Парсит длительность из строки (10m, 2h, 1d) в секунды.
