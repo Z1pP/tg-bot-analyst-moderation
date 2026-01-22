@@ -50,12 +50,10 @@ async def welcome_text_menu_handler(
         return
 
     antibot_status = "🟢 Включён" if chat.is_antibot_enabled else "🔴 Выключен"
-    welcome_text_status = "🟢 Включён" if chat.welcome_text else "🔴 Выключен"
-    # auto_delete_status = (
-    #     "🟢 Включён" if chat.auto_delete_welcome_text else "🔴 Выключен"
-    # )
-
-    auto_delete_status = "🟢 Включён"
+    welcome_text_status = "🟢 Включён" if chat.show_welcome_text else "🔴 Выключен"
+    auto_delete_status = (
+        "🟢 Включён" if chat.auto_delete_welcome_text else "🔴 Выключен"
+    )
 
     await safe_edit_message(
         bot=callback.bot,
@@ -68,7 +66,7 @@ async def welcome_text_menu_handler(
             auto_delete_status=auto_delete_status,
         ),
         reply_markup=welcome_text_setting_ikb(
-            welcome_text_enabled=True if chat.welcome_text else False,
-            auto_delete_enabled=True if auto_delete_status else False,
+            welcome_text_enabled=True if chat.show_welcome_text else False,
+            auto_delete_enabled=True if chat.auto_delete_welcome_text else False,
         ),
     )
