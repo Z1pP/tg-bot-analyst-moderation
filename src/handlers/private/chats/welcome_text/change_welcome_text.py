@@ -32,7 +32,7 @@ async def change_welcome_text_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Chat.ENTER_WELCOME_TEXT,
+        text=Dialog.Chat.WELCOME_TEXT_ENTER,
         reply_markup=cancel_welcome_text_setting_ikb(),
     )
 
