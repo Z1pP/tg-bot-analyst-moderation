@@ -89,6 +89,23 @@ class GetChatReportUseCase:
                 error_message=ReportDialogs.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
             )
 
+        if not self._has_time_settings(chat=chat):
+            if dto.start_date and dto.end_date:
+                start_date, end_date = dto.start_date, dto.end_date
+            else:
+                start_date, end_date = TimePeriod.to_datetime(
+                    period=dto.selected_period
+                )
+            return ReportResultDTO(
+                users_stats=[],
+                chat_title=chat.title or "",
+                start_date=start_date,
+                end_date=end_date,
+                is_single_day=False,
+                working_hours=0.0,
+                error_message=ReportDialogs.CHAT_REPORT_SETTINGS_REQUIRED,
+            )
+
         dto.chat_tgid = chat.chat_id
 
         tracked_users_ids = await self._get_tracked_users_ids(
@@ -149,6 +166,7 @@ class GetChatReportUseCase:
             end_date=dto.end_date,
             is_single_day=is_single_day,
             working_hours=working_hours,
+            breaks_time=chat.breaks_time,
         )
 
         # Логирование действия администратора
@@ -273,6 +291,7 @@ class GetChatReportUseCase:
         end_date: datetime,
         is_single_day: bool,
         working_hours: float,
+        breaks_time: int,
     ) -> List[UserStatsDTO]:
         """
         Оптимизированный расчет статистики по пользователям за один проход.
@@ -338,7 +357,10 @@ class GetChatReportUseCase:
 
             # Рассчитываем перерывы
             breaks = self._calculate_breaks(
-                stats["messages"], stats["reactions"], is_single_day
+                stats["messages"],
+                stats["reactions"],
+                is_single_day,
+                breaks_time,
             )
 
             users_stats.append(
@@ -467,6 +489,7 @@ class GetChatReportUseCase:
         messages: List[ChatMessage],
         reactions: List[MessageReaction],
         is_single_day: bool,
+        breaks_time: int,
     ) -> List[str]:
         """
         Рассчитывает перерывы. Возвращает список строк, уже отформатированных
@@ -486,11 +509,14 @@ class GetChatReportUseCase:
                 messages=sorted_messages,
                 reactions=reactions,
                 is_single_day=is_single_day,
+                min_break_minutes=breaks_time,
             )
             return breaks
         else:
             # Для многодневного отчета возвращаем одну строку со средним временем
-            avg_time = BreakAnalysisService.avg_breaks_time(messages, reactions)
+            avg_time = BreakAnalysisService.avg_breaks_time(
+                messages, reactions, min_break_minutes=breaks_time
+            )
             if avg_time:
                 return [
                     f"Перерывы:\n• <b>{avg_time}</b> — средн.время перерыва между сообщ. и реакциями"
@@ -518,4 +544,13 @@ class GetChatReportUseCase:
             admin_tg_id=dto.admin_tg_id,
             action_type=AdminActionType.REPORT_CHAT,
             details=details,
+        )
+
+    @staticmethod
+    def _has_time_settings(chat: ChatSession) -> bool:
+        return (
+            chat.start_time is not None
+            and chat.end_time is not None
+            and chat.tolerance is not None
+            and chat.breaks_time is not None
         )
