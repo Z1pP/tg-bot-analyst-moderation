@@ -12,7 +12,7 @@ def build_welcome_text_view(chat: ChatSession) -> tuple[str, InlineKeyboardMarku
         "🟢 Включён" if chat.auto_delete_welcome_text else "🔴 Выключен"
     )
 
-    text = Dialog.Chat.ENTER_WELCOME_TEXT.format(
+    text = Dialog.Chat.WELCOME_TEXT_INFO.format(
         chat_title=chat.title,
         antibot_status=antibot_status,
         welcome_text_status=welcome_text_status,
