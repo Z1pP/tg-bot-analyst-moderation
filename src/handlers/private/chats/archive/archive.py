@@ -339,11 +339,7 @@ async def archive_back_to_chat_actions_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Chat.CHAT_ACTIONS.format(
-            title=chat.title,
-            start_time=chat.start_time.strftime("%H:%M"),
-            end_time=chat.end_time.strftime("%H:%M"),
-        ),
+        text=Dialog.Chat.CHAT_ACTIONS_INFO,
         reply_markup=chat_actions_ikb(),
     )
 
