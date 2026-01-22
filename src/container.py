@@ -74,6 +74,8 @@ from usecases.chat import (
     GetChatsForUserActionUseCase,
     GetTrackedChatsUseCase,
     ToggleAntibotUseCase,
+    ToggleAutoDeleteWelcomeTextUseCase,
+    ToggleWelcomeTextUseCase,
     UpdateChatWelcomeTextUseCase,
     UpdateChatWorkHoursUseCase,
 )
@@ -314,6 +316,8 @@ class ContainerSetup:
             GetChatsForUserActionUseCase,
             UpdateChatWorkHoursUseCase,
             ToggleAntibotUseCase,
+            ToggleWelcomeTextUseCase,
+            ToggleAutoDeleteWelcomeTextUseCase,
             UpdateChatWelcomeTextUseCase,
         ]
 
