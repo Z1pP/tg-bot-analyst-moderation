@@ -11,7 +11,7 @@ from .pagination import router as pagination_router
 from .punishment import router as punishment_router
 from .rating import router as chat_rating_router
 from .untrack import router as untrack_chat_router
-from .welcome_text.change_welcome_text import router as change_welcome_text_router
+from .welcome_text import router as welcome_text_router
 
 router = Router(name="chats_router")
 router.include_router(add_chat_router)
@@ -24,5 +24,5 @@ router.include_router(dashboard_router)
 router.include_router(pagination_router)
 router.include_router(archive_router)
 router.include_router(change_work_hours_router)
-router.include_router(change_welcome_text_router)
+router.include_router(welcome_text_router)
 router.include_router(punishment_router)
