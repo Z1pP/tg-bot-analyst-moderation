@@ -7,8 +7,8 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats import antibot_setting_ikb, chats_management_ikb
-from services.chat import ChatService
+from keyboards.inline.chats import chats_management_ikb
+from usecases.antibot import GetAntibotSettingsUseCase
 from usecases.chat import ToggleAntibotUseCase
 from utils.send_message import safe_edit_message
 
@@ -51,20 +51,15 @@ async def toggle_antibot_handler(
         )
         return
 
-    chat_service: ChatService = container.resolve(ChatService)
-    chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
-
-    antibot_status = "🟢 Включён" if chat.is_antibot_enabled else "🔴 Выключен"
-    welcome_text_status = "🟢 Включён" if chat.welcome_text else "🔴 Выключен"
+    settings_usecase: GetAntibotSettingsUseCase = container.resolve(
+        GetAntibotSettingsUseCase
+    )
+    result = await settings_usecase.execute(chat_id=chat_id)
 
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Antibot.SETTINGS_INFO.format(
-            chat_title=chat.title,
-            antibot_status=antibot_status,
-            welcome_text_status=welcome_text_status,
-        ),
-        reply_markup=antibot_setting_ikb(is_enabled=new_state),
+        text=result.text,
+        reply_markup=result.reply_markup,
     )
