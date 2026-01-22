@@ -303,18 +303,10 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.row(
-        InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.GET_STATISTICS,
-            callback_data=CallbackData.Chat.GET_STATISTICS,
-        ),
-        InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.GET_DAILY_RATING,
-            callback_data=CallbackData.Chat.GET_DAILY_RATING,
-        ),
-        InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.GET_SUMMARY_24H,
-            callback_data=CallbackData.Chat.GET_CHAT_SUMMARY_24H,
-        ),
+        # InlineKeyboardButton(
+        #     text=InlineButtons.ChatButtons.GET_STATISTICS,
+        #     callback_data=CallbackData.Chat.GET_STATISTICS,
+        # ),
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.REPORT_TIME_SETTING,
             callback_data=CallbackData.Chat.REPORT_TIME_SETTING,
@@ -324,16 +316,28 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.PUNISHMENT_SETTING,
-            callback_data=CallbackData.Chat.PUNISHMENT_SETTING,
-        ),
-        InlineKeyboardButton(
             text=InlineButtons.ChatButtons.ANTIBOT_SETTING,
             callback_data=CallbackData.Chat.ANTIBOT_SETTING,
         ),
         InlineKeyboardButton(
             text=InlineButtons.ChatButtons.WELCOME_TEXT_SETTING,
             callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
+        ),
+        # InlineKeyboardButton(
+        #     text=InlineButtons.ChatButtons.GET_DAILY_RATING,
+        #     callback_data=CallbackData.Chat.GET_DAILY_RATING,
+        # ),
+        # InlineKeyboardButton(
+        #     text=InlineButtons.ChatButtons.GET_SUMMARY_24H,
+        #     callback_data=CallbackData.Chat.GET_CHAT_SUMMARY_24H,
+        # ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.PROHIBITIONS_SETTINGS,
+            callback_data="prohibitions_settings",
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.PUNISHMENT_SETTING,
+            callback_data=CallbackData.Chat.PUNISHMENT_SETTING,
         ),
     )
 
@@ -344,7 +348,7 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
         ),
     )
 
-    builder.adjust(1, 2, 2, 2, 1, 1)
+    builder.adjust(2, 2, 2, 1)
 
     return builder.as_markup()
 
@@ -542,7 +546,7 @@ def cancel_archive_time_setting_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def work_hours_menu_ikb() -> InlineKeyboardMarkup:
+def time_report_settings_ikb() -> InlineKeyboardMarkup:
     """Клавиатура меню выбора параметра для настройки времени сбора данных"""
     builder = InlineKeyboardBuilder()
 
@@ -566,8 +570,14 @@ def work_hours_menu_ikb() -> InlineKeyboardMarkup:
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CANCEL_WORK_HOURS,
-            callback_data=CallbackData.Chat.CANCEL_WORK_HOURS_SETTING,
+            text=InlineButtons.ChatButtons.CHANGE_BREAKS_TIME,
+            callback_data=CallbackData.Chat.CHANGE_BREAKS_TIME,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.COME_BACK,
+            callback_data=CallbackData.Chat.CANCEL_TIME_SETTING,
         ),
     )
 
@@ -579,8 +589,8 @@ def cancel_work_hours_setting_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CANCEL_WORK_HOURS,
-            callback_data=CallbackData.Chat.CANCEL_WORK_HOURS_SETTING,
+            text=InlineButtons.ChatButtons.COME_BACK,
+            callback_data=CallbackData.Chat.CANCEL_TIME_SETTING,
         )
     )
     return builder.as_markup()
