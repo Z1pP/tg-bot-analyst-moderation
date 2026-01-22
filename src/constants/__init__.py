@@ -114,7 +114,7 @@ class InlineButtons:
         CANCEL_WORK_HOURS = "❌ Отмена"
         ARCHIVE_CHANNEL_REBIND = "🔄 Перепривязать"
         ARCHIVE_CHANNEL_BIND = "🔗 Привязать"
-        ARCHIVE_TIME_SETTING = "🕓 Настройка времени отправки отчёта"
+        ARCHIVE_TIME_SETTING = "🕐 Время отправки аналитики"
         ARCHIVE_SCHEDULE_ENABLE = "✅ Включить рассылку"
         ARCHIVE_SCHEDULE_DISABLE = "🛑 Отключить рассылку"
         BACK_TO_ARCHIVE_SETTING = "⬅️ Вернуться"
