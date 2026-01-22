@@ -115,6 +115,14 @@ class ChatSession(BaseModel):
     def welcome_text(self) -> Optional[str]:
         return self.settings.welcome_text if self.settings else None
 
+    @property
+    def auto_delete_welcome_text(self) -> bool:
+        return self.settings.auto_delete_welcome_text if self.settings else False
+
+    @property
+    def show_welcome_text(self) -> bool:
+        return self.settings.show_welcome_text if self.settings else False
+
     __table_args__ = (
         Index("idx_chat_session_chat_id", "chat_id"),
         Index("idx_chat_session_title", "title"),
