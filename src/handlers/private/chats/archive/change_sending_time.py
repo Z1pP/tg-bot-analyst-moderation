@@ -11,6 +11,7 @@ from aiogram.types import CallbackQuery, Message
 from punq import Container
 from sqlalchemy.exc import SQLAlchemyError
 
+from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.chats import cancel_archive_time_setting_ikb
 from services.report_schedule_service import ReportScheduleService
@@ -24,29 +25,17 @@ logger = logging.getLogger(__name__)
 
 def _build_time_prompt() -> str:
     """Build instruction text for time input."""
-    return (
-        "Пожалуйста, пришлите время, когда будет автоматически отправляться "
-        "ежедневный отчёт в формате HH:mm\n\n"
-        "Например: 23:45"
-    )
+    return Dialog.Chat.ARCHIVE_TIME_PROMPT
 
 
 def _build_invalid_time_text() -> str:
     """Build invalid time input error text."""
-    return (
-        "❌ Неверный формат времени!\n\n"
-        "Пожалуйста, пришлите время в формате HH:mm.\n\n"
-        "Например: 23:45"
-    )
+    return Dialog.Chat.ARCHIVE_TIME_INVALID
 
 
 def _build_success_text(parsed_time: time) -> str:
     """Build success text with formatted time."""
-    return (
-        "✅ Время успешно применено!\n\n"
-        f"Ежедневный отчёт будет приходить в архив в "
-        f"{parsed_time.strftime('%H:%M')}."
-    )
+    return Dialog.Chat.ARCHIVE_TIME_SUCCESS.format(time=parsed_time.strftime("%H:%M"))
 
 
 async def _safe_delete_message(message: Message) -> None:
@@ -72,7 +61,7 @@ async def change_sending_time_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="❌ Не удалось определить чат. Попробуйте выбрать чат заново.",
+            text=Dialog.Chat.ARCHIVE_TIME_CHAT_NOT_FOUND,
             reply_markup=cancel_archive_time_setting_ikb(),
         )
         return
@@ -150,7 +139,7 @@ async def time_input_handler(
 
     except SQLAlchemyError as exc:
         logger.error("Ошибка при сохранении времени отправки: %s", exc, exc_info=True)
-        text = "❌ Произошла ошибка при сохранении времени. Попробуйте позже."
+        text = Dialog.Chat.ARCHIVE_TIME_SAVE_ERROR
         if active_message_id:
             await safe_edit_message(
                 bot=message.bot,
