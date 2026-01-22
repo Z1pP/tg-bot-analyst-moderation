@@ -36,7 +36,7 @@ class GetAntibotSettingsUseCase:
             )
 
         antibot_status = "🟢 Включён" if chat.is_antibot_enabled else "🔴 Выключен"
-        welcome_text_status = "🟢 Включён" if chat.welcome_text else "🔴 Выключен"
+        welcome_text_status = "🟢 Включён" if chat.show_welcome_text else "🔴 Выключен"
 
         text = Dialog.Antibot.SETTINGS_INFO.format(
             chat_title=chat.title,
