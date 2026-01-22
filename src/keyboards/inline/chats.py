@@ -358,8 +358,8 @@ def cancel_welcome_text_setting_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
-            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+            text=InlineButtons.ChatButtons.COME_BACK,
+            callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
         )
     )
     return builder.as_markup()
