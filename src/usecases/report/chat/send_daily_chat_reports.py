@@ -5,6 +5,7 @@ from datetime import datetime
 from statistics import mean, median
 from typing import Any, Awaitable, Callable, Dict, List, Set, TypeVar
 
+from constants.dialogs import ReportDialogs
 from constants.period import TimePeriod
 from models import ChatMessage, ChatSession, MessageReaction, MessageReply
 from models.user import User
@@ -68,6 +69,10 @@ class SendDailyChatReportsUseCase:
 
         if not chat.archive_chat_id:
             logger.warning("Чат не имеет архива: chat_id=%d", chat_id)
+            return
+
+        if not self._has_time_settings(chat=chat):
+            await self._notify_admins_missing_settings(chat=chat)
             return
 
         # Сбор всех отслеживаемых пользователей
@@ -326,7 +331,9 @@ class SendDailyChatReportsUseCase:
         parts.append(self._generate_replies_stats(replies))
 
         # Перерывы
-        parts.append(self._generate_breaks_section(messages, reactions))
+        parts.append(
+            self._generate_breaks_section(messages, reactions, chat.breaks_time)
+        )
 
         return "\n".join(filter(None, parts))
 
@@ -395,6 +402,7 @@ class SendDailyChatReportsUseCase:
         self,
         messages: List[ChatMessage],
         reactions: List[MessageReaction],
+        breaks_time: int,
     ) -> str:
         if not messages and not reactions:
             return "<b>⏸️ Перерывы:</b> отсутствуют"
@@ -406,8 +414,38 @@ class SendDailyChatReportsUseCase:
             messages=sorted_messages,
             reactions=reactions,
             is_single_day=True,
+            min_break_minutes=breaks_time,
         )
 
         if breaks:
             return "<b>⏸️ Перерывы:</b>\n" + "\n".join(breaks)
         return "<b>⏸️ Перерывы:</b> отсутствуют"
+
+    async def _notify_admins_missing_settings(self, chat: ChatSession) -> None:
+        admins = await self._user_repository.get_admins_for_chat(
+            chat_tg_id=chat.chat_id
+        )
+        if not admins:
+            logger.warning(
+                "Не найдены админы для уведомления о настройках: chat_id=%d",
+                chat.id,
+            )
+            return
+
+        text = ReportDialogs.CHAT_REPORT_SETTINGS_REQUIRED_ADMIN.format(
+            chat_title=chat.title or "Без названия"
+        )
+        for admin in admins:
+            await self._bot_message_service.send_private_message(
+                user_tgid=admin.tg_id,
+                text=text,
+            )
+
+    @staticmethod
+    def _has_time_settings(chat: ChatSession) -> bool:
+        return (
+            chat.start_time is not None
+            and chat.end_time is not None
+            and chat.tolerance is not None
+            and chat.breaks_time is not None
+        )
