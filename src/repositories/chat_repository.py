@@ -252,6 +252,7 @@ class ChatRepository(BaseRepository):
         start_time: Optional[time] = None,
         end_time: Optional[time] = None,
         tolerance: Optional[int] = None,
+        breaks_time: Optional[int] = None,
     ) -> Optional[ChatSession]:
         """
         Обновляет рабочие часы чата для фильтрации данных в отчетах.
@@ -261,6 +262,7 @@ class ChatRepository(BaseRepository):
             start_time: Время начала рабочего дня (опционально)
             end_time: Время конца рабочего дня (опционально)
             tolerance: Допустимое отклонение в минутах (опционально)
+            breaks_time: Интервал паузы в минутах (опционально)
 
         Returns:
             Обновленный чат или None если чат не найден
@@ -289,17 +291,20 @@ class ChatRepository(BaseRepository):
                     chat.settings.end_time = end_time
                 if tolerance is not None:
                     chat.settings.tolerance = tolerance
+                if breaks_time is not None:
+                    chat.settings.breaks_time = breaks_time
 
                 await session.commit()
                 await session.refresh(chat)
                 self._expunge_chat_with_archive(session, chat)
 
                 logger.info(
-                    "Обновлены рабочие часы чата: chat_id=%s, start_time=%s, end_time=%s, tolerance=%s",
+                    "Обновлены рабочие часы чата: chat_id=%s, start_time=%s, end_time=%s, tolerance=%s, breaks_time=%s",
                     chat_id,
                     start_time,
                     end_time,
                     tolerance,
+                    breaks_time,
                 )
                 return chat
             except Exception as e:
