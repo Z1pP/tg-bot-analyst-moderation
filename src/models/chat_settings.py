@@ -57,6 +57,20 @@ class ChatSettings(BaseModel):
         doc="Custom welcome message for new members.",
     )
 
+    auto_delete_welcome_text: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        doc="Whether auto delete welcome text is enabled for this chat.",
+    )
+
+    show_welcome_text: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        doc="Whether welcome text is enabled for this chat.",
+    )
+
     # Relationships
     chat: Mapped["ChatSession"] = relationship(
         "ChatSession",
