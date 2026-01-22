@@ -28,8 +28,8 @@ async def chat_selected_handler(
     await callback.answer()
 
     chat_id_str = callback.data.replace(CallbackData.Chat.PREFIX_CHAT, "")
-    if not chat_id_str.isdigit():
-        logger.error("Некорректный ID чата в callback: %s", callback.data)
+    if not chat_id_str or not chat_id_str.isdigit():
+        await _handle_error(callback=callback, error=ValueError("Invalid chat ID"))
         return
 
     chat_id = int(chat_id_str)
@@ -38,27 +38,45 @@ async def chat_selected_handler(
     chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
 
     if not chat:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-            reply_markup=chats_management_ikb(),
-        )
+        await _show_chat_not_found_message(callback=callback)
         return
 
     await state.update_data(chat_id=chat_id)
 
+    await _show_chat_actions_message(callback=callback)
+
+    await state.set_state(ChatStateManager.selecting_chat)
+
+
+async def _show_chat_not_found_message(callback: CallbackQuery) -> None:
+    """Показывает сообщение о том, что чат не найден."""
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Chat.CHAT_ACTIONS.format(
-            title=chat.title,
-            start_time=chat.start_time.strftime("%H:%M"),
-            end_time=chat.end_time.strftime("%H:%M"),
-        ),
+        text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+        reply_markup=chats_management_ikb(),
+    )
+
+
+async def _show_chat_actions_message(callback: CallbackQuery) -> None:
+    """Показывает сообщение с информацией о действиях с чатом."""
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.Chat.CHAT_ACTIONS_INFO,
         reply_markup=chat_actions_ikb(),
     )
 
-    await state.set_state(ChatStateManager.selecting_chat)
+
+async def _handle_error(callback: CallbackQuery, error: Exception) -> None:
+    """Обрабатывает ошибки при выборе чата."""
+    logger.error("Ошибка при выборе чата: %s", error, exc_info=True)
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.Chat.ERROR_GET_CHAT_WITH_ARCHIVE,
+        reply_markup=chats_management_ikb(),
+    )
