@@ -15,7 +15,7 @@ router = Router(name=__name__)
 
 
 @router.callback_query(F.data == CallbackData.Chat.ANTIBOT_SETTING)
-async def antibot_menu_handler(
+async def antibot_settings_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
