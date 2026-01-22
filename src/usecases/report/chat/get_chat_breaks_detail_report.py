@@ -1,6 +1,7 @@
 import logging
 from typing import List
 
+from constants.dialogs import ReportDialogs
 from dto.report import ChatReportDTO
 from models import User
 from services.break_analysis_service import BreakAnalysisService
@@ -25,6 +26,9 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
         chat = await self._chat_repository.get_chat_by_id(dto.chat_id)
         if not chat:
             return ["⚠️ Чат не найден!"]
+
+        if not self._has_time_settings(chat=chat):
+            return [ReportDialogs.CHAT_REPORT_SETTINGS_REQUIRED]
 
         period = self._format_selected_period(
             start_date=dto.start_date,
@@ -87,7 +91,11 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
         if not messages and not reactions:
             return ""
 
-        breaks = BreakAnalysisService.calculate_breaks(messages, reactions)
+        breaks = BreakAnalysisService.calculate_breaks(
+            messages,
+            reactions,
+            min_break_minutes=chat.breaks_time,
+        )
 
         # Показываем пользователя только если есть перерывы
         if not breaks:
@@ -97,3 +105,12 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
         user_report += "\n".join(breaks)
 
         return user_report
+
+    @staticmethod
+    def _has_time_settings(chat) -> bool:
+        return (
+            chat.start_time is not None
+            and chat.end_time is not None
+            and chat.tolerance is not None
+            and chat.breaks_time is not None
+        )
