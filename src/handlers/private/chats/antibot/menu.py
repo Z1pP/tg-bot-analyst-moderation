@@ -5,8 +5,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from punq import Container
 
+from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats import antibot_setting_ikb
+from keyboards.inline.chats import antibot_setting_ikb, chats_management_ikb
 from services.chat import ChatService
 from utils.send_message import safe_edit_message
 
@@ -25,26 +26,39 @@ async def antibot_menu_handler(
     chat_id = await state.get_value("chat_id")
 
     if not chat_id:
-        await callback.answer("Ошибка: чат не выбран", show_alert=True)
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_SELECTED,
+            reply_markup=chats_management_ikb(),
+        )
         return
 
     chat_service: ChatService = container.resolve(ChatService)
     chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
 
     if not chat:
-        await callback.answer("Ошибка: чат не найден", show_alert=True)
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+            reply_markup=chats_management_ikb(),
+        )
         return
 
-    status_icon = "✅" if chat.is_antibot_enabled else "❌"
-    status_text = "Включен" if chat.is_antibot_enabled else "Выключен"
+    antibot_status = "🟢 Включён" if chat.is_antibot_enabled else "🔴 Выключен"
+    welcome_text_status = "🟢 Включён" if chat.welcome_text else "🔴 Выключен"
 
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=f"🛡️ <b>Настройка Антибота для чата {chat.title}</b>\n\n"
-        f"Текущий статус: {status_icon} <b>{status_text}</b>\n\n"
-        f"Система Антибота ограничивает новых участников (mute), пока они не пройдут "
-        f"проверку в личных сообщениях бота.",
+        text=Dialog.Antibot.SETTINGS_INFO.format(
+            chat_title=chat.title,
+            antibot_status=antibot_status,
+            welcome_text_status=welcome_text_status,
+        ),
         reply_markup=antibot_setting_ikb(is_enabled=chat.is_antibot_enabled),
     )
