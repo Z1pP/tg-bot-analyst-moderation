@@ -3,7 +3,7 @@ from typing import List
 
 from constants.dialogs import ReportDialogs
 from dto.report import ChatReportDTO
-from models import User
+from models import ChatSession, User
 from services.break_analysis_service import BreakAnalysisService
 
 from ..base import ChatReportUseCase
@@ -38,6 +38,7 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
         report_title = f"<b>📊 Детализация перерывов по датам в чате «{chat.title}» за {period}</b>"
 
         reports = []
+
         for user in users:
             user_data = await self._get_user_data_for_chat(user=user, dto=dto)
 
@@ -45,7 +46,12 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
             if not user_data["messages"] and not user_data["reactions"]:
                 continue
 
-            user_report = self._generate_user_breaks_detail(data=user_data, user=user)
+            user_report = self._generate_user_breaks_detail(
+                data=user_data,
+                user=user,
+                chat=chat,
+            )
+
             if user_report:
                 reports.append(user_report)
 
@@ -82,7 +88,12 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
 
         return {"messages": messages, "reactions": user_reactions}
 
-    def _generate_user_breaks_detail(self, data: dict, user: User) -> str:
+    def _generate_user_breaks_detail(
+        self,
+        data: dict,
+        user: User,
+        chat: ChatSession,
+    ) -> str:
         """Генерирует детализацию перерывов для одного пользователя."""
         messages = data["messages"]
         reactions = data["reactions"]
