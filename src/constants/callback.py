@@ -29,6 +29,8 @@ class ChatCallbackData:
     ANTIBOT_TOGGLE = "chat_antibot_toggle"
     ANTIBOT_SETTING = "chat_antibot_setting"
     WELCOME_TEXT_SETTING = "chat_welcome_text_setting"
+    AUTO_DELETE_SETTING = "chat_auto_delete_setting"
+    CHANGE_WELCOME_TEXT = "chat_change_welcome_text"
     ALL_CHATS = "chat__all"
     CHATS_PAGE_INFO = "chats_page_info"
     REMOVE_CHATS_PAGE_INFO = "remove_chats_page_info"
