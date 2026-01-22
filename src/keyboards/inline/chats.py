@@ -378,16 +378,21 @@ def antibot_setting_ikb(is_enabled: bool = False) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=toggle_text,
             callback_data=CallbackData.Chat.ANTIBOT_TOGGLE,
-        )
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.ChatButtons.WELCOME_TEXT_SETTING,
+            callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
+        ),
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            text=InlineButtons.ChatButtons.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
 
+    builder.adjust(2, 1)
     return builder.as_markup()
 
 
