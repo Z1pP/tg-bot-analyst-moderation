@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from punq import Container
@@ -10,12 +10,12 @@ from constants.callback import CallbackData
 from keyboards.inline.chats import (
     cancel_work_hours_setting_ikb,
     chat_actions_ikb,
-    work_hours_menu_ikb,
+    time_report_settings_ikb,
 )
 from services import ChatService
 from states import ChatStateManager, WorkHoursState
 from usecases.chat import UpdateChatWorkHoursUseCase
-from utils.data_parser import parse_time, parse_tolerance
+from utils.data_parser import parse_breaks_time, parse_time, parse_tolerance
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
@@ -57,18 +57,27 @@ async def work_hours_menu_handler(
             )
             return
 
-        msg_text = Dialog.Chat.WORK_HOURS_MENU.format(
-            start_time=chat.start_time.strftime("%H:%M"),
-            end_time=chat.end_time.strftime("%H:%M"),
-            tolerance=chat.tolerance,
-        )
+        if (
+            chat.start_time is not None
+            and chat.end_time is not None
+            and chat.tolerance is not None
+            and chat.breaks_time is not None
+        ):
+            msg_text = Dialog.Chat.TIME_REPORT_EXISTS.format(
+                start_time=chat.start_time.strftime("%H:%M"),
+                end_time=chat.end_time.strftime("%H:%M"),
+                tolerance=chat.tolerance,
+                breaks_time=chat.breaks_time,
+            )
+        else:
+            msg_text = Dialog.Chat.TIME_REPORT_NOT_EXISTS
 
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=msg_text,
-            reply_markup=work_hours_menu_ikb(),
+            reply_markup=time_report_settings_ikb(),
         )
 
         await state.update_data(active_message_id=callback.message.message_id)
@@ -142,6 +151,26 @@ async def change_tolerance_handler(
 
     await state.update_data(active_message_id=callback.message.message_id)
     await state.set_state(WorkHoursState.waiting_tolerance_input)
+
+
+@router.callback_query(F.data == CallbackData.Chat.CHANGE_BREAKS_TIME)
+async def change_breaks_time_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
+) -> None:
+    """Обработчик выбора изменения интервала паузы"""
+    await callback.answer()
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.Chat.ENTER_BREAKS_TIME,
+        reply_markup=cancel_work_hours_setting_ikb(),
+    )
+
+    await state.update_data(active_message_id=callback.message.message_id)
+    await state.set_state(WorkHoursState.waiting_breaks_time_input)
 
 
 @router.message(WorkHoursState.waiting_work_start_input)
@@ -218,7 +247,10 @@ async def work_start_input_handler(
 
         # Возвращаемся в меню действий чата
         await _return_to_chat_actions(
-            message.bot, message.chat.id, active_message_id, updated_chat, state
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            state=state,
         )
 
     except Exception as e:
@@ -309,7 +341,10 @@ async def work_end_input_handler(
 
         # Возвращаемся в меню действий чата
         await _return_to_chat_actions(
-            message.bot, message.chat.id, active_message_id, updated_chat, state
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            state=state,
         )
 
     except Exception as e:
@@ -400,7 +435,10 @@ async def tolerance_input_handler(
 
         # Возвращаемся в меню действий чата
         await _return_to_chat_actions(
-            message.bot, message.chat.id, active_message_id, updated_chat, state
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            state=state,
         )
 
     except Exception as e:
@@ -417,7 +455,101 @@ async def tolerance_input_handler(
         await message.delete()
 
 
-@router.callback_query(F.data == CallbackData.Chat.CANCEL_WORK_HOURS_SETTING)
+@router.message(WorkHoursState.waiting_breaks_time_input)
+async def breaks_time_input_handler(
+    message: Message, state: FSMContext, container: Container
+) -> None:
+    """Обработчик ввода интервала паузы"""
+    data = await state.get_data()
+    active_message_id = data.get("active_message_id")
+    chat_id = data.get("chat_id")
+
+    parsed_breaks_time = parse_breaks_time(text=message.text)
+
+    if parsed_breaks_time is None:
+        if active_message_id:
+            text = (
+                "❌ Неверный формат!\n\n"
+                "Пожалуйста, пришлите целое число (минуты, можно 0).\n\n"
+                "Например: 15"
+            )
+            await safe_edit_message(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=text,
+                reply_markup=cancel_work_hours_setting_ikb(),
+            )
+
+        await message.delete()
+        return
+
+    if not chat_id:
+        logger.error("chat_id не найден в state")
+        await message.delete()
+        return
+
+    try:
+        usecase: UpdateChatWorkHoursUseCase = container.resolve(
+            UpdateChatWorkHoursUseCase
+        )
+        updated_chat = await usecase.execute(
+            chat_id=chat_id,
+            admin_tg_id=str(message.from_user.id),
+            breaks_time=parsed_breaks_time,
+        )
+
+        if not updated_chat:
+            text = "❌ Чат не найден. Попробуйте позже."
+            if active_message_id:
+                await safe_edit_message(
+                    bot=message.bot,
+                    chat_id=message.chat.id,
+                    message_id=active_message_id,
+                    text=text,
+                    reply_markup=cancel_work_hours_setting_ikb(),
+                )
+            await message.delete()
+            return
+
+        success_message = Dialog.Chat.BREAKS_TIME_UPDATED.format(
+            breaks_time=parsed_breaks_time
+        )
+        text = Dialog.Chat.WORK_HOURS_UPDATED.format(message=success_message)
+
+        await safe_edit_message(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            text=text,
+            reply_markup=cancel_work_hours_setting_ikb(),
+        )
+
+        await message.delete()
+
+        # Возвращаемся в меню действий чата
+        await _return_to_chat_actions(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            state=state,
+        )
+
+    except Exception as e:
+        logger.error("Ошибка при сохранении интервала паузы: %s", e, exc_info=True)
+        text = "❌ Произошла ошибка при сохранении интервала паузы. Попробуйте позже."
+        if active_message_id:
+            await safe_edit_message(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=text,
+                reply_markup=cancel_work_hours_setting_ikb(),
+            )
+        await message.delete()
+
+
+@router.callback_query(F.data == CallbackData.Chat.CANCEL_TIME_SETTING)
 async def cancel_work_hours_handler(
     callback: CallbackQuery,
     state: FSMContext,
@@ -456,11 +588,7 @@ async def cancel_work_hours_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.Chat.CHAT_ACTIONS.format(
-                title=chat.title,
-                start_time=chat.start_time.strftime("%H:%M"),
-                end_time=chat.end_time.strftime("%H:%M"),
-            ),
+            text=Dialog.Chat.CHAT_ACTIONS_INFO,
             reply_markup=chat_actions_ikb(),
         )
 
@@ -478,7 +606,10 @@ async def cancel_work_hours_handler(
 
 
 async def _return_to_chat_actions(
-    bot, chat_id: int, message_id: int, chat, state: FSMContext
+    bot: Bot,
+    chat_id: int,
+    message_id: int,
+    state: FSMContext,
 ) -> None:
     """Вспомогательная функция для возврата в меню действий чата"""
     try:
@@ -486,11 +617,7 @@ async def _return_to_chat_actions(
             bot=bot,
             chat_id=chat_id,
             message_id=message_id,
-            text=Dialog.Chat.CHAT_ACTIONS.format(
-                title=chat.title,
-                start_time=chat.start_time.strftime("%H:%M"),
-                end_time=chat.end_time.strftime("%H:%M"),
-            ),
+            text=Dialog.Chat.CHAT_ACTIONS_INFO.format,
             reply_markup=chat_actions_ikb(),
         )
 
