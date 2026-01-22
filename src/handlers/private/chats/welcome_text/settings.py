@@ -7,16 +7,18 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats import chats_management_ikb, welcome_text_setting_ikb
+from keyboards.inline.chats import chats_management_ikb
 from services.chat import ChatService
 from utils.send_message import safe_edit_message
+
+from .helpers import build_welcome_text_view
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == CallbackData.Chat.WELCOME_TEXT_SETTING)
-async def welcome_text_menu_handler(
+async def welcome_text_settings_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
@@ -49,24 +51,11 @@ async def welcome_text_menu_handler(
         )
         return
 
-    antibot_status = "🟢 Включён" if chat.is_antibot_enabled else "🔴 Выключен"
-    welcome_text_status = "🟢 Включён" if chat.show_welcome_text else "🔴 Выключен"
-    auto_delete_status = (
-        "🟢 Включён" if chat.auto_delete_welcome_text else "🔴 Выключен"
-    )
-
+    text, reply_markup = build_welcome_text_view(chat)
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Chat.ENTER_WELCOME_TEXT.format(
-            chat_title=chat.title,
-            antibot_status=antibot_status,
-            welcome_text_status=welcome_text_status,
-            auto_delete_status=auto_delete_status,
-        ),
-        reply_markup=welcome_text_setting_ikb(
-            welcome_text_enabled=True if chat.show_welcome_text else False,
-            auto_delete_enabled=True if chat.auto_delete_welcome_text else False,
-        ),
+        text=text,
+        reply_markup=reply_markup,
     )
