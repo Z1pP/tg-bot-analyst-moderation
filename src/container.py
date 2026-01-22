@@ -60,6 +60,7 @@ from usecases.amnesty import (
     UnbanUserUseCase,
     UnmuteUserUseCase,
 )
+from usecases.antibot import GetAntibotSettingsUseCase
 from usecases.archive import GetArchiveSettingsUseCase
 from usecases.categories import (
     CreateCategoryUseCase,
@@ -239,6 +240,7 @@ class ContainerSetup:
         """Регистрация всех use cases."""
         ContainerSetup._register_user_usecases(container)
         ContainerSetup._register_chat_usecases(container)
+        ContainerSetup._register_antibot_usecases(container)
         ContainerSetup._register_message_usecases(container)
         ContainerSetup._register_archive_usecases(container)
         ContainerSetup._register_report_usecases(container)
@@ -260,6 +262,11 @@ class ContainerSetup:
 
         for usecase in punishment_usecases:
             container.register(usecase)
+
+    @staticmethod
+    def _register_antibot_usecases(container: Container) -> None:
+        """Регистрация use cases для антибота."""
+        container.register(GetAntibotSettingsUseCase)
 
     @staticmethod
     def _register_archive_usecases(container: Container) -> None:
