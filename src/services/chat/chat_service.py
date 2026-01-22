@@ -241,6 +241,7 @@ class ChatService:
         start_time: Optional[time] = None,
         end_time: Optional[time] = None,
         tolerance: Optional[int] = None,
+        breaks_time: Optional[int] = None,
     ) -> Optional[ChatSession]:
         """
         Обновляет рабочие часы чата и обновляет кеш.
@@ -260,4 +261,5 @@ class ChatService:
             start_time=start_time,
             end_time=end_time,
             tolerance=tolerance,
+            breaks_time=breaks_time,
         )
