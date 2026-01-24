@@ -27,14 +27,25 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    F.data == CallbackData.Chat.GET_STATISTICS,
-    ChatStateManager.selecting_chat,
+    F.data.startswith(CallbackData.Chat.PREFIX_CHAT),
+    ChatStateManager.selecting_chat_for_report,
 )
-async def get_chat_statistics_handler(
-    callback: CallbackQuery, state: FSMContext
-) -> None:
+async def get_chat_report_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик запроса на создание отчета по конкретному чату."""
     await callback.answer()
+
+    chat_id_str = callback.data.replace(CallbackData.Chat.PREFIX_CHAT, "")
+    if not chat_id_str.isdigit():
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+            reply_markup=chat_actions_ikb(),
+        )
+        return
+
+    await state.update_data(chat_id=int(chat_id_str))
 
     # Проверка tracked_users перенесена в UseCase
     await safe_edit_message(
@@ -49,8 +60,8 @@ async def get_chat_statistics_handler(
 
 
 @router.callback_query(
-    ChatStateManager.selecting_period,
     F.data.startswith(CallbackData.Report.PREFIX_PERIOD),
+    ChatStateManager.selecting_period,
 )
 async def process_period_selection_callback(
     callback: CallbackQuery, state: FSMContext, container: Container
