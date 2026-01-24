@@ -6,16 +6,19 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import RELEASE_NOTES_ADMIN_IDS, Dialog, InlineButtons
 from constants.callback import CallbackData
 from constants.i18n import DEFAULT_LANGUAGE, get_text
+from dto.user import UserDTO
 
 
 def admin_menu_ikb(
-    user_language: str = None,
+    user: Optional[UserDTO] = None,
+    user_language: Optional[str] = None,
     admin_tg_id: Optional[str] = None,
 ) -> InlineKeyboardMarkup:
     """
     Создает inline клавиатуру главного меню администратора с учетом языка пользователя.
 
     Args:
+        user: DTO пользователя или None
         user_language: Код языка пользователя (например, 'ru', 'en')
 
     Returns:
@@ -55,7 +58,8 @@ def admin_menu_ikb(
 
     # Добавляем кнопку для просмотра логов действий администраторов
     # (только для авторизованных пользователей)
-    if admin_tg_id and admin_tg_id in RELEASE_NOTES_ADMIN_IDS:
+    release_admin_id = user.tg_id if user else admin_tg_id
+    if release_admin_id and release_admin_id in RELEASE_NOTES_ADMIN_IDS:
         builder.row(
             InlineKeyboardButton(
                 text=Dialog.AdminLogs.ADMIN_LOGS,
