@@ -41,7 +41,12 @@ class AdminOnlyFilter(BaseUserFilter):
             tg_id=tg_id, current_username=current_username, container=container
         )
 
-        if user and user.role == UserRole.ADMIN:
+        if user and user.role in (
+            UserRole.ADMIN,
+            UserRole.ROOT,
+            UserRole.DEV,
+            UserRole.OWNER,
+        ):
             return True
 
         await event.answer("⛔ У Вас нет доступа к сервисам Analyst AI")
