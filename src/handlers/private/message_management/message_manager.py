@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data == "message_management_menu")
 async def message_management_menu_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery,
+    state: FSMContext,
 ) -> None:
     """Обработчик возврата в меню управления сообщениями."""
     await callback.answer()
