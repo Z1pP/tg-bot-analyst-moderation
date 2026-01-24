@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 router = Router(name=__name__)
 
 
-@router.callback_query(F.data == CallbackData.ModerationMenu.MENU)
+@router.callback_query(F.data == CallbackData.Moderation.SHOW_MENU)
 async def lock_menu_callback_handler(
     callback: CallbackQuery,
     state: FSMContext,
@@ -28,7 +28,7 @@ async def lock_menu_callback_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.ModerationMenu.SELECT_ACTION,
+        text=Dialog.Moderation.SELECT_ACTION,
         reply_markup=moderation_menu_ikb(),
     )
 
