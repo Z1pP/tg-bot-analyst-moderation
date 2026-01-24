@@ -48,10 +48,24 @@ async def show_tracked_chats_handler(
     # Устанавливаем состояние выбора чата
     if callback.data == CallbackData.Chat.SELECT_CHAT_FOR_REPORT:
         await state.set_state(ChatStateManager.selecting_chat_for_report)
+        await _show_chats_list_message(
+            callback=callback,
+            chats=chats,
+            back_callback=CallbackData.Analytics.SHOW_MENU,
+            show_management_button=True,
+            prev_page_prefix=CallbackData.Chat.PREFIX_PREV_CHATS_REPORT_PAGE,
+            next_page_prefix=CallbackData.Chat.PREFIX_NEXT_CHATS_REPORT_PAGE,
+        )
     else:
         await state.set_state(ChatStateManager.listing_tracking_chats)
-
-    await _show_chats_list_message(callback=callback, chats=chats)
+        await _show_chats_list_message(
+            callback=callback,
+            chats=chats,
+            back_callback=CallbackData.Chat.SHOW_MENU,
+            show_management_button=False,
+            prev_page_prefix=CallbackData.Chat.PREFIX_PREV_CHATS_PAGE,
+            next_page_prefix=CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE,
+        )
 
 
 async def _show_no_chats_message(callback: CallbackQuery) -> None:
@@ -69,6 +83,11 @@ async def _show_no_chats_message(callback: CallbackQuery) -> None:
 async def _show_chats_list_message(
     callback: CallbackQuery,
     chats: List[ChatDTO],
+    *,
+    back_callback: str,
+    show_management_button: bool,
+    prev_page_prefix: str,
+    next_page_prefix: str,
 ) -> None:
     """Показывает список чатов на первой странице."""
     # Получаем первую страницу чатов
@@ -86,6 +105,10 @@ async def _show_chats_list_message(
             chats=first_page_chats,
             page=1,
             total_count=total_count,
+            back_callback=back_callback,
+            show_management_button=show_management_button,
+            prev_page_prefix=prev_page_prefix,
+            next_page_prefix=next_page_prefix,
         ),
     )
 
