@@ -85,7 +85,7 @@ def back_to_users_menu_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.COME_BACK,
-            callback_data=CallbackData.User.MENU,
+            callback_data=CallbackData.User.SELECT_USER,
         )
     )
     return builder.as_markup()
@@ -149,7 +149,7 @@ def remove_user_inline_kb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data=CallbackData.User.MENU,
+            callback_data=CallbackData.User.SELECT_USER,
         )
     )
 
@@ -188,7 +188,7 @@ def user_actions_ikb() -> InlineKeyboardMarkup:
         # ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data=CallbackData.User.MENU,
+            callback_data=CallbackData.User.SELECT_USER,
         ),
         width=1,
     )
@@ -212,7 +212,7 @@ def all_users_actions_ikb() -> InlineKeyboardMarkup:
         # ),
         InlineKeyboardButton(
             text=InlineButtons.UserButtons.BACK_TO_USERS_MENU,
-            callback_data=CallbackData.User.MENU,
+            callback_data=CallbackData.User.SELECT_USER,
         ),
         width=1,
     )
