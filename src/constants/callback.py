@@ -175,6 +175,12 @@ class MessagesCallbackData:
 
     # Commands
     SHOW_MENU = "messages_menu"
+    DELETE_MESSAGE = "delete_message"
+    REPLY_MESSAGE = "reply_message"
+    CANCEL = "cancel"
+    DELETE_MESSAGE_CONFIRM = "delete_message_confirm"
+    DELETE_MESSAGE_CANCEL = "delete_message_cancel"
+    SEND_MESSAGE_TO_CHAT = "send_message_to_chat"
 
 
 class UserAndChatsSettingsCallbackData:
@@ -219,6 +225,13 @@ class NewsCallbackData:
     SHOW_MENU = "news_menu"
 
 
+class TemplatesCallbackData:
+    """Класс для хранения callback данных шаблонов"""
+
+    # Commands
+    SHOW_MENU = "templates_menu"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
@@ -238,3 +251,4 @@ class CallbackData:
     Root = RootCallbackData
     Help = HelpCallbackData
     News = NewsCallbackData
+    Templates = TemplatesCallbackData
