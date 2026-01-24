@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import Dialog
+from constants import InlineButtons
 from constants.callback import CallbackData
 from constants.period import TimePeriod
 
@@ -29,7 +29,7 @@ def _build_time_period_keyboard(
     # Кнопка "Назад"
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Menu.BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=back_callback,
         )
     )
@@ -51,8 +51,9 @@ def time_period_ikb_all_users(include_custom: bool = True) -> InlineKeyboardMark
     )
 
 
-def time_period_ikb_chat(include_custom: bool = True) -> InlineKeyboardMarkup:
+def time_period_ikb_chat(
+    include_custom: bool = True,
+    back_callback: str = CallbackData.Chat.BACK_TO_ANALYTICS_CHAT_ACTIONS,
+) -> InlineKeyboardMarkup:
     """Создает inline клавиатуру с выбором периода времени для отчетов по чату."""
-    return _build_time_period_keyboard(
-        include_custom, CallbackData.Chat.SELECT_CHAT_FOR_REPORT
-    )
+    return _build_time_period_keyboard(include_custom, back_callback)

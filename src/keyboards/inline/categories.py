@@ -111,7 +111,7 @@ def categories_inline_ikb(
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.BACK_TO_TEMPLATES_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data="templates_menu",
         )
     )
@@ -172,7 +172,7 @@ def categories_select_only_ikb(
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.BACK_TO_TEMPLATES_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data="templates_menu",
         )
     )

@@ -39,7 +39,7 @@ def moderation_menu_ikb() -> InlineKeyboardMarkup:
     builder.adjust(1, 2)
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.User.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Menu.MAIN_MENU,
         )
     )
@@ -51,7 +51,7 @@ def back_to_block_menu_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=block_actions.BACK_TO_BLOCK_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=block_actions.BACK_TO_BLOCK_MENU,
         )
     )
@@ -75,7 +75,7 @@ def amnesty_actions_ikb() -> InlineKeyboardMarkup:
             callback_data=block_actions.UNBAN,
         ),
         InlineKeyboardButton(
-            text=block_actions.BACK_TO_BLOCK_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=block_actions.BACK_TO_BLOCK_MENU,
         ),
     )

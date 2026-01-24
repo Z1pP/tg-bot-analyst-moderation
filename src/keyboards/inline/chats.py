@@ -14,7 +14,7 @@ def back_to_chats_menu_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.SHOW_MENU,
         )
     )
@@ -75,7 +75,7 @@ def remove_chat_ikb(
     # Кнопка возврата в меню (в самом низу)
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.BACK_TO_CHATS_MANAGEMENT,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.SHOW_MENU,
         )
     )
@@ -304,7 +304,7 @@ def select_chat_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Messages.BACK_TO_MESSAGE_MANAGEMENT,
+            text=InlineButtons.Common.COME_BACK,
             callback_data="message_management_menu",
         )
     )
@@ -317,10 +317,6 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.row(
-        # InlineKeyboardButton(
-        #     text=InlineButtons.ChatButtons.GET_STATISTICS,
-        #     callback_data=CallbackData.Chat.GET_STATISTICS,
-        # ),
         InlineKeyboardButton(
             text=InlineButtons.Chat.REPORT_TIME_SETTING,
             callback_data=CallbackData.Chat.REPORT_TIME_SETTING,
@@ -337,14 +333,6 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             text=InlineButtons.Chat.WELCOME_TEXT_SETTING,
             callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
         ),
-        # InlineKeyboardButton(
-        #     text=InlineButtons.ChatButtons.GET_DAILY_RATING,
-        #     callback_data=CallbackData.Chat.GET_DAILY_RATING,
-        # ),
-        # InlineKeyboardButton(
-        #     text=InlineButtons.ChatButtons.GET_SUMMARY_24H,
-        #     callback_data=CallbackData.Chat.GET_CHAT_SUMMARY_24H,
-        # ),
         InlineKeyboardButton(
             text=InlineButtons.Chat.PROHIBITIONS_SETTINGS,
             callback_data="prohibitions_settings",
@@ -363,6 +351,38 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
     )
 
     builder.adjust(2, 2, 2, 1)
+
+    return builder.as_markup()
+
+
+def analytics_chat_actions_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура действий для аналитики по чату."""
+    builder = InlineKeyboardBuilder()
+
+    builder.row(
+        InlineKeyboardButton(
+            text="📊 Статистика",
+            callback_data=CallbackData.Chat.GET_REPORT,
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🏆 Рейтинг активности",
+            callback_data=CallbackData.Chat.GET_DAILY_RATING,
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="📝 AI-сводка",
+            callback_data=CallbackData.Chat.GET_CHAT_SUMMARY_24H,
+        )
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text="🔄 Выбрать другой чат",
+            callback_data=CallbackData.Chat.SELECT_CHAT_FOR_REPORT,
+        )
+    )
 
     return builder.as_markup()
 
@@ -388,7 +408,7 @@ def cancel_welcome_text_setting_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
         )
     )
@@ -417,7 +437,7 @@ def antibot_setting_ikb(is_enabled: bool = False) -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
@@ -462,7 +482,7 @@ def welcome_text_setting_ikb(
             callback_data=CallbackData.Chat.ANTIBOT_SETTING,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.Chat.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         ),
     )
@@ -472,14 +492,16 @@ def welcome_text_setting_ikb(
     return builder.as_markup()
 
 
-def rating_report_ikb() -> InlineKeyboardMarkup:
+def rating_report_ikb(
+    back_callback: str = CallbackData.Chat.BACK_TO_ANALYTICS_CHAT_ACTIONS,
+) -> InlineKeyboardMarkup:
     """Клавиатура для отчета по рейтингу"""
     builder = InlineKeyboardBuilder()
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.RatingButtons.BACK_TO_PERIOD,
-            callback_data=CallbackData.Chat.GET_DAILY_RATING,
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=back_callback,
         )
     )
 
@@ -504,7 +526,7 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.REMOVE,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.Chat.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
         ),
     )
@@ -514,7 +536,9 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def summary_type_ikb() -> InlineKeyboardMarkup:
+def summary_type_ikb(
+    back_callback: str = CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+) -> InlineKeyboardMarkup:
     """Клавиатура выбора типа сводки"""
     builder = InlineKeyboardBuilder()
 
@@ -531,8 +555,8 @@ def summary_type_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.BACK_TO_SELECT_ACTION,
-            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=back_callback,
         )
     )
 
@@ -597,7 +621,7 @@ def archive_channel_setting_ikb(
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
@@ -609,7 +633,7 @@ def archive_bind_instruction_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.BACK_TO_ARCHIVE_SETTING,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         )
     )
@@ -620,7 +644,7 @@ def cancel_archive_time_setting_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.BACK_TO_ARCHIVE_SETTING,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         )
     )
@@ -657,7 +681,7 @@ def time_report_settings_ikb() -> InlineKeyboardMarkup:
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.CANCEL_TIME_SETTING,
         ),
     )
@@ -670,7 +694,7 @@ def cancel_work_hours_setting_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.CANCEL_TIME_SETTING,
         )
     )

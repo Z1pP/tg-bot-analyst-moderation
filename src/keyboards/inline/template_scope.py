@@ -30,7 +30,7 @@ def template_scope_selection_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.BACK_TO_TEMPLATES_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data="templates_menu",
         )
     )

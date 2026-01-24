@@ -78,7 +78,7 @@ def release_notes_menu_ikb(
         )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.AdminLogsButtons.BACK_TO_MAIN_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Menu.MAIN_MENU,
         )
     )
@@ -121,7 +121,7 @@ def release_note_detail_ikb(
         )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ReleaseNotesButtons.BACK_TO_LIST,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.ReleaseNotes.MENU,
         )
     )

@@ -60,7 +60,7 @@ def admin_logs_ikb(
     # Кнопка "Вернуться в меню логов"
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.AdminLogsButtons.BACK_TO_ADMIN_LOGS_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.AdminLogs.MENU,
         )
     )
@@ -92,7 +92,7 @@ def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup
     # Кнопка "Скрыть"
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.AdminLogsButtons.BACK_TO_MAIN_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Menu.MAIN_MENU,
         )
     )

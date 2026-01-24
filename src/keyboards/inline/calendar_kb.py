@@ -4,6 +4,7 @@ from typing import Optional
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from constants import InlineButtons
 from constants.callback import CallbackData
 
 
@@ -97,14 +98,16 @@ class CalendarKeyboard:
         keyboard.append(
             [
                 InlineKeyboardButton(
-                    text="◀️", callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}prev_{year}_{month}"
+                    text="◀️",
+                    callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}prev_{year}_{month}",
                 ),
                 InlineKeyboardButton(
                     text=f"{CalendarKeyboard.MONTHS_RU[month - 1]} {year}",
                     callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}ignore",
                 ),
                 InlineKeyboardButton(
-                    text="▶️", callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}next_{year}_{month}"
+                    text="▶️",
+                    callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}next_{year}_{month}",
                 ),
             ]
         )
@@ -112,7 +115,10 @@ class CalendarKeyboard:
         # Дни недели
         keyboard.append(
             [
-                InlineKeyboardButton(text=day, callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}ignore")
+                InlineKeyboardButton(
+                    text=day,
+                    callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}ignore",
+                )
                 for day in CalendarKeyboard.DAYS_RU
             ]
         )
@@ -126,7 +132,10 @@ class CalendarKeyboard:
                 if day == 0:
                     # Пустая ячейка
                     row.append(
-                        InlineKeyboardButton(text=" ", callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}ignore")
+                        InlineKeyboardButton(
+                            text=" ",
+                            callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}ignore",
+                        )
                     )
                 else:
                     current_date = datetime(year, month, day)
@@ -157,15 +166,23 @@ class CalendarKeyboard:
         control_row = []
         if start_date and end_date:
             control_row.append(
-                InlineKeyboardButton(text="✅ Подтвердить", callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}confirm")
+                InlineKeyboardButton(
+                    text="✅ Подтвердить",
+                    callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}confirm",
+                )
             )
         if start_date or end_date:
             control_row.append(
-                InlineKeyboardButton(text="🔄 Сбросить", callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}reset")
+                InlineKeyboardButton(
+                    text="🔄 Сбросить",
+                    callback_data=f"{CallbackData.Report.PREFIX_CALENDAR}reset",
+                )
             )
 
         control_row.append(
-            InlineKeyboardButton(text="⬅️ Назад к периоду", callback_data=back_callback)
+            InlineKeyboardButton(
+                text=InlineButtons.Common.COME_BACK, callback_data=back_callback
+            )
         )
 
         keyboard.append(control_row)

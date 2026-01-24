@@ -34,7 +34,7 @@ def users_menu_ikb(has_tracked_users: bool = True) -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.User.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.User.BACK_TO_MAIN_MENU_FROM_USERS,
         ),
     )
@@ -84,7 +84,7 @@ def back_to_users_menu_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.User.COME_BACK,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.User.SHOW_MENU,
         )
     )
@@ -228,7 +228,7 @@ def remove_user_inline_kb(
     # Кнопка возврата в меню (в самом низу)
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.User.BACK_TO_USERS_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.User.SELECT_USER,
         )
     )

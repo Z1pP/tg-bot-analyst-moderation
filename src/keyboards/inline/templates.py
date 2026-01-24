@@ -58,7 +58,7 @@ def templates_menu_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Messages.BACK_TO_MESSAGE_MANAGEMENT,
+            text=InlineButtons.Common.COME_BACK,
             callback_data="message_management_menu",
         )
     )
@@ -128,7 +128,7 @@ def templates_inline_kb(
         # Кнопка возврата к категориям
         builder.row(
             InlineKeyboardButton(
-                text="⬅️ Вернуться к категориям",
+                text=InlineButtons.Common.COME_BACK,
                 callback_data="select_category",
             )
         )
@@ -136,7 +136,7 @@ def templates_inline_kb(
         # Кнопка возврата к списку чатов
         builder.row(
             InlineKeyboardButton(
-                text="⬅️ Назад к выбору чата",
+                text=InlineButtons.Common.COME_BACK,
                 callback_data="select_template",
             )
         )
