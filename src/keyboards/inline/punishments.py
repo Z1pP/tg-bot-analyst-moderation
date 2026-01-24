@@ -11,19 +11,19 @@ def punishment_setting_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.PUNISHMENT_CREATE_NEW,
+            text=InlineButtons.Chat.PUNISHMENT_CREATE_NEW,
             callback_data=CallbackData.Chat.PUNISHMENT_CREATE_NEW,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.PUNISHMENT_SET_DEFAULT,
+            text=InlineButtons.Chat.PUNISHMENT_SET_DEFAULT,
             callback_data=CallbackData.Chat.PUNISHMENT_SET_DEFAULT,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
@@ -57,7 +57,7 @@ def punishment_action_ikb() -> InlineKeyboardMarkup:
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.PUNISHMENT_SETTING,
         )
     )
