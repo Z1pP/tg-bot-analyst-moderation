@@ -14,7 +14,7 @@ def analytics_menu_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=Dialog.Chat.SHOW_TRACKED_CHATS,
-            callback_data=CallbackData.Chat.SELECT_CHAT,
+            callback_data=CallbackData.Chat.SELECT_CHAT_FOR_REPORT,
         ),
         InlineKeyboardButton(
             text=Dialog.Common.COME_BACK,
