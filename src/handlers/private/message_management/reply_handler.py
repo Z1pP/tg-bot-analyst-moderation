@@ -28,7 +28,7 @@ async def message_reply_handler(
 
     if not chat_tgid or not message_id:
         logger.error("Некорректные данные в state: %s", data)
-        await message.reply(Dialog.MessageManager.INVALID_STATE_DATA)
+        await message.reply(Dialog.Messages.INVALID_STATE_DATA)
         await state.clear()
         return
 
@@ -49,7 +49,9 @@ async def message_reply_handler(
             await message.delete()
         except Exception as e:
             logger.warning(f"Не удалось удалить сообщение пользователя: {e}")
-        success_text = f"{Dialog.MessageManager.REPLY_SUCCESS}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
+        success_text = (
+            f"{Dialog.Messages.REPLY_SUCCESS}\n\n{Dialog.Messages.INPUT_MESSAGE_LINK}"
+        )
 
         # Редактируем существующее сообщение или отправляем новое
         if active_message_id:
@@ -75,9 +77,7 @@ async def message_reply_handler(
             chat_tgid,
         )
     except MessageSendError as e:
-        error_text = (
-            f"{e.get_user_message()}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
-        )
+        error_text = f"{e.get_user_message()}\n\n{Dialog.Messages.INPUT_MESSAGE_LINK}"
         if active_message_id:
             await safe_edit_message(
                 bot=bot,
@@ -97,7 +97,9 @@ async def message_reply_handler(
             e,
             exc_info=True,
         )
-        error_text = f"{Dialog.MessageManager.REPLY_ERROR}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
+        error_text = (
+            f"{Dialog.Messages.REPLY_ERROR}\n\n{Dialog.Messages.INPUT_MESSAGE_LINK}"
+        )
         if active_message_id:
             await safe_edit_message(
                 bot=bot,
