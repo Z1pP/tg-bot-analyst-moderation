@@ -14,8 +14,8 @@ def back_to_chats_menu_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
-            callback_data=CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT,
+            text=InlineButtons.Chat.COME_BACK,
+            callback_data=CallbackData.Chat.SHOW_MENU,
         )
     )
     return builder.as_markup()
@@ -75,15 +75,15 @@ def remove_chat_ikb(
     # Кнопка возврата в меню (в самом низу)
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_CHATS_MANAGEMENT,
-            callback_data=CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT,
+            text=InlineButtons.Chat.BACK_TO_CHATS_MANAGEMENT,
+            callback_data=CallbackData.Chat.SHOW_MENU,
         )
     )
 
     return builder.as_markup()
 
 
-def tracked_chats_ikb(
+def show_tracked_chats_ikb(
     chats: List[ChatDTO],
     page: int = 1,
     total_count: int = 0,
@@ -100,6 +100,14 @@ def tracked_chats_ikb(
                 callback_data=f"{CallbackData.Chat.PREFIX_CHAT}{chat.id}",
             )
         )
+
+    # Кнопка перехода в меню управления чатами
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.Chat.MANAGEMENT,
+            callback_data=CallbackData.Chat.SHOW_MENU,
+        ),
+    )
 
     # Пагинация
     if total_count > page_size:
@@ -137,9 +145,9 @@ def tracked_chats_ikb(
     # Кнопка возврата в меню (в самом низу)
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
-            callback_data=CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT,
-        )
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Analytics.SHOW_MENU,
+        ),
     )
 
     return builder.as_markup()
@@ -251,7 +259,7 @@ def hide_notification_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.HIDE_NOTIFICATION,
+            text=InlineButtons.Chat.HIDE_NOTIFICATION,
             callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
         )
     )
@@ -264,11 +272,11 @@ def move_to_chat_analytics_ikb(chat_id: int) -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.UserButtons.MOVE_TO_ANALYTICS,
+            text=InlineButtons.User.MOVE_TO_ANALYTICS,
             callback_data=f"{CallbackData.Chat.PREFIX_CHAT}{chat_id}",
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.HIDE_NOTIFICATION,
+            text=InlineButtons.Chat.HIDE_NOTIFICATION,
             callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
         ),
         width=1,
@@ -308,19 +316,19 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
         #     callback_data=CallbackData.Chat.GET_STATISTICS,
         # ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.REPORT_TIME_SETTING,
+            text=InlineButtons.Chat.REPORT_TIME_SETTING,
             callback_data=CallbackData.Chat.REPORT_TIME_SETTING,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_SETTING,
+            text=InlineButtons.Chat.ARCHIVE_CHANNEL_SETTING,
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.ANTIBOT_SETTING,
+            text=InlineButtons.Chat.ANTIBOT_SETTING,
             callback_data=CallbackData.Chat.ANTIBOT_SETTING,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.WELCOME_TEXT_SETTING,
+            text=InlineButtons.Chat.WELCOME_TEXT_SETTING,
             callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
         ),
         # InlineKeyboardButton(
@@ -332,18 +340,18 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
         #     callback_data=CallbackData.Chat.GET_CHAT_SUMMARY_24H,
         # ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.PROHIBITIONS_SETTINGS,
+            text=InlineButtons.Chat.PROHIBITIONS_SETTINGS,
             callback_data="prohibitions_settings",
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.PUNISHMENT_SETTING,
+            text=InlineButtons.Chat.PUNISHMENT_SETTING,
             callback_data=CallbackData.Chat.PUNISHMENT_SETTING,
         ),
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.SELECT_CHAT,
         ),
     )
@@ -357,11 +365,11 @@ def confirm_set_default_punishments_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CANCEL_SET_DEFAULT,
+            text=InlineButtons.Chat.CANCEL_SET_DEFAULT,
             callback_data=CallbackData.Chat.CANCEL_SET_DEFAULT,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CONFIRM_SET_DEFAULT,
+            text=InlineButtons.Chat.CONFIRM_SET_DEFAULT,
             callback_data=CallbackData.Chat.CONFIRM_SET_DEFAULT,
         ),
         width=2,
@@ -374,7 +382,7 @@ def cancel_welcome_text_setting_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
         )
     )
@@ -386,9 +394,9 @@ def antibot_setting_ikb(is_enabled: bool = False) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     toggle_text = (
-        InlineButtons.ChatButtons.ANTIBOT_DISABLE
+        InlineButtons.Chat.ANTIBOT_DISABLE
         if is_enabled
-        else InlineButtons.ChatButtons.ANTIBOT_ENABLE
+        else InlineButtons.Chat.ANTIBOT_ENABLE
     )
     builder.row(
         InlineKeyboardButton(
@@ -396,14 +404,14 @@ def antibot_setting_ikb(is_enabled: bool = False) -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.ANTIBOT_TOGGLE,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.WELCOME_TEXT_SETTING,
+            text=InlineButtons.Chat.WELCOME_TEXT_SETTING,
             callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
         ),
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
@@ -420,19 +428,19 @@ def welcome_text_setting_ikb(
     builder = InlineKeyboardBuilder()
 
     auto_delete_text = (
-        InlineButtons.ChatButtons.AUTO_DELETE_DISABLE
+        InlineButtons.Chat.AUTO_DELETE_DISABLE
         if auto_delete_enabled
-        else InlineButtons.ChatButtons.AUTO_DELETE_ENABLE
+        else InlineButtons.Chat.AUTO_DELETE_ENABLE
     )
     welcome_text_text = (
-        InlineButtons.ChatButtons.WELCOME_TEXT_DISABLE
+        InlineButtons.Chat.WELCOME_TEXT_DISABLE
         if welcome_text_enabled
-        else InlineButtons.ChatButtons.WELCOME_TEXT_ENABLE
+        else InlineButtons.Chat.WELCOME_TEXT_ENABLE
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CHANGE_WELCOME_TEXT,
+            text=InlineButtons.Chat.CHANGE_WELCOME_TEXT,
             callback_data=CallbackData.Chat.CHANGE_WELCOME_TEXT,
         ),
         InlineKeyboardButton(
@@ -444,11 +452,11 @@ def welcome_text_setting_ikb(
             callback_data=CallbackData.Chat.AUTO_DELETE_TOGGLE,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.ANTIBOT_SETTING,
+            text=InlineButtons.Chat.ANTIBOT_SETTING,
             callback_data=CallbackData.Chat.ANTIBOT_SETTING,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         ),
     )
@@ -478,19 +486,19 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.SELECT_CHAT,
+            text=InlineButtons.Chat.SELECT_CHAT,
             callback_data=CallbackData.Chat.SELECT_CHAT,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.ADD,
+            text=InlineButtons.Chat.ADD,
             callback_data=CallbackData.Chat.ADD,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.REMOVE,
+            text=InlineButtons.Chat.REMOVE,
             callback_data=CallbackData.Chat.REMOVE,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
         ),
     )
@@ -506,18 +514,18 @@ def summary_type_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.SUMMARY_SHORT,
+            text=InlineButtons.Chat.SUMMARY_SHORT,
             callback_data=f"{CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE}short",
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.SUMMARY_FULL,
+            text=InlineButtons.Chat.SUMMARY_FULL,
             callback_data=f"{CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE}full",
         ),
     )
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            text=InlineButtons.Chat.BACK_TO_SELECT_ACTION,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
@@ -545,16 +553,16 @@ def archive_channel_setting_ikb(
                 url=url,
             ),
             InlineKeyboardButton(
-                text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_REBIND,
+                text=InlineButtons.Chat.ARCHIVE_CHANNEL_REBIND,
                 callback_data=CallbackData.Chat.ARCHIVE_BIND_INSTRUCTION,
             ),
         )
 
         if schedule_enabled is not None:
             toggle_text = (
-                InlineButtons.ChatButtons.ARCHIVE_SCHEDULE_DISABLE
+                InlineButtons.Chat.ARCHIVE_SCHEDULE_DISABLE
                 if schedule_enabled
-                else InlineButtons.ChatButtons.ARCHIVE_SCHEDULE_ENABLE
+                else InlineButtons.Chat.ARCHIVE_SCHEDULE_ENABLE
             )
 
             builder.row(
@@ -566,7 +574,7 @@ def archive_channel_setting_ikb(
 
         builder.row(
             InlineKeyboardButton(
-                text=InlineButtons.ChatButtons.ARCHIVE_TIME_SETTING,
+                text=InlineButtons.Chat.ARCHIVE_TIME_SETTING,
                 callback_data=CallbackData.Chat.ARCHIVE_TIME_SETTING,
             ),
         )
@@ -576,14 +584,14 @@ def archive_channel_setting_ikb(
     else:
         builder.row(
             InlineKeyboardButton(
-                text=InlineButtons.ChatButtons.ARCHIVE_CHANNEL_BIND,
+                text=InlineButtons.Chat.ARCHIVE_CHANNEL_BIND,
                 callback_data=CallbackData.Chat.ARCHIVE_BIND_INSTRUCTION,
             ),
         )
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
@@ -595,7 +603,7 @@ def archive_bind_instruction_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_ARCHIVE_SETTING,
+            text=InlineButtons.Chat.BACK_TO_ARCHIVE_SETTING,
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         )
     )
@@ -606,7 +614,7 @@ def cancel_archive_time_setting_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_ARCHIVE_SETTING,
+            text=InlineButtons.Chat.BACK_TO_ARCHIVE_SETTING,
             callback_data=CallbackData.Chat.ARCHIVE_SETTING,
         )
     )
@@ -619,31 +627,31 @@ def time_report_settings_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CHANGE_WORK_START,
+            text=InlineButtons.Chat.CHANGE_WORK_START,
             callback_data=CallbackData.Chat.CHANGE_WORK_START,
         ),
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CHANGE_WORK_END,
+            text=InlineButtons.Chat.CHANGE_WORK_END,
             callback_data=CallbackData.Chat.CHANGE_WORK_END,
         ),
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CHANGE_TOLERANCE,
+            text=InlineButtons.Chat.CHANGE_TOLERANCE,
             callback_data=CallbackData.Chat.CHANGE_TOLERANCE,
         ),
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CHANGE_BREAKS_TIME,
+            text=InlineButtons.Chat.CHANGE_BREAKS_TIME,
             callback_data=CallbackData.Chat.CHANGE_BREAKS_TIME,
         ),
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.CANCEL_TIME_SETTING,
         ),
     )
@@ -656,7 +664,7 @@ def cancel_work_hours_setting_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.COME_BACK,
+            text=InlineButtons.Chat.COME_BACK,
             callback_data=CallbackData.Chat.CANCEL_TIME_SETTING,
         )
     )
