@@ -17,7 +17,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == CallbackData.User.MENU)
+@router.callback_query(F.data == CallbackData.User.SELECT_USER)
 async def users_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
@@ -47,7 +47,10 @@ async def users_menu_handler(
 
 @router.callback_query(F.data == CallbackData.User.BACK_TO_MAIN_MENU_FROM_USERS)
 async def back_to_main_menu_from_users_handler(
-    callback: types.CallbackQuery, state: FSMContext, user_language: str
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    user_language: str,
+    container: Container,
 ) -> None:
     """Обработчик возврата в главное меню из меню пользователей"""
     await callback.answer()
@@ -55,4 +58,5 @@ async def back_to_main_menu_from_users_handler(
         callback=callback,
         state=state,
         user_language=user_language,
+        container=container,
     )
