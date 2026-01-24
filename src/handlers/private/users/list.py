@@ -10,7 +10,11 @@ from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
-from keyboards.inline.users import back_to_users_menu_ikb, users_menu_ikb
+from keyboards.inline.users import (
+    back_to_users_menu_ikb,
+    show_tracked_users_ikb,
+    users_menu_ikb,
+)
 from usecases.user_tracking import GetListTrackedUsersUseCase
 from utils.send_message import safe_edit_message
 
@@ -98,8 +102,8 @@ async def _display_tracked_users_page(
         )
 
 
-@router.callback_query(F.data == CallbackData.User.SELECT_USER)
-async def users_list_handler(
+@router.callback_query(F.data == CallbackData.User.SHOW_TRACKED_USERS_LIST)
+async def show_users_list_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
@@ -114,3 +118,51 @@ async def users_list_handler(
         callback.from_user.username or "неизвестно",
     )
     await _display_tracked_users_page(callback, state, container, page=1)
+
+
+@router.callback_query(F.data == CallbackData.User.SELECT_USER)
+async def select_user_handler(
+    callback: CallbackQuery,
+    state: FSMContext,
+    container: Container,
+) -> None:
+    """Обработчик команды для отображения списка пользователей через inline клавиатуру"""
+    await callback.answer()
+
+    logger.info(
+        f"Пользователь {callback.from_user.id} запросил список пользователей для отчета"
+    )
+
+    usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
+    users = await usecase.execute(admin_tgid=str(callback.from_user.id))
+
+    if not users:
+        message_text = (
+            "❗Чтобы получать отчёты по пользователям, "
+            "необходимо добавить пользователя в отслеживаемые"
+        )
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=message_text,
+            reply_markup=users_menu_ikb(),
+        )
+        return
+
+    logger.info(f"Найдено {len(users)} пользователей для отчета")
+
+    # Показываем первую страницу
+    first_page_users = users[:USERS_PAGE_SIZE]
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=f"Всего {len(users)} пользователей",
+        reply_markup=show_tracked_users_ikb(
+            users=first_page_users,
+            page=1,
+            total_count=len(users),
+        ),
+    )
