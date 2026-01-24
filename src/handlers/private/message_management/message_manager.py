@@ -29,7 +29,7 @@ async def message_management_menu_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.MessageManager.INPUT_MESSAGE_LINK,
+        text=Dialog.Messages.INPUT_MESSAGE_LINK,
         reply_markup=send_message_ikb(),
     )
 
