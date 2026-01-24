@@ -15,7 +15,6 @@ from .release_notes import router as release_notes_router
 from .reports import router as reports_router
 from .roles import router as roles_router
 from .scheduler import router as scheduler_router
-from .settings import router as user_settings_router
 from .templates import router as templates_router
 from .users import router as users_router
 
@@ -27,7 +26,6 @@ router.include_router(chats_router)
 router.include_router(reports_router)
 router.include_router(templates_router)
 router.include_router(categories_router)
-router.include_router(user_settings_router)
 router.include_router(message_management_router)
 router.include_router(admin_logs_router)
 router.include_router(admin_logs_pagination_router)
