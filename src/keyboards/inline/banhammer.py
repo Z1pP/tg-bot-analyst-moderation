@@ -39,7 +39,7 @@ def moderation_menu_ikb() -> InlineKeyboardMarkup:
     builder.adjust(1, 2)
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.UserButtons.COME_BACK,
+            text=InlineButtons.User.COME_BACK,
             callback_data=CallbackData.Menu.MAIN_MENU,
         )
     )
