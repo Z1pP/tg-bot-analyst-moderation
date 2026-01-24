@@ -34,11 +34,11 @@ async def message_link_handler(
                 bot=bot,
                 chat_id=message.chat.id,
                 message_id=active_message_id,
-                text=f"{Dialog.MessageManager.INVALID_LINK}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}",
+                text=f"{Dialog.Messages.INVALID_LINK}\n\n{Dialog.Messages.INPUT_MESSAGE_LINK}",
                 reply_markup=send_message_ikb(),
             )
         else:
-            await message.reply(Dialog.MessageManager.INVALID_LINK)
+            await message.reply(Dialog.Messages.INVALID_LINK)
 
         # Удаляем сообщение пользователя со ссылкой
         try:
@@ -68,7 +68,7 @@ async def message_link_handler(
         logger.warning(f"Не удалось удалить сообщение: {e}")
 
     # Редактируем существующее сообщение вместо создания нового
-    text = Dialog.MessageManager.MESSAGE_ACTIONS.format(
+    text = Dialog.Messages.MESSAGE_ACTIONS.format(
         message_id=message_id,
         chat_tgid=chat_tgid,
     )
