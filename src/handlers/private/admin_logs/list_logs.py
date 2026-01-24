@@ -64,6 +64,7 @@ async def admin_logs_handler(
             message_id=callback.message.message_id,
             text=Dialog.AdminLogs.ERROR_GET_ADMINS,
             reply_markup=admin_menu_ikb(
+                user=None,
                 user_language=user_language,
                 admin_tg_id=str(callback.from_user.id),
             ),

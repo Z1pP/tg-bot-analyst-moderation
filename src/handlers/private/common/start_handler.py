@@ -22,6 +22,7 @@ async def start_handler(
     await message.answer(
         text=welcome_text,
         reply_markup=admin_menu_ikb(
+            user=None,
             user_language=user_language,
             admin_tg_id=str(message.from_user.id),
         ),

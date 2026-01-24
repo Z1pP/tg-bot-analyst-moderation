@@ -56,6 +56,7 @@ async def back_to_main_menu_from_message_management_handler(
         message_id=callback.message.message_id,
         text=menu_text,
         reply_markup=admin_menu_ikb(
+            user=None,
             user_language=user_language,
             admin_tg_id=str(callback.from_user.id),
         ),
