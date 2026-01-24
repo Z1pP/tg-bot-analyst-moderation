@@ -4,7 +4,7 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
-from keyboards.inline.menu import admin_menu_ikb
+from keyboards.inline.menu import main_menu_ikb
 from keyboards.inline.message_actions import send_message_ikb
 from states import MenuStates, MessageManagerState
 from utils.send_message import safe_edit_message
@@ -55,7 +55,7 @@ async def back_to_main_menu_from_message_management_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=menu_text,
-        reply_markup=admin_menu_ikb(
+        reply_markup=main_menu_ikb(
             user=None,
             user_language=user_language,
             admin_tg_id=str(callback.from_user.id),

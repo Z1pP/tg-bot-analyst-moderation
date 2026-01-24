@@ -6,7 +6,7 @@ from punq import Container
 
 from constants import Dialog
 from keyboards.inline.chats import chats_management_ikb
-from keyboards.inline.menu import admin_menu_ikb
+from keyboards.inline.menu import main_menu_ikb
 from keyboards.inline.users import hide_notification_ikb
 from services.user import UserService
 from states import MenuStates
@@ -42,7 +42,7 @@ async def show_main_menu(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=Dialog.Menu.MENU_TEXT.format(username=user.username),
-        reply_markup=admin_menu_ikb(
+        reply_markup=main_menu_ikb(
             user=user,
             user_language=user_language,
             admin_tg_id=str(callback.from_user.id),

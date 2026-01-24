@@ -1,5 +1,5 @@
 from .calendar_kb import CalendarKeyboard
-from .menu import admin_menu_ikb
+from .menu import main_menu_ikb
 from .punishments import (
     punishment_action_ikb,
     punishment_next_step_ikb,
@@ -25,7 +25,7 @@ from .users import (
 )
 
 __all__ = [
-    "admin_menu_ikb",
+    "main_menu_ikb",
     "remove_user_inline_kb",
     "users_menu_ikb",
     "back_to_users_menu_ikb",

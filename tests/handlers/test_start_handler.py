@@ -7,7 +7,7 @@ from punq import Container
 
 from constants import Dialog
 from handlers.private.common.start_handler import start_handler
-from keyboards.inline.menu import admin_menu_ikb
+from keyboards.inline.menu import main_menu_ikb
 
 
 @pytest.mark.asyncio
@@ -43,7 +43,7 @@ async def test_start_handler(mock_container: Container) -> None:
 
     # 4. Проверяем результат
     expected_text = Dialog.Menu.MENU_TEXT.format(username=full_name)
-    expected_markup = admin_menu_ikb(
+    expected_markup = main_menu_ikb(
         user_language=user_language, admin_tg_id=str(user_id)
     )
 

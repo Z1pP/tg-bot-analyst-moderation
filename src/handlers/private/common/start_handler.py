@@ -4,7 +4,7 @@ from aiogram.types import Message
 from punq import Container
 
 from constants import Dialog
-from keyboards.inline.menu import admin_menu_ikb
+from keyboards.inline.menu import main_menu_ikb
 
 router = Router(name=__name__)
 
@@ -21,7 +21,7 @@ async def start_handler(
 
     await message.answer(
         text=welcome_text,
-        reply_markup=admin_menu_ikb(
+        reply_markup=main_menu_ikb(
             user=None,
             user_language=user_language,
             admin_tg_id=str(message.from_user.id),

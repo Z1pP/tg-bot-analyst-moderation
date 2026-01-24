@@ -9,7 +9,7 @@ from constants.i18n import DEFAULT_LANGUAGE, get_text
 from dto.user import UserDTO
 
 
-def admin_menu_ikb(
+def main_menu_ikb(
     user: Optional[UserDTO] = None,
     user_language: Optional[str] = None,
     admin_tg_id: Optional[str] = None,
