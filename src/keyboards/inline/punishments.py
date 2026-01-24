@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import InlineButtons
+from constants import Dialog, InlineButtons
 from constants.callback import CallbackData
 
 
@@ -23,10 +23,12 @@ def punishment_setting_ikb() -> InlineKeyboardMarkup:
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            text=InlineButtons.ChatButtons.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
+
+    builder.adjust(2, 1)
 
     return builder.as_markup()
 
@@ -37,28 +39,30 @@ def punishment_action_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text="Предупреждение",
-            callback_data="punish_action_warning",
+            text=Dialog.Punishment.ACTION_WARNING,
+            callback_data=CallbackData.Chat.PUNISH_ACTION_WARNING,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="Мут",
-            callback_data="punish_action_mute",
+            text=Dialog.Punishment.ACTION_MUTE,
+            callback_data=CallbackData.Chat.PUNISH_ACTION_MUTE,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="Бан",
-            callback_data="punish_action_ban",
+            text=Dialog.Punishment.ACTION_BAN,
+            callback_data=CallbackData.Chat.PUNISH_ACTION_BAN,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="❌ Отмена",
-            callback_data="punish_action_cancel",
+            text=InlineButtons.ChatButtons.COME_BACK,
+            callback_data=CallbackData.Chat.PUNISHMENT_SETTING,
         )
     )
+
+    builder.adjust(3, 1)
 
     return builder.as_markup()
 
@@ -69,21 +73,33 @@ def punishment_next_step_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text="➕ Добавить еще",
-            callback_data="punish_step_next",
+            text=Dialog.Punishment.STEP_ADD_MORE,
+            callback_data=CallbackData.Chat.PUNISH_STEP_NEXT,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="✅ Сохранить лестницу",
-            callback_data="punish_step_save",
+            text=Dialog.Punishment.STEP_SAVE_LADDER,
+            callback_data=CallbackData.Chat.PUNISH_STEP_SAVE,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="❌ Отмена",
-            callback_data="punish_step_cancel",
+            text=Dialog.Punishment.STEP_CANCEL,
+            callback_data=CallbackData.Chat.PUNISH_STEP_CANCEL,
         )
     )
 
+    return builder.as_markup()
+
+
+def cancel_punishment_creation_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура отмены создания лестницы наказаний"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=Dialog.Punishment.STEP_CANCEL,
+            callback_data=CallbackData.Chat.PUNISH_STEP_CANCEL,
+        )
+    )
     return builder.as_markup()
