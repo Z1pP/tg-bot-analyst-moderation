@@ -16,13 +16,16 @@ class SetDefaultPunishmentLadderUseCase:
         self._admin_action_log_service = admin_action_log_service
 
     async def execute(
-        self, chat_db_id: int, admin_tg_id: str
+        self, chat_id: int, admin_tgid: str, confirm: bool
     ) -> PunishmentCommandResultDTO:
-        chat = await self._chat_service.get_chat_with_archive(chat_id=chat_db_id)
+        chat = await self._chat_service.get_chat_with_archive(chat_id=chat_id)
         if not chat:
             return PunishmentCommandResultDTO(
                 success=False, error_message="Чат не найден"
             )
+
+        if not confirm:
+            return PunishmentCommandResultDTO(success=True)
 
         chat_tg_id = chat.chat_id
         await self._punishment_ladder_repository.delete_ladder_by_chat_id(
@@ -30,10 +33,10 @@ class SetDefaultPunishmentLadderUseCase:
         )
 
         # Логируем действие администратора
-        chat_title = chat.title if chat else f"ID: {chat_db_id}"
+        chat_title = chat.title if chat else f"ID: {chat_id}"
         details = f"Чат: {chat_title}, Действие: сброс до настроек по умолчанию"
         await self._admin_action_log_service.log_action(
-            admin_tg_id=admin_tg_id,
+            admin_tg_id=admin_tgid,
             action_type=AdminActionType.SET_DEFAULT_PUNISHMENT_LADDER,
             details=details,
         )
