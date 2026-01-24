@@ -10,11 +10,11 @@ from constants.punishment import PunishmentType
 from dto import AmnestyUserDTO
 from exceptions import AmnestyError
 from keyboards.inline.amnesty import confirm_action_ikb
-from keyboards.inline.banhammer import (
+from keyboards.inline.chats import tracked_chats_with_all_ikb
+from keyboards.inline.moderation import (
     amnesty_actions_ikb,
     moderation_menu_ikb,
 )
-from keyboards.inline.chats import tracked_chats_with_all_ikb
 from states import AmnestyStates, ModerationStates
 from usecases.amnesty import (
     CancelLastWarnUseCase,
