@@ -351,8 +351,8 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.COME_BACK,
-            callback_data=CallbackData.Chat.SELECT_CHAT,
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Chat.SELECT_CHAT_FOR_REPORT,
         ),
     )
 
@@ -487,7 +487,7 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Chat.SELECT_CHAT,
-            callback_data=CallbackData.Chat.SELECT_CHAT,
+            callback_data=CallbackData.Chat.SELECT_CHAT_FOR_SETTINGS,
         ),
         InlineKeyboardButton(
             text=InlineButtons.Chat.ADD,
