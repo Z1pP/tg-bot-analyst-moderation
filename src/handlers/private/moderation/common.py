@@ -10,8 +10,8 @@ from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
 from dto.chat_dto import ChatDTO
-from keyboards.inline.banhammer import back_to_block_menu_ikb, moderation_menu_ikb
 from keyboards.inline.chats import tracked_chats_with_all_ikb
+from keyboards.inline.moderation import back_to_block_menu_ikb, moderation_menu_ikb
 from services import UserService
 from states.moderation import ModerationStates
 from usecases.chat import GetChatsForUserActionUseCase

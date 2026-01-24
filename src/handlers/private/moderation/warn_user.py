@@ -6,7 +6,7 @@ from punq import Container
 
 from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
-from keyboards.inline.banhammer import (
+from keyboards.inline.moderation import (
     no_reason_ikb,
 )
 from states import ModerationStates, WarnUserStates

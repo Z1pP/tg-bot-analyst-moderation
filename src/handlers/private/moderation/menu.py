@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.banhammer import moderation_menu_ikb
+from keyboards.inline.moderation import moderation_menu_ikb
 from states import ModerationStates
 from utils.send_message import safe_edit_message
 
