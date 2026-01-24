@@ -85,7 +85,7 @@ def back_to_users_menu_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.User.COME_BACK,
-            callback_data=CallbackData.User.SELECT_USER,
+            callback_data=CallbackData.User.SHOW_MENU,
         )
     )
     return builder.as_markup()
