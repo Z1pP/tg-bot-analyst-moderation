@@ -7,6 +7,7 @@ class ChatStateManager(StatesGroup):
 
     selecting_chat = State()
     selecting_chat_for_report = State()
+    selecting_chat_report_action = State()
 
     selecting_period = State()
     selecting_custom_period = State()
