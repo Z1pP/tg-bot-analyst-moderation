@@ -22,7 +22,8 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == CallbackData.Chat.SELECT_CHAT)
+@router.callback_query(F.data == CallbackData.Chat.SELECT_CHAT_FOR_REPORT)
+@router.callback_query(F.data == CallbackData.Chat.SELECT_CHAT_FOR_SETTINGS)
 async def show_tracked_chats_handler(
     callback: CallbackQuery,
     state: FSMContext,
@@ -44,10 +45,13 @@ async def show_tracked_chats_handler(
         await _show_no_chats_message(callback=callback)
         return
 
-    # Показываем список чатов
-    await _show_chats_list_message(callback=callback, chats=chats)
+    # Устанавливаем состояние выбора чата
+    if callback.data == CallbackData.Chat.SELECT_CHAT_FOR_REPORT:
+        await state.set_state(ChatStateManager.selecting_chat_for_report)
+    else:
+        await state.set_state(ChatStateManager.listing_tracking_chats)
 
-    await state.set_state(ChatStateManager.listing_tracking_chats)
+    await _show_chats_list_message(callback=callback, chats=chats)
 
 
 async def _show_no_chats_message(callback: CallbackQuery) -> None:
