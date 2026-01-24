@@ -7,7 +7,7 @@ from punq import Container
 
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
-from keyboards.inline.chats import remove_chat_ikb, tracked_chats_ikb
+from keyboards.inline.chats import remove_chat_ikb, show_tracked_chats_ikb
 from models import ChatSession
 from usecases.chat import GetTrackedChatsUseCase
 from utils.pagination_handler import BasePaginationHandler
@@ -36,7 +36,7 @@ class ChatsPaginationHandler(BasePaginationHandler):
         page: int,
         total_count: int,
     ) -> InlineKeyboardMarkup:
-        return tracked_chats_ikb(
+        return show_tracked_chats_ikb(
             chats=items,
             page=page,
             total_count=total_count,
