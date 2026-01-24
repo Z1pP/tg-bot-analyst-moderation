@@ -58,7 +58,7 @@ def templates_menu_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.BACK_TO_MESSAGE_MANAGEMENT,
+            text=InlineButtons.Messages.BACK_TO_MESSAGE_MANAGEMENT,
             callback_data="message_management_menu",
         )
     )
