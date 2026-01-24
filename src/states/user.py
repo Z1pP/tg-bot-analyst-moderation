@@ -24,5 +24,4 @@ class UserStateManager(StatesGroup):
     """Состояния для управления пользователями через inline клавиатуру"""
 
     users_menu = State()
-    listing_users = State()
     removing_user = State()
