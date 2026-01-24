@@ -2,7 +2,7 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog, InlineButtons
-from keyboards.inline.banhammer import moderation_menu_ikb
+from keyboards.inline.moderation import moderation_menu_ikb
 from states.moderation import ModerationStates
 from utils.send_message import safe_edit_message
 
