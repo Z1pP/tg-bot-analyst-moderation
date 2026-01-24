@@ -7,13 +7,14 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from handlers.private.chats.punishments.settings import punishment_settings_handler
 from keyboards.inline.chats import (
     chats_management_ikb,
     confirm_set_default_punishments_ikb,
 )
 from usecases.punishment import SetDefaultPunishmentLadderUseCase
 from utils.send_message import safe_edit_message
+
+from .settings import punishment_settings_handler
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
