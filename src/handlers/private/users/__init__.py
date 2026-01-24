@@ -1,7 +1,6 @@
 from aiogram import Router
 
 from .add import router as add_router
-from .back_to_users_menu import router as back_router
 from .delete import router as delete_router
 from .list import router as list_router
 from .menu import router as menu_router
@@ -11,7 +10,6 @@ from .select_specific_user import router as select_specific_router
 
 router = Router(name="users_router")
 router.include_router(menu_router)
-router.include_router(back_router)
 router.include_router(list_router)
 router.include_router(add_router)
 router.include_router(delete_router)
