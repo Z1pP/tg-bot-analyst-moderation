@@ -17,7 +17,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == CallbackData.User.SELECT_USER)
+@router.callback_query(F.data == CallbackData.User.SHOW_MENU)
 async def users_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
