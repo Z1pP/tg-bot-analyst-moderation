@@ -11,7 +11,7 @@ from keyboards.inline.users import remove_user_inline_kb
 from states import UserStateManager
 from utils.pagination_handler import BasePaginationHandler
 
-from .list_tracked_users import get_tracked_users, paginate_users
+from .list import get_tracked_users, paginate_users
 
 router = Router(name=__name__)
 
