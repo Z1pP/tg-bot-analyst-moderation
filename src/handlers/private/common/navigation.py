@@ -9,7 +9,6 @@ from keyboards.inline.chats import chats_management_ikb
 from keyboards.inline.menu import main_menu_ikb
 from keyboards.inline.users import hide_notification_ikb
 from services.user import UserService
-from states import MenuStates
 from utils.send_message import safe_edit_message
 
 logger = logging.getLogger(__name__)
@@ -48,7 +47,6 @@ async def show_main_menu(
             admin_tg_id=str(callback.from_user.id),
         ),
     )
-    await state.set_state(MenuStates.main_menu)
 
 
 async def show_chats_menu(callback: CallbackQuery, state: FSMContext) -> None:
@@ -62,4 +60,3 @@ async def show_chats_menu(callback: CallbackQuery, state: FSMContext) -> None:
         text=Dialog.Chat.SELECT_ACTION,
         reply_markup=chats_management_ikb(),
     )
-    await state.set_state(MenuStates.chats_menu)
