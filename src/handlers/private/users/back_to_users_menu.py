@@ -10,7 +10,7 @@ from usecases.user_tracking import HasTrackedUsersUseCase
 router = Router(name=__name__)
 
 
-@router.callback_query(F.data == CallbackData.User.MENU)
+@router.callback_query(F.data == CallbackData.User.SELECT_USER)
 async def back_to_users_menu_handler(
     callback: types.CallbackQuery, state: FSMContext, container: Container
 ):
