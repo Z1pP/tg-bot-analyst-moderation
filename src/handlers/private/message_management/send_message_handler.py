@@ -39,7 +39,7 @@ async def send_message_button_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.MessageManager.NO_TRACKED_CHATS,
+            text=Dialog.Messages.NO_TRACKED_CHATS,
             reply_markup=send_message_ikb(),
         )
         await state.clear()
@@ -58,7 +58,7 @@ async def send_message_button_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.MessageManager.SELECT_CHAT,
+        text=Dialog.Messages.SELECT_CHAT,
         reply_markup=select_chat_ikb(user_chats_dto.chats),
     )
     await state.set_state(MessageManagerState.waiting_chat_select)
@@ -88,7 +88,7 @@ async def chat_selected_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.MessageManager.INVALID_STATE_DATA,
+            text=Dialog.Messages.INVALID_STATE_DATA,
             reply_markup=send_message_ikb(),
         )
         await state.clear()
@@ -104,7 +104,7 @@ async def chat_selected_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.MessageManager.INVALID_STATE_DATA,
+            text=Dialog.Messages.INVALID_STATE_DATA,
             reply_markup=send_message_ikb(),
         )
         await state.clear()
@@ -116,7 +116,7 @@ async def chat_selected_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.MessageManager.SEND_CONTENT_INPUT,
+        text=Dialog.Messages.SEND_CONTENT_INPUT,
         reply_markup=cancel_send_message_ikb(),
     )
     await state.set_state(MessageManagerState.waiting_send_content)
@@ -138,7 +138,7 @@ async def send_content_handler(
     if not chat_tgid:
         logger.error("Некорректные данные в state: %s", data)
         await message.answer(
-            Dialog.MessageManager.INVALID_STATE_DATA,
+            Dialog.Messages.INVALID_STATE_DATA,
             reply_markup=send_message_ikb(),
         )
         await state.clear()
@@ -156,8 +156,7 @@ async def send_content_handler(
     try:
         await usecase.execute(dto)
         success_text = (
-            f"{Dialog.MessageManager.SEND_SUCCESS}\n\n"
-            f"{Dialog.MessageManager.INPUT_MESSAGE_LINK}"
+            f"{Dialog.Messages.SEND_SUCCESS}\n\n{Dialog.Messages.INPUT_MESSAGE_LINK}"
         )
         await message.answer(
             success_text,
@@ -181,7 +180,7 @@ async def send_content_handler(
             exc_info=True,
         )
         await message.answer(
-            Dialog.MessageManager.REPLY_ERROR,
+            Dialog.Messages.REPLY_ERROR,
             reply_markup=send_message_ikb(),
         )
 
