@@ -98,7 +98,7 @@ async def _display_tracked_users_page(
         )
 
 
-@router.callback_query(F.data == CallbackData.User.SHOW_TRACKED_USERS_LIST)
+@router.callback_query(F.data == CallbackData.User.SELECT_USER)
 async def users_list_handler(
     callback: CallbackQuery,
     state: FSMContext,
