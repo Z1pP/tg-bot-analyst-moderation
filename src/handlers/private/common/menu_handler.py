@@ -18,16 +18,19 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == CallbackData.Menu.MAIN_MENU)
+@router.callback_query(F.data == CallbackData.Menu.SHOW_MENU)
 async def main_menu_callback_handler(
-    callback: CallbackQuery, state: FSMContext, user_language: str
+    callback: CallbackQuery,
+    state: FSMContext,
+    user_language: str,
+    container: Container,
 ) -> None:
     """Обработчик возврата в главное меню через callback"""
     await callback.answer()
-    await show_main_menu(callback, state, user_language)
+    await show_main_menu(callback, state, user_language, container)
 
 
-@router.callback_query(F.data == CallbackData.Menu.USERS_MENU)
+@router.callback_query(F.data == CallbackData.Menu.SHOW_MENU)
 async def users_menu_callback_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
@@ -57,10 +60,8 @@ async def chats_menu_callback_handler(
     await show_chats_menu(callback, state)
 
 
-@router.callback_query(F.data == CallbackData.Menu.MESSAGE_MANAGEMENT)
-async def message_management_callback_handler(
-    callback: CallbackQuery, state: FSMContext
-) -> None:
+@router.callback_query(F.data == CallbackData.Messages.SHOW_MENU)
+async def messages_menu_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик меню управления сообщениями через callback"""
     from constants import Dialog
     from keyboards.inline.message_actions import send_message_ikb
@@ -78,7 +79,7 @@ async def message_management_callback_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.MessageManager.INPUT_MESSAGE_LINK,
+        text=Dialog.Messages.INPUT_MESSAGE_LINK,
         reply_markup=send_message_ikb(),
     )
 
