@@ -82,7 +82,7 @@ class UserCallbackData:
     SHOW_TRACKED_USERS_LIST = "show_tracked_users_list"
     ADD = "add_user"
     REMOVE = "remove_user"
-    MENU = "users_menu"
+    SELECT_USER = "select_user"
     BACK_TO_MAIN_MENU_FROM_USERS = "back_to_main_menu_from_users"
     ALL_USERS = "all_users"
     USERS_PAGE_INFO = "users_page_info"
@@ -110,6 +110,7 @@ class MenuCallbackData:
     ADMIN_LOGS = "admin_logs"
     MAIN_MENU = "main_menu"
     HIDE_NOTIFICATION = "hide_notification"
+    SHOW_MENU = "main_menu"
 
 
 class AdminLogsCallbackData:
@@ -158,7 +159,63 @@ class ModerationCallbackData:
     """Класс для хранения callback данных модерации"""
 
     # Commands
-    MENU = "moderation_menu"
+    SHOW_MENU = "moderation_menu"
+
+
+class AnalyticsCallbackData:
+    """Класс для хранения callback данных аналитики"""
+
+    # Commands
+    SHOW_MENU = "analytics_menu"
+
+
+class MessagesCallbackData:
+    """Класс для хранения callback данных сообщений"""
+
+    # Commands
+    SHOW_MENU = "messages_menu"
+
+
+class UserAndChatsSettingsCallbackData:
+    """Класс для хранения callback данных настроек пользователей и чатов"""
+
+    # Commands
+    SHOW_MENU = "users_chats_settings_menu"
+
+
+class BotSettingsCallbackData:
+    """Класс для хранения callback данных настроек бота"""
+
+    # Commands
+    SHOW_MENU = "bot_settings_menu"
+
+
+class SubscriptionCallbackData:
+    """Класс для хранения callback данных подписки"""
+
+    # Commands
+    SHOW_MENU = "subscription_menu"
+
+
+class RootCallbackData:
+    """Класс для хранения callback данных root"""
+
+    # Commands
+    SHOW_MENU = "root_menu"
+
+
+class HelpCallbackData:
+    """Класс для хранения callback данных помощи"""
+
+    # Commands
+    SHOW_MENU = "help_menu"
+
+
+class NewsCallbackData:
+    """Класс для хранения callback данных новостей"""
+
+    # Commands
+    SHOW_MENU = "news_menu"
 
 
 class CallbackData:
@@ -168,7 +225,15 @@ class CallbackData:
     Report = ReportCallbackData
     User = UserCallbackData
     Menu = MenuCallbackData
-    ModerationMenu = ModerationCallbackData
+    Moderation = ModerationCallbackData
     AdminLogs = AdminLogsCallbackData
     ReleaseNotes = ReleaseNotesCallbackData
     Role = RoleCallbackData
+    Analytics = AnalyticsCallbackData
+    Messages = MessagesCallbackData
+    UserAndChatsSettings = UserAndChatsSettingsCallbackData
+    BotSettings = BotSettingsCallbackData
+    Subscription = SubscriptionCallbackData
+    Root = RootCallbackData
+    Help = HelpCallbackData
+    News = NewsCallbackData
