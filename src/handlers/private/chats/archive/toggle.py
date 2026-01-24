@@ -14,9 +14,8 @@ from keyboards.inline.chats import archive_channel_setting_ikb, chats_management
 from services import ChatService
 from services.messaging import BotMessageService
 from services.report_schedule_service import ReportScheduleService
+from utils.archive import build_schedule_info
 from utils.send_message import safe_edit_message
-
-from .helpers import build_schedule_info
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
