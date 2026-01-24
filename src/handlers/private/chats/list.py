@@ -12,7 +12,7 @@ from dto.chat_dto import ChatDTO
 from keyboards.inline.chats import (
     chat_actions_ikb,
     chats_management_ikb,
-    tracked_chats_ikb,
+    show_tracked_chats_ikb,
 )
 from states import ChatStateManager
 from usecases.chat import GetTrackedChatsUseCase
@@ -78,7 +78,7 @@ async def _show_chats_list_message(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=message_text,
-        reply_markup=tracked_chats_ikb(
+        reply_markup=show_tracked_chats_ikb(
             chats=first_page_chats,
             page=1,
             total_count=total_count,
