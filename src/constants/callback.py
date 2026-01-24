@@ -55,6 +55,8 @@ class ChatCallbackData:
     PREFIX_TEMPLATE_SCOPE = "template_scope__"
     PREFIX_PREV_CHATS_PAGE = "prev_chats_page__"
     PREFIX_NEXT_CHATS_PAGE = "next_chats_page__"
+    PREFIX_PREV_CHATS_REPORT_PAGE = "prev_chats_report_page__"
+    PREFIX_NEXT_CHATS_REPORT_PAGE = "next_chats_report_page__"
     PREFIX_PREV_REMOVE_CHATS_PAGE = "prev_remove_chats_page__"
     PREFIX_NEXT_REMOVE_CHATS_PAGE = "next_remove_chats_page__"
 
