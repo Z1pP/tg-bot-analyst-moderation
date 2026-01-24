@@ -22,6 +22,7 @@ class ChatCallbackData:
     ARCHIVE_TIME_SETTING = "archive_time_setting"
     ARCHIVE_TOGGLE_SCHEDULE = "archive_toggle_schedule"
     BACK_TO_CHAT_ACTIONS = "back_to_chat_actions"
+    BACK_TO_ANALYTICS_CHAT_ACTIONS = "back_to_analytics_chat_actions"
     SHOW_MENU = "chats_menu"
     BACK_TO_MAIN_MENU_FROM_CHATS = "back_to_main_menu_from_chats"
     PUNISHMENT_SETTING = "punishment_setting"
