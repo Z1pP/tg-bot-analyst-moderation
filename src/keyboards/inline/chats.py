@@ -88,7 +88,13 @@ def show_tracked_chats_ikb(
     page: int = 1,
     total_count: int = 0,
     page_size: int = CHATS_PAGE_SIZE,
+    *,
+    back_callback: str = CallbackData.Analytics.SHOW_MENU,
+    show_management_button: bool = True,
+    prev_page_prefix: str = CallbackData.Chat.PREFIX_PREV_CHATS_PAGE,
+    next_page_prefix: str = CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE,
 ) -> InlineKeyboardMarkup:
+    """Клавиатура списка чатов с поддержкой пагинации и контекста."""
     builder = InlineKeyboardBuilder()
 
     # Кнопки чатов
@@ -101,13 +107,13 @@ def show_tracked_chats_ikb(
             )
         )
 
-    # Кнопка перехода в меню управления чатами
-    builder.row(
-        InlineKeyboardButton(
-            text=InlineButtons.Chat.MANAGEMENT,
-            callback_data=CallbackData.Chat.SHOW_MENU,
-        ),
-    )
+    if show_management_button:
+        builder.row(
+            InlineKeyboardButton(
+                text=InlineButtons.Chat.MANAGEMENT,
+                callback_data=CallbackData.Chat.SHOW_MENU,
+            ),
+        )
 
     # Пагинация
     if total_count > page_size:
@@ -118,7 +124,7 @@ def show_tracked_chats_ikb(
             pagination_buttons.append(
                 InlineKeyboardButton(
                     text="◀️",
-                    callback_data=f"{CallbackData.Chat.PREFIX_PREV_CHATS_PAGE}{page}",
+                    callback_data=f"{prev_page_prefix}{page}",
                 )
             )
 
@@ -135,7 +141,7 @@ def show_tracked_chats_ikb(
             pagination_buttons.append(
                 InlineKeyboardButton(
                     text="▶️",
-                    callback_data=f"{CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE}{page}",
+                    callback_data=f"{next_page_prefix}{page}",
                 )
             )
 
@@ -146,7 +152,7 @@ def show_tracked_chats_ikb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.Analytics.SHOW_MENU,
+            callback_data=back_callback,
         ),
     )
 
@@ -352,7 +358,7 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.Chat.SELECT_CHAT_FOR_REPORT,
+            callback_data=CallbackData.Chat.SELECT_CHAT_FOR_SETTINGS,
         ),
     )
 
