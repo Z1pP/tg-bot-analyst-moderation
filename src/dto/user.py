@@ -18,6 +18,7 @@ class UserDTO(BaseModel):
     tg_id: Optional[str] = None
     username: Optional[str] = None
     added_at: Optional[datetime] = None
+    language: Optional[str] = None
 
     @classmethod
     def from_model(cls, user: "User", added_at: Optional[datetime] = None) -> "UserDTO":
@@ -38,4 +39,5 @@ class UserDTO(BaseModel):
             role=user.role,
             is_active=user.is_active,
             added_at=added_at,
+            language=user.language,
         )
