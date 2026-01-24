@@ -8,12 +8,12 @@ from dataclasses import dataclass
 from aiogram.types import InlineKeyboardMarkup
 
 from constants import Dialog
-from handlers.private.chats.archive.helpers import build_schedule_info
 from keyboards.inline.chats import archive_channel_setting_ikb, chats_management_ikb
 from services import ChatService
 from services.messaging import BotMessageService
 from services.permissions import BotPermissionService
 from services.report_schedule_service import ReportScheduleService
+from utils.archive import build_schedule_info
 
 logger = logging.getLogger(__name__)
 
