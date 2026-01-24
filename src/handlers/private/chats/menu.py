@@ -12,7 +12,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT)
+@router.callback_query(F.data == CallbackData.Chat.SHOW_MENU)
 async def show_chats_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
