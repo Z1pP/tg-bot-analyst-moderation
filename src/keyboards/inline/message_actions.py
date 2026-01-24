@@ -2,6 +2,7 @@ from aiogram import types
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import InlineButtons
+from constants.callback import CallbackData
 
 
 def message_action_ikb() -> types.InlineKeyboardMarkup:
@@ -9,18 +10,18 @@ def message_action_ikb() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.DELETE,
-            callback_data="delete_message",
+            text=InlineButtons.Messages.DELETE,
+            callback_data=CallbackData.Messages.DELETE_MESSAGE,
         ),
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.REPLY,
-            callback_data="reply_message",
+            text=InlineButtons.Messages.REPLY,
+            callback_data=CallbackData.Messages.REPLY_MESSAGE,
         ),
     )
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.CANCEL,
-            callback_data="cancel",
+            text=InlineButtons.Messages.CANCEL,
+            callback_data=CallbackData.Messages.CANCEL,
         ),
     )
     return builder.as_markup()
@@ -31,12 +32,12 @@ def confirm_delete_ikb() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.CONFIRM_DELETE,
-            callback_data="delete_message_confirm",
+            text=InlineButtons.Messages.CONFIRM_DELETE,
+            callback_data=CallbackData.Messages.DELETE_MESSAGE_CONFIRM,
         ),
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.CANCEL,
-            callback_data="delete_message_cancel",
+            text=InlineButtons.Messages.CANCEL,
+            callback_data=CallbackData.Messages.DELETE_MESSAGE_CANCEL,
         ),
     )
     return builder.as_markup()
@@ -47,18 +48,18 @@ def send_message_ikb() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.SEND_MESSAGE,
-            callback_data="send_message_to_chat",
+            text=InlineButtons.Messages.SEND_MESSAGE,
+            callback_data=CallbackData.Messages.SEND_MESSAGE_TO_CHAT,
         ),
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.TEMPLATES_MENU,
-            callback_data="templates_menu",
+            text=InlineButtons.Templates.MENU,
+            callback_data=CallbackData.Templates.SHOW_MENU,
         ),
     )
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.User.COME_BACK,
-            callback_data="back_to_main_menu_from_message_management",
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Menu.SHOW_MENU,
         )
     )
     return builder.as_markup()
@@ -69,7 +70,7 @@ def cancel_send_message_ikb() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.CANCEL,
+            text=InlineButtons.Messages.CANCEL,
             callback_data="message_management_menu",
         )
     )
@@ -81,7 +82,7 @@ def cancel_reply_ikb() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.CANCEL,
+            text=InlineButtons.Messages.CANCEL,
             callback_data="cancel_reply_message",
         )
     )
@@ -93,7 +94,7 @@ def hide_template_ikb(message_id: int) -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.HIDE_TEMPLATE,
+            text=InlineButtons.Messages.HIDE_TEMPLATE,
             callback_data=f"hide_template_{message_id}",
         )
     )
@@ -107,7 +108,7 @@ def hide_album_ikb(message_ids: list[int]) -> types.InlineKeyboardMarkup:
     message_ids_str = ",".join(map(str, message_ids))
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.HIDE_ALBUM,
+            text=InlineButtons.Messages.HIDE_ALBUM,
             callback_data=f"hide_album_{message_ids_str}",
         )
     )
