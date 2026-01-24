@@ -123,7 +123,7 @@ def close_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.CANCEL,
+            text=InlineButtons.Messages.CANCEL,
             callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
         )
     )
