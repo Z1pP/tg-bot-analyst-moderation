@@ -16,7 +16,10 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data.startswith(CallbackData.Chat.PREFIX_CHAT))
+@router.callback_query(
+    F.data.startswith(CallbackData.Chat.PREFIX_CHAT),
+    ChatStateManager.listing_tracking_chats,
+)
 async def chat_selected_handler(
     callback: CallbackQuery,
     state: FSMContext,
