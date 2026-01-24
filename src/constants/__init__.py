@@ -122,6 +122,8 @@ class InlineButtons:
         PUNISHMENT_SETTING = "⚖️ Наказания"
         PUNISHMENT_CREATE_NEW = "🆕 Создать новую"
         PUNISHMENT_SET_DEFAULT = "🔄 Установить по умолчанию"
+        CANCEL_SET_DEFAULT = "❌ Нет"
+        CONFIRM_SET_DEFAULT = "✅ Да"
         ANTIBOT_SETTING = "🛡 Антибот"
         ANTIBOT_ENABLE = "🟢 Включить Антибот"
         ANTIBOT_DISABLE = "🛑 Выключить Антибот"
