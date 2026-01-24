@@ -3,9 +3,10 @@ from typing import Optional
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import RELEASE_NOTES_ADMIN_IDS, Dialog, InlineButtons
+from constants import Dialog, InlineButtons
 from constants.callback import CallbackData
-from constants.i18n import DEFAULT_LANGUAGE, get_text
+from constants.enums import UserRole
+from constants.i18n import DEFAULT_LANGUAGE
 from dto.user import UserDTO
 
 
@@ -27,57 +28,92 @@ def main_menu_ikb(
     if user_language is None:
         user_language = DEFAULT_LANGUAGE
 
-    users_menu_text = get_text("USERS_MENU", user_language)
-    release_notes_text = get_text("RELEASE_NOTES", user_language)
+    # users_menu_text = get_text("USERS_MENU", user_language)
+    # release_notes_text = get_text("RELEASE_NOTES", user_language)
 
     builder = InlineKeyboardBuilder()
 
-    builder.row(
-        InlineKeyboardButton(
-            text=users_menu_text,
-            callback_data=CallbackData.Menu.USERS_MENU,
-        ),
-        InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.CHATS_MANAGEMENT,
-            callback_data=CallbackData.Menu.CHATS_MENU,
-        ),
-        width=2,
-    )
+    # builder.row(
+    #     InlineKeyboardButton(
+    #         text=users_menu_text,
+    #         callback_data=CallbackData.Menu.USERS_MENU,
+    #     ),
+    #     InlineKeyboardButton(
+    #         text=InlineButtons.ChatButtons.CHATS_MANAGEMENT,
+    #         callback_data=CallbackData.Menu.CHATS_MENU,
+    #     ),
+    #     width=2,
+    # )
 
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.MessageManager.MESSAGE_MANAGEMENT,
-            callback_data=CallbackData.Menu.MESSAGE_MANAGEMENT,
+            text=Dialog.Analytics.MENU,
+            callback_data=CallbackData.Analytics.SHOW_MENU,
         ),
         InlineKeyboardButton(
-            text=Dialog.ModerationMenu.MODERATION_MENU,
-            callback_data=CallbackData.ModerationMenu.MENU,
+            text=Dialog.Moderation.MENU,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
         ),
-        width=2,
+        InlineKeyboardButton(
+            text=Dialog.Messages.MENU,
+            callback_data=CallbackData.Messages.SHOW_MENU,
+        ),
+        InlineKeyboardButton(
+            text=Dialog.UserAndChatsSettings.MENU,
+            callback_data=CallbackData.UserAndChatsSettings.SHOW_MENU,
+        ),
+        InlineKeyboardButton(
+            text=Dialog.BotSettings.MENU,
+            callback_data=CallbackData.BotSettings.SHOW_MENU,
+        ),
+        InlineKeyboardButton(
+            text=Dialog.Subscription.MENU,
+            callback_data=CallbackData.Subscription.SHOW_MENU,
+        ),
+        InlineKeyboardButton(
+            text=Dialog.Help.MENU,
+            callback_data=CallbackData.Help.SHOW_MENU,
+        ),
+        InlineKeyboardButton(
+            text=Dialog.News.MENU,
+            callback_data=CallbackData.News.SHOW_MENU,
+        ),
     )
 
-    # Добавляем кнопку для просмотра логов действий администраторов
-    # (только для авторизованных пользователей)
-    release_admin_id = user.tg_id if user else admin_tg_id
-    if release_admin_id and release_admin_id in RELEASE_NOTES_ADMIN_IDS:
+    if user.role in (UserRole.ROOT, UserRole.DEV):
         builder.row(
             InlineKeyboardButton(
-                text=Dialog.AdminLogs.ADMIN_LOGS,
-                callback_data=CallbackData.AdminLogs.MENU,
+                text=Dialog.Root.MENU,
+                callback_data=CallbackData.Root.SHOW_MENU,
             ),
-            InlineKeyboardButton(
-                text=Dialog.Roles.MENU,
-                callback_data=CallbackData.Role.INPUT_USER_DATA,
-            ),
-            width=2,
         )
 
-    builder.row(
-        InlineKeyboardButton(
-            text=release_notes_text,
-            callback_data=CallbackData.ReleaseNotes.MENU,
-        ),
-    )
+        builder.adjust(1, 2, 1, 1, 1, 2, 1)
+    else:
+        builder.adjust(1, 2, 1, 1, 1, 2)
+
+    # # Добавляем кнопку для просмотра логов действий администраторов
+    # # (только для авторизованных пользователей)
+    # release_admin_id = user.tg_id if user else admin_tg_id
+    # if release_admin_id and release_admin_id in RELEASE_NOTES_ADMIN_IDS:
+    #     builder.row(
+    #         InlineKeyboardButton(
+    #             text=Dialog.AdminLogs.ADMIN_LOGS,
+    #             callback_data=CallbackData.AdminLogs.MENU,
+    #         ),
+    #         InlineKeyboardButton(
+    #             text=Dialog.Roles.MENU,
+    #             callback_data=CallbackData.Role.INPUT_USER_DATA,
+    #         ),
+    #         width=2,
+    #     )
+
+    # builder.row(
+    #     InlineKeyboardButton(
+    #         text=release_notes_text,
+    #         callback_data=CallbackData.ReleaseNotes.MENU,
+    #     ),
+    # )
 
     return builder.as_markup()
 
