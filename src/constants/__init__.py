@@ -1,19 +1,27 @@
 from .dialogs import (
     AdminLogsDialogs,
     AmnestyUserDialogs,
+    AnalyticsDialogs,
     AntibotDialogs,
     BanUserDialogs,
+    BotSettingsDialogs,
     CalendarDialogs,
     ChatDialogs,
+    CommonDialogs,
+    HelpDialogs,
     MenuDialogs,
     MessageManagerDialogs,
     ModerationMenuDialogs,
+    NewsDialogs,
     PunishmentDialogs,
     RatingDialogs,
     ReleaseNotesDialogs,
     ReportDialogs,
     RolesDialogs,
+    RootDialogs,
+    SubscriptionDialogs,
     TemplateDialogs,
+    UserAndChatsSettingsDialogs,
     UserDialogs,
     UserTrackingDialogs,
     WarnUserDialogs,
@@ -182,10 +190,12 @@ class InlineButtons:
 
 
 class Dialog:
+    # Common
+    Common = CommonDialogs
     # User Tracking
     UserTracking = UserTrackingDialogs
     # Moderation User
-    ModerationMenu = ModerationMenuDialogs
+    Moderation = ModerationMenuDialogs
     # Ban User
     BanUser = BanUserDialogs
     # Warn User
@@ -193,7 +203,7 @@ class Dialog:
     # Amnesty User
     AmnestyUser = AmnestyUserDialogs
     # Message Management
-    MessageManager = MessageManagerDialogs
+    Messages = MessageManagerDialogs
     # Reports
     Report = ReportDialogs
     # Users
@@ -218,3 +228,17 @@ class Dialog:
     Rating = RatingDialogs
     # Punishments
     Punishment = PunishmentDialogs
+    # Analytics
+    Analytics = AnalyticsDialogs
+    # User and Chats Settings
+    UserAndChatsSettings = UserAndChatsSettingsDialogs
+    # Bot Settings
+    BotSettings = BotSettingsDialogs
+    # Subscription
+    Subscription = SubscriptionDialogs
+    # Root
+    Root = RootDialogs
+    # Help
+    Help = HelpDialogs
+    # News
+    News = NewsDialogs
