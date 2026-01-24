@@ -32,7 +32,7 @@ async def message_action_select_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.MessageManager.DELETE_CONFIRM,
+            text=Dialog.Messages.DELETE_CONFIRM,
             reply_markup=confirm_delete_ikb(),
         )
         await state.set_state(MessageManagerState.waiting_delete_confirm)
@@ -45,7 +45,7 @@ async def message_action_select_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.MessageManager.REPLY_INPUT,
+            text=Dialog.Messages.REPLY_INPUT,
             reply_markup=cancel_reply_ikb(),
         )
         await state.set_state(MessageManagerState.waiting_reply_message)
@@ -57,7 +57,7 @@ async def message_action_select_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=f"{Dialog.MessageManager.ACTION_CANCELLED}\n\n{Dialog.MessageManager.INPUT_MESSAGE_LINK}",
+            text=f"{Dialog.Messages.ACTION_CANCELLED}\n\n{Dialog.Messages.INPUT_MESSAGE_LINK}",
             reply_markup=send_message_ikb(),
         )
         # Сохраняем message_id для последующего редактирования
@@ -90,7 +90,7 @@ async def cancel_reply_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.MessageManager.INPUT_MESSAGE_LINK,
+            text=Dialog.Messages.INPUT_MESSAGE_LINK,
             reply_markup=send_message_ikb(),
         )
         await state.update_data(active_message_id=callback.message.message_id)
@@ -102,7 +102,7 @@ async def cancel_reply_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.MessageManager.MESSAGE_ACTIONS.format(
+        text=Dialog.Messages.MESSAGE_ACTIONS.format(
             message_id=message_id,
             chat_tgid=chat_tgid,
         ),
