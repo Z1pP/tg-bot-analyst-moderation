@@ -23,7 +23,7 @@ async def back_to_block_menu_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.ModerationMenu.SELECT_ACTION,
+        text=Dialog.Moderation.SELECT_ACTION,
         reply_markup=moderation_menu_ikb(),
     )
 
