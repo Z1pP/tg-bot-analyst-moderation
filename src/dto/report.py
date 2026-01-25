@@ -33,8 +33,11 @@ class UserDayStats(BaseModel):
 
     first_message_time: Optional[datetime]
     first_reaction_time: Optional[datetime]
+    last_message_time: Optional[datetime] = None
     avg_messages_per_hour: float
     total_messages: int
+    warns_count: int = 0
+    bans_count: int = 0
 
     model_config = ConfigDict(frozen=True)
 
@@ -44,9 +47,12 @@ class UserMultiDayStats(BaseModel):
 
     avg_first_message_time: Optional[str]  # "HH:MM"
     avg_first_reaction_time: Optional[str]
+    avg_last_message_time: Optional[str] = None
     avg_messages_per_hour: float
     avg_messages_per_day: float
     total_messages: int
+    warns_count: int = 0
+    bans_count: int = 0
 
     model_config = ConfigDict(frozen=True)
 
@@ -72,6 +78,7 @@ class UserStatsDTO(BaseModel):
     multi_day_stats: Optional[UserMultiDayStats]  # для многодневного
     replies_stats: RepliesStats
     breaks: List[str]  # уже отформатированные строки из BreakAnalysisService
+    total_break_time: Optional[str] = None
 
     model_config = ConfigDict(frozen=True)
 
