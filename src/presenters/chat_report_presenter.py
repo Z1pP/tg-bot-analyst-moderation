@@ -11,7 +11,7 @@ from dto.report import (
 from utils.formatter import format_seconds, format_selected_period
 
 
-class ReportPresenter:
+class ChatReportPresenter:
     """Класс для форматирования данных отчета в HTML строки"""
 
     @staticmethod
@@ -42,7 +42,7 @@ class ReportPresenter:
 
         user_reports = []
         for user_stats in result.users_stats:
-            user_report = ReportPresenter.format_user_stats(
+            user_report = ChatReportPresenter.format_user_stats(
                 user_stats, result.is_single_day
             )
             user_reports.append(user_report)
@@ -54,7 +54,7 @@ class ReportPresenter:
 
         full_report = f"{header}{report_body}"
 
-        return ReportPresenter._split_report(full_report)
+        return ChatReportPresenter._split_report(full_report)
 
     @staticmethod
     def format_user_stats(stats: UserStatsDTO, is_single_day: bool) -> str:
@@ -71,17 +71,21 @@ class ReportPresenter:
         parts = [f"@{stats.username}:"]
 
         if is_single_day and stats.day_stats:
-            parts.append(ReportPresenter._format_day_stats(stats.day_stats))
+            parts.append(ChatReportPresenter._format_day_stats(stats.day_stats))
         elif not is_single_day and stats.multi_day_stats:
-            parts.append(ReportPresenter._format_multi_day_stats(stats.multi_day_stats))
+            parts.append(
+                ChatReportPresenter._format_multi_day_stats(stats.multi_day_stats)
+            )
 
-        parts.append(ReportPresenter._format_replies_stats(stats.replies_stats))
+        parts.append(ChatReportPresenter._format_replies_stats(stats.replies_stats))
 
         if stats.breaks:
             if is_single_day:
-                parts.append(ReportPresenter._format_breaks_single_day(stats.breaks))
+                parts.append(
+                    ChatReportPresenter._format_breaks_single_day(stats.breaks)
+                )
             else:
-                parts.append(ReportPresenter._format_breaks_multiday(stats.breaks))
+                parts.append(ChatReportPresenter._format_breaks_multiday(stats.breaks))
         else:
             if is_single_day:
                 parts.append("<b>⏸️ Перерывы:</b> отсутствуют")
