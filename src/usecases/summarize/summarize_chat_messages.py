@@ -3,7 +3,7 @@ from datetime import datetime
 
 from config import settings
 from constants.enums import AdminActionType, SummaryType
-from repositories import ChatRepository, MessageRepository
+from repositories import ChatRepository, MessageRepository, UserTrackingRepository
 from services import AdminActionLogService
 from services.caching import ICache
 from services.chat.summarize import IAIService
@@ -17,12 +17,14 @@ class GetChatSummaryUseCase:
         self,
         msg_repository: MessageRepository,
         chat_repository: ChatRepository,
+        user_tracking_repository: UserTrackingRepository,
         ai_service: IAIService,
         admin_action_log_service: AdminActionLogService,
         cache: ICache,
     ) -> None:
         self._msg_repo = msg_repository
         self._chat_repo = chat_repository
+        self._user_tracking_repo = user_tracking_repository
         self._ai_service = ai_service
         self._admin_action_log_service = admin_action_log_service
         self._cache = cache
@@ -66,8 +68,19 @@ class GetChatSummaryUseCase:
         if not formatted_text:
             return "Нет сообщений для сводки."
 
+        # Получаем отслеживаемых пользователей
+        tracked_users = await self._user_tracking_repo.get_tracked_users_by_admin(
+            admin_tgid=admin_tg_id
+        )
+        tracked_usernames = [
+            f"@{u.username}" if u.username else f"ID:{u.tg_id}" for u in tracked_users
+        ]
+
         summary = await self._ai_service.summarize_text(
-            text=formatted_text, msg_count=real_count, summary_type=summary_type
+            text=formatted_text,
+            msg_count=real_count,
+            summary_type=summary_type,
+            tracked_users=tracked_usernames,
         )
 
         # Сохраняем в кеш
