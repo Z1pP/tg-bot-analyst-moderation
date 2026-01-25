@@ -11,6 +11,7 @@ from keyboards.inline.message_actions import (
 )
 from states.message_management import MessageManagerState
 from utils.send_message import safe_edit_message
+
 from .ui import show_message_actions_menu, show_message_management_menu
 
 router = Router()
@@ -70,7 +71,7 @@ async def select_action_handler(
 
 
 @router.callback_query(
-    CallbackData.Messages.CANCEL_REPLY,
+    F.data == CallbackData.Messages.CANCEL_REPLY,
     MessageManagerState.waiting_reply_message,
 )
 async def cancel_reply_handler(
