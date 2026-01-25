@@ -23,6 +23,7 @@ from repositories import (
     MessageReactionRepository,
     MessageReplyRepository,
     MessageRepository,
+    PunishmentRepository,
     UserRepository,
 )
 from services import AdminActionLogService, BotPermissionService
@@ -62,6 +63,7 @@ class GetChatReportUseCase:
         message_repository: MessageRepository,
         reaction_repository: MessageReactionRepository,
         msg_reply_repository: MessageReplyRepository,
+        punishment_repository: PunishmentRepository,
         bot_permission_service: BotPermissionService = None,
         admin_action_log_service: AdminActionLogService = None,
     ) -> None:
@@ -70,6 +72,7 @@ class GetChatReportUseCase:
         self._message_repository = message_repository
         self._reaction_repository = reaction_repository
         self._msg_reply_repository = msg_reply_repository
+        self._punishment_repository = punishment_repository
         self._bot_permission_service = bot_permission_service
         self._admin_action_log_service = admin_action_log_service
 
@@ -331,16 +334,30 @@ class GetChatReportUseCase:
 
         # Создаем UserStatsDTO для каждого пользователя
         users_stats = []
+        # Получаем статистику наказаний для всех отслеживаемых пользователей разом
+        punishment_stats = (
+            await self._punishment_repository.get_punishment_counts_by_moderators(
+                moderator_ids=list(users_data.keys()),
+                start_date=start_date,
+                end_date=end_date,
+            )
+        )
+
         for user_id, stats in users_data.items():
             if not stats["messages"] and not stats["reactions"]:
                 continue
 
             username = user_names.get(user_id, f"user_{user_id}")
+            user_punishments = punishment_stats.get(user_id, {"warns": 0, "bans": 0})
 
             # Рассчитываем статистику
             if is_single_day:
                 day_stats = self._calculate_single_day_stats(
-                    stats["messages"], stats["reactions"], working_hours
+                    stats["messages"],
+                    stats["reactions"],
+                    working_hours,
+                    warns_count=user_punishments["warns"],
+                    bans_count=user_punishments["bans"],
                 )
                 multi_day_stats = None
             else:
@@ -351,6 +368,8 @@ class GetChatReportUseCase:
                     start_date,
                     end_date,
                     working_hours,
+                    warns_count=user_punishments["warns"],
+                    bans_count=user_punishments["bans"],
                 )
 
             replies_stats = self._calculate_replies_stats(stats["replies"])
@@ -363,6 +382,13 @@ class GetChatReportUseCase:
                 breaks_time,
             )
 
+            # Извлекаем общее время перерыва из первой строки, если оно там есть
+            total_break_time = None
+            if breaks and "общее время перерыва" in breaks[0]:
+                total_break_time = (
+                    breaks[0].split(" - ")[0].replace("<b>", "").replace("</b>", "")
+                )
+
             users_stats.append(
                 UserStatsDTO(
                     user_id=user_id,
@@ -371,6 +397,7 @@ class GetChatReportUseCase:
                     multi_day_stats=multi_day_stats,
                     replies_stats=replies_stats,
                     breaks=breaks,
+                    total_break_time=total_break_time,
                 )
             )
 
@@ -381,15 +408,21 @@ class GetChatReportUseCase:
         messages: List[ChatMessage],
         reactions: List[MessageReaction],
         working_hours: float,
+        warns_count: int = 0,
+        bans_count: int = 0,
     ) -> UserDayStats:
         """Рассчитывает статистику за один день"""
         first_message_time = None
         first_reaction_time = None
+        last_message_time = None
 
         if messages:
             # Используем _get_local_time для конвертации без мутации
             first_msg = min(messages, key=lambda m: self._get_local_time(m))
             first_message_time = self._get_local_time(first_msg)
+
+            last_msg = max(messages, key=lambda m: self._get_local_time(m))
+            last_message_time = self._get_local_time(last_msg)
 
         if reactions:
             first_reaction = min(reactions, key=lambda r: self._get_local_time(r))
@@ -401,8 +434,11 @@ class GetChatReportUseCase:
         return UserDayStats(
             first_message_time=first_message_time,
             first_reaction_time=first_reaction_time,
+            last_message_time=last_message_time,
             avg_messages_per_hour=avg_per_hour,
             total_messages=msg_count,
+            warns_count=warns_count,
+            bans_count=bans_count,
         )
 
     def _calculate_multi_day_stats(
@@ -412,13 +448,17 @@ class GetChatReportUseCase:
         start_date: datetime,
         end_date: datetime,
         working_hours: float,
+        warns_count: int = 0,
+        bans_count: int = 0,
     ) -> UserMultiDayStats:
         """Рассчитывает статистику за несколько дней"""
         avg_first_message_time = None
         avg_first_reaction_time = None
+        avg_last_message_time = None
 
         if messages:
             avg_first_message_time = self._calculate_avg_daily_start_time(messages)
+            avg_last_message_time = self._calculate_avg_daily_end_time(messages)
 
         if reactions:
             avg_first_reaction_time = self._calculate_avg_daily_start_time(reactions)
@@ -432,9 +472,12 @@ class GetChatReportUseCase:
         return UserMultiDayStats(
             avg_first_message_time=avg_first_message_time,
             avg_first_reaction_time=avg_first_reaction_time,
+            avg_last_message_time=avg_last_message_time,
             avg_messages_per_hour=avg_per_hour,
             avg_messages_per_day=avg_per_day,
             total_messages=msg_count,
+            warns_count=warns_count,
+            bans_count=bans_count,
         )
 
     def _calculate_avg_daily_start_time(self, items: List[Any]) -> Optional[str]:
@@ -460,6 +503,32 @@ class GetChatReportUseCase:
             return None
 
         avg_seconds = int(mean(first_times_seconds))
+        hours = avg_seconds // 3600
+        minutes = (avg_seconds % 3600) // 60
+        return f"{hours:02d}:{minutes:02d}"
+
+    def _calculate_avg_daily_end_time(self, items: List[Any]) -> Optional[str]:
+        """
+        Метод для расчета среднего времени последнего действия за день.
+        """
+        if not items:
+            return None
+
+        daily_lasts = defaultdict(list)
+        for item in items:
+            local_time = self._get_local_time(item)
+            daily_lasts[local_time.date()].append(local_time)
+
+        last_times_seconds = []
+        for dates_times in daily_lasts.values():
+            max_time = max(dates_times).time()
+            seconds = max_time.hour * 3600 + max_time.minute * 60 + max_time.second
+            last_times_seconds.append(seconds)
+
+        if not last_times_seconds:
+            return None
+
+        avg_seconds = int(mean(last_times_seconds))
         hours = avg_seconds // 3600
         minutes = (avg_seconds % 3600) // 60
         return f"{hours:02d}:{minutes:02d}"
@@ -513,14 +582,14 @@ class GetChatReportUseCase:
             )
             return breaks
         else:
-            # Для многодневного отчета возвращаем одну строку со средним временем
-            avg_time = BreakAnalysisService.avg_breaks_time(
+            # Для многодневного отчета считаем среднее общее время перерыва за день
+            daily_totals = BreakAnalysisService.total_breaks_time_per_day(
                 messages, reactions, min_break_minutes=breaks_time
             )
-            if avg_time:
-                return [
-                    f"Перерывы:\n• <b>{avg_time}</b> — средн.время перерыва между сообщ. и реакциями"
-                ]
+            if daily_totals:
+                avg_total = mean(daily_totals)
+                formatted_avg = BreakAnalysisService._format_break_time(avg_total)
+                return [f"<b>{formatted_avg}</b> - общее время перерыва за день"]
             return []
 
     def _is_single_day_report(
