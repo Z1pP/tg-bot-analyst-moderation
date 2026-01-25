@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(
-    MessageManagerState.waiting_delete_confirm,
+    MessageManagerState.waiting_confirm,
     F.data.in_(["delete_message_confirm", "delete_message_cancel"]),
 )
 async def message_delete_confirm_handler(

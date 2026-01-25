@@ -35,7 +35,7 @@ async def message_action_select_handler(
             text=Dialog.Messages.DELETE_CONFIRM,
             reply_markup=confirm_delete_ikb(),
         )
-        await state.set_state(MessageManagerState.waiting_delete_confirm)
+        await state.set_state(MessageManagerState.waiting_confirm)
         logger.info("Админ %s запросил удаление сообщения", callback.from_user.id)
 
     elif callback.data == "reply_message":
