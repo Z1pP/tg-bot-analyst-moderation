@@ -34,6 +34,11 @@ async def send_message_to_chat_handler(
     user_chats_dto = await usecase.execute(tg_id=str(callback.from_user.id))
 
     if not user_chats_dto.chats:
+        logger.info(
+            "Админ %s пытается отправить сообщение без отслеживаемых чатов",
+            callback.from_user.username,
+        )
+
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
@@ -42,16 +47,14 @@ async def send_message_to_chat_handler(
             reply_markup=send_message_ikb(),
         )
         await state.clear()
-        logger.warning(
-            "Админ %s пытается отправить сообщение без отслеживаемых чатов",
-            callback.from_user.username,
-        )
         return
 
     # Сохраняем список чатов в state
     await state.update_data(
         user_chats=[chat.model_dump(mode="json") for chat in user_chats_dto.chats]
     )
+
+    logger.info("Админ %s выбирает чат для отправки сообщения", callback.from_user.id)
 
     await safe_edit_message(
         bot=callback.bot,
@@ -61,7 +64,6 @@ async def send_message_to_chat_handler(
         reply_markup=select_chat_ikb(user_chats_dto.chats),
     )
     await state.set_state(MessageManagerState.waiting_chat_select)
-    logger.info("Админ %s выбирает чат для отправки сообщения", callback.from_user.id)
 
 
 @router.callback_query(
@@ -182,5 +184,6 @@ async def send_content_handler(
             Dialog.Messages.REPLY_ERROR,
             reply_markup=send_message_ikb(),
         )
-
-    await state.set_state(MessageManagerState.waiting_message_link)
+    finally:
+        await message.delete()
+        await state.set_state(MessageManagerState.waiting_message_link)
