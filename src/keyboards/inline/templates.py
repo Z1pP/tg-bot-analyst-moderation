@@ -4,6 +4,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import InlineButtons
+from constants.callback import CallbackData
 from constants.pagination import TEMPLATES_PAGE_SIZE
 from models import MessageTemplate
 
@@ -59,7 +60,7 @@ def templates_menu_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data="message_management_menu",
+            callback_data=CallbackData.Messages.SHOW_MENU,
         )
     )
 
