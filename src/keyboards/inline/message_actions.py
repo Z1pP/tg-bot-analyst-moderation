@@ -71,7 +71,7 @@ def cancel_send_message_ikb() -> types.InlineKeyboardMarkup:
     builder.row(
         types.InlineKeyboardButton(
             text=InlineButtons.Messages.CANCEL,
-            callback_data="message_management_menu",
+            callback_data=CallbackData.Messages.SHOW_MENU,
         )
     )
     return builder.as_markup()
@@ -83,7 +83,7 @@ def cancel_reply_ikb() -> types.InlineKeyboardMarkup:
     builder.row(
         types.InlineKeyboardButton(
             text=InlineButtons.Messages.CANCEL,
-            callback_data="cancel_reply_message",
+            callback_data=CallbackData.Messages.CANCEL_REPLY,
         )
     )
     return builder.as_markup()
