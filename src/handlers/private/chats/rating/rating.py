@@ -77,7 +77,7 @@ async def process_period_selection_callback(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.Report.SELECT_START_DATE,
+            text=Dialog.Calendar.SELECT_START_DATE,
             reply_markup=calendar_kb,
         )
         return
