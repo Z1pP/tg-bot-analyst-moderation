@@ -261,8 +261,6 @@ async def _render_report_view(
 
     # Объединяем все части отчета в один текст
     full_report = "\n\n".join(report_parts)
-    if not result.is_single_day:
-        full_report = f"{full_report}{Dialog.Report.CONTINUE_SELECT_PERIOD}"
 
     await safe_edit_message(
         bot=callback.bot,
