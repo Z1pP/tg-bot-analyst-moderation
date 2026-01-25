@@ -114,6 +114,40 @@ class BreakAnalysisService:
         return format_seconds(int(avg_break_seconds))
 
     @classmethod
+    def total_breaks_time_per_day(
+        cls,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        min_break_minutes: int = BREAK_TIME,
+    ) -> List[float]:
+        """Возвращает список общего времени перерывов за каждый день в минутах."""
+        activities = cls._merge_activities(messages, reactions)
+
+        if len(activities) < 2:
+            return []
+
+        activities_by_date = {}
+        for activity_time, _ in activities:
+            local_time = TimeZoneService.convert_to_local_time(activity_time)
+            date_key = local_time.date()
+            if date_key not in activities_by_date:
+                activities_by_date[date_key] = []
+            activities_by_date[date_key].append(local_time)
+
+        daily_totals = []
+        for _, day_activities in sorted(activities_by_date.items()):
+            day_activities.sort()
+            day_total = 0
+            for i in range(1, len(day_activities)):
+                diff = (day_activities[i] - day_activities[i - 1]).total_seconds() / 60
+                if diff >= min_break_minutes:
+                    day_total += diff
+            if day_total > 0:
+                daily_totals.append(day_total)
+
+        return daily_totals
+
+    @classmethod
     def _merge_activities(
         cls, messages: List[ChatMessage], reactions: List[MessageReaction]
     ) -> List[Tuple[datetime, str]]:
