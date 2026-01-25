@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 from punq import Container
 
 from constants import Dialog
+from constants.callback import CallbackData
 from dto.chat_dto import ChatDTO
 from dto.message_action import SendMessageDTO
 from exceptions.moderation import MessageSendError
@@ -19,20 +20,18 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == "send_message_to_chat")
-async def send_message_button_handler(
-    callback: types.CallbackQuery, state: FSMContext, container: Container
+@router.callback_query(F.data == CallbackData.Messages.SEND_MESSAGE_TO_CHAT)
+async def send_message_to_chat_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    container: Container,
 ) -> None:
     """Обработчик нажатия кнопки отправки сообщения."""
     await callback.answer()
 
     # Получаем отслеживаемые чаты
-    tracked_chats_usecase: GetUserTrackedChatsUseCase = container.resolve(
-        GetUserTrackedChatsUseCase
-    )
-    user_chats_dto = await tracked_chats_usecase.execute(
-        tg_id=str(callback.from_user.id)
-    )
+    usecase: GetUserTrackedChatsUseCase = container.resolve(GetUserTrackedChatsUseCase)
+    user_chats_dto = await usecase.execute(tg_id=str(callback.from_user.id))
 
     if not user_chats_dto.chats:
         await safe_edit_message(
@@ -151,10 +150,10 @@ async def send_content_handler(
         admin_message_id=message.message_id,
     )
 
-    usecase: SendMessageToChatUseCase = container.resolve(SendMessageToChatUseCase)
-
     try:
+        usecase: SendMessageToChatUseCase = container.resolve(SendMessageToChatUseCase)
         await usecase.execute(dto)
+
         success_text = (
             f"{Dialog.Messages.SEND_SUCCESS}\n\n{Dialog.Messages.INPUT_MESSAGE_LINK}"
         )
