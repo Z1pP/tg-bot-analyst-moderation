@@ -158,7 +158,7 @@ async def send_content_handler(
             f"{Dialog.Messages.SEND_SUCCESS}\n\n{Dialog.Messages.INPUT_MESSAGE_LINK}"
         )
         await message.answer(
-            success_text,
+            text=success_text,
             reply_markup=send_message_ikb(),
         )
         logger.info(
