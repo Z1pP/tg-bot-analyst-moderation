@@ -16,6 +16,8 @@ from usecases.admin_actions import SendMessageToChatUseCase
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from utils.send_message import safe_edit_message
 
+from .ui import show_message_management_menu
+
 router = Router()
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,7 @@ async def start_send_handler(
         text=Dialog.Messages.SELECT_CHAT,
         reply_markup=select_chat_ikb(user_chats_dto.chats),
     )
+    await state.update_data(active_message_id=callback.message.message_id)
     await state.set_state(MessageManagerState.waiting_chat_select)
 
 
@@ -91,7 +94,10 @@ async def select_chat_handler(
         await state.clear()
         return
 
-    await state.update_data(chat_tgid=selected_chat.chat_id)
+    await state.update_data(
+        chat_tgid=selected_chat.chat_id,
+        active_message_id=callback.message.message_id,
+    )
 
     await safe_edit_message(
         bot=callback.bot,
@@ -117,15 +123,29 @@ async def process_content_handler(
     """Обработчик получения контента для отправки в чат."""
     data = await state.get_data()
     chat_tgid = data.get("chat_tgid")
+    active_message_id = data.get("active_message_id")
 
-    if not chat_tgid:
+    if not chat_tgid or not active_message_id:
         logger.error("Некорректные данные в state: %s", data)
-        await message.answer(
-            Dialog.Messages.INVALID_STATE_DATA,
-            reply_markup=send_message_ikb(),
-        )
-        await state.clear()
-        await message.delete()
+        if active_message_id:
+            await show_message_management_menu(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                state=state,
+                text_prefix=Dialog.Messages.INVALID_STATE_DATA,
+            )
+        else:
+            await message.answer(
+                Dialog.Messages.INVALID_STATE_DATA,
+                reply_markup=send_message_ikb(),
+            )
+            await state.clear()
+
+        try:
+            await message.delete()
+        except Exception as e:
+            logger.warning("Не удалось удалить сообщение пользователя: %s", e)
         return
 
     dto = SendMessageDTO(
@@ -139,25 +159,26 @@ async def process_content_handler(
         usecase: SendMessageToChatUseCase = container.resolve(SendMessageToChatUseCase)
         await usecase.execute(dto)
 
-        success_text = (
-            f"{Dialog.Messages.SEND_SUCCESS}\n\n{Dialog.Messages.INPUT_MESSAGE_LINK}"
-        )
-        await message.answer(
-            text=success_text,
-            reply_markup=send_message_ikb(),
+        await show_message_management_menu(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            state=state,
+            text_prefix=Dialog.Messages.SEND_SUCCESS,
         )
         logger.info(
             "Админ %s отправил сообщение в чат %s",
             message.from_user.id,
             chat_tgid,
         )
-        await state.set_state(MessageManagerState.waiting_message_link)
     except MessageSendError as e:
-        await message.answer(
-            e.get_user_message(),
-            reply_markup=send_message_ikb(),
+        await show_message_management_menu(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            state=state,
+            text_prefix=e.get_user_message(),
         )
-        await state.clear()
     except Exception as e:
         logger.error(
             "Ошибка отправки сообщения в чат %s: %s",
@@ -165,10 +186,15 @@ async def process_content_handler(
             e,
             exc_info=True,
         )
-        await message.answer(
-            Dialog.Messages.REPLY_ERROR,
-            reply_markup=send_message_ikb(),
+        await show_message_management_menu(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=active_message_id,
+            state=state,
+            text_prefix=Dialog.Messages.REPLY_ERROR,
         )
-        await state.clear()
     finally:
-        await message.delete()
+        try:
+            await message.delete()
+        except Exception as e:
+            logger.warning("Не удалось удалить сообщение пользователя: %s", e)
