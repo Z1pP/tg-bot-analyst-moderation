@@ -171,13 +171,15 @@ class MessagesCallbackData:
     """Класс для хранения callback данных сообщений"""
 
     # Commands
-    SHOW_MENU = "messages_menu"
+    SHOW_MENU = "message_management_menu"
     DELETE_MESSAGE = "delete_message"
     REPLY_MESSAGE = "reply_message"
     CANCEL = "cancel"
+    CANCEL_REPLY = "cancel_reply_message"
     DELETE_MESSAGE_CONFIRM = "delete_message_confirm"
     DELETE_MESSAGE_CANCEL = "delete_message_cancel"
     SEND_MESSAGE_TO_CHAT = "send_message_to_chat"
+    PREFIX_SELECT_CHAT = "select_chat_"
 
 
 class UserAndChatsSettingsCallbackData:
