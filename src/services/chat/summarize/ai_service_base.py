@@ -11,6 +11,10 @@ class IAIService(ABC):
 
     @abstractmethod
     async def summarize_text(
-        self, text: str, msg_count: int, summary_type: SummaryType
+        self,
+        text: str,
+        msg_count: int,
+        summary_type: SummaryType,
+        tracked_users: list[str],
     ) -> str:
         pass
