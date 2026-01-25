@@ -21,19 +21,20 @@ async def process_reply_handler(
     message: types.Message, state: FSMContext, bot: Bot, container: Container
 ) -> None:
     """Обработчик получения контента для ответа."""
+    # Получаем данные из state
     data = await state.get_data()
     chat_tgid = data.get("chat_tgid")
     tg_message_id = data.get("message_id")
     active_message_id = data.get("active_message_id")
 
-    # Удаляем сообщение пользователя для чистоты чата
-    try:
-        await message.delete()
-    except Exception as e:
-        logger.warning("Не удалось удалить сообщение пользователя: %s", e)
-
     if not chat_tgid or not tg_message_id or not active_message_id:
         logger.error("Некорректные данные в state: %s", data)
+        # Удаляем сообщение пользователя для чистоты чата
+        try:
+            await message.delete()
+        except Exception as e:
+            logger.warning("Не удалось удалить сообщение пользователя: %s", e)
+
         # Если нет active_message_id, отвечаем новым сообщением, иначе редактируем активное
         if active_message_id:
             await show_message_management_menu(
@@ -97,3 +98,8 @@ async def process_reply_handler(
             state=state,
             text_prefix=Dialog.Messages.REPLY_ERROR,
         )
+    finally:
+        try:
+            await message.delete()
+        except Exception as e:
+            logger.warning("Не удалось удалить сообщение пользователя: %s", e)
