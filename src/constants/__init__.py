@@ -137,6 +137,8 @@ class InlineButtons:
         CHANGE_WELCOME_TEXT = "📝 Изменить текст приветствия"
         WELCOME_TEXT_DISABLE = "🛑 Выключить Приветствие"
         WELCOME_TEXT_ENABLE = "🟢 Включить Приветствие"
+        SUMMARY_SHORT = "Краткая"
+        SUMMARY_FULL = "Полная"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
