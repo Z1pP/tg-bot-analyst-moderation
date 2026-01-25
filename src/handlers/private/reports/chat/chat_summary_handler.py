@@ -54,7 +54,7 @@ async def process_get_chat_summary_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text="Выберите тип сводки:",
+        text=Dialog.Summary.SELECT_FORMAT,
         reply_markup=summary_type_ikb(back_callback=back_callback),
     )
 
@@ -106,7 +106,7 @@ async def process_summary_type_selection_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text="⏳ <b>Сводка на этапе выполнения</b>\nПожалуйста, подождите, это может занять до 30 секунд...",
+        text=Dialog.Summary.GENERATING,
     )
 
     try:
@@ -159,7 +159,7 @@ async def process_summary_type_selection_handler(
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
-                text="✅ Сводка готова! Она отправлена отдельным сообщением.",
+                text=Dialog.Summary.READY,
                 reply_markup=finish_keyboard,
             )
 
@@ -171,6 +171,6 @@ async def process_summary_type_selection_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="❌ Произошла ошибка при генерации сводки. Попробуйте позже.",
+            text=Dialog.Summary.ERROR,
             reply_markup=finish_keyboard,
         )
