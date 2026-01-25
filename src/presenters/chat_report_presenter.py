@@ -31,11 +31,9 @@ class ChatReportPresenter:
         period_str = format_selected_period(
             start_date=result.start_date, end_date=result.end_date
         )
-        period_prefix = "период " if not result.is_single_day else ""
+        chat_name = f"{result.chat_title}" if result.chat_title else "чате"
 
-        header = (
-            f"<b>📈 Отчёт: «{result.chat_title}» за {period_prefix}{period_str}</b>\n\n"
-        )
+        header = f"📊 Отчёт: {chat_name} за {period_str}\n\n"
 
         if not result.users_stats:
             return [f"{header}⚠️ Нет активности за указанный период"]
@@ -50,7 +48,10 @@ class ChatReportPresenter:
         report_body = "\n\n".join(user_reports)
 
         if not result.is_single_day:
-            report_body += "\n\n❗Чтобы получить детализацию перерывов по датам, нажмите соответствующую кнопку"
+            report_body += (
+                "\n\n❗️Чтобы получить детализацию перерывов по датам, "
+                'нажмите "Заказ детализации перерывов" под сообщением'
+            )
 
         full_report = f"{header}{report_body}"
 
@@ -68,163 +69,166 @@ class ChatReportPresenter:
         Returns:
             Отформатированная строка со статистикой пользователя
         """
-        parts = [f"@{stats.username}:"]
+        parts = [f"🙂 @{stats.username}:\n"]
 
+        # 🚫 Модерация - отображаем всегда
+        parts.append("🚫 Модерация:")
         if is_single_day and stats.day_stats:
-            parts.append(ChatReportPresenter._format_day_stats(stats.day_stats))
+            parts.append(f"• {stats.day_stats.warns_count} - выдано предупреждений")
+            parts.append(f"• {stats.day_stats.bans_count} - выдано банов")
         elif not is_single_day and stats.multi_day_stats:
             parts.append(
-                ChatReportPresenter._format_multi_day_stats(stats.multi_day_stats)
+                f"• {stats.multi_day_stats.warns_count} - всего выдано предупреждений"
+            )
+            parts.append(f"• {stats.multi_day_stats.bans_count} - всего выдано банов")
+        parts.append("")
+
+        # 💬 Сообщения и ответы
+        msg_parts = []
+        if is_single_day and stats.day_stats:
+            msg_parts.append(
+                ChatReportPresenter._format_day_message_stats(stats.day_stats)
+            )
+        elif not is_single_day and stats.multi_day_stats:
+            msg_parts.append(
+                ChatReportPresenter._format_multi_day_message_stats(
+                    stats.multi_day_stats
+                )
             )
 
-        parts.append(ChatReportPresenter._format_replies_stats(stats.replies_stats))
+        replies_text = ChatReportPresenter._format_replies_stats(
+            stats.replies_stats, is_single_day
+        )
+        if replies_text:
+            msg_parts.append(replies_text)
 
-        if stats.breaks:
-            if is_single_day:
-                parts.append(
-                    ChatReportPresenter._format_breaks_single_day(stats.breaks)
-                )
-            else:
-                parts.append(ChatReportPresenter._format_breaks_multiday(stats.breaks))
-        else:
-            if is_single_day:
-                parts.append("<b>⏸️ Перерывы:</b> отсутствуют")
-            else:
-                parts.append("Перерывы: отсутствуют")
+        if msg_parts:
+            parts.append("💬 Сообщения и ответы:")
+            parts.extend(msg_parts)
+            parts.append("")
 
-        return "\n".join(filter(None, parts))
+        # ⏸️ Перерывы
+        break_parts = []
+        if stats.total_break_time:
+            break_parts.append(
+                f"{stats.total_break_time} - общее время перерыва за период"
+            )
+
+        if is_single_day and stats.breaks:
+            # Пропускаем первую строку (которая с общим временем), так как мы её уже добавили выше
+            break_lines = [
+                b for b in stats.breaks if "общее время перерыва" not in b and b.strip()
+            ]
+            if break_lines:
+                break_parts.extend(break_lines)
+
+        if break_parts:
+            parts.append("⏸️ Перерывы:")
+            parts.extend(break_parts)
+
+        # Удаляем лишнюю пустую строку в конце если она есть
+        if parts and not parts[-1]:
+            parts.pop()
+
+        return "\n".join(parts)
 
     @staticmethod
-    def _format_day_stats(stats: UserDayStats) -> str:
-        """Форматирует статистику за один день"""
+    def _format_day_message_stats(stats: UserDayStats) -> str:
+        """Форматирует статистику сообщений за один день"""
         lines = []
-
         if stats.first_message_time:
-            lines.append(
-                f"• <b>{stats.first_message_time.strftime('%H:%M')}</b> — 1-е сообщение"
-            )
+            lines.append(f"• {stats.first_message_time.strftime('%H:%M')} - 1-е сообщ.")
 
         if stats.first_reaction_time:
             lines.append(
-                f"• <b>{stats.first_reaction_time.strftime('%H:%M')}</b> — 1-я реакция на сообщение"
+                f"• {stats.first_reaction_time.strftime('%H:%M')} - 1-я реакция на сообщ."
+            )
+
+        if stats.last_message_time:
+            lines.append(
+                f"• {stats.last_message_time.strftime('%H:%M')} - последнее сообщ."
             )
 
         if lines:
             lines.append("")
 
-        lines.extend(
-            [
-                f"• <b>{stats.avg_messages_per_hour}</b> — сред. кол-во сообщ./час",
-                f"• <b>{stats.total_messages}</b> — всего сообщений",
-            ]
-        )
+        lines.append(f"• {stats.total_messages} - всего сообщ.")
+        lines.append(f"• {stats.avg_messages_per_hour} - сред. кол-во сообщ./час")
 
         return "\n".join(lines)
 
     @staticmethod
-    def _format_multi_day_stats(stats: UserMultiDayStats) -> str:
-        """Форматирует статистику за несколько дней"""
+    def _format_multi_day_message_stats(stats: UserMultiDayStats) -> str:
+        """Форматирует статистику сообщений за несколько дней"""
         lines = []
-
         if stats.avg_first_message_time:
-            lines.append(
-                f"• <b>{stats.avg_first_message_time}</b> — среднее время отправки 1-х сообщений"
-            )
+            lines.append(f"• {stats.avg_first_message_time} - ср. вр. 1-го сообщ.")
 
         if stats.avg_first_reaction_time:
-            lines.append(
-                f"• <b>{stats.avg_first_reaction_time}</b> — среднее время 1-й реакции на сообщение"
-            )
+            lines.append(f"• {stats.avg_first_reaction_time} - ср. вр. 1-й реакции")
+
+        if stats.avg_last_message_time:
+            lines.append(f"• {stats.avg_last_message_time} - ср. вр. последнего сообщ.")
 
         if lines:
             lines.append("")
 
-        lines.extend(
-            [
-                f"• <b>{stats.avg_messages_per_hour}</b> — сред. кол-во сообщ./час",
-                f"• <b>{stats.avg_messages_per_day}</b> — сред. кол-во сообщ./день",
-                f"• <b>{stats.total_messages}</b> — всего сообщ. за период",
-            ]
-        )
+        lines.append(f"• {stats.total_messages} - всего сообщ. за период")
+        lines.append(f"• {stats.avg_messages_per_hour} - ср. кол-во сообщ./час")
 
         return "\n".join(lines)
 
     @staticmethod
-    def _format_replies_stats(stats: RepliesStats) -> str:
+    def _format_replies_stats(stats: RepliesStats, is_single_day: bool) -> str:
         """Форматирует статистику ответов"""
         if stats.total_count == 0:
-            return "Из них всего <b>0</b> ответов"
+            return ""
 
-        lines = [f"Из них всего <b>{stats.total_count}</b> ответов:"]
+        prefix = "ср. " if not is_single_day else ""
+
+        lines = [f"Из них {stats.total_count} ответов:"]
 
         if stats.min_time_seconds is not None:
             lines.append(
-                f"• <b>{format_seconds(stats.min_time_seconds)}</b> — мин. время ответа"
+                f"• {format_seconds(stats.min_time_seconds)} - {prefix}мин. время отв."
             )
+
         if stats.max_time_seconds is not None:
             lines.append(
-                f"• <b>{format_seconds(stats.max_time_seconds)}</b> — макс. время ответа"
+                f"• {format_seconds(stats.max_time_seconds)} - {prefix}макс. время отв."
             )
+
         if stats.avg_time_seconds is not None:
             lines.append(
-                f"• <b>{format_seconds(stats.avg_time_seconds)}</b> — сред. время ответа"
+                f"• {format_seconds(stats.avg_time_seconds)} - {prefix}сред. время отв."
             )
+
         if stats.median_time_seconds is not None:
             lines.append(
-                f"• <b>{format_seconds(stats.median_time_seconds)}</b> — медиан. время ответа"
+                f"• {format_seconds(stats.median_time_seconds)} - {prefix}медиан. время отв."
             )
 
         return "\n".join(lines)
-
-    @staticmethod
-    def _format_breaks_single_day(breaks: List[str]) -> str:
-        """Форматирует перерывы для однодневного отчета"""
-        if not breaks:
-            return "<b>⏸️ Перерывы:</b> отсутствуют"
-        return "<b>⏸️ Перерывы:</b>\n" + "\n".join(breaks)
-
-    @staticmethod
-    def _format_breaks_multiday(breaks: List[str]) -> str:
-        """Форматирует перерывы для многодневного отчета"""
-        # Для многодневного отчета breaks содержит уже отформатированную строку
-        # из BreakAnalysisService.avg_breaks_time
-        if not breaks:
-            return "Перерывы: отсутствуют"
-        # breaks[0] содержит уже отформатированную строку типа "Перерывы:\n• <b>...</b> — средн.время..."
-        return breaks[0] if breaks else "Перерывы: отсутствуют"
 
     @staticmethod
     def _split_report(report: str) -> List[str]:
         """
         Разделяет отчет на части по лимиту длины сообщения.
-
-        Args:
-            report: Полный текст отчета
-
-        Returns:
-            Список частей отчета
         """
         if len(report) <= MAX_MSG_LENGTH:
             return [report]
 
-        parts = report.split("<b>⏸️ Перерывы:</b>")
-        main_part = parts[0]
-        breaks_part = parts[1] if len(parts) > 1 else ""
+        # Упрощенное разбиение для этого презентера
+        parts = []
+        current_part = ""
 
-        result = [main_part + "Перерывы: см. следующее сообщение"]
+        for line in report.split("\n"):
+            if len(current_part) + len(line) + 1 > MAX_MSG_LENGTH:
+                parts.append(current_part.strip())
+                current_part = ""
+            current_part += line + "\n"
 
-        if breaks_part:
-            # Разбиваем перерывы построчно
-            current_part = "<b>⏸️ Перерывы:</b>"
-            for line in breaks_part.split("\n"):
-                if not line:
-                    continue
-                # +1 для учета переноса строки
-                if len(current_part) + len(line) + 1 > MAX_MSG_LENGTH:
-                    result.append(current_part)
-                    current_part = "<b>⏸️ Перерывы (продолжение):</b>"
-                current_part += "\n" + line
+        if current_part:
+            parts.append(current_part.strip())
 
-            result.append(current_part)
-
-        return result
+        return parts
