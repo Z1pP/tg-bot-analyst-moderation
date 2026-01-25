@@ -4,9 +4,8 @@ from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 
 from constants import Dialog
-from keyboards.inline.menu import main_menu_ikb
 from keyboards.inline.message_actions import send_message_ikb
-from states import MenuStates, MessageManagerState
+from states import MessageManagerState
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
@@ -38,29 +37,3 @@ async def message_management_menu_handler(
     await state.update_data(active_message_id=callback.message.message_id)
 
     await state.set_state(MessageManagerState.waiting_message_link)
-
-
-@router.callback_query(F.data == "back_to_main_menu_from_message_management")
-async def back_to_main_menu_from_message_management_handler(
-    callback: types.CallbackQuery, state: FSMContext, user_language: str
-) -> None:
-    """Обработчик возврата в главное меню из меню управления сообщениями"""
-    await callback.answer()
-    await state.clear()
-
-    username = callback.from_user.first_name
-    menu_text = Dialog.Menu.MENU_TEXT.format(username=username)
-
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=menu_text,
-        reply_markup=main_menu_ikb(
-            user=None,
-            user_language=user_language,
-            admin_tg_id=str(callback.from_user.id),
-        ),
-    )
-
-    await state.set_state(MenuStates.main_menu)
