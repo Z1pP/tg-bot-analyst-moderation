@@ -258,7 +258,6 @@ class ReportDialogs:
     NO_DATA_FOR_REPORT = "❌ Нет данных для составления отчета"
 
     GENERATING_REPORT = "⏳ Составляю отчёт..."
-    CONTINUE_SELECT_PERIOD = "\n\nДля продолжения выберите период, либо нажмите назад"
     NO_TRACKED_CHATS_FOR_REPORT = (
         "❌ У вас нет отслеживаемых чатов.\n"
         "Добавьте чаты в отслеживание для составления отчета."
