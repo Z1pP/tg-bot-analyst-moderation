@@ -298,14 +298,14 @@ def select_chat_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
         builder.row(
             InlineKeyboardButton(
                 text=chat.title[:40],
-                callback_data=f"select_chat_{chat.id}",
+                callback_data=f"{CallbackData.Messages.PREFIX_SELECT_CHAT}{chat.id}",
             )
         )
 
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data="message_management_menu",
+            callback_data=CallbackData.Messages.SHOW_MENU,
         )
     )
 
