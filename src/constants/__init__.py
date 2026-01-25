@@ -20,6 +20,7 @@ from .dialogs import (
     RolesDialogs,
     RootDialogs,
     SubscriptionDialogs,
+    SummaryDialogs,
     TemplateDialogs,
     UserAndChatsSettingsDialogs,
     UserDialogs,
@@ -209,6 +210,8 @@ class Dialog:
     Punishment = PunishmentDialogs
     # Analytics
     Analytics = AnalyticsDialogs
+    # Summary
+    Summary = SummaryDialogs
     # User and Chats Settings
     UserAndChatsSettings = UserAndChatsSettingsDialogs
     # Bot Settings
