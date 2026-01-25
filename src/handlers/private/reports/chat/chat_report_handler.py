@@ -14,7 +14,7 @@ from keyboards.inline import CalendarKeyboard
 from keyboards.inline.chats import analytics_chat_actions_ikb, chat_actions_ikb
 from keyboards.inline.report import order_details_kb_chat
 from keyboards.inline.time_period import time_period_ikb_chat
-from presenters import ReportPresenter
+from presenters import ChatReportPresenter
 from services.time_service import TimeZoneService
 from states import ChatStateManager, RatingStateManager
 from usecases.report import GetChatReportUseCase
@@ -241,7 +241,7 @@ async def _render_report_view(
         return
 
     # Форматируем результат через Presenter
-    presenter = ReportPresenter()
+    presenter = ChatReportPresenter()
     report_parts = presenter.format_report(result)
 
     if result.error_message:
