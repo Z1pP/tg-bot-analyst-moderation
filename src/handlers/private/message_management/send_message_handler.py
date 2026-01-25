@@ -118,7 +118,7 @@ async def chat_selected_handler(
         text=Dialog.Messages.SEND_CONTENT_INPUT,
         reply_markup=cancel_send_message_ikb(),
     )
-    await state.set_state(MessageManagerState.waiting_send_content)
+    await state.set_state(MessageManagerState.waiting_content)
     logger.info(
         "Админ %s выбрал чат %s для отправки сообщения",
         callback.from_user.id,
@@ -126,7 +126,7 @@ async def chat_selected_handler(
     )
 
 
-@router.message(MessageManagerState.waiting_send_content)
+@router.message(MessageManagerState.waiting_content)
 async def send_content_handler(
     message: types.Message, state: FSMContext, container: Container
 ) -> None:
