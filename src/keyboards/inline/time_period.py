@@ -14,25 +14,24 @@ def _build_time_period_keyboard(
 
     periods = TimePeriod.get_all() if include_custom else TimePeriod.get_all_periods()
 
-    # Добавляем кнопки периодов по 2 в ряд
-    for i in range(0, len(periods), 2):
-        row_periods = periods[i : i + 2]
-        buttons = [
+    # Добавляем кнопки периодов
+    for period in periods:
+        builder.add(
             InlineKeyboardButton(
                 text=period,
                 callback_data=f"{CallbackData.Report.PREFIX_PERIOD}{period}",
             )
-            for period in row_periods
-        ]
-        builder.row(*buttons)
+        )
 
     # Кнопка "Назад"
-    builder.row(
+    builder.add(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
             callback_data=back_callback,
         )
     )
+
+    builder.adjust(2, 2, 1, 1)
 
     return builder.as_markup()
 
