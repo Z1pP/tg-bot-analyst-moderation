@@ -130,27 +130,30 @@ async def select_user_handler(
     await callback.answer()
 
     logger.info(
-        f"Пользователь {callback.from_user.id} запросил список пользователей для отчета"
+        "Администратор tg_id:%d username:%s запросил список пользователей для отчета",
+        callback.from_user.id,
+        callback.from_user.username or "неизвестно",
     )
 
     usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
     users = await usecase.execute(admin_tgid=str(callback.from_user.id))
 
     if not users:
-        message_text = (
-            "❗Чтобы получать отчёты по пользователям, "
-            "необходимо добавить пользователя в отслеживаемые"
-        )
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=message_text,
-            reply_markup=users_menu_ikb(),
+            text=Dialog.Analytics.NO_TRACKED_USERS,
+            reply_markup=users_menu_ikb(has_tracked_users=False),
         )
         return
 
-    logger.info(f"Найдено {len(users)} пользователей для отчета")
+    logger.info(
+        "Найдено %d пользователей для отчета для администратора tg_id:%d username:%s",
+        len(users),
+        callback.from_user.id,
+        callback.from_user.username or "неизвестно",
+    )
 
     # Показываем первую страницу
     first_page_users = users[:USERS_PAGE_SIZE]
@@ -159,7 +162,7 @@ async def select_user_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=f"Всего {len(users)} пользователей",
+        text=Dialog.Analytics.TOTAL_USERS.format(total=len(users)),
         reply_markup=show_tracked_users_ikb(
             users=first_page_users,
             page=1,
