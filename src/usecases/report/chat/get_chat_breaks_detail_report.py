@@ -4,6 +4,7 @@ from constants.dialogs import ReportDialogs
 from dto.report import BreaksDetailReportDTO, BreaksDetailUserDTO, ChatReportDTO
 from models import ChatSession, User
 from services.break_analysis_service import BreakAnalysisService
+from utils.collection_utils import group_by
 
 from ..base import ChatReportUseCase
 
@@ -45,11 +46,15 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
             start_date=dto.start_date,
             end_date=dto.end_date,
         )
+        user_ids = [user.id for user in users]
+        users_data = await self._get_all_users_data_for_chat(
+            user_ids=user_ids,
+            dto=dto,
+        )
+
         reports = []
-
         for user in users:
-            user_data = await self._get_user_data_for_chat(user=user, dto=dto)
-
+            user_data = users_data.get(user.id, {"messages": [], "reactions": []})
             user_report = self._generate_user_breaks_detail(
                 data=user_data,
                 user=user,
@@ -69,30 +74,36 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
 
         return BreaksDetailReportDTO(period=period, users=reports)
 
-    async def _get_user_data_for_chat(self, user: User, dto: ChatReportDTO) -> dict:
-        """Получает данные пользователя за период в конкретном чате."""
-        # Получаем сообщения пользователя в чате
+    async def _get_all_users_data_for_chat(
+        self, user_ids: list[int], dto: ChatReportDTO
+    ) -> dict:
+        """Получает данные пользователей за период в конкретном чате."""
         messages = await self._get_processed_items_by_chat_with_users(
             self._message_repository.get_messages_by_chat_id_and_period,
             dto.chat_id,
             dto.start_date,
             dto.end_date,
-            [user.id],
+            user_ids,
         )
 
-        # Получаем реакции пользователя в чате
         reactions = await self._get_processed_items_by_chat_with_users(
             self._reaction_repository.get_reactions_by_chat_and_period,
             dto.chat_id,
             dto.start_date,
             dto.end_date,
-            [user.id],
+            user_ids,
         )
 
-        # Фильтруем реакции только для данного пользователя
-        user_reactions = [r for r in reactions if r.user_id == user.id]
+        messages_by_user = group_by(messages, lambda m: m.user_id)
+        reactions_by_user = group_by(reactions, lambda r: r.user_id)
 
-        return {"messages": messages, "reactions": user_reactions}
+        return {
+            user_id: {
+                "messages": messages_by_user.get(user_id, []),
+                "reactions": reactions_by_user.get(user_id, []),
+            }
+            for user_id in user_ids
+        }
 
     def _generate_user_breaks_detail(
         self,
