@@ -7,6 +7,7 @@ from punq import Container
 
 from exceptions.base import BotBaseException
 from exceptions.moderation import PrivateModerationError, PublicModerationError
+from keyboards.inline.chats import hide_notification_ikb
 from services import BotMessageService
 from utils.send_message import send_html_message_with_kb
 
@@ -31,7 +32,11 @@ async def handle_exception(
             f"Обработано исключение{' в ' + context if context else ''}: {exc}",
             exc_info=True,
         )
-        await send_html_message_with_kb(message=message, text=exc.get_user_message())
+        await send_html_message_with_kb(
+            message=message,
+            text=exc.get_user_message(),
+            reply_markup=hide_notification_ikb(),
+        )
     else:
         logger.error(
             f"Необработанное исключение{' в ' + context if context else ''}: {exc}",
@@ -40,6 +45,7 @@ async def handle_exception(
         await send_html_message_with_kb(
             message=message,
             text="❌ Произошла непредвиденная ошибка. Попробуйте позже.",
+            reply_markup=hide_notification_ikb(),
         )
 
 
