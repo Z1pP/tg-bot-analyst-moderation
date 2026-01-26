@@ -1,12 +1,9 @@
 import logging
 
-from dto.report import (
-    AllUsersReportDTO,
-    BreaksDetailReportDTO,
-    BreaksDetailUserDTO,
-)
+from dto.report import AllUsersReportDTO, BreaksDetailReportDTO, BreaksDetailUserDTO
 from models import User
 from services.break_analysis_service import BreakAnalysisService
+from utils.collection_utils import group_by
 
 from .base import BaseReportUseCase
 
@@ -32,9 +29,12 @@ class GetAllUsersBreaksDetailReportUseCase(BaseReportUseCase):
             end_date=dto.end_date,
         )
 
+        user_ids = [user.id for user in users]
+        users_data = await self._get_all_users_data(user_ids, dto)
+
         reports = []
         for user in users:
-            user_data = await self._get_user_data(user, dto)
+            user_data = users_data.get(user.id, {"messages": [], "reactions": []})
             user_report = self._generate_user_breaks_detail(user_data, user, period)
             if user_report:
                 reports.append(user_report)
@@ -48,23 +48,36 @@ class GetAllUsersBreaksDetailReportUseCase(BaseReportUseCase):
 
         return BreaksDetailReportDTO(period=period, users=reports)
 
-    async def _get_user_data(self, user: User, dto: AllUsersReportDTO) -> dict:
-        """Получает данные пользователя за период."""
-        messages = await self._get_processed_items(
-            self._message_repository.get_messages_by_period_date,
-            user.id,
-            dto.start_date,
-            dto.end_date,
+    async def _get_all_users_data(
+        self, user_ids: list[int], dto: AllUsersReportDTO
+    ) -> dict:
+        """Получает данные пользователей за период одной выборкой."""
+        messages = await self._message_repository.get_messages_by_period_date_for_users(
+            user_ids=user_ids,
+            start_date=dto.start_date,
+            end_date=dto.end_date,
+        )
+        reactions = (
+            await self._reaction_repository.get_reactions_by_user_and_period_for_users(
+                user_ids=user_ids,
+                start_date=dto.start_date,
+                end_date=dto.end_date,
+            )
         )
 
-        reactions = await self._get_processed_items(
-            self._reaction_repository.get_reactions_by_user_and_period,
-            user.id,
-            dto.start_date,
-            dto.end_date,
-        )
+        messages = self._process_items(messages)
+        reactions = self._process_items(reactions)
 
-        return {"messages": messages, "reactions": reactions}
+        messages_by_user = group_by(messages, lambda m: m.user_id)
+        reactions_by_user = group_by(reactions, lambda r: r.user_id)
+
+        return {
+            user_id: {
+                "messages": messages_by_user.get(user_id, []),
+                "reactions": reactions_by_user.get(user_id, []),
+            }
+            for user_id in user_ids
+        }
 
     def _generate_user_breaks_detail(
         self, data: dict, user: User, period: str
