@@ -1,8 +1,11 @@
 import logging
 from datetime import datetime
-from typing import List
 
-from dto.report import SingleUserReportDTO
+from dto.report import (
+    BreaksDetailReportDTO,
+    BreaksDetailUserDTO,
+    SingleUserReportDTO,
+)
 from exceptions.user import UserNotFoundException
 from models import User
 from services.break_analysis_service import BreakAnalysisService
@@ -13,17 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 class GetBreaksDetailReportUseCase(BaseReportUseCase):
-
-    async def execute(self, report_dto: SingleUserReportDTO) -> List[str]:
+    async def execute(self, report_dto: SingleUserReportDTO) -> BreaksDetailReportDTO:
         """Генерирует детализированный отчет по перерывам пользователя."""
         user = await self._get_user(user_id=report_dto.user_id)
         user_data = await self._get_user_data(user=user, dto=report_dto)
 
-        full_report = self._generate_breaks_detail_report(
+        report = self._generate_breaks_detail_report(
             user_data, user, report_dto.start_date, report_dto.end_date
         )
 
-        return self._split_report(full_report)
+        return report
 
     async def _get_user(self, user_id: int) -> User:
         """Получает пользователя по user_id."""
@@ -68,24 +70,36 @@ class GetBreaksDetailReportUseCase(BaseReportUseCase):
         user: User,
         start_date: datetime,
         end_date: datetime,
-    ) -> str:
+    ) -> BreaksDetailReportDTO:
         """Генерирует детализированный отчет по перерывам."""
         period = self._format_selected_period(start_date, end_date)
-        header = f"<b>📈 Детализация перерывов: @{user.username} за {period}</b>\n\n"
 
         # Проверяем наличие отслеживаемых чатов
         if data.get("no_chats"):
-            return header + "⚠️ Необходимо добавить чат в отслеживание."
+            return BreaksDetailReportDTO(
+                period=period,
+                users=[],
+                error_message="⚠️ Необходимо добавить чат в отслеживание.",
+            )
 
         messages = data.get("messages", [])
         reactions = data.get("reactions", [])
 
         if not messages and not reactions:
-            return header + "⚠️ Нет данных за указанный период."
+            return BreaksDetailReportDTO(
+                period=period,
+                users=[],
+                error_message="⚠️ Нет данных за указанный период.",
+            )
 
-        breaks_detail = BreakAnalysisService.calculate_breaks(messages, reactions)
+        breaks_detail = BreakAnalysisService.calculate_breaks_structured(
+            messages, reactions
+        )
 
-        if not breaks_detail:
-            return header + "<b>⏸️ Перерывы отсутствуют</b>"
+        user_detail = BreaksDetailUserDTO(
+            username=user.username,
+            has_activity=bool(messages or reactions),
+            days=breaks_detail,
+        )
 
-        return header + "\n".join(breaks_detail)
+        return BreaksDetailReportDTO(period=period, users=[user_detail])
