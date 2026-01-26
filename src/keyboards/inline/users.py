@@ -249,7 +249,7 @@ def remove_user_inline_kb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.User.SELECT_USER_FOR_ANALYTICS,
+            callback_data=CallbackData.User.SELECT_USER_FOR_REPORT,
         )
     )
 
@@ -284,7 +284,7 @@ def user_actions_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=Dialog.User.SELECT_USER,
-            callback_data=CallbackData.User.SELECT_USER_FOR_ANALYTICS,
+            callback_data=CallbackData.User.SELECT_USER_FOR_REPORT,
         ),
         width=1,
     )
@@ -304,7 +304,7 @@ def all_users_actions_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=Dialog.User.SELECT_USER,
-            callback_data=CallbackData.User.SELECT_USER_FOR_ANALYTICS,
+            callback_data=CallbackData.User.SELECT_USER_FOR_REPORT,
         ),
         width=1,
     )
