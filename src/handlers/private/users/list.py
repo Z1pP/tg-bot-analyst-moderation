@@ -121,7 +121,7 @@ async def show_users_list_handler(
     await _display_tracked_users_page(callback, state, container, page=1)
 
 
-@router.callback_query(F.data == CallbackData.User.SELECT_USER_FOR_ANALYTICS)
+@router.callback_query(F.data == CallbackData.User.SELECT_USER_FOR_REPORT)
 async def select_user_for_analytics_handler(
     callback: CallbackQuery,
     container: Container,

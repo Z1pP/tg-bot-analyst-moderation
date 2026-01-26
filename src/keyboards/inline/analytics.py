@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import Dialog, InlineButtons
+from constants import InlineButtons
 from constants.callback import CallbackData
 
 
@@ -9,11 +9,11 @@ def analytics_menu_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.User.SHOW_TRACKED_USERS,
-            callback_data=CallbackData.User.SELECT_USER_FOR_ANALYTICS,
+            text=InlineButtons.User.SHOW_TRACKED_USERS,
+            callback_data=CallbackData.User.SELECT_USER_FOR_REPORT,
         ),
         InlineKeyboardButton(
-            text=Dialog.Chat.SHOW_TRACKED_CHATS,
+            text=InlineButtons.Chat.SHOW_TRACKED_CHATS,
             callback_data=CallbackData.Chat.SELECT_CHAT_FOR_REPORT,
         ),
         InlineKeyboardButton(

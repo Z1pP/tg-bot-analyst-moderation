@@ -7,7 +7,7 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats import chats_management_ikb
+from keyboards.inline.chats import chats_menu_ikb
 from keyboards.inline.punishments import punishment_setting_ikb
 from usecases.punishment import GetPunishmentLadderUseCase
 from utils.send_message import safe_edit_message
@@ -35,7 +35,7 @@ async def punishment_settings_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
-            reply_markup=chats_management_ikb(),
+            reply_markup=chats_menu_ikb(),
         )
         return
 

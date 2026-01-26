@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery
 from punq import Container
 
 from constants import Dialog
-from keyboards.inline.chats import chats_management_ikb
+from keyboards.inline.chats import chats_menu_ikb
 from keyboards.inline.menu import main_menu_ikb
 from keyboards.inline.users import hide_notification_ikb
 from services.user import UserService
@@ -58,5 +58,5 @@ async def show_chats_menu(callback: CallbackQuery, state: FSMContext) -> None:
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=Dialog.Chat.SELECT_ACTION,
-        reply_markup=chats_management_ikb(),
+        reply_markup=chats_menu_ikb(),
     )

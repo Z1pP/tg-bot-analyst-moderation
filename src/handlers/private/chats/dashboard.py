@@ -7,7 +7,7 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats import chat_actions_ikb, chats_management_ikb
+from keyboards.inline.chats import chat_actions_ikb, chats_menu_ikb
 from services.chat import ChatService
 from states import ChatStateManager
 from utils.send_message import safe_edit_message
@@ -58,7 +58,7 @@ async def _show_chat_not_found_message(callback: CallbackQuery) -> None:
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-        reply_markup=chats_management_ikb(),
+        reply_markup=chats_menu_ikb(),
     )
 
 
@@ -81,5 +81,5 @@ async def _handle_error(callback: CallbackQuery, error: Exception) -> None:
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=Dialog.Chat.ERROR_GET_CHAT_WITH_ARCHIVE,
-        reply_markup=chats_management_ikb(),
+        reply_markup=chats_menu_ikb(),
     )

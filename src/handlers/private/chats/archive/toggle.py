@@ -10,7 +10,7 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats import archive_channel_setting_ikb, chats_management_ikb
+from keyboards.inline.chats import archive_channel_setting_ikb, chats_menu_ikb
 from services import ChatService
 from services.messaging import BotMessageService
 from services.report_schedule_service import ReportScheduleService
@@ -39,7 +39,7 @@ async def archive_toggle_schedule_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
-            reply_markup=chats_management_ikb(),
+            reply_markup=chats_menu_ikb(),
         )
         return
 

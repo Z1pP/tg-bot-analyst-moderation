@@ -7,7 +7,7 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats import chats_management_ikb
+from keyboards.inline.chats import chats_menu_ikb
 from services.chat import ChatService
 from usecases.chat import ToggleAutoDeleteWelcomeTextUseCase
 from utils.send_message import safe_edit_message
@@ -35,7 +35,7 @@ async def toggle_auto_delete_welcome_text_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
-            reply_markup=chats_management_ikb(),
+            reply_markup=chats_menu_ikb(),
         )
         return
 
@@ -49,7 +49,7 @@ async def toggle_auto_delete_welcome_text_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-            reply_markup=chats_management_ikb(),
+            reply_markup=chats_menu_ikb(),
         )
         return
 
@@ -61,7 +61,7 @@ async def toggle_auto_delete_welcome_text_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-            reply_markup=chats_management_ikb(),
+            reply_markup=chats_menu_ikb(),
         )
         return
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from aiogram.types import InlineKeyboardMarkup
 
 from constants import Dialog
-from keyboards.inline.chats import antibot_setting_ikb, chats_management_ikb
+from keyboards.inline.chats import antibot_setting_ikb, chats_menu_ikb
 from services.chat import ChatService
 
 
@@ -32,7 +32,7 @@ class GetAntibotSettingsUseCase:
         if not chat:
             return AntibotSettingsResult(
                 text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-                reply_markup=chats_management_ikb(),
+                reply_markup=chats_menu_ikb(),
             )
 
         antibot_status = "🟢 Включён" if chat.is_antibot_enabled else "🔴 Выключен"

@@ -9,7 +9,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.chats import (
     back_to_chats_menu_ikb,
-    chats_management_ikb,
+    chats_menu_ikb,
     conf_remove_chat_ikb,
 )
 from states import MenuStates
@@ -120,7 +120,7 @@ async def confirmation_untracking_chat_handler(
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
                 text=Dialog.Chat.ERROR_REMOVE_CHAT,
-                reply_markup=chats_management_ikb(),
+                reply_markup=chats_menu_ikb(),
             )
             return
 
@@ -150,7 +150,7 @@ async def confirmation_untracking_chat_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=text,
-        reply_markup=chats_management_ikb(),
+        reply_markup=chats_menu_ikb(),
     )
 
     await state.set_state(MenuStates.chats_menu)

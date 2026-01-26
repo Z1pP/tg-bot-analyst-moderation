@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from aiogram.types import InlineKeyboardMarkup
 
 from constants import Dialog
-from keyboards.inline.chats import archive_channel_setting_ikb, chats_management_ikb
+from keyboards.inline.chats import archive_channel_setting_ikb, chats_menu_ikb
 from services import ChatService
 from services.messaging import BotMessageService
 from services.permissions import BotPermissionService
@@ -49,13 +49,13 @@ class GetArchiveSettingsUseCase:
             logger.error("Ошибка при получении чата: %s", exc, exc_info=True)
             return ArchiveSettingsResult(
                 text=Dialog.Chat.ERROR_GET_CHAT_WITH_ARCHIVE,
-                reply_markup=chats_management_ikb(),
+                reply_markup=chats_menu_ikb(),
             )
 
         if not chat:
             return ArchiveSettingsResult(
                 text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-                reply_markup=chats_management_ikb(),
+                reply_markup=chats_menu_ikb(),
             )
 
         if chat.archive_chat:
