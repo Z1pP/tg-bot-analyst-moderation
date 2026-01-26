@@ -135,17 +135,10 @@ async def select_user_for_analytics_handler(
         callback.from_user.username or "неизвестно",
     )
 
-    usecase: GetListTrackedUsersUseCase = container.resolve(GetListTrackedUsersUseCase)
-    users = await usecase.execute(admin_tgid=str(callback.from_user.id))
+    users = await get_tracked_users(str(callback.from_user.id), container)
 
     if not users:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.Analytics.NO_TRACKED_USERS,
-            reply_markup=no_tracked_users_ikb(),
-        )
+        await _show_no_users_message(callback)
         return
 
     logger.info(
@@ -168,4 +161,15 @@ async def select_user_for_analytics_handler(
             page=1,
             total_count=len(users),
         ),
+    )
+
+
+async def _show_no_users_message(callback: CallbackQuery) -> None:
+    """Показывает сообщение о том, что нет отслеживаемых пользователей."""
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.User.NO_TRACKED_USERS,
+        reply_markup=no_tracked_users_ikb(),
     )
