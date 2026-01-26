@@ -2,6 +2,7 @@ class ChatCallbackData:
     """Класс для хранения callback данных чата"""
 
     # Commands
+    MANAGEMENT = "chats_management"
     ADD = "add_chat"
     REMOVE = "remove_chat"
     GET_REPORT = "get_chat_report"
@@ -84,7 +85,7 @@ class UserCallbackData:
     SHOW_TRACKED_USERS_LIST = "show_tracked_users_list"
     ADD = "add_user"
     REMOVE = "remove_user"
-    SELECT_USER_FOR_ANALYTICS = "select_user"
+    SELECT_USER_FOR_REPORT = "select_user_for_report"
     BACK_TO_MAIN_MENU_FROM_USERS = "back_to_main_menu_from_users"
     ALL_USERS = "all_users"
     USERS_PAGE_INFO = "users_page_info"
