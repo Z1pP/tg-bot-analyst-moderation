@@ -3,6 +3,7 @@ from statistics import mean
 from typing import List, Tuple
 
 from constants import BREAK_TIME
+from dto.report import BreakDayDTO, BreakIntervalDTO
 from models import ChatMessage, MessageReaction
 from services.time_service import TimeZoneService
 from utils.formatter import format_seconds
@@ -80,6 +81,61 @@ class BreakAnalysisService:
                 )
                 result.extend([f"• {br}" for br in day_breaks])
                 result.append("")
+
+        return result
+
+    @classmethod
+    def calculate_breaks_structured(
+        cls,
+        messages: List[ChatMessage],
+        reactions: List[MessageReaction],
+        min_break_minutes: int = BREAK_TIME,
+    ) -> List[BreakDayDTO]:
+        """
+        Возвращает структурированные перерывы по дням без форматирования строк.
+        """
+        activities = cls._merge_activities(messages, reactions)
+
+        if len(activities) < 2:
+            return []
+
+        activities_by_date = {}
+        for activity_time, activity_type in activities:
+            local_time = TimeZoneService.convert_to_local_time(activity_time)
+            date_key = local_time.date()
+            if date_key not in activities_by_date:
+                activities_by_date[date_key] = []
+            activities_by_date[date_key].append((local_time, activity_type))
+
+        result: List[BreakDayDTO] = []
+        for date, day_activities in sorted(activities_by_date.items()):
+            day_activities.sort(key=lambda x: x[0])
+            intervals: List[BreakIntervalDTO] = []
+            total_break_minutes = 0
+
+            for i in range(1, len(day_activities)):
+                prev_time, _ = day_activities[i - 1]
+                curr_time, _ = day_activities[i]
+                minutes_diff = (curr_time - prev_time).total_seconds() / 60
+
+                if minutes_diff >= min_break_minutes:
+                    intervals.append(
+                        BreakIntervalDTO(
+                            start_time=prev_time.strftime("%H:%M"),
+                            end_time=curr_time.strftime("%H:%M"),
+                            duration_minutes=int(minutes_diff),
+                        )
+                    )
+                    total_break_minutes += minutes_diff
+
+            if intervals:
+                result.append(
+                    BreakDayDTO(
+                        date=datetime.combine(date, datetime.min.time()),
+                        total_break_seconds=int(total_break_minutes * 60),
+                        intervals=intervals,
+                    )
+                )
 
         return result
 
