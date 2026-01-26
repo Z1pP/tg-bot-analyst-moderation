@@ -12,6 +12,7 @@ from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
 from keyboards.inline.users import (
     back_to_users_menu_ikb,
+    no_tracked_users_ikb,
     show_tracked_users_ikb,
     users_menu_ikb,
 )
@@ -120,17 +121,16 @@ async def show_users_list_handler(
     await _display_tracked_users_page(callback, state, container, page=1)
 
 
-@router.callback_query(F.data == CallbackData.User.SELECT_USER)
-async def select_user_handler(
+@router.callback_query(F.data == CallbackData.User.SELECT_USER_FOR_ANALYTICS)
+async def select_user_for_analytics_handler(
     callback: CallbackQuery,
-    state: FSMContext,
     container: Container,
 ) -> None:
     """Обработчик команды для отображения списка пользователей через inline клавиатуру"""
     await callback.answer()
 
     logger.info(
-        "Администратор tg_id:%d username:%s запросил список пользователей для отчета",
+        "Администратор tg_id:%d username:%s запросил список пользователей для аналитики",
         callback.from_user.id,
         callback.from_user.username or "неизвестно",
     )
@@ -144,7 +144,7 @@ async def select_user_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.Analytics.NO_TRACKED_USERS,
-            reply_markup=users_menu_ikb(has_tracked_users=False),
+            reply_markup=no_tracked_users_ikb(),
         )
         return
 
