@@ -84,11 +84,12 @@ class UserCallbackData:
     SHOW_TRACKED_USERS_LIST = "show_tracked_users_list"
     ADD = "add_user"
     REMOVE = "remove_user"
-    SELECT_USER = "select_user"
+    SELECT_USER_FOR_ANALYTICS = "select_user"
     BACK_TO_MAIN_MENU_FROM_USERS = "back_to_main_menu_from_users"
     ALL_USERS = "all_users"
     USERS_PAGE_INFO = "users_page_info"
     REMOVE_USERS_PAGE_INFO = "remove_users_page_info"
+    MANAGEMENT = "users_management"
 
     # Prefixes
     PREFIX_USER = "user__"
