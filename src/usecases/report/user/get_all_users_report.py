@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from datetime import datetime
 from statistics import mean, median
 from typing import List, Optional
@@ -239,9 +240,12 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             return None
 
         first_message_time = None
+        last_message_time = None
         if messages:
             first_message = min(messages, key=lambda m: m.created_at)
             first_message_time = first_message.created_at
+            last_message = max(messages, key=lambda m: m.created_at)
+            last_message_time = last_message.created_at
 
         first_reaction_time = None
         if reactions:
@@ -256,6 +260,7 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
         return SingleUserDayStats(
             first_message_time=first_message_time,
             first_reaction_time=first_reaction_time,
+            last_message_time=last_message_time,
             avg_messages_per_hour=avg_messages_per_hour,
             total_messages=msg_count,
             warns_count=warns_count,
@@ -277,6 +282,7 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
 
         avg_first_message_time = self.get_avg_time_first_messages(messages)
         avg_first_reaction_time = self.get_avg_time_first_reaction(reactions)
+        avg_last_message_time = self._calculate_avg_daily_end_time(messages)
 
         msg_count = len(messages)
         avg_messages_per_hour = self._avg_messages_per_hour(
@@ -289,12 +295,41 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
         return SingleUserMultiDayStats(
             avg_first_message_time=avg_first_message_time or None,
             avg_first_reaction_time=avg_first_reaction_time or None,
+            avg_last_message_time=avg_last_message_time,
             avg_messages_per_hour=avg_messages_per_hour,
             avg_messages_per_day=avg_messages_per_day,
             total_messages=msg_count,
             warns_count=warns_count,
             bans_count=bans_count,
         )
+
+    def _calculate_avg_daily_end_time(
+        self, messages: List[ChatMessage]
+    ) -> Optional[str]:
+        """
+        Возвращает среднее время последнего сообщения за каждый день.
+        """
+        if not messages:
+            return None
+
+        daily_lasts: dict[datetime.date, List[datetime]] = defaultdict(list)
+        for message in messages:
+            local_time = message.created_at
+            daily_lasts[local_time.date()].append(local_time)
+
+        last_times_seconds = []
+        for dates_times in daily_lasts.values():
+            max_time = max(dates_times).time()
+            seconds = max_time.hour * 3600 + max_time.minute * 60 + max_time.second
+            last_times_seconds.append(seconds)
+
+        if not last_times_seconds:
+            return None
+
+        avg_seconds = int(mean(last_times_seconds))
+        hours = avg_seconds // 3600
+        minutes = (avg_seconds % 3600) // 60
+        return f"{hours:02d}:{minutes:02d}"
 
     def _calculate_replies_stats(self, replies: List[MessageReply]) -> RepliesStats:
         """Рассчитывает статистику по ответам."""
@@ -330,11 +365,13 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             )
             return breaks
         else:
-            avg_breaks_time = BreakAnalysisService.avg_breaks_time(messages, reactions)
-            if avg_breaks_time:
-                return [
-                    f"• <b>{avg_breaks_time}</b> - средн. время перерыва между сообщ. и реакциями"
-                ]
+            daily_totals = BreakAnalysisService.total_breaks_time_per_day(
+                messages, reactions
+            )
+            if daily_totals:
+                avg_total = mean(daily_totals)
+                formatted_avg = BreakAnalysisService._format_break_time(avg_total)
+                return [f"{formatted_avg} - общее время перерыва за день"]
             return []
 
     def _is_single_day_report(
