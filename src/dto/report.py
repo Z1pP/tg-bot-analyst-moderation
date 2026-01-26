@@ -69,6 +69,46 @@ class RepliesStats(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class BreakIntervalDTO(BaseModel):
+    """Интервал перерыва в пределах дня."""
+
+    start_time: str
+    end_time: str
+    duration_minutes: int
+
+    model_config = ConfigDict(frozen=True)
+
+
+class BreakDayDTO(BaseModel):
+    """Перерывы за один день."""
+
+    date: datetime
+    total_break_seconds: int
+    intervals: List[BreakIntervalDTO]
+
+    model_config = ConfigDict(frozen=True)
+
+
+class BreaksDetailUserDTO(BaseModel):
+    """Детализация перерывов одного пользователя."""
+
+    username: str
+    has_activity: bool
+    days: List[BreakDayDTO]
+
+    model_config = ConfigDict(frozen=True)
+
+
+class BreaksDetailReportDTO(BaseModel):
+    """Результат детализации перерывов."""
+
+    period: str
+    users: List[BreaksDetailUserDTO]
+    error_message: Optional[str] = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class UserStatsDTO(BaseModel):
     """Статистика одного пользователя"""
 
@@ -88,6 +128,7 @@ class SingleUserDayStats(BaseModel):
 
     first_message_time: Optional[datetime]
     first_reaction_time: Optional[datetime]
+    last_message_time: Optional[datetime] = None
     avg_messages_per_hour: float
     total_messages: int
     warns_count: int = 0
@@ -101,6 +142,7 @@ class SingleUserMultiDayStats(BaseModel):
 
     avg_first_message_time: Optional[str]  # "HH:MM"
     avg_first_reaction_time: Optional[str]
+    avg_last_message_time: Optional[str] = None
     avg_messages_per_hour: float
     avg_messages_per_day: float
     total_messages: int
