@@ -1,5 +1,4 @@
 from aiogram import F, Router
-from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 
 from constants import Dialog
@@ -11,10 +10,7 @@ router = Router(name=__name__)
 
 
 @router.callback_query(F.data == CallbackData.Analytics.SHOW_MENU)
-async def analytics_menu_handler(
-    callback: CallbackQuery,
-    state: FSMContext,
-):
+async def analytics_menu_handler(callback: CallbackQuery):
     await callback.answer()
     await safe_edit_message(
         bot=callback.bot,
