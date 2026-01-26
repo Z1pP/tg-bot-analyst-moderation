@@ -9,7 +9,27 @@ from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
 
 
-def users_menu_ikb(has_tracked_users: bool = True) -> InlineKeyboardMarkup:
+def no_tracked_users_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура меню пользователей без отслеживаемых пользователей"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.User.MANAGEMENT,
+            callback_data=CallbackData.User.MANAGEMENT,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Analytics.SHOW_MENU,
+        ),
+        width=1,
+    )
+    return builder.as_markup()
+
+
+def users_menu_ikb(
+    has_tracked_users: bool = True,
+    callback_data: str = CallbackData.User.BACK_TO_MAIN_MENU_FROM_USERS,
+) -> InlineKeyboardMarkup:
     """Клавиатура меню пользователей"""
     builder = InlineKeyboardBuilder()
 
@@ -35,7 +55,7 @@ def users_menu_ikb(has_tracked_users: bool = True) -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.User.BACK_TO_MAIN_MENU_FROM_USERS,
+            callback_data=callback_data,
         ),
     )
 
@@ -229,7 +249,7 @@ def remove_user_inline_kb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.User.SELECT_USER,
+            callback_data=CallbackData.User.SELECT_USER_FOR_ANALYTICS,
         )
     )
 
@@ -264,7 +284,7 @@ def user_actions_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=Dialog.User.SELECT_USER,
-            callback_data=CallbackData.User.SELECT_USER,
+            callback_data=CallbackData.User.SELECT_USER_FOR_ANALYTICS,
         ),
         width=1,
     )
@@ -284,7 +304,7 @@ def all_users_actions_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=Dialog.User.SELECT_USER,
-            callback_data=CallbackData.User.SELECT_USER,
+            callback_data=CallbackData.User.SELECT_USER_FOR_ANALYTICS,
         ),
         width=1,
     )
