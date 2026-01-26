@@ -8,6 +8,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from dto.report import AllUsersReportDTO, ChatReportDTO, SingleUserReportDTO
 from keyboards.inline.report import hide_details_ikb
+from presenters.breaks_detail_presenter import BreaksDetailPresenter
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
     GetBreaksDetailReportUseCase,
@@ -73,7 +74,8 @@ async def _handle_single_user_details(
     usecase: GetBreaksDetailReportUseCase = container.resolve(
         GetBreaksDetailReportUseCase
     )
-    report_parts = await usecase.execute(report_dto)
+    report_data = await usecase.execute(report_dto)
+    report_parts = BreaksDetailPresenter.format_report(report_data)
 
     message_ids = []
     for part in report_parts:
@@ -113,7 +115,8 @@ async def _handle_all_users_details(
     usecase: GetAllUsersBreaksDetailReportUseCase = container.resolve(
         GetAllUsersBreaksDetailReportUseCase
     )
-    report_parts = await usecase.execute(report_dto)
+    report_data = await usecase.execute(report_dto)
+    report_parts = BreaksDetailPresenter.format_report(report_data)
 
     message_ids = []
     for part in report_parts:
@@ -153,7 +156,8 @@ async def _handle_chat_details(
     usecase: GetChatBreaksDetailReportUseCase = container.resolve(
         GetChatBreaksDetailReportUseCase
     )
-    report_parts = await usecase.execute(report_dto)
+    report_data = await usecase.execute(report_dto)
+    report_parts = BreaksDetailPresenter.format_report(report_data)
 
     message_ids = []
     for part in report_parts:
