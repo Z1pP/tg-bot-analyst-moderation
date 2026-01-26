@@ -27,6 +27,7 @@ from repositories import (
 from services import AdminActionLogService
 from services.break_analysis_service import BreakAnalysisService
 from services.work_time_service import WorkTimeService
+from utils.collection_utils import group_by
 
 from .base import BaseReportUseCase
 
@@ -105,8 +106,16 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             )
         )
 
+        users_data = await self._get_all_users_data(
+            user_ids=user_ids,
+            start_date=adjusted_start,
+            end_date=adjusted_end,
+        )
+
         for user in users:
-            user_data = await self._get_user_data(user, adjusted_start, adjusted_end)
+            user_data = users_data.get(
+                user.id, {"messages": [], "reactions": [], "replies": []}
+            )
             punishment_stats = all_punishment_stats.get(
                 user.id, {"warns": 0, "bans": 0}
             )
@@ -149,36 +158,47 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             users_stats=users_stats,
         )
 
-    async def _get_user_data(
-        self, user: User, start_date: datetime, end_date: datetime
+    async def _get_all_users_data(
+        self,
+        user_ids: List[int],
+        start_date: datetime,
+        end_date: datetime,
     ) -> dict:
-        """Получает все данные пользователя за период."""
-        replies = await self._get_processed_items(
-            self._msg_reply_repository.get_replies_by_period_date,
-            user.id,
-            start_date,
-            end_date,
+        """Получает все данные пользователей за период одной выборкой."""
+        replies = await self._msg_reply_repository.get_replies_by_period_date_for_users(
+            user_ids=user_ids,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        messages = await self._message_repository.get_messages_by_period_date_for_users(
+            user_ids=user_ids,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        reactions = (
+            await self._reaction_repository.get_reactions_by_user_and_period_for_users(
+                user_ids=user_ids,
+                start_date=start_date,
+                end_date=end_date,
+            )
         )
 
-        messages = await self._get_processed_items(
-            self._message_repository.get_messages_by_period_date,
-            user.id,
-            start_date,
-            end_date,
-        )
+        replies = self._process_items(replies)
+        messages = self._process_items(messages)
+        reactions = self._process_items(reactions)
 
-        reactions = await self._get_processed_items(
-            self._reaction_repository.get_reactions_by_user_and_period,
-            user.id,
-            start_date,
-            end_date,
-        )
+        replies_by_user = group_by(replies, lambda r: r.reply_user_id)
+        messages_by_user = group_by(messages, lambda m: m.user_id)
+        reactions_by_user = group_by(reactions, lambda r: r.user_id)
 
-        logger.info(
-            f"Пользователь {user.username}: {len(messages)} сообщений, {len(replies)} ответов, {len(reactions)} реакций"
-        )
-
-        return {"replies": replies, "messages": messages, "reactions": reactions}
+        return {
+            user_id: {
+                "replies": replies_by_user.get(user_id, []),
+                "messages": messages_by_user.get(user_id, []),
+                "reactions": reactions_by_user.get(user_id, []),
+            }
+            for user_id in user_ids
+        }
 
     def _calculate_user_stats(
         self,
