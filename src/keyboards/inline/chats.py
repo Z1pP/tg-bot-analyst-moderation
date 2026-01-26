@@ -508,15 +508,38 @@ def rating_report_ikb(
     return builder.as_markup()
 
 
-def chats_management_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура меню чатов"""
+def not_tracked_chats_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.SELECT_CHAT,
-            callback_data=CallbackData.Chat.SELECT_CHAT_FOR_SETTINGS,
+            text=InlineButtons.Chat.MANAGEMENT,
+            callback_data=CallbackData.Chat.MANAGEMENT,
         ),
+        InlineKeyboardButton(
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Chat.SHOW_MENU,
+        ),
+        width=1,
+    )
+    return builder.as_markup()
+
+
+def chats_menu_ikb(
+    has_tracked_chats: bool = True,
+    callback_data: str = CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
+) -> InlineKeyboardMarkup:
+    "Клавиатура меню чатов"
+    builder = InlineKeyboardBuilder()
+
+    if has_tracked_chats:
+        builder.row(
+            InlineKeyboardButton(
+                text=InlineButtons.Chat.SELECT_CHAT,
+                callback_data=CallbackData.Chat.SELECT_CHAT_FOR_SETTINGS,
+            ),
+        )
+
+    builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Chat.ADD,
             callback_data=CallbackData.Chat.ADD,
@@ -527,11 +550,14 @@ def chats_management_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.Chat.BACK_TO_MAIN_MENU_FROM_CHATS,
+            callback_data=callback_data,
         ),
     )
 
-    builder.adjust(1, 2, 1)
+    if has_tracked_chats:
+        builder.adjust(1, 2, 1)
+    else:
+        builder.adjust(2, 1)
 
     return builder.as_markup()
 
