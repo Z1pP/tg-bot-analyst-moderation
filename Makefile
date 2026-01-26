@@ -38,6 +38,9 @@ build:
 logs:
 	$(DOCKER_COMPOSE) logs -f
 
+logs-bot:
+	$(DOCKER_COMPOSE) logs -f bot
+
 ps:
 	$(DOCKER_COMPOSE) ps
 
