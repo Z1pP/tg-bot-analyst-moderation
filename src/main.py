@@ -3,11 +3,9 @@ import asyncio
 import logging
 import os
 import sys
-from contextlib import asynccontextmanager
 
-import uvicorn
-from aiogram.types import Update
-from fastapi import FastAPI, Request
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+from aiohttp import web
 
 from bot import configure_dispatcher
 from commands.start_commands import set_bot_commands
@@ -28,7 +26,7 @@ bot = None
 dp = None
 
 
-async def init_bot():
+async def init_bot() -> None:
     """Инициализирует контейнер зависимостей и настраивает бота."""
     global bot, dp
     logger.info("Инициализация контейнера...")
@@ -37,74 +35,82 @@ async def init_bot():
     bot, dp = await configure_dispatcher()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Управляет жизненным циклом FastAPI: инициализация и очистка ресурсов."""
-    await init_bot()
-
+async def on_startup(app: web.Application) -> None:
+    """Устанавливает webhook и команды при старте сервера."""
     if args.webhook_url:
         url = f"{args.webhook_url}/webhook"
         logger.info("🚀 Устанавливаем webhook: %s", url)
         await bot.set_webhook(url)
         await set_bot_commands(bot)
 
-    yield
 
-    if bot and hasattr(bot, "session"):
-        await bot.session.close()
-        logger.info("Сессия бота закрыта")
-
-
-app = FastAPI(lifespan=lifespan)
+async def on_shutdown(app: web.Application) -> None:
+    """Освобождает ресурсы при остановке сервера."""
+    await shutdown(bot, dp)
 
 
-@app.get("/")
-async def root():
+async def root(request: web.Request) -> web.Response:
     """Проверка работоспособности бота."""
-    return {"status": "ok", "message": "Bot is running"}
+    return web.json_response({"status": "ok", "message": "Bot is running"})
 
 
-@app.get("/health")
-async def health():
+async def health(request: web.Request) -> web.Response:
     """Возвращает статус здоровья бота и конфигурацию."""
-    return {
-        "status": "healthy",
-        "webhook_configured": args.webhook_url is not None,
-        "bot_initialized": bot is not None,
-    }
+    return web.json_response(
+        {
+            "status": "healthy",
+            "webhook_configured": args.webhook_url is not None,
+            "bot_initialized": bot is not None,
+        }
+    )
 
 
-@app.get("/webhook-info")
-async def webhook_info():
+async def webhook_info(request: web.Request) -> web.Response:
     """Возвращает информацию о текущем webhook."""
     if bot:
         info = await bot.get_webhook_info()
-        return {
-            "url": info.url,
-            "has_custom_certificate": info.has_custom_certificate,
-            "pending_update_count": info.pending_update_count,
-            "last_error_date": info.last_error_date,
-            "last_error_message": info.last_error_message,
-        }
-    return {"error": "Bot not initialized"}
+        return web.json_response(
+            {
+                "url": info.url,
+                "has_custom_certificate": info.has_custom_certificate,
+                "pending_update_count": info.pending_update_count,
+                "last_error_date": info.last_error_date,
+                "last_error_message": info.last_error_message,
+            }
+        )
+    return web.json_response({"error": "Bot not initialized"}, status=503)
 
 
-@app.post("/webhook")
-async def webhook(request: Request):
-    """Обрабатывает входящие обновления от Telegram."""
-    update = Update.model_validate(await request.json(), context={"bot": bot})
-    asyncio.create_task(dp.feed_update(bot, update))
-    return {"ok": True}
+def build_web_app() -> web.Application:
+    """Создает aiohttp приложение для webhook."""
+    app = web.Application()
+    app.router.add_get("/", root)
+    app.router.add_get("/health", health)
+    app.router.add_get("/webhook-info", webhook_info)
+
+    webhook_requests_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
+    webhook_requests_handler.register(app, path="/webhook")
+    setup_application(app, dp, bot=bot)
+
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
+    return app
 
 
-async def run_webhook():
-    """Запускает бота в режиме webhook через FastAPI."""
+async def run_webhook() -> None:
+    """Запускает бота в режиме webhook через aiohttp."""
     logger.info("Запуск в режиме webhook...")
-    config = uvicorn.Config(
-        app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), log_level="info"
-    )
-    server = uvicorn.Server(config)
-    await server.serve()
+    await init_bot()
+    app = build_web_app()
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    await site.start()
+    logger.info("Webhook server started")
+    try:
+        await asyncio.Event().wait()
+    finally:
+        await runner.cleanup()
 
 
 async def run_polling():
@@ -123,24 +129,24 @@ async def run_polling():
     await dp.start_polling(bot)
 
 
-async def shutdown(bot, dp):
+async def shutdown(bot, dp) -> None:
     """
     Функция для корректного завершения всех ресурсов.
     """
     logger.info("Начало процесса Graceful Shutdown...")
 
-    if dp.is_polling():
+    if dp and dp.is_polling():
         logger.info("Остановка polling...")
         dp.stop_polling()
 
-    if bot:
+    if bot and hasattr(bot, "session") and not bot.session.closed:
         logger.info("Закрытие сессии бота...")
         await bot.session.close()
 
     logger.info("Закрытие соединений с БД...")
     await engine.dispose()
 
-    if dp.storage:
+    if dp and dp.storage:
         logger.info("Закрытие хранилища FSM...")
         await dp.storage.close()
 
@@ -159,8 +165,7 @@ async def main():
         logger.error("Критическая ошибка: %s", str(e), exc_info=True)
         sys.exit(1)
     finally:
-        if bot and hasattr(bot, "session"):
-            await bot.session.close()
+        await shutdown(bot, dp)
 
 
 if __name__ == "__main__":
