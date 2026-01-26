@@ -91,6 +91,7 @@ class InlineButtons:
         """Кнопки для действий с пользователями"""
 
         SHOW_TRACKED_USERS_LIST = "📋 Все отсл. пользователи"
+        SHOW_TRACKED_USERS = "😏 Пользователи"
         ADD = "➕ Добавить"
         REMOVE = "🗑 Удалить"
         COME_BACK = "◀️ Вернуться"
@@ -103,6 +104,7 @@ class InlineButtons:
         """Кнопки для действий с чатами"""
 
         MANAGEMENT = "⚙️ Управление чатами"
+        SHOW_TRACKED_CHATS = "🗯 Чаты"
         # Chat management menu
         SELECT_CHAT = "📋 Выбрать чат"
         ADD = "➕ Добавить"
