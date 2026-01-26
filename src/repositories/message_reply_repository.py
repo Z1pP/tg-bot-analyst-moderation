@@ -52,6 +52,48 @@ class MessageReplyRepository(BaseRepository):
                 )
                 return []
 
+    async def get_replies_by_period_date_for_users(
+        self,
+        user_ids: list[int],
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list[MessageReply]:
+        """
+        Получает все ответы пользователей за указанный период.
+        """
+        if not user_ids:
+            return []
+
+        async with self._db.session() as session:
+            query = (
+                select(MessageReply)
+                .options(joinedload(MessageReply.chat_session))
+                .where(
+                    MessageReply.reply_user_id.in_(user_ids),
+                    MessageReply.created_at.between(start_date, end_date),
+                )
+            )
+            try:
+                result = await session.execute(query)
+                replies = result.scalars().all()
+                logger.info(
+                    "Получено %d ответов для пользователей (%d) за период %s - %s",
+                    len(replies),
+                    len(user_ids),
+                    start_date,
+                    end_date,
+                )
+                return replies
+            except Exception as e:
+                logger.error(
+                    "Ошибка при получении ответов по периоду для пользователей: users=%s, период=%s-%s, %s",
+                    user_ids,
+                    start_date,
+                    end_date,
+                    e,
+                )
+                return []
+
     async def get_replies_by_chat_id_and_period(
         self,
         chat_id: int,
