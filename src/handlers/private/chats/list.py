@@ -6,12 +6,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from punq import Container
 
+from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
 from dto.chat_dto import ChatDTO
 from keyboards.inline.chats import (
     chat_actions_ikb,
-    chats_management_ikb,
+    not_tracked_chats_ikb,
     show_tracked_chats_ikb,
 )
 from states import ChatStateManager
@@ -74,9 +75,8 @@ async def _show_no_chats_message(callback: CallbackQuery) -> None:
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text="❗Чтобы получать отчёты по чату, необходимо добавить чат "
-        "в отслеживаемые, а также пользователей для сбора статистики",
-        reply_markup=chats_management_ikb(),
+        text=Dialog.Chat.NO_TRACKED_CHATS,
+        reply_markup=not_tracked_chats_ikb(),
     )
 
 
