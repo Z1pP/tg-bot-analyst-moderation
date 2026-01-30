@@ -1,10 +1,12 @@
 import logging
 
+import httpx
 from openrouter import OpenRouter
+from openrouter.errors import OpenRouterError
 
 from constants.enums import SummaryType
 
-from .ai_service_base import IAIService
+from .ai_service_base import IAIService, SummaryResult
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +58,7 @@ class OpenRouterService(IAIService):
         msg_count: int,
         summary_type: SummaryType,
         tracked_users: list[str],
-    ) -> str:
+    ) -> SummaryResult:
         async with OpenRouter(api_key=self._api_key) as client:
             try:
                 user_content = (
@@ -87,7 +89,39 @@ class OpenRouterService(IAIService):
                     ],
                 )
 
-                return response.choices[0].message.content
-            except Exception as e:
-                logger.error("Unexpected AI error: %s", e, exc_info=True)
-                return "❌ Произошла непредвиденная ошибка при генерации сводки."
+                if not response.choices:
+                    logger.error("OpenRouter response has no choices.")
+                    return SummaryResult(
+                        status_code=502,
+                        summary="❌ Произошла непредвиденная ошибка при генерации сводки.",
+                    )
+
+                first_choice = response.choices[0]
+                message = getattr(first_choice, "message", None)
+                content = getattr(message, "content", None)
+
+                if not content:
+                    logger.error("OpenRouter response has no content.")
+                    return SummaryResult(
+                        status_code=502,
+                        summary="❌ Произошла непредвиденная ошибка при генерации сводки.",
+                    )
+
+                return SummaryResult(status_code=200, summary=content)
+            except OpenRouterError as exc:
+                logger.error(
+                    "OpenRouter API error: %s (status=%s)",
+                    exc,
+                    exc.status_code,
+                    exc_info=True,
+                )
+                return SummaryResult(
+                    status_code=exc.status_code,
+                    summary="❌ Произошла непредвиденная ошибка при генерации сводки.",
+                )
+            except httpx.HTTPError as exc:
+                logger.error("OpenRouter network error: %s", exc, exc_info=True)
+                return SummaryResult(
+                    status_code=503,
+                    summary="❌ Произошла непредвиденная ошибка при генерации сводки.",
+                )
