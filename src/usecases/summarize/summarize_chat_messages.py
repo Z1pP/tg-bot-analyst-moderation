@@ -76,21 +76,24 @@ class GetChatSummaryUseCase:
             f"@{u.username}" if u.username else f"ID:{u.tg_id}" for u in tracked_users
         ]
 
-        summary = await self._ai_service.summarize_text(
+        summary_result = await self._ai_service.summarize_text(
             text=formatted_text,
             msg_count=real_count,
             summary_type=summary_type,
             tracked_users=tracked_usernames,
         )
 
-        # Сохраняем в кеш
-        max_id = await self._msg_repo.get_max_message_id(chat_id=chat_id)
-        if max_id:
-            await self._cache.set(
-                key=cache_key,
-                value=(summary, max_id),
-                ttl=settings.SUMMARY_CACHE_TTL_MINUTES * 60,
-            )
+        summary = summary_result.summary
+
+        if summary_result.status_code == 200:
+            # Сохраняем в кеш
+            max_id = await self._msg_repo.get_max_message_id(chat_id=chat_id)
+            if max_id:
+                await self._cache.set(
+                    key=cache_key,
+                    value=(summary, max_id),
+                    ttl=settings.SUMMARY_CACHE_TTL_MINUTES * 60,
+                )
 
         # Логируем действие администратора
         chat = await self._chat_repo.get_chat_by_id(chat_id=chat_id)
