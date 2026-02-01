@@ -189,6 +189,8 @@ class UserAndChatsSettingsCallbackData:
 
     # Commands
     SHOW_MENU = "users_chats_settings_menu"
+    RESET_SETTINGS = "reset_settings"
+    FIRST_TIME_SETTINGS = "first_time_settings"
 
 
 class BotSettingsCallbackData:
