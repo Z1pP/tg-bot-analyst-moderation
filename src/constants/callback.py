@@ -198,13 +198,6 @@ class BotSettingsCallbackData:
     SHOW_MENU = "bot_settings_menu"
 
 
-class SubscriptionCallbackData:
-    """Класс для хранения callback данных подписки"""
-
-    # Commands
-    SHOW_MENU = "subscription_menu"
-
-
 class RootCallbackData:
     """Класс для хранения callback данных root"""
 
@@ -248,7 +241,6 @@ class CallbackData:
     Messages = MessagesCallbackData
     UserAndChatsSettings = UserAndChatsSettingsCallbackData
     BotSettings = BotSettingsCallbackData
-    Subscription = SubscriptionCallbackData
     Root = RootCallbackData
     Help = HelpCallbackData
     News = NewsCallbackData
