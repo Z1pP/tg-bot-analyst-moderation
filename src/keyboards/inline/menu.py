@@ -67,10 +67,6 @@ def main_menu_ikb(
             callback_data=CallbackData.BotSettings.SHOW_MENU,
         ),
         InlineKeyboardButton(
-            text=Dialog.Subscription.MENU,
-            callback_data=CallbackData.Subscription.SHOW_MENU,
-        ),
-        InlineKeyboardButton(
             text=Dialog.Help.MENU,
             callback_data=CallbackData.Help.SHOW_MENU,
         ),
