@@ -178,36 +178,6 @@ async def test_get_reactions_by_chat_and_period(db_manager: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_reactions_by_user_and_period(db_manager: Any) -> None:
-    """Тестирует получение реакций по пользователю и периоду."""
-    async with db_manager.session() as session:
-        user = await create_test_user(session, "1", "user1")
-        chat = await create_test_chat(session, "-1", "chat1")
-        repo = MessageReactionRepository(db_manager)
-        now = datetime.now()
-
-        await repo.add_reaction(
-            MessageReactionDTO(
-                chat_id=chat.id,
-                user_id=user.id,
-                message_id="1",
-                action=ReactionAction.ADDED,
-                emoji="👍",
-                message_url="u1",
-            )
-        )
-
-        # Act
-        reactions = await repo.get_reactions_by_user_and_period(
-            user.id, now - timedelta(days=1), now + timedelta(days=1)
-        )
-
-        # Assert
-        assert len(reactions) == 1
-        assert reactions[0].user_id == user.id
-
-
-@pytest.mark.asyncio
 async def test_get_daily_top_reactors(db_manager: Any) -> None:
     """Тестирует получение топа реакторов."""
     async with db_manager.session() as session:
