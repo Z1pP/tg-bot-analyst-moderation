@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import aliased, selectinload
 
 from database.session import DatabaseContextManager
@@ -113,3 +113,26 @@ class UserTrackingRepository:
                 .limit(1)
             )
             return result.first() is not None
+
+    async def delete_all_tracked_users_for_admin(self, admin_id: int) -> int:
+        """Удаляет всех отслеживаемых пользователей для админа."""
+        async with self._db.session() as session:
+            try:
+                query = delete(admin_user_tracking).where(
+                    admin_user_tracking.c.admin_id == admin_id
+                )
+                result = await session.execute(query)
+                await session.commit()
+                logger.info(
+                    "Удалено %d отслеживаемых пользователей для администратора: admin_id=%s",
+                    result.rowcount,
+                    admin_id,
+                )
+                return result.rowcount
+            except Exception as e:
+                logger.error(
+                    "Произошла ошибка при удалении всех отслеживаемых пользователей: %s",
+                    e,
+                )
+                await session.rollback()
+                raise e
