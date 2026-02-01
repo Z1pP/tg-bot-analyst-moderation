@@ -14,7 +14,7 @@ def cancel_template_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data="cancel_template",
         )
     )
@@ -27,7 +27,7 @@ def cancel_edit_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL_EDIT,
+            text=InlineButtons.Common.CANCEL,
             callback_data="cancel_edit_title_or_content",
         )
     )
@@ -164,7 +164,7 @@ def edit_template_kb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text="❌ Отмена",
+            text=InlineButtons.Common.CANCEL,
             callback_data="cancel_edit",
         )
     )
