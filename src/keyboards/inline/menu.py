@@ -112,15 +112,3 @@ def main_menu_ikb(
     # )
 
     return builder.as_markup()
-
-
-def close_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура с кнопкой закрытия уведомления."""
-    builder = InlineKeyboardBuilder()
-    builder.row(
-        InlineKeyboardButton(
-            text=InlineButtons.Common.CANCEL,
-            callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
-        )
-    )
-    return builder.as_markup()
