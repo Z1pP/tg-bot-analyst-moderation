@@ -3,7 +3,7 @@ from typing import Optional
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import Dialog, InlineButtons
+from constants import InlineButtons
 from constants.callback import CallbackData
 from constants.enums import UserRole
 from constants.i18n import DEFAULT_LANGUAGE
@@ -47,31 +47,31 @@ def main_menu_ikb(
 
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Analytics.MENU,
+            text=InlineButtons.Analytics.MENU,
             callback_data=CallbackData.Analytics.SHOW_MENU,
         ),
         InlineKeyboardButton(
-            text=Dialog.Moderation.MENU,
+            text=InlineButtons.Moderation.MENU,
             callback_data=CallbackData.Moderation.SHOW_MENU,
         ),
         InlineKeyboardButton(
-            text=Dialog.Messages.MENU,
+            text=InlineButtons.Messages.MENU,
             callback_data=CallbackData.Messages.SHOW_MENU,
         ),
         InlineKeyboardButton(
-            text=Dialog.UserAndChatsSettings.MENU,
+            text=InlineButtons.UserAndChatsSettings.MENU,
             callback_data=CallbackData.UserAndChatsSettings.SHOW_MENU,
         ),
         InlineKeyboardButton(
-            text=Dialog.BotSettings.MENU,
+            text=InlineButtons.BotSettings.MENU,
             callback_data=CallbackData.BotSettings.SHOW_MENU,
         ),
         InlineKeyboardButton(
-            text=Dialog.Help.MENU,
+            text=InlineButtons.Help.MENU,
             callback_data=CallbackData.Help.SHOW_MENU,
         ),
         InlineKeyboardButton(
-            text=Dialog.News.MENU,
+            text=InlineButtons.News.MENU,
             callback_data=CallbackData.News.SHOW_MENU,
         ),
     )
@@ -79,7 +79,7 @@ def main_menu_ikb(
     if user.role in (UserRole.ROOT, UserRole.DEV):
         builder.row(
             InlineKeyboardButton(
-                text=Dialog.Root.MENU,
+                text=InlineButtons.Root.MENU,
                 callback_data=CallbackData.Root.SHOW_MENU,
             ),
         )
