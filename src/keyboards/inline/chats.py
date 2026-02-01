@@ -712,6 +712,8 @@ def time_report_settings_ikb() -> InlineKeyboardMarkup:
         ),
     )
 
+    builder.adjust(2, 1, 1, 1)
+
     return builder.as_markup()
 
 
