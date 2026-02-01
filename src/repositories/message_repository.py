@@ -51,42 +51,6 @@ class MessageRepository(BaseRepository):
             # Возвращаем список кортежей (text, username) в хронологическом порядке
             return list(reversed(result.all()))
 
-    async def get_messages_by_period_date(
-        self,
-        user_id: int,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> list[ChatMessage]:
-        async with self._db.session() as session:
-            query = (
-                select(ChatMessage)
-                .options(joinedload(ChatMessage.chat_session))
-                .where(
-                    ChatMessage.user_id == user_id,
-                    ChatMessage.created_at.between(start_date, end_date),
-                )
-            )
-            try:
-                result = await session.execute(query)
-                messages = result.scalars().all()
-                logger.info(
-                    "Получено %d сообщений для user_id=%s за период %s - %s",
-                    len(messages),
-                    user_id,
-                    start_date,
-                    end_date,
-                )
-                return messages
-            except Exception as e:
-                logger.error(
-                    "Ошибка при получении сообщений по периоду: user_id=%s, период=%s-%s, %s",
-                    user_id,
-                    start_date,
-                    end_date,
-                    e,
-                )
-                return []
-
     async def get_messages_by_period_date_for_users(
         self,
         user_ids: list[int],
