@@ -722,8 +722,8 @@ def cancel_work_hours_setting_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.Chat.CANCEL_TIME_SETTING,
+            text=InlineButtons.Common.CANCEL,
+            callback_data=CallbackData.Chat.REPORT_TIME_SETTING,
         )
     )
     return builder.as_markup()
