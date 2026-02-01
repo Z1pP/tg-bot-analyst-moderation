@@ -265,7 +265,7 @@ def hide_notification_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Chat.HIDE_NOTIFICATION,
+            text=InlineButtons.Common.HIDE_NOTIFICATION,
             callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
         )
     )
@@ -282,7 +282,7 @@ def move_to_chat_analytics_ikb(chat_id: int) -> InlineKeyboardMarkup:
             callback_data=f"{CallbackData.Chat.PREFIX_CHAT}{chat_id}",
         ),
         InlineKeyboardButton(
-            text=InlineButtons.Chat.HIDE_NOTIFICATION,
+            text=InlineButtons.Common.HIDE_NOTIFICATION,
             callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
         ),
         width=1,
