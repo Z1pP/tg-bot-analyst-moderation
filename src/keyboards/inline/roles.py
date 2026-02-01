@@ -43,7 +43,7 @@ def role_select_ikb(user_id: int, current_role: UserRole) -> InlineKeyboardMarku
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.RoleButtons.CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.Menu.MAIN_MENU,
         )
     )
@@ -56,7 +56,7 @@ def cancel_role_select_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.RoleButtons.CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.Menu.MAIN_MENU,
         )
     )
