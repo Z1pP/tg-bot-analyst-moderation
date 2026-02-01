@@ -190,6 +190,8 @@ class UserAndChatsSettingsCallbackData:
     # Commands
     SHOW_MENU = "users_chats_settings_menu"
     RESET_SETTINGS = "reset_settings"
+    CONFIRM_RESET = "confirm_reset"
+    CANCEL_RESET = "cancel_reset"
     FIRST_TIME_SETTINGS = "first_time_settings"
 
 
