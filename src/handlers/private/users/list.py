@@ -170,6 +170,6 @@ async def _show_no_users_message(callback: CallbackQuery) -> None:
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.User.NO_TRACKED_USERS,
+        text=Dialog.Analytics.NO_TRACKED_USERS,
         reply_markup=no_tracked_users_ikb(),
     )
