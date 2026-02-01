@@ -94,11 +94,11 @@ def main_menu_ikb(
     # if release_admin_id and release_admin_id in RELEASE_NOTES_ADMIN_IDS:
     #     builder.row(
     #         InlineKeyboardButton(
-    #             text=Dialog.AdminLogs.ADMIN_LOGS,
+    #             text=InlineButtons.AdminLogs.MENU,
     #             callback_data=CallbackData.AdminLogs.MENU,
     #         ),
     #         InlineKeyboardButton(
-    #             text=Dialog.Roles.MENU,
+    #             text=InlineButtons.RoleButtons.MENU,
     #             callback_data=CallbackData.Role.INPUT_USER_DATA,
     #         ),
     #         width=2,
