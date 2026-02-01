@@ -1,5 +1,4 @@
 from datetime import datetime
-from statistics import mean
 from typing import List, Tuple
 
 from constants import BREAK_TIME
@@ -138,36 +137,6 @@ class BreakAnalysisService:
                 )
 
         return result
-
-    @classmethod
-    def avg_breaks_time(
-        cls,
-        messages: List[ChatMessage],
-        reactions: List[MessageReaction],
-        min_break_minutes: int = BREAK_TIME,
-    ) -> str:
-        """Считает среднее время перерыва между сообщениями и реакциями"""
-        activities = cls._merge_activities(messages, reactions)
-
-        if len(activities) < 2:
-            return ""
-
-        break_durations = []
-
-        for i in range(1, len(activities)):
-            prev_time = activities[i - 1][0]
-            curr_time = activities[i][0]
-
-            break_seconds = (curr_time - prev_time).total_seconds()
-
-            if break_seconds >= min_break_minutes * 60:
-                break_durations.append(break_seconds)
-
-        if not break_durations:
-            return ""
-
-        avg_break_seconds = mean(break_durations)
-        return format_seconds(int(avg_break_seconds))
 
     @classmethod
     def total_breaks_time_per_day(
