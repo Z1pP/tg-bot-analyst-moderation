@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import Dialog, InlineButtons
+from constants import InlineButtons
 from constants.callback import CallbackData
 
 
@@ -39,19 +39,19 @@ def punishment_action_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Punishment.ACTION_WARNING,
+            text=InlineButtons.Punishment.ACTION_WARNING,
             callback_data=CallbackData.Chat.PUNISH_ACTION_WARNING,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Punishment.ACTION_MUTE,
+            text=InlineButtons.Punishment.ACTION_MUTE,
             callback_data=CallbackData.Chat.PUNISH_ACTION_MUTE,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Punishment.ACTION_BAN,
+            text=InlineButtons.Punishment.ACTION_BAN,
             callback_data=CallbackData.Chat.PUNISH_ACTION_BAN,
         )
     )
@@ -73,19 +73,19 @@ def punishment_next_step_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Punishment.STEP_ADD_MORE,
+            text=InlineButtons.Punishment.STEP_ADD_MORE,
             callback_data=CallbackData.Chat.PUNISH_STEP_NEXT,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Punishment.STEP_SAVE_LADDER,
+            text=InlineButtons.Punishment.STEP_SAVE_LADDER,
             callback_data=CallbackData.Chat.PUNISH_STEP_SAVE,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Punishment.STEP_CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.Chat.PUNISH_STEP_CANCEL,
         )
     )
@@ -98,7 +98,7 @@ def cancel_punishment_creation_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Punishment.STEP_CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.Chat.PUNISH_STEP_CANCEL,
         )
     )
