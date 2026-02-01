@@ -12,7 +12,6 @@ from keyboards.inline.chats import (
     chats_menu_ikb,
     conf_remove_chat_ikb,
 )
-from states import MenuStates
 from usecases.chat_tracking import (
     RemoveChatFromTrackingUseCase,
 )
@@ -152,5 +151,3 @@ async def confirmation_untracking_chat_handler(
         text=text,
         reply_markup=chats_menu_ikb(),
     )
-
-    await state.set_state(MenuStates.chats_menu)
