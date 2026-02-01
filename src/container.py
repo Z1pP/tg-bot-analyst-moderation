@@ -110,6 +110,7 @@ from usecases.report import (
     SendDailyChatReportsUseCase,
 )
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
+from usecases.settings import ResetAllTrackingUseCase
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
 from usecases.templates import (
     DeleteTemplateUseCase,
@@ -302,6 +303,7 @@ class ContainerSetup:
             GetAllUsersUseCase,
             GetUserByIdUseCase,
             UpdateUserRoleUseCase,
+            ResetAllTrackingUseCase,
         ]
 
         for usecase in user_usecases:
