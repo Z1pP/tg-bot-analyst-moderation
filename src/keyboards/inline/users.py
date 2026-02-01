@@ -3,7 +3,7 @@ from typing import List
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from constants import Dialog, InlineButtons
+from constants import InlineButtons
 from constants.callback import CallbackData
 from constants.pagination import USERS_PAGE_SIZE
 from dto.user import UserDTO
@@ -279,11 +279,11 @@ def user_actions_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Report.GET_REPORT,
+            text=InlineButtons.Report.GET_REPORT,
             callback_data=CallbackData.Report.GET_USER_REPORT,
         ),
         InlineKeyboardButton(
-            text=Dialog.User.SELECT_USER,
+            text=InlineButtons.User.SELECT_USER,
             callback_data=CallbackData.User.SELECT_USER_FOR_REPORT,
         ),
         width=1,
@@ -299,11 +299,11 @@ def all_users_actions_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=Dialog.Report.GET_REPORT,
+            text=InlineButtons.Report.GET_REPORT,
             callback_data=CallbackData.Report.GET_ALL_USERS_REPORT,
         ),
         InlineKeyboardButton(
-            text=Dialog.User.SELECT_USER,
+            text=InlineButtons.User.SELECT_USER,
             callback_data=CallbackData.User.SELECT_USER_FOR_REPORT,
         ),
         width=1,
