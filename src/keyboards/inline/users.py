@@ -77,7 +77,7 @@ def move_to_analytics_ikb(user_id: int) -> InlineKeyboardMarkup:
             callback_data=CallbackData.User.PREFIX_USER + str(user_id),
         ),
         InlineKeyboardButton(
-            text=InlineButtons.User.HIDE_NOTIFICATION,
+            text=InlineButtons.Common.HIDE_NOTIFICATION,
             callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
         ),
         width=1,
@@ -90,7 +90,7 @@ def hide_notification_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.User.HIDE_NOTIFICATION,
+            text=InlineButtons.Common.HIDE_NOTIFICATION,
             callback_data=CallbackData.Menu.HIDE_NOTIFICATION,
         )
     )
