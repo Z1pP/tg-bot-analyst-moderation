@@ -20,7 +20,7 @@ def message_action_ikb() -> types.InlineKeyboardMarkup:
     )
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.Messages.CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.Messages.CANCEL,
         ),
     )
@@ -36,7 +36,7 @@ def confirm_delete_ikb() -> types.InlineKeyboardMarkup:
             callback_data=CallbackData.Messages.DELETE_MESSAGE_CONFIRM,
         ),
         types.InlineKeyboardButton(
-            text=InlineButtons.Messages.CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.Messages.DELETE_MESSAGE_CANCEL,
         ),
     )
@@ -70,7 +70,7 @@ def cancel_send_message_ikb() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.Messages.CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.Messages.SHOW_MENU,
         )
     )
@@ -82,7 +82,7 @@ def cancel_reply_ikb() -> types.InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         types.InlineKeyboardButton(
-            text=InlineButtons.Messages.CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.Messages.CANCEL_REPLY,
         )
     )
