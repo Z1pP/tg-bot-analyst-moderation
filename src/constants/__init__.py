@@ -19,7 +19,6 @@ from .dialogs import (
     ReportDialogs,
     RolesDialogs,
     RootDialogs,
-    SubscriptionDialogs,
     SummaryDialogs,
     TemplateDialogs,
     UserAndChatsSettingsDialogs,
@@ -220,8 +219,6 @@ class Dialog:
     UserAndChatsSettings = UserAndChatsSettingsDialogs
     # Bot Settings
     BotSettings = BotSettingsDialogs
-    # Subscription
-    Subscription = SubscriptionDialogs
     # Root
     Root = RootDialogs
     # Help
