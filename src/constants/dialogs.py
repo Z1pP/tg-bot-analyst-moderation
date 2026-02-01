@@ -778,7 +778,7 @@ class AnalyticsDialogs:
 class UserAndChatsSettingsDialogs:
     """Сообщения для функционала настроек пользователей и чатов"""
 
-    pass
+    MENU_TEXT = "Выберите раздел для настроек."
 
 
 class BotSettingsDialogs:
