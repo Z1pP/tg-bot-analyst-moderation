@@ -146,7 +146,7 @@ def edit_release_note_ikb() -> InlineKeyboardMarkup:
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ReleaseNotesButtons.CANCEL_EDIT,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.ReleaseNotes.CANCEL_EDIT,
         )
     )
@@ -160,7 +160,7 @@ def cancel_edit_release_note_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ReleaseNotesButtons.CANCEL_EDIT,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.ReleaseNotes.CANCEL_EDIT,
         )
     )
@@ -178,7 +178,7 @@ def confirm_delete_release_note_ikb(note_id: int) -> InlineKeyboardMarkup:
             callback_data=f"{CallbackData.ReleaseNotes.PREFIX_CONFIRM_DELETE}yes__{note_id}",
         ),
         InlineKeyboardButton(
-            text="❌ Отмена",
+            text=InlineButtons.Common.CANCEL,
             callback_data=f"{CallbackData.ReleaseNotes.PREFIX_CONFIRM_DELETE}no__{note_id}",
         ),
         width=2,
@@ -197,7 +197,7 @@ def confirm_broadcast_release_note_ikb(note_id: int) -> InlineKeyboardMarkup:
             callback_data=f"{CallbackData.ReleaseNotes.PREFIX_CONFIRM_BROADCAST}yes__{note_id}",
         ),
         InlineKeyboardButton(
-            text="❌ Отмена",
+            text=InlineButtons.Common.CANCEL,
             callback_data=f"{CallbackData.ReleaseNotes.PREFIX_CONFIRM_BROADCAST}no__{note_id}",
         ),
         width=2,
@@ -212,7 +212,7 @@ def cancel_add_release_note_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ReleaseNotesButtons.CANCEL_EDIT,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.ReleaseNotes.CANCEL_ADD,
         )
     )
@@ -232,7 +232,7 @@ def change_title_or_cancel_add_ikb() -> InlineKeyboardMarkup:
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ReleaseNotesButtons.CANCEL_EDIT,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.ReleaseNotes.CANCEL_ADD,
         )
     )
@@ -276,7 +276,7 @@ def select_add_language_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ReleaseNotesButtons.CANCEL_EDIT,
+            text=InlineButtons.Common.CANCEL,
             callback_data=CallbackData.ReleaseNotes.CANCEL_ADD,
         )
     )
