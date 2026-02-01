@@ -43,6 +43,7 @@ class InlineButtons:
         """Кнопки для общих действий"""
 
         COME_BACK = "◀️ Вернуться"
+        CANCEL = "❌ Отмена"
 
     class TemplateButtons:
         """Кнопки для действий с шаблонами"""
