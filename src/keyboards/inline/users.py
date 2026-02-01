@@ -256,23 +256,6 @@ def remove_user_inline_kb(
     return builder.as_markup()
 
 
-def conf_remove_user_kb() -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-
-    builder.row(
-        InlineKeyboardButton(
-            text="Да",
-            callback_data=f"{CallbackData.User.PREFIX_CONFIRM_REMOVE_USER}yes",
-        ),
-        InlineKeyboardButton(
-            text="Нет",
-            callback_data=f"{CallbackData.User.PREFIX_CONFIRM_REMOVE_USER}no",
-        ),
-        width=2,
-    )
-    return builder.as_markup()
-
-
 def user_actions_ikb() -> InlineKeyboardMarkup:
     """Клавиатура действий с выбранным пользователем"""
     builder = InlineKeyboardBuilder()
