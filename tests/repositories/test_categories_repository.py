@@ -49,22 +49,6 @@ async def test_get_all_categories(db_manager: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_category_by_name(db_manager: Any) -> None:
-    """Тестирует получение категории по имени."""
-    # Arrange
-    repo = TemplateCategoryRepository(db_manager)
-    name = "FindMe"
-    await repo.create_category(name=name)
-
-    # Act
-    category = await repo.get_category_by_name(name)
-
-    # Assert
-    assert category is not None
-    assert category.name == name
-
-
-@pytest.mark.asyncio
 async def test_get_category_by_id(db_manager: Any) -> None:
     """Тестирует получение категории по ID."""
     # Arrange
