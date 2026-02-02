@@ -24,6 +24,7 @@ class SaveReplyMessageUseCase:
 
         reply_user = await self.user_service.get_or_create(
             tg_id=reply_message_dto.reply_user_tgid,
+            username=reply_message_dto.reply_user_username,
         )
         chat = await self.chat_service.get_or_create(
             chat_tgid=reply_message_dto.chat_tgid,
