@@ -63,6 +63,7 @@ async def process_reply_message(
     msg_dto = CreateMessageDTO(
         chat_tgid=str(message.chat.id),
         user_tgid=str(message.from_user.id),
+        user_username=message.from_user.username,
         message_id=str(message.message_id),
         message_type=MessageType.REPLY.value,
         content_type=message.content_type.value,
@@ -83,6 +84,7 @@ async def process_reply_message(
         reply_dto = CreateMessageReplyDTO(
             chat_tgid=str(message.chat.id),
             reply_user_tgid=str(message.from_user.id),
+            reply_user_username=message.from_user.username,
             original_message_url=original_message_url,
             reply_message_id=0,  # Временное значение, будет заменено в воркере по message_id
             original_message_date=message_date,
@@ -118,6 +120,7 @@ async def process_message(
     msg_dto = CreateMessageDTO(
         chat_tgid=str(message.chat.id),
         user_tgid=str(message.from_user.id),
+        user_username=message.from_user.username,
         message_id=str(message.message_id),
         message_type=MessageType.MESSAGE.value,
         content_type=message.content_type.value,
