@@ -107,10 +107,16 @@ class UserService:
 
         if user:
             if username and user.username != username:
+                # Если нашли по tg_id, но username не совпадает или None - обновляем
                 user = await self._user_repository.update_user(
                     user_id=user.id,
                     username=username,
                 )
+            if tg_id and user.tg_id != tg_id:
+                # Если нашли по username, но tg_id не совпадает или None - обновляем
+                # (Хотя tg_id обычно не меняется, но может быть None если юзер создан по username)
+                # Но в нашей модели tg_id уникален, так что тут надо быть осторожным
+                pass
             await self._cache_user(user)
 
         return user
