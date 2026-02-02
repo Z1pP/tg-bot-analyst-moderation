@@ -29,6 +29,7 @@ class SaveMessageReactionUseCase:
         # Разрешаем Telegram ID в записи БД
         user = await self.user_service.get_or_create(
             tg_id=reaction_dto.user_tgid,
+            username=reaction_dto.user_username,
         )
         chat = await self.chat_service.get_or_create(
             chat_tgid=reaction_dto.chat_tgid,
