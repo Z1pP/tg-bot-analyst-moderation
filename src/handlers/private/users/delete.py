@@ -46,7 +46,7 @@ async def remove_user_from_tracking_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.User.REMOVE_USER_INFO,
+        text=Dialog.User.REMOVE_USER_INSTRUCTION,
         reply_markup=back_to_users_menu_ikb(),
     )
 
