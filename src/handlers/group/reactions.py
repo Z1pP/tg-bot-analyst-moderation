@@ -51,6 +51,7 @@ async def process_reaction(
     reaction_dto = MessageReactionDTO(
         chat_tgid=chat_tgid,
         user_tgid=user_tgid,
+        user_username=getattr(user, "username", None),
         message_id=str(event.message_id),
         action=_get_reaction_action(event),
         emoji=_get_emoji(event),
