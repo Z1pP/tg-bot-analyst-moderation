@@ -42,7 +42,7 @@ async def add_user_to_tracking_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.User.ADD_USER_INFO,
+        text=Dialog.User.ADD_USER_INSTRUCTION,
         reply_markup=back_to_users_menu_ikb(),
     )
 
