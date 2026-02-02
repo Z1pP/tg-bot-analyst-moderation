@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -10,6 +11,7 @@ class CreateMessageReplyDTO(BaseModel):
 
     chat_tgid: str
     reply_user_tgid: str
+    reply_user_username: Optional[str] = None
     original_message_url: str
     reply_message_id: int
     original_message_date: datetime
