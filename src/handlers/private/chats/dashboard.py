@@ -7,21 +7,19 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats import (
-    antibot_setting_ikb,
-    chat_actions_ikb,
-    chats_management_ikb,
-)
+from keyboards.inline.chats import chat_actions_ikb, chats_menu_ikb
 from services.chat import ChatService
 from states import ChatStateManager
-from usecases.chat import ToggleAntibotUseCase
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data.startswith(CallbackData.Chat.PREFIX_CHAT))
+@router.callback_query(
+    F.data.startswith(CallbackData.Chat.PREFIX_CHAT),
+    ChatStateManager.listing_tracking_chats,
+)
 async def chat_selected_handler(
     callback: CallbackQuery,
     state: FSMContext,
@@ -33,8 +31,8 @@ async def chat_selected_handler(
     await callback.answer()
 
     chat_id_str = callback.data.replace(CallbackData.Chat.PREFIX_CHAT, "")
-    if not chat_id_str.isdigit():
-        logger.error("Некорректный ID чата в callback: %s", callback.data)
+    if not chat_id_str or not chat_id_str.isdigit():
+        await _handle_error(callback=callback, error=ValueError("Invalid chat ID"))
         return
 
     chat_id = int(chat_id_str)
@@ -43,113 +41,45 @@ async def chat_selected_handler(
     chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
 
     if not chat:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-            reply_markup=chats_management_ikb(),
-        )
+        await _show_chat_not_found_message(callback=callback)
         return
 
     await state.update_data(chat_id=chat_id)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=Dialog.Chat.CHAT_ACTIONS.format(
-            title=chat.title,
-            start_time=chat.start_time.strftime("%H:%M"),
-            end_time=chat.end_time.strftime("%H:%M"),
-        ),
-        reply_markup=chat_actions_ikb(),
-    )
+    await _show_chat_actions_message(callback=callback)
 
     await state.set_state(ChatStateManager.selecting_chat)
 
 
-@router.callback_query(F.data == CallbackData.Chat.ANTIBOT_SETTING)
-async def antibot_menu_handler(
-    callback: CallbackQuery,
-    state: FSMContext,
-    container: Container,
-) -> None:
-    """
-    Обработчик перехода в меню настройки антибота.
-    """
-    chat_id = await state.get_value("chat_id")
-
-    if not chat_id:
-        await callback.answer("Ошибка: чат не выбран", show_alert=True)
-        return
-
-    chat_service: ChatService = container.resolve(ChatService)
-    chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
-
-    if not chat:
-        await callback.answer("Ошибка: чат не найден", show_alert=True)
-        return
-
-    status_icon = "✅" if chat.is_antibot_enabled else "❌"
-    status_text = "Включен" if chat.is_antibot_enabled else "Выключен"
-
+async def _show_chat_not_found_message(callback: CallbackQuery) -> None:
+    """Показывает сообщение о том, что чат не найден."""
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=f"🛡️ <b>Настройка Антибота для чата {chat.title}</b>\n\n"
-        f"Текущий статус: {status_icon} <b>{status_text}</b>\n\n"
-        f"Система Антибота ограничивает новых участников (mute), пока они не пройдут "
-        f"проверку в личных сообщениях бота.",
-        reply_markup=antibot_setting_ikb(is_enabled=chat.is_antibot_enabled),
+        text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+        reply_markup=chats_menu_ikb(),
     )
 
 
-@router.callback_query(F.data == CallbackData.Chat.ANTIBOT_TOGGLE)
-async def toggle_antibot_handler(
-    callback: CallbackQuery,
-    state: FSMContext,
-    container: Container,
-) -> None:
-    """
-    Обработчик переключения системы антибота.
-    """
-    chat_id = await state.get_value("chat_id")
-
-    if not chat_id:
-        await callback.answer("Ошибка: чат не выбран", show_alert=True)
-        return
-
-    toggle_usecase: ToggleAntibotUseCase = container.resolve(ToggleAntibotUseCase)
-    new_state = await toggle_usecase.execute(
-        chat_id=chat_id, admin_tg_id=str(callback.from_user.id)
-    )
-
-    if new_state is None:
-        await callback.answer("Ошибка: чат не найден", show_alert=True)
-        return
-
-    chat_service: ChatService = container.resolve(ChatService)
-    chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
-
-    status_text = (
-        Dialog.Antibot.ENABLED if chat.is_antibot_enabled else Dialog.Antibot.DISABLED
-    )
-    await callback.answer(
-        Dialog.Antibot.TOGGLE_SUCCESS.format(chat_title=chat.title, status=status_text)
-    )
-
-    status_icon = "✅" if new_state else "❌"
-    display_status = "Включен" if new_state else "Выключен"
-
+async def _show_chat_actions_message(callback: CallbackQuery) -> None:
+    """Показывает сообщение с информацией о действиях с чатом."""
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=f"🛡️ <b>Настройка Антибота для чата {chat.title}</b>\n\n"
-        f"Текущий статус: {status_icon} <b>{display_status}</b>\n\n"
-        f"Система Антибота ограничивает новых участников (mute), пока они не пройдут "
-        f"проверку в личных сообщениях бота.",
-        reply_markup=antibot_setting_ikb(is_enabled=new_state),
+        text=Dialog.Chat.CHAT_ACTIONS_INFO,
+        reply_markup=chat_actions_ikb(),
+    )
+
+
+async def _handle_error(callback: CallbackQuery, error: Exception) -> None:
+    """Обрабатывает ошибки при выборе чата."""
+    logger.error("Ошибка при выборе чата: %s", error, exc_info=True)
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=Dialog.Chat.ERROR_GET_CHAT_WITH_ARCHIVE,
+        reply_markup=chats_menu_ikb(),
     )

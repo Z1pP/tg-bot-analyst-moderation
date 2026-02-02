@@ -23,6 +23,7 @@ from repositories import (
     MessageReactionRepository,
     MessageReplyRepository,
     MessageRepository,
+    PunishmentRepository,
     UserRepository,
 )
 from services import AdminActionLogService, BotPermissionService
@@ -62,6 +63,7 @@ class GetChatReportUseCase:
         message_repository: MessageRepository,
         reaction_repository: MessageReactionRepository,
         msg_reply_repository: MessageReplyRepository,
+        punishment_repository: PunishmentRepository,
         bot_permission_service: BotPermissionService = None,
         admin_action_log_service: AdminActionLogService = None,
     ) -> None:
@@ -70,6 +72,7 @@ class GetChatReportUseCase:
         self._message_repository = message_repository
         self._reaction_repository = reaction_repository
         self._msg_reply_repository = msg_reply_repository
+        self._punishment_repository = punishment_repository
         self._bot_permission_service = bot_permission_service
         self._admin_action_log_service = admin_action_log_service
 
@@ -87,6 +90,23 @@ class GetChatReportUseCase:
                 is_single_day=False,
                 working_hours=0.0,
                 error_message=ReportDialogs.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+            )
+
+        if not self._has_time_settings(chat=chat):
+            if dto.start_date and dto.end_date:
+                start_date, end_date = dto.start_date, dto.end_date
+            else:
+                start_date, end_date = TimePeriod.to_datetime(
+                    period=dto.selected_period
+                )
+            return ReportResultDTO(
+                users_stats=[],
+                chat_title=chat.title or "",
+                start_date=start_date,
+                end_date=end_date,
+                is_single_day=False,
+                working_hours=0.0,
+                error_message=ReportDialogs.CHAT_REPORT_SETTINGS_REQUIRED,
             )
 
         dto.chat_tgid = chat.chat_id
@@ -149,6 +169,7 @@ class GetChatReportUseCase:
             end_date=dto.end_date,
             is_single_day=is_single_day,
             working_hours=working_hours,
+            breaks_time=chat.breaks_time,
         )
 
         # Логирование действия администратора
@@ -273,6 +294,7 @@ class GetChatReportUseCase:
         end_date: datetime,
         is_single_day: bool,
         working_hours: float,
+        breaks_time: int,
     ) -> List[UserStatsDTO]:
         """
         Оптимизированный расчет статистики по пользователям за один проход.
@@ -312,16 +334,30 @@ class GetChatReportUseCase:
 
         # Создаем UserStatsDTO для каждого пользователя
         users_stats = []
+        # Получаем статистику наказаний для всех отслеживаемых пользователей разом
+        punishment_stats = (
+            await self._punishment_repository.get_punishment_counts_by_moderators(
+                moderator_ids=list(users_data.keys()),
+                start_date=start_date,
+                end_date=end_date,
+            )
+        )
+
         for user_id, stats in users_data.items():
             if not stats["messages"] and not stats["reactions"]:
                 continue
 
             username = user_names.get(user_id, f"user_{user_id}")
+            user_punishments = punishment_stats.get(user_id, {"warns": 0, "bans": 0})
 
             # Рассчитываем статистику
             if is_single_day:
                 day_stats = self._calculate_single_day_stats(
-                    stats["messages"], stats["reactions"], working_hours
+                    stats["messages"],
+                    stats["reactions"],
+                    working_hours,
+                    warns_count=user_punishments["warns"],
+                    bans_count=user_punishments["bans"],
                 )
                 multi_day_stats = None
             else:
@@ -332,14 +368,26 @@ class GetChatReportUseCase:
                     start_date,
                     end_date,
                     working_hours,
+                    warns_count=user_punishments["warns"],
+                    bans_count=user_punishments["bans"],
                 )
 
             replies_stats = self._calculate_replies_stats(stats["replies"])
 
             # Рассчитываем перерывы
             breaks = self._calculate_breaks(
-                stats["messages"], stats["reactions"], is_single_day
+                stats["messages"],
+                stats["reactions"],
+                is_single_day,
+                breaks_time,
             )
+
+            # Извлекаем общее время перерыва из первой строки, если оно там есть
+            total_break_time = None
+            if breaks and "общее время перерыва" in breaks[0]:
+                total_break_time = (
+                    breaks[0].split(" - ")[0].replace("<b>", "").replace("</b>", "")
+                )
 
             users_stats.append(
                 UserStatsDTO(
@@ -349,6 +397,7 @@ class GetChatReportUseCase:
                     multi_day_stats=multi_day_stats,
                     replies_stats=replies_stats,
                     breaks=breaks,
+                    total_break_time=total_break_time,
                 )
             )
 
@@ -359,15 +408,21 @@ class GetChatReportUseCase:
         messages: List[ChatMessage],
         reactions: List[MessageReaction],
         working_hours: float,
+        warns_count: int = 0,
+        bans_count: int = 0,
     ) -> UserDayStats:
         """Рассчитывает статистику за один день"""
         first_message_time = None
         first_reaction_time = None
+        last_message_time = None
 
         if messages:
             # Используем _get_local_time для конвертации без мутации
             first_msg = min(messages, key=lambda m: self._get_local_time(m))
             first_message_time = self._get_local_time(first_msg)
+
+            last_msg = max(messages, key=lambda m: self._get_local_time(m))
+            last_message_time = self._get_local_time(last_msg)
 
         if reactions:
             first_reaction = min(reactions, key=lambda r: self._get_local_time(r))
@@ -379,8 +434,11 @@ class GetChatReportUseCase:
         return UserDayStats(
             first_message_time=first_message_time,
             first_reaction_time=first_reaction_time,
+            last_message_time=last_message_time,
             avg_messages_per_hour=avg_per_hour,
             total_messages=msg_count,
+            warns_count=warns_count,
+            bans_count=bans_count,
         )
 
     def _calculate_multi_day_stats(
@@ -390,13 +448,17 @@ class GetChatReportUseCase:
         start_date: datetime,
         end_date: datetime,
         working_hours: float,
+        warns_count: int = 0,
+        bans_count: int = 0,
     ) -> UserMultiDayStats:
         """Рассчитывает статистику за несколько дней"""
         avg_first_message_time = None
         avg_first_reaction_time = None
+        avg_last_message_time = None
 
         if messages:
             avg_first_message_time = self._calculate_avg_daily_start_time(messages)
+            avg_last_message_time = self._calculate_avg_daily_end_time(messages)
 
         if reactions:
             avg_first_reaction_time = self._calculate_avg_daily_start_time(reactions)
@@ -410,9 +472,12 @@ class GetChatReportUseCase:
         return UserMultiDayStats(
             avg_first_message_time=avg_first_message_time,
             avg_first_reaction_time=avg_first_reaction_time,
+            avg_last_message_time=avg_last_message_time,
             avg_messages_per_hour=avg_per_hour,
             avg_messages_per_day=avg_per_day,
             total_messages=msg_count,
+            warns_count=warns_count,
+            bans_count=bans_count,
         )
 
     def _calculate_avg_daily_start_time(self, items: List[Any]) -> Optional[str]:
@@ -442,6 +507,32 @@ class GetChatReportUseCase:
         minutes = (avg_seconds % 3600) // 60
         return f"{hours:02d}:{minutes:02d}"
 
+    def _calculate_avg_daily_end_time(self, items: List[Any]) -> Optional[str]:
+        """
+        Метод для расчета среднего времени последнего действия за день.
+        """
+        if not items:
+            return None
+
+        daily_lasts = defaultdict(list)
+        for item in items:
+            local_time = self._get_local_time(item)
+            daily_lasts[local_time.date()].append(local_time)
+
+        last_times_seconds = []
+        for dates_times in daily_lasts.values():
+            max_time = max(dates_times).time()
+            seconds = max_time.hour * 3600 + max_time.minute * 60 + max_time.second
+            last_times_seconds.append(seconds)
+
+        if not last_times_seconds:
+            return None
+
+        avg_seconds = int(mean(last_times_seconds))
+        hours = avg_seconds // 3600
+        minutes = (avg_seconds % 3600) // 60
+        return f"{hours:02d}:{minutes:02d}"
+
     def _calculate_replies_stats(self, replies: List[MessageReply]) -> RepliesStats:
         """Рассчитывает статистику ответов"""
         if not replies:
@@ -467,6 +558,7 @@ class GetChatReportUseCase:
         messages: List[ChatMessage],
         reactions: List[MessageReaction],
         is_single_day: bool,
+        breaks_time: int,
     ) -> List[str]:
         """
         Рассчитывает перерывы. Возвращает список строк, уже отформатированных
@@ -486,15 +578,18 @@ class GetChatReportUseCase:
                 messages=sorted_messages,
                 reactions=reactions,
                 is_single_day=is_single_day,
+                min_break_minutes=breaks_time,
             )
             return breaks
         else:
-            # Для многодневного отчета возвращаем одну строку со средним временем
-            avg_time = BreakAnalysisService.avg_breaks_time(messages, reactions)
-            if avg_time:
-                return [
-                    f"Перерывы:\n• <b>{avg_time}</b> — средн.время перерыва между сообщ. и реакциями"
-                ]
+            # Для многодневного отчета считаем среднее общее время перерыва за день
+            daily_totals = BreakAnalysisService.total_breaks_time_per_day(
+                messages, reactions, min_break_minutes=breaks_time
+            )
+            if daily_totals:
+                avg_total = mean(daily_totals)
+                formatted_avg = BreakAnalysisService._format_break_time(avg_total)
+                return [f"<b>{formatted_avg}</b> - общее время перерыва за день"]
             return []
 
     def _is_single_day_report(
@@ -518,4 +613,13 @@ class GetChatReportUseCase:
             admin_tg_id=dto.admin_tg_id,
             action_type=AdminActionType.REPORT_CHAT,
             details=details,
+        )
+
+    @staticmethod
+    def _has_time_settings(chat: ChatSession) -> bool:
+        return (
+            chat.start_time is not None
+            and chat.end_time is not None
+            and chat.tolerance is not None
+            and chat.breaks_time is not None
         )

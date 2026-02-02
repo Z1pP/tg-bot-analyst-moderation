@@ -4,7 +4,8 @@ from aiogram.types import Message
 from punq import Container
 
 from constants import Dialog
-from keyboards.inline.menu import admin_menu_ikb
+from keyboards.inline.menu import main_menu_ikb
+from services.user import UserService
 
 router = Router(name=__name__)
 
@@ -16,13 +17,13 @@ async def start_handler(
     """
     Выводит приветственное сообщение
     """
-    username = message.from_user.full_name
-    welcome_text = Dialog.Menu.MENU_TEXT.format(username=username)
+    user_service: UserService = container.resolve(UserService)
+    user = await user_service.get_user(tg_id=str(message.from_user.id))
 
     await message.answer(
-        text=welcome_text,
-        reply_markup=admin_menu_ikb(
+        text=Dialog.Menu.MENU_TEXT.format(username=user.username),
+        reply_markup=main_menu_ikb(
+            user=user,
             user_language=user_language,
-            admin_tg_id=str(message.from_user.id),
         ),
     )

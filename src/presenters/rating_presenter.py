@@ -10,19 +10,6 @@ from dto.daily_activity import (
 class RatingPresenter:
     """Презентер для форматирования рейтинга пользователей."""
 
-    RANK_EMOJIS = {
-        1: "🥇",
-        2: "🥈",
-        3: "🥉",
-        4: "🏅",
-        5: "🎖️",
-        6: "🏵️",
-        7: "🎗️",
-        8: "🌟",
-        9: "⭐",
-        10: "✨",
-    }
-
     @classmethod
     def format_daily_rating(cls, stats: ChatDailyStatsDTO) -> str:
         """
@@ -34,47 +21,51 @@ class RatingPresenter:
         Returns:
             Отформатированная строка с рейтингом
         """
-        period_str, title = cls._get_period_info(stats)
+        period_str = cls._get_period_string(stats)
+        chat_name = f"<b>{stats.chat_title}</b>" if stats.chat_title else "чате"
 
-        if not stats.top_users:
-            return (
-                f"{title}\n"
-                f"📅 {period_str} | 💬 <b>{stats.chat_title}</b>\n\n"
-                f"{Dialog.Rating.NO_ACTIVITY}"
+        if not stats.top_users and not stats.top_reactors:
+            title = Dialog.Rating.RATING_TITLE.format(
+                period=period_str, chat_name=chat_name
             )
+            return f"{title}\n\n{Dialog.Rating.NO_ACTIVITY}"
 
-        sections = [
-            cls._format_header(stats, period_str, title),
-            cls._format_top_users(stats.top_users),
-            cls._format_top_reactors(stats.top_reactors),
-            cls._format_popular_reactions(stats.popular_reactions),
-            cls._format_summary(stats),
-        ]
+        header = cls._format_header(stats, period_str, chat_name)
+        top_messages = cls._format_top_users(stats.top_users[:10])
+        top_reactions = cls._format_top_reactors(stats.top_reactors[:5])
+        popular_reactions = cls._format_popular_reactions(stats.popular_reactions[:7])
 
-        # Фильтруем пустые секции и соединяем
-        return "\n".join(filter(None, sections))
+        sections = [header, top_messages, top_reactions, popular_reactions]
+
+        # Filter out empty strings and join with double newlines for clear separation
+        return "\n\n".join(filter(None, sections))
 
     @classmethod
-    def _get_period_info(cls, stats: ChatDailyStatsDTO) -> tuple[str, str]:
-        """Возвращает строку периода и заголовок."""
+    def _get_period_string(cls, stats: ChatDailyStatsDTO) -> str:
+        """Возвращает строку периода."""
+        start_fmt = stats.start_date.strftime("%d.%m.%Y")
         if stats.end_date and stats.start_date.date() != stats.end_date.date():
-            period_str = f"{stats.start_date.strftime('%d.%m.%Y')} - {stats.end_date.strftime('%d.%m.%Y')}"
-            title = Dialog.Rating.TOP_ACTIVE_PERIOD
-        else:
-            period_str = stats.start_date.strftime("%Y-%m-%d")
-            title = Dialog.Rating.TOP_ACTIVE_DAILY
-        return period_str, title
+            end_fmt = stats.end_date.strftime("%d.%m.%Y")
+            return f"{start_fmt}-{end_fmt}"
+        return start_fmt
 
     @classmethod
     def _format_header(
-        cls, stats: ChatDailyStatsDTO, period_str: str, title: str
+        cls, stats: ChatDailyStatsDTO, period_str: str, chat_name: str
     ) -> str:
-        """Форматирует заголовок рейтинга."""
-        return (
-            f"{title}\n"
-            f"📅 {period_str} | 💬 <b>{stats.chat_title}</b>\n\n"
-            f"{Dialog.Rating.ACTIVE_USERS} {stats.active_users_count} из {stats.total_users_count}\n"
+        """Форматирует заголовок и общую статистику."""
+        title = Dialog.Rating.RATING_TITLE.format(
+            period=period_str, chat_name=chat_name
         )
+
+        lines = [
+            title,
+            "",
+            f"{Dialog.Rating.ACTIVE_USERS} {stats.active_users_count} из {stats.total_users_count}",
+            f"{Dialog.Rating.TOTAL_MESSAGES} {stats.total_messages}",
+            f"{Dialog.Rating.TOTAL_REACTIONS} {stats.total_reactions}",
+        ]
+        return "\n".join(lines)
 
     @classmethod
     def _format_top_users(cls, top_users: list[UserDailyActivityDTO]) -> str:
@@ -82,12 +73,11 @@ class RatingPresenter:
         if not top_users:
             return ""
 
-        text = f"\n{Dialog.Rating.BY_MESSAGES}\n"
-        for user in top_users:
-            emoji = cls.RANK_EMOJIS.get(user.rank, "💫")
+        lines = [Dialog.Rating.TOP_USERS_BY_MESSAGES]
+        for i, user in enumerate(top_users, 1):
             username = cls._get_username(user.username)
-            text += f"{emoji} {username} — {user.message_count} сообщ.\n"
-        return text
+            lines.append(f"{i}. {username} — {user.message_count} сообщ.")
+        return "\n".join(lines)
 
     @classmethod
     def _format_top_reactors(cls, top_reactors: list[UserReactionActivityDTO]) -> str:
@@ -95,12 +85,11 @@ class RatingPresenter:
         if not top_reactors:
             return ""
 
-        text = f"\n{Dialog.Rating.BY_REACTIONS}\n"
-        for user in top_reactors:
-            emoji = cls.RANK_EMOJIS.get(user.rank, "💫")
+        lines = [Dialog.Rating.TOP_USERS_BY_REACTIONS]
+        for i, user in enumerate(top_reactors, 1):
             username = cls._get_username(user.username)
-            text += f"{emoji} {username} — {user.reaction_count} реакт.\n"
-        return text
+            lines.append(f"{i}. {username} — {user.reaction_count} реакций")
+        return "\n".join(lines)
 
     @classmethod
     def _format_popular_reactions(
@@ -110,18 +99,10 @@ class RatingPresenter:
         if not popular_reactions:
             return ""
 
-        text = f"\n{Dialog.Rating.POPULAR_REACTIONS}\n"
-        for reaction in popular_reactions:
-            text += f"{reaction.emoji} — {reaction.count} раз\n"
-        return text
-
-    @classmethod
-    def _format_summary(cls, stats: ChatDailyStatsDTO) -> str:
-        """Форматирует итоговую статистику."""
-        return (
-            f"\n{Dialog.Rating.TOTAL_MESSAGES} {stats.total_messages}\n"
-            f"{Dialog.Rating.TOTAL_REACTIONS} {stats.total_reactions}"
-        )
+        lines = [Dialog.Rating.TOP_REACTIONS_LIST]
+        for i, reaction in enumerate(popular_reactions, 1):
+            lines.append(f"{i}. {reaction.emoji} — {reaction.count} раз")
+        return "\n".join(lines)
 
     @staticmethod
     def _get_username(username: str) -> str:

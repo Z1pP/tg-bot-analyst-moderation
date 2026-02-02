@@ -125,11 +125,11 @@ class ModerationUseCase:
                 message_id=dto.original_message_id,
             )
 
-        violator = await self.user_service.get_user(
+        violator = await self.user_service.get_or_create(
             tg_id=dto.violator_tgid,
             username=dto.violator_username,
         )
-        admin = await self.user_service.get_user(
+        admin = await self.user_service.get_or_create(
             tg_id=dto.admin_tgid,
             username=dto.admin_username,
         )

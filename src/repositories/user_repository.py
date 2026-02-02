@@ -159,7 +159,7 @@ class UserRepository(BaseRepository):
                         User.id == admin_user_tracking.c.tracked_user_id,
                     )
                     .where(admin_user_tracking.c.admin_id == admin.id)
-                    .order_by(User.username)
+                    .order_by(func.coalesce(User.username, User.tg_id))
                 )
                 result = await session.execute(query)
 
@@ -244,11 +244,13 @@ class UserRepository(BaseRepository):
                 return []
 
     async def get_user_by_username(self, username: str) -> Optional[User]:
-        """Получает пользователя по имени пользователя."""
+        """Получает пользователя по имени пользователя (регистронезависимо)."""
         async with self._db.session() as session:
             try:
                 result = await session.execute(
-                    select(User).where(User.username == username)
+                    select(User).where(
+                        func.lower(User.username) == func.lower(username)
+                    )
                 )
                 user = result.scalars().first()
 

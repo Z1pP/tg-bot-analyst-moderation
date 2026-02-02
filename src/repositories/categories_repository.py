@@ -29,19 +29,6 @@ class TemplateCategoryRepository:
                 logger.error("Ошибка при получении списка категорий: %s", e)
                 return []
 
-    async def get_category_by_name(self, name: str) -> Optional[TemplateCategory]:
-        """Получаем категорию по имени"""
-        async with self._db.session() as session:
-            try:
-                result = await session.execute(
-                    select(TemplateCategory).where(TemplateCategory.name == name)
-                )
-
-                return result.scalars().first()
-            except Exception as e:
-                logger.error("Ошибка при получении категории c именем: %s", str(e))
-                return None
-
     async def get_last_category(self) -> Optional[TemplateCategory]:
         """Получаем последнюю созданную категорию"""
         async with self._db.session() as session:

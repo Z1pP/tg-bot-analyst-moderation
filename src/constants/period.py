@@ -7,15 +7,14 @@ from services.time_service import TimeZoneService
 
 class TimePeriod(Enum):
     """
-    Перечисления для указания выбора периода создания отчета 📅 🔧
+    Перечисления для указания выбора периода создания отчета
     """
 
-    TODAY = "📅 За сегодня"
-    YESTERDAY = "📅 За вчера"
-    ONE_WEEK = "📅 За неделю"
-    ONE_MONTH = "📅 За месяц"
-    THREE_MONTH = "📅 За 3 месяца"
-    CUSTOM = "🔧 За период"
+    TODAY = "За сегодня"
+    YESTERDAY = "За вчера"
+    ONE_WEEK = "За неделю"
+    ONE_MONTH = "За месяц"
+    CUSTOM = "За другой период"
 
     @classmethod
     def get_all_periods(cls) -> list[str]:
@@ -71,24 +70,16 @@ class TimePeriod(Enum):
             )
             return start_of_month, now
 
-        elif period == cls.THREE_MONTH.value:
-            # Последние 90 дней, включая сегодня
-            # Начало 3-месячного периода - 90 дней назад в 00:00
-            start_of_three_months = (now - timedelta(days=89)).replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-            return start_of_three_months, now
-
         else:
             raise ValueError(f"Неизвестный период: {period}")
 
 
 class SummaryTimePeriod(Enum):
     """
-    Перечисления для указания выбора периода создания сводки 📝
+    Перечисления для указания выбора периода создания сводки
     """
 
-    LAST_24_HOURS = "📅 За последние 24 часа"
+    LAST_24_HOURS = "За последние 24 часа"
 
     @classmethod
     def to_datetime(cls, period: str) -> Tuple[datetime, datetime]:

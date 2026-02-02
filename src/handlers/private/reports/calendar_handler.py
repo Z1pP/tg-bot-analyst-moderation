@@ -153,7 +153,7 @@ async def handle_day_selection(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Report.DATE_RANGE_SELECTED.format(
+        text=Dialog.Calendar.DATE_RANGE_SELECTED.format(
             start_date=cal_start.strftime("%d.%m.%Y"),
             end_date=selected_date.strftime("%d.%m.%Y"),
         ),

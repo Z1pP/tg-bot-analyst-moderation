@@ -1,14 +1,11 @@
 import logging
-from typing import Tuple
 
 from aiogram import Bot, Router, types
 from punq import Container
 
 from constants.enums import ReactionAction
 from dto import MessageReactionDTO
-from models import ChatSession, User
-from services.chat import ChatService
-from services.user import UserService
+from services.time_service import TimeZoneService
 from usecases.reactions import SaveMessageReactionUseCase
 
 router = Router(name=__name__)
@@ -19,51 +16,78 @@ logger = logging.getLogger(__name__)
 async def reaction_handler(
     event: types.MessageReactionUpdated, bot: Bot, container: Container
 ) -> None:
-    try:
-        sender, chat = await _get_sender_and_chat(event, container)
-        if not sender or not chat:
-            logger.error("Не удалось получить пользователя или чат")
-            return
-
-        reaction_dto = MessageReactionDTO(
-            chat_id=chat.id,
-            user_id=sender.id,
-            message_id=str(event.message_id),
-            action=_get_reaction_action(event),
-            emoji=_get_emoji(event),
-            message_url=_generate_message_url(event),
-        )
-
-        await save_reacion(reaction_dto=reaction_dto, container=container)
-
-    except Exception as e:
-        logger.error(f"Ошибка при обработке реакции: {e}", exc_info=True)
+    """
+    Хендлер для обработки изменений реакций на сообщениях.
+    """
+    # Обрабатываем только реакции от пользователей (не ботов)
+    if event.user and event.user.is_bot:
         return
 
+    await process_reaction(event, container)
 
-async def save_reacion(reaction_dto: MessageReactionDTO, container: Container) -> None:
+
+async def process_reaction(
+    event: types.MessageReactionUpdated,
+    container: Container,
+) -> None:
     """
-    Сохраняет реакцию в базу данных.
+    Сохраняет реакцию для построения метрик.
     """
-    usecase: SaveMessageReactionUseCase = container.resolve(SaveMessageReactionUseCase)
-    await usecase.execute(reaction_dto=reaction_dto)
+    # Преобразуем время реакции в локальное время
+    # В MessageReactionUpdated нет поля date, используем текущее время
+    reaction_date = TimeZoneService.now()
+
+    # Получаем идентификатор пользователя (или чата для анонимных реакций)
+    user = event.user or event.actor_chat
+    if not user:
+        logger.warning(
+            "Не удалось определить автора реакции для сообщения %s", event.message_id
+        )
+        return
+
+    user_tgid = str(user.id)
+    chat_tgid = str(event.chat.id)
+
+    reaction_dto = MessageReactionDTO(
+        chat_tgid=chat_tgid,
+        user_tgid=user_tgid,
+        user_username=getattr(user, "username", None),
+        message_id=str(event.message_id),
+        action=_get_reaction_action(event),
+        emoji=_get_emoji(event),
+        message_url=_generate_message_url(event),
+        created_at=reaction_date,
+    )
+
+    try:
+        usecase: SaveMessageReactionUseCase = container.resolve(
+            SaveMessageReactionUseCase
+        )
+        await usecase.execute(reaction_dto=reaction_dto)
+    except Exception as e:
+        logger.error("Ошибка сохранения реакции: %s", str(e), exc_info=True)
 
 
 def _get_emoji(event: types.MessageReactionUpdated) -> str:
     """
-    Получает эмодзи из сообщения.
+    Получает эмодзи или ID кастомного эмодзи из события.
     """
-    if event.new_reaction:
-        return event.new_reaction[0].emoji
-    elif event.old_reaction:
-        return event.old_reaction[0].emoji
-    else:
+    reactions = event.new_reaction or event.old_reaction
+    if not reactions:
         return "Неизвестно"
+
+    reaction = reactions[0]
+    if reaction.type == "emoji":
+        return reaction.emoji
+    elif reaction.type == "custom_emoji":
+        return reaction.custom_emoji_id
+
+    return "Неизвестно"
 
 
 def _get_reaction_action(event: types.MessageReactionUpdated) -> ReactionAction:
     """
-    Определяет действие с реакцией.
+    Определяет действие с реакцией (добавлена, удалена, изменена).
     """
     old_count = len(event.old_reaction)
     new_count = len(event.new_reaction)
@@ -86,39 +110,11 @@ def _generate_message_url(event: types.MessageReactionUpdated) -> str:
     if chat_id.startswith("-100"):
         # Супергруппы: убираем -100
         clean_chat_id = chat_id[4:]
-        return f"https://t.me/c/{clean_chat_id}/{message_id}"
     elif chat_id.startswith("-"):
         # Обычные группы: убираем только -
         clean_chat_id = chat_id[1:]
-        return f"https://t.me/c/{clean_chat_id}/{message_id}"
     else:
-        # Каналы (положительный ID)
-        return f"https://t.me/c/{chat_id}/{message_id}"
+        # Каналы или личные чаты
+        clean_chat_id = chat_id
 
-
-async def _get_sender_and_chat(
-    event: types.MessageReactionUpdated,
-    container: Container,
-) -> Tuple[User, ChatSession]:
-    """
-    Получает пользователя и чат из сообщения.
-    """
-    # Получаем сервисы
-    user_service: UserService = container.resolve(UserService)
-    chat_service: ChatService = container.resolve(ChatService)
-
-    # Получаем пользователя и чат
-    username = event.user.username
-    tg_id = str(event.user.id)
-    chat_id = str(event.chat.id)
-
-    sender = await user_service.get_or_create(username=username, tg_id=tg_id)
-
-    chat = await chat_service.get_or_create(
-        chat_tgid=chat_id, title=event.chat.title or "Без названия"
-    )
-    if not chat:
-        logger.error("Не удалось получить или создать чат: %s", chat_id)
-        return None, None
-
-    return sender, chat
+    return f"https://t.me/c/{clean_chat_id}/{message_id}"

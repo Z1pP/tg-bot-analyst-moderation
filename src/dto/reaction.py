@@ -7,8 +7,9 @@ from models.reaction import ReactionAction
 
 
 class MessageReactionDTO(BaseModel):
-    chat_id: int
-    user_id: int
+    chat_tgid: str
+    user_tgid: str
+    user_username: Optional[str] = None
     message_id: str
     action: ReactionAction
     emoji: str

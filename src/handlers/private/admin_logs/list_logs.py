@@ -12,7 +12,7 @@ from keyboards.inline.admin_logs import (
     admin_select_ikb,
     format_action_type,
 )
-from keyboards.inline.menu import admin_menu_ikb
+from keyboards.inline.menu import main_menu_ikb
 from repositories import AdminActionLogRepository
 from services.time_service import TimeZoneService
 from utils.send_message import safe_edit_message
@@ -63,7 +63,8 @@ async def admin_logs_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=Dialog.AdminLogs.ERROR_GET_ADMINS,
-            reply_markup=admin_menu_ikb(
+            reply_markup=main_menu_ikb(
+                user=None,
                 user_language=user_language,
                 admin_tg_id=str(callback.from_user.id),
             ),

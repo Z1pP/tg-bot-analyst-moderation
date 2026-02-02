@@ -25,12 +25,14 @@ class UpdateChatWorkHoursUseCase:
         start_time: Optional[time] = None,
         end_time: Optional[time] = None,
         tolerance: Optional[int] = None,
+        breaks_time: Optional[int] = None,
     ) -> Optional[ChatSession]:
         updated_chat = await self._chat_service.update_work_hours(
             chat_id=chat_id,
             start_time=start_time,
             end_time=end_time,
             tolerance=tolerance,
+            breaks_time=breaks_time,
         )
 
         if updated_chat:
@@ -46,6 +48,8 @@ class UpdateChatWorkHoursUseCase:
                 )
             if tolerance is not None:
                 details_parts.append(f"Новое отклонение: {tolerance} мин.")
+            if breaks_time is not None:
+                details_parts.append(f"Новый интервал паузы: {breaks_time} мин.")
 
             await self._admin_action_log_service.log_action(
                 admin_tg_id=admin_tg_id,

@@ -216,6 +216,38 @@ class ChatService:
         )
         return chat.is_antibot_enabled if chat else None
 
+    async def toggle_show_welcome_text(self, chat_id: int) -> Optional[bool]:
+        """
+        Переключает показ приветственного текста для чата и обновляет кеш.
+
+        Args:
+            chat_id: ID чата из БД
+
+        Returns:
+            Новое состояние или None
+        """
+        chat = await self._update_and_sync_cache(
+            chat_id=chat_id,
+            update_func=self._chat_repository.toggle_show_welcome_text,
+        )
+        return chat.show_welcome_text if chat else None
+
+    async def toggle_auto_delete_welcome_text(self, chat_id: int) -> Optional[bool]:
+        """
+        Переключает автоудаление приветственного текста для чата и обновляет кеш.
+
+        Args:
+            chat_id: ID чата из БД
+
+        Returns:
+            Новое состояние или None
+        """
+        chat = await self._update_and_sync_cache(
+            chat_id=chat_id,
+            update_func=self._chat_repository.toggle_auto_delete_welcome_text,
+        )
+        return chat.auto_delete_welcome_text if chat else None
+
     async def update_welcome_text(
         self, chat_id: int, welcome_text: str
     ) -> Optional[ChatSession]:
@@ -241,6 +273,7 @@ class ChatService:
         start_time: Optional[time] = None,
         end_time: Optional[time] = None,
         tolerance: Optional[int] = None,
+        breaks_time: Optional[int] = None,
     ) -> Optional[ChatSession]:
         """
         Обновляет рабочие часы чата и обновляет кеш.
@@ -260,4 +293,5 @@ class ChatService:
             start_time=start_time,
             end_time=end_time,
             tolerance=tolerance,
+            breaks_time=breaks_time,
         )

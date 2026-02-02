@@ -6,14 +6,14 @@ from aiogram.types import CallbackQuery
 
 from constants import Dialog
 from constants.callback import CallbackData
-from keyboards.inline.chats import chats_management_ikb
+from keyboards.inline.chats import back_to_chats_menu_ikb
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == CallbackData.Chat.ADD)
-async def add_chat_callback_handler(callback: CallbackQuery, state: FSMContext) -> None:
+async def add_chat_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """
     Хендлер для команды добавления чата через callback.
     """
@@ -26,5 +26,5 @@ async def add_chat_callback_handler(callback: CallbackQuery, state: FSMContext) 
 
     await callback.message.edit_text(
         text=Dialog.Chat.ADD_CHAT_INSTRUCTION,
-        reply_markup=chats_management_ikb(),
+        reply_markup=back_to_chats_menu_ikb(),
     )

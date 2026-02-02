@@ -27,14 +27,3 @@ class TimeZoneService:
     @classmethod
     def now(cls) -> datetime:
         return datetime.now(cls.DEFAULT_TIMEZONE)
-
-    @classmethod
-    def format_time(cls, dt: datetime, fmt: str = "%Y-%m-%d %H:%M:%S") -> str:
-        """
-        Форматирует дату-время в строку
-
-        :param dt: Дата-время
-        :param fmt: Формат вывода
-        :return: Строка
-        """
-        return dt.strftime(fmt)

@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from aiogram.filters import Filter
-from aiogram.types import CallbackQuery, InlineQuery, Message, MessageReactionUpdated
+from aiogram.types import CallbackQuery, InlineQuery, Message
 from punq import Container
 
 from constants.enums import UserRole
@@ -41,7 +41,12 @@ class AdminOnlyFilter(BaseUserFilter):
             tg_id=tg_id, current_username=current_username, container=container
         )
 
-        if user and user.role == UserRole.ADMIN:
+        if user and user.role in (
+            UserRole.ADMIN,
+            UserRole.ROOT,
+            UserRole.DEV,
+            UserRole.OWNER,
+        ):
             return True
 
         await event.answer("⛔ У Вас нет доступа к сервисам Analyst AI")
@@ -55,7 +60,13 @@ class StaffOnlyFilter(BaseUserFilter):
         user = await self.get_user(
             tg_id=tg_id, current_username=current_username, container=container
         )
-        return user.role in (UserRole.ADMIN, UserRole.MODERATOR)
+        return user is not None and user.role in (
+            UserRole.ADMIN,
+            UserRole.MODERATOR,
+            UserRole.DEV,
+            UserRole.ROOT,
+            UserRole.OWNER,
+        )
 
 
 class StaffOnlyInlineFilter(BaseUserFilter):
@@ -68,19 +79,10 @@ class StaffOnlyInlineFilter(BaseUserFilter):
         user = await self.get_user(
             tg_id=tg_id, current_username=current_username, container=container
         )
-        return user is not None and user.role in (UserRole.ADMIN, UserRole.MODERATOR)
-
-
-class StaffOnlyReactionFilter(BaseUserFilter):
-    """Фильтр только для администраторов"""
-
-    async def __call__(
-        self, event: MessageReactionUpdated, container: Container
-    ) -> bool:
-        tg_id = str(event.user.id)
-        current_username = event.user.username
-
-        user = await self.get_user(
-            tg_id=tg_id, current_username=current_username, container=container
+        return user is not None and user.role in (
+            UserRole.ADMIN,
+            UserRole.MODERATOR,
+            UserRole.DEV,
+            UserRole.ROOT,
+            UserRole.OWNER,
         )
-        return user is not None and user.role in (UserRole.ADMIN, UserRole.MODERATOR)

@@ -2,32 +2,45 @@ class ChatCallbackData:
     """Класс для хранения callback данных чата"""
 
     # Commands
+    MANAGEMENT = "chats_management"
     ADD = "add_chat"
     REMOVE = "remove_chat"
-    GET_STATISTICS = "get_chat_statistics"
+    GET_REPORT = "get_chat_report"
     GET_DAILY_RATING = "get_chat_daily_rating"
-    GET_CHAT_SUMMARY = "get_chat_summary"
     GET_CHAT_SUMMARY_24H = "get_chat_summary_24h"
-    SELECT_CHAT = "select_chat"
+    SELECT_CHAT_FOR_REPORT = "select_chat_for_report"
+    SELECT_CHAT_FOR_SETTINGS = "select_chat_for_settings"
     REPORT_TIME_SETTING = "report_time_setting"
-    WORK_HOURS_MENU = "work_hours_menu"
     CHANGE_WORK_START = "change_work_start"
     CHANGE_WORK_END = "change_work_end"
     CHANGE_TOLERANCE = "change_tolerance"
-    CANCEL_WORK_HOURS_SETTING = "cancel_work_hours_setting"
+    CHANGE_BREAKS_TIME = "change_breaks_time"
+    CANCEL_TIME_SETTING = "cancel_work_hours_setting"
     ARCHIVE_SETTING = "archive_setting"
     ARCHIVE_BIND_INSTRUCTION = "archive_bind_instruction"
     ARCHIVE_TIME_SETTING = "archive_time_setting"
     ARCHIVE_TOGGLE_SCHEDULE = "archive_toggle_schedule"
     BACK_TO_CHAT_ACTIONS = "back_to_chat_actions"
-    BACK_TO_CHATS_MANAGEMENT = "back_to_chats_management"
+    BACK_TO_ANALYTICS_CHAT_ACTIONS = "back_to_analytics_chat_actions"
+    SHOW_MENU = "chats_menu"
     BACK_TO_MAIN_MENU_FROM_CHATS = "back_to_main_menu_from_chats"
     PUNISHMENT_SETTING = "punishment_setting"
     PUNISHMENT_CREATE_NEW = "punishment_create_new"
     PUNISHMENT_SET_DEFAULT = "punishment_set_default"
+    CANCEL_SET_DEFAULT = "punishment_set_default_cancel"
+    CONFIRM_SET_DEFAULT = "punishment_set_default_confirm"
+    PUNISH_ACTION_WARNING = "punish_action_warning"
+    PUNISH_ACTION_MUTE = "punish_action_mute"
+    PUNISH_ACTION_BAN = "punish_action_ban"
+    PUNISH_STEP_NEXT = "punish_step_next"
+    PUNISH_STEP_SAVE = "punish_step_save"
+    PUNISH_STEP_CANCEL = "punish_step_cancel"
     ANTIBOT_TOGGLE = "chat_antibot_toggle"
     ANTIBOT_SETTING = "chat_antibot_setting"
     WELCOME_TEXT_SETTING = "chat_welcome_text_setting"
+    WELCOME_TEXT_TOGGLE = "chat_welcome_text_toggle"
+    AUTO_DELETE_TOGGLE = "chat_auto_delete_toggle"
+    CHANGE_WELCOME_TEXT = "chat_change_welcome_text"
     ALL_CHATS = "chat__all"
     CHATS_PAGE_INFO = "chats_page_info"
     REMOVE_CHATS_PAGE_INFO = "remove_chats_page_info"
@@ -37,9 +50,12 @@ class ChatCallbackData:
     PREFIX_CHAT_SUMMARY_TYPE = "chat_summary_type__"
     PREFIX_UNTRACK_CHAT = "untrack_chat__"
     PREFIX_CONFIRM_REMOVE_CHAT = "conf_remove_chat__"
+    PREFIX_PUNISH_ACTION = "punish_action_"
     PREFIX_TEMPLATE_SCOPE = "template_scope__"
     PREFIX_PREV_CHATS_PAGE = "prev_chats_page__"
     PREFIX_NEXT_CHATS_PAGE = "next_chats_page__"
+    PREFIX_PREV_CHATS_REPORT_PAGE = "prev_chats_report_page__"
+    PREFIX_NEXT_CHATS_REPORT_PAGE = "next_chats_report_page__"
     PREFIX_PREV_REMOVE_CHATS_PAGE = "prev_remove_chats_page__"
     PREFIX_NEXT_REMOVE_CHATS_PAGE = "next_remove_chats_page__"
 
@@ -65,15 +81,16 @@ class UserCallbackData:
     """Класс для хранения callback данных пользователей"""
 
     # Commands
-    SELECT_USER = "select_user"
+    SHOW_MENU = "users_menu"
+    SHOW_TRACKED_USERS_LIST = "show_tracked_users_list"
     ADD = "add_user"
     REMOVE = "remove_user"
-    USERS_MENU = "users_menu"
+    SELECT_USER_FOR_REPORT = "select_user_for_report"
     BACK_TO_MAIN_MENU_FROM_USERS = "back_to_main_menu_from_users"
-    CANCEL_ADD = "cancel_add_user"
     ALL_USERS = "all_users"
     USERS_PAGE_INFO = "users_page_info"
     REMOVE_USERS_PAGE_INFO = "remove_users_page_info"
+    MANAGEMENT = "users_management"
 
     # Prefixes
     PREFIX_USER = "user__"
@@ -90,12 +107,10 @@ class MenuCallbackData:
     """Класс для хранения callback данных главного меню"""
 
     # Commands
-    USERS_MENU = "users_menu"
     CHATS_MENU = "chats_menu"
-    MESSAGE_MANAGEMENT = "message_management"
-    LOCK_MENU = "lock_menu"
-    ADMIN_LOGS = "admin_logs"
     MAIN_MENU = "main_menu"
+    HIDE_NOTIFICATION = "hide_notification"
+    SHOW_MENU = "main_menu"
 
 
 class AdminLogsCallbackData:
@@ -144,7 +159,83 @@ class ModerationCallbackData:
     """Класс для хранения callback данных модерации"""
 
     # Commands
-    MENU = "moderation_menu"
+    SHOW_MENU = "moderation_menu"
+
+
+class AnalyticsCallbackData:
+    """Класс для хранения callback данных аналитики"""
+
+    # Commands
+    SHOW_MENU = "analytics_menu"
+
+
+class MessagesCallbackData:
+    """Класс для хранения callback данных сообщений"""
+
+    # Commands
+    SHOW_MENU = "message_management_menu"
+    DELETE_MESSAGE = "delete_message"
+    REPLY_MESSAGE = "reply_message"
+    CANCEL = "cancel"
+    CANCEL_REPLY = "cancel_reply_message"
+    DELETE_MESSAGE_CONFIRM = "delete_message_confirm"
+    DELETE_MESSAGE_CANCEL = "delete_message_cancel"
+    SEND_MESSAGE_TO_CHAT = "send_message_to_chat"
+    PREFIX_SELECT_CHAT = "select_chat_"
+
+
+class UserAndChatsSettingsCallbackData:
+    """Класс для хранения callback данных настроек пользователей и чатов"""
+
+    # Commands
+    SHOW_MENU = "users_chats_settings_menu"
+    RESET_SETTINGS = "reset_settings"
+    CONFIRM_RESET = "confirm_reset"
+    CANCEL_RESET = "cancel_reset"
+    FIRST_TIME_SETTINGS = "first_time_settings"
+    CONTINUE_SETTINGS = "continue_settings"
+    # First-time work hours
+    FIRST_TIME_CHANGE_WORK_START = "first_time_change_work_start"
+    FIRST_TIME_CHANGE_WORK_END = "first_time_change_work_end"
+    FIRST_TIME_CHANGE_TOLERANCE = "first_time_change_tolerance"
+    FIRST_TIME_CHANGE_BREAKS_TIME = "first_time_change_breaks_time"
+    FIRST_TIME_SAVE_AND_FINISH = "first_time_save_and_finish"
+    FIRST_TIME_CANCEL_TIME_INPUT = "first_time_cancel_time_input"
+
+
+class BotSettingsCallbackData:
+    """Класс для хранения callback данных настроек бота"""
+
+    # Commands
+    SHOW_MENU = "bot_settings_menu"
+
+
+class RootCallbackData:
+    """Класс для хранения callback данных root"""
+
+    # Commands
+    SHOW_MENU = "root_menu"
+
+
+class HelpCallbackData:
+    """Класс для хранения callback данных помощи"""
+
+    # Commands
+    SHOW_MENU = "help_menu"
+
+
+class NewsCallbackData:
+    """Класс для хранения callback данных новостей"""
+
+    # Commands
+    SHOW_MENU = "news_menu"
+
+
+class TemplatesCallbackData:
+    """Класс для хранения callback данных шаблонов"""
+
+    # Commands
+    SHOW_MENU = "templates_menu"
 
 
 class CallbackData:
@@ -154,7 +245,15 @@ class CallbackData:
     Report = ReportCallbackData
     User = UserCallbackData
     Menu = MenuCallbackData
-    ModerationMenu = ModerationCallbackData
+    Moderation = ModerationCallbackData
     AdminLogs = AdminLogsCallbackData
     ReleaseNotes = ReleaseNotesCallbackData
     Role = RoleCallbackData
+    Analytics = AnalyticsCallbackData
+    Messages = MessagesCallbackData
+    UserAndChatsSettings = UserAndChatsSettingsCallbackData
+    BotSettings = BotSettingsCallbackData
+    Root = RootCallbackData
+    Help = HelpCallbackData
+    News = NewsCallbackData
+    Templates = TemplatesCallbackData

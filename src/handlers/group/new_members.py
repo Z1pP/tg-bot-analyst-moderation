@@ -5,26 +5,10 @@ from punq import Container
 
 from constants import Dialog
 from usecases.moderation import RestrictNewMemberUseCase
-from usecases.user import GetOrCreateUserIfNotExistUserCase
 from utils.exception_handler import handle_exception
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
-
-
-async def get_or_create_user(tg_id: str, username: str, container: Container) -> None:
-    """Создает или получает пользователя из базы данных."""
-    try:
-        usecase: GetOrCreateUserIfNotExistUserCase = container.resolve(
-            GetOrCreateUserIfNotExistUserCase
-        )
-        user = await usecase.execute(tg_id=tg_id, username=username)
-        logger.info(
-            f"Пользователь {username} (ID: {tg_id}) {'создан' if not user.is_existed else 'найден'}"
-        )
-        return user
-    except Exception as e:
-        logger.error(f"Ошибка при создании/получении пользователя {username}: {e}")
 
 
 @router.message(F.new_chat_members)

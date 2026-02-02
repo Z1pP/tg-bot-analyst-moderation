@@ -147,3 +147,25 @@ class ChatTrackingRepository:
                     "Произошла ошибка при получении всех чатов администратора: %s", e
                 )
                 return []
+
+    async def delete_all_tracked_chats_for_admin(self, admin_id: int) -> int:
+        """Удаляет все отслеживаемые чаты для админа."""
+        async with self._db.session() as session:
+            try:
+                query = delete(AdminChatAccess).where(
+                    AdminChatAccess.admin_id == admin_id
+                )
+                result = await session.execute(query)
+                await session.commit()
+                logger.info(
+                    "Удалено %d отслеживаемых чатов для администратора: admin_id=%s",
+                    result.rowcount,
+                    admin_id,
+                )
+                return result.rowcount
+            except Exception as e:
+                logger.error(
+                    "Произошла ошибка при удалении всех отслеживаемых чатов: %s", e
+                )
+                await session.rollback()
+                raise e

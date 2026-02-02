@@ -1,7 +1,6 @@
 from .archive_chat import ChatArchiveState
 from .category import CategoryStateManager
 from .chat import ChatStateManager
-from .main_menu import MenuStates
 from .message_management import MessageManagerState
 from .moderation import (
     AmnestyStates,
@@ -29,7 +28,6 @@ __all__ = [
     "SingleUserReportStates",
     "UserStateManager",
     "TemplateStateManager",
-    "MenuStates",
     "ModerationStates",
     "AmnestyStates",
     "BanUserStates",

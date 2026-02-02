@@ -3,7 +3,7 @@ from datetime import datetime
 
 from config import settings
 from constants.enums import AdminActionType, SummaryType
-from repositories import ChatRepository, MessageRepository
+from repositories import ChatRepository, MessageRepository, UserTrackingRepository
 from services import AdminActionLogService
 from services.caching import ICache
 from services.chat.summarize import IAIService
@@ -17,12 +17,14 @@ class GetChatSummaryUseCase:
         self,
         msg_repository: MessageRepository,
         chat_repository: ChatRepository,
+        user_tracking_repository: UserTrackingRepository,
         ai_service: IAIService,
         admin_action_log_service: AdminActionLogService,
         cache: ICache,
     ) -> None:
         self._msg_repo = msg_repository
         self._chat_repo = chat_repository
+        self._user_tracking_repo = user_tracking_repository
         self._ai_service = ai_service
         self._admin_action_log_service = admin_action_log_service
         self._cache = cache
@@ -66,18 +68,32 @@ class GetChatSummaryUseCase:
         if not formatted_text:
             return "Нет сообщений для сводки."
 
-        summary = await self._ai_service.summarize_text(
-            text=formatted_text, msg_count=real_count, summary_type=summary_type
+        # Получаем отслеживаемых пользователей
+        tracked_users = await self._user_tracking_repo.get_tracked_users_by_admin(
+            admin_tgid=admin_tg_id
+        )
+        tracked_usernames = [
+            f"@{u.username}" if u.username else f"ID:{u.tg_id}" for u in tracked_users
+        ]
+
+        summary_result = await self._ai_service.summarize_text(
+            text=formatted_text,
+            msg_count=real_count,
+            summary_type=summary_type,
+            tracked_users=tracked_usernames,
         )
 
-        # Сохраняем в кеш
-        max_id = await self._msg_repo.get_max_message_id(chat_id=chat_id)
-        if max_id:
-            await self._cache.set(
-                key=cache_key,
-                value=(summary, max_id),
-                ttl=settings.SUMMARY_CACHE_TTL_MINUTES * 60,
-            )
+        summary = summary_result.summary
+
+        if summary_result.status_code == 200:
+            # Сохраняем в кеш
+            max_id = await self._msg_repo.get_max_message_id(chat_id=chat_id)
+            if max_id:
+                await self._cache.set(
+                    key=cache_key,
+                    value=(summary, max_id),
+                    ttl=settings.SUMMARY_CACHE_TTL_MINUTES * 60,
+                )
 
         # Логируем действие администратора
         chat = await self._chat_repo.get_chat_by_id(chat_id=chat_id)

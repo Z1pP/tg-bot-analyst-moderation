@@ -10,6 +10,9 @@ class ChatType(str, Enum):
 
 
 class UserRole(Enum):
+    DEV = "dev"
+    ROOT = "root"
+    OWNER = "owner"
     ADMIN = "admin"
     MODERATOR = "moderator"
     USER = "user"

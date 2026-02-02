@@ -7,15 +7,12 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from constants.pagination import CHATS_PAGE_SIZE
 from keyboards.inline.chats import (
-    chats_management_ikb,
+    back_to_chats_menu_ikb,
+    chats_menu_ikb,
     conf_remove_chat_ikb,
-    remove_chat_ikb,
 )
-from states import MenuStates
 from usecases.chat_tracking import (
-    GetUserTrackedChatsUseCase,
     RemoveChatFromTrackingUseCase,
 )
 from utils.send_message import safe_edit_message
@@ -33,54 +30,20 @@ async def untrack_chat_handler(
     """Хендлер для команды удаления чата из отслеживания через callback"""
     await callback.answer()
 
-    tg_id = str(callback.from_user.id)
-
     logger.info(
-        "Пользователь %s начал удаление чата из отслеживания",
+        "Администратор tg_id: %d username: %s начал удаление чата из отслеживания",
+        callback.from_user.id,
         callback.from_user.username,
     )
 
-    try:
-        usecase: GetUserTrackedChatsUseCase = container.resolve(
-            GetUserTrackedChatsUseCase
-        )
-        user_chats_dto = await usecase.execute(tg_id=tg_id)
-    except Exception as e:
-        logger.error("Ошибка при получении списка чатов: %s", e, exc_info=True)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.Chat.ERROR_GET_CHATS,
-            reply_markup=chats_management_ikb(),
-        )
-        return
-
-    await state.update_data(user_id=user_chats_dto.user_id)
-
-    if not user_chats_dto.chats:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.Chat.NO_TRACKED_CHATS,
-            reply_markup=chats_management_ikb(),
-        )
-        return
-
-    message_text = Dialog.Chat.REMOVE_CHAT_TITLE
-    first_page_chats = user_chats_dto.chats[:CHATS_PAGE_SIZE]
+    message_text = Dialog.Chat.UNTRACK_CHAT_INFO
 
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=message_text,
-        reply_markup=remove_chat_ikb(
-            chats=first_page_chats,
-            page=1,
-            total_count=user_chats_dto.total_count,
-        ),
+        reply_markup=back_to_chats_menu_ikb(),
     )
 
 
@@ -156,7 +119,7 @@ async def confirmation_untracking_chat_handler(
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
                 text=Dialog.Chat.ERROR_REMOVE_CHAT,
-                reply_markup=chats_management_ikb(),
+                reply_markup=chats_menu_ikb(),
             )
             return
 
@@ -186,7 +149,5 @@ async def confirmation_untracking_chat_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=text,
-        reply_markup=chats_management_ikb(),
+        reply_markup=chats_menu_ikb(),
     )
-
-    await state.set_state(MenuStates.chats_menu)

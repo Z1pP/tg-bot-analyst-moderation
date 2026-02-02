@@ -252,6 +252,7 @@ class ChatRepository(BaseRepository):
         start_time: Optional[time] = None,
         end_time: Optional[time] = None,
         tolerance: Optional[int] = None,
+        breaks_time: Optional[int] = None,
     ) -> Optional[ChatSession]:
         """
         Обновляет рабочие часы чата для фильтрации данных в отчетах.
@@ -261,6 +262,7 @@ class ChatRepository(BaseRepository):
             start_time: Время начала рабочего дня (опционально)
             end_time: Время конца рабочего дня (опционально)
             tolerance: Допустимое отклонение в минутах (опционально)
+            breaks_time: Интервал паузы в минутах (опционально)
 
         Returns:
             Обновленный чат или None если чат не найден
@@ -289,17 +291,20 @@ class ChatRepository(BaseRepository):
                     chat.settings.end_time = end_time
                 if tolerance is not None:
                     chat.settings.tolerance = tolerance
+                if breaks_time is not None:
+                    chat.settings.breaks_time = breaks_time
 
                 await session.commit()
                 await session.refresh(chat)
                 self._expunge_chat_with_archive(session, chat)
 
                 logger.info(
-                    "Обновлены рабочие часы чата: chat_id=%s, start_time=%s, end_time=%s, tolerance=%s",
+                    "Обновлены рабочие часы чата: chat_id=%s, start_time=%s, end_time=%s, tolerance=%s, breaks_time=%s",
                     chat_id,
                     start_time,
                     end_time,
                     tolerance,
+                    breaks_time,
                 )
                 return chat
             except Exception as e:
@@ -355,6 +360,112 @@ class ChatRepository(BaseRepository):
             except Exception as e:
                 logger.error(
                     "Ошибка при переключении антибота для чата %s: %s", chat_id, e
+                )
+                await session.rollback()
+                raise e
+
+    async def toggle_show_welcome_text(self, chat_id: int) -> Optional[ChatSession]:
+        """
+        Переключает показ приветственного текста для чата.
+
+        Args:
+            chat_id: ID чата из БД
+
+        Returns:
+            Обновленный чат или None если чат не найден
+        """
+        async with self._db.session() as session:
+            try:
+                chat = await session.scalar(
+                    select(ChatSession)
+                    .where(ChatSession.id == chat_id)
+                    .options(selectinload(ChatSession.settings))
+                )
+                if not chat:
+                    logger.error(
+                        "Чат не найден для переключения приветствия: id=%s",
+                        chat_id,
+                    )
+                    return None
+
+                if not chat.settings:
+                    chat.settings = ChatSettings(chat_id=chat.id)
+                    session.add(chat.settings)
+
+                chat.settings.show_welcome_text = not chat.settings.show_welcome_text
+
+                await session.commit()
+                await session.refresh(chat, ["settings"])
+
+                logger.info(
+                    "Приветствие для чата %s (ID: %s) переключено в состояние: %s",
+                    chat.title,
+                    chat.chat_id,
+                    chat.settings.show_welcome_text,
+                )
+
+                self._expunge_chat_with_archive(session, chat)
+                return chat
+            except Exception as e:
+                logger.error(
+                    "Ошибка при переключении приветствия для чата %s: %s",
+                    chat_id,
+                    e,
+                )
+                await session.rollback()
+                raise e
+
+    async def toggle_auto_delete_welcome_text(
+        self, chat_id: int
+    ) -> Optional[ChatSession]:
+        """
+        Переключает автоудаление приветственного текста для чата.
+
+        Args:
+            chat_id: ID чата из БД
+
+        Returns:
+            Обновленный чат или None если чат не найден
+        """
+        async with self._db.session() as session:
+            try:
+                chat = await session.scalar(
+                    select(ChatSession)
+                    .where(ChatSession.id == chat_id)
+                    .options(selectinload(ChatSession.settings))
+                )
+                if not chat:
+                    logger.error(
+                        "Чат не найден для переключения автоудаления: id=%s",
+                        chat_id,
+                    )
+                    return None
+
+                if not chat.settings:
+                    chat.settings = ChatSettings(chat_id=chat.id)
+                    session.add(chat.settings)
+
+                chat.settings.auto_delete_welcome_text = (
+                    not chat.settings.auto_delete_welcome_text
+                )
+
+                await session.commit()
+                await session.refresh(chat, ["settings"])
+
+                logger.info(
+                    "Автоудаление приветствия для чата %s (ID: %s) переключено в состояние: %s",
+                    chat.title,
+                    chat.chat_id,
+                    chat.settings.auto_delete_welcome_text,
+                )
+
+                self._expunge_chat_with_archive(session, chat)
+                return chat
+            except Exception as e:
+                logger.error(
+                    "Ошибка при переключении автоудаления для чата %s: %s",
+                    chat_id,
+                    e,
                 )
                 await session.rollback()
                 raise e

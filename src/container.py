@@ -60,6 +60,8 @@ from usecases.amnesty import (
     UnbanUserUseCase,
     UnmuteUserUseCase,
 )
+from usecases.antibot import GetAntibotSettingsUseCase
+from usecases.archive import GetArchiveSettingsUseCase
 from usecases.categories import (
     CreateCategoryUseCase,
     DeleteCategoryUseCase,
@@ -72,6 +74,8 @@ from usecases.chat import (
     GetChatsForUserActionUseCase,
     GetTrackedChatsUseCase,
     ToggleAntibotUseCase,
+    ToggleAutoDeleteWelcomeTextUseCase,
+    ToggleWelcomeTextUseCase,
     UpdateChatWelcomeTextUseCase,
     UpdateChatWorkHoursUseCase,
 )
@@ -106,6 +110,7 @@ from usecases.report import (
     SendDailyChatReportsUseCase,
 )
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
+from usecases.settings import ResetAllTrackingUseCase
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
 from usecases.templates import (
     DeleteTemplateUseCase,
@@ -125,6 +130,7 @@ from usecases.user import (
 from usecases.user_tracking import (
     AddUserToTrackingUseCase,
     GetListTrackedUsersUseCase,
+    HasTrackedUsersUseCase,
     RemoveUserFromTrackingUseCase,
 )
 from utils.exception_handler import AsyncErrorHandler
@@ -237,7 +243,9 @@ class ContainerSetup:
         """Регистрация всех use cases."""
         ContainerSetup._register_user_usecases(container)
         ContainerSetup._register_chat_usecases(container)
+        ContainerSetup._register_antibot_usecases(container)
         ContainerSetup._register_message_usecases(container)
+        ContainerSetup._register_archive_usecases(container)
         ContainerSetup._register_report_usecases(container)
         ContainerSetup._register_summarize_usecases(container)
         ContainerSetup._register_tracking_usecases(container)
@@ -257,6 +265,16 @@ class ContainerSetup:
 
         for usecase in punishment_usecases:
             container.register(usecase)
+
+    @staticmethod
+    def _register_antibot_usecases(container: Container) -> None:
+        """Регистрация use cases для антибота."""
+        container.register(GetAntibotSettingsUseCase)
+
+    @staticmethod
+    def _register_archive_usecases(container: Container) -> None:
+        """Регистрация use cases для архива."""
+        container.register(GetArchiveSettingsUseCase)
 
     @staticmethod
     def _register_summarize_usecases(container: Container) -> None:
@@ -285,6 +303,7 @@ class ContainerSetup:
             GetAllUsersUseCase,
             GetUserByIdUseCase,
             UpdateUserRoleUseCase,
+            ResetAllTrackingUseCase,
         ]
 
         for usecase in user_usecases:
@@ -299,6 +318,8 @@ class ContainerSetup:
             GetChatsForUserActionUseCase,
             UpdateChatWorkHoursUseCase,
             ToggleAntibotUseCase,
+            ToggleWelcomeTextUseCase,
+            ToggleAutoDeleteWelcomeTextUseCase,
             UpdateChatWelcomeTextUseCase,
         ]
 
@@ -357,6 +378,7 @@ class ContainerSetup:
         tracking_usecases = [
             AddUserToTrackingUseCase,
             GetListTrackedUsersUseCase,
+            HasTrackedUsersUseCase,
             RemoveUserFromTrackingUseCase,
             AddChatToTrackUseCase,
             GetUserTrackedChatsUseCase,

@@ -1,9 +1,8 @@
+from datetime import time
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from constants.work_time import END_TIME, START_TIME, TOLERANCE
 
 from .base import BaseModel
 
@@ -97,20 +96,32 @@ class ChatSession(BaseModel):
         return self.settings.is_antibot_enabled if self.settings else False
 
     @property
-    def start_time(self):
-        return self.settings.start_time if self.settings else START_TIME
+    def start_time(self) -> Optional[time]:
+        return self.settings.start_time if self.settings else None
 
     @property
-    def end_time(self):
-        return self.settings.end_time if self.settings else END_TIME
+    def end_time(self) -> Optional[time]:
+        return self.settings.end_time if self.settings else None
 
     @property
-    def tolerance(self) -> int:
-        return self.settings.tolerance if self.settings else TOLERANCE
+    def tolerance(self) -> Optional[int]:
+        return self.settings.tolerance if self.settings else None
+
+    @property
+    def breaks_time(self) -> Optional[int]:
+        return self.settings.breaks_time if self.settings else None
 
     @property
     def welcome_text(self) -> Optional[str]:
         return self.settings.welcome_text if self.settings else None
+
+    @property
+    def auto_delete_welcome_text(self) -> bool:
+        return self.settings.auto_delete_welcome_text if self.settings else False
+
+    @property
+    def show_welcome_text(self) -> bool:
+        return self.settings.show_welcome_text if self.settings else False
 
     __table_args__ = (
         Index("idx_chat_session_chat_id", "chat_id"),

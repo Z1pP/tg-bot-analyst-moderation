@@ -4,6 +4,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import InlineButtons
+from constants.callback import CallbackData
 from constants.pagination import TEMPLATES_PAGE_SIZE
 from models import MessageTemplate
 
@@ -13,7 +14,7 @@ def cancel_template_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data="cancel_template",
         )
     )
@@ -26,7 +27,7 @@ def cancel_edit_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL_EDIT,
+            text=InlineButtons.Common.CANCEL,
             callback_data="cancel_edit_title_or_content",
         )
     )
@@ -58,8 +59,8 @@ def templates_menu_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.MessageButtons.BACK_TO_MESSAGE_MANAGEMENT,
-            callback_data="message_management_menu",
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Messages.SHOW_MENU,
         )
     )
 
@@ -128,7 +129,7 @@ def templates_inline_kb(
         # Кнопка возврата к категориям
         builder.row(
             InlineKeyboardButton(
-                text="⬅️ Вернуться к категориям",
+                text=InlineButtons.Common.COME_BACK,
                 callback_data="select_category",
             )
         )
@@ -136,7 +137,7 @@ def templates_inline_kb(
         # Кнопка возврата к списку чатов
         builder.row(
             InlineKeyboardButton(
-                text="⬅️ Назад к выбору чата",
+                text=InlineButtons.Common.COME_BACK,
                 callback_data="select_template",
             )
         )
@@ -163,7 +164,7 @@ def edit_template_kb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text="❌ Отмена",
+            text=InlineButtons.Common.CANCEL,
             callback_data="cancel_edit",
         )
     )

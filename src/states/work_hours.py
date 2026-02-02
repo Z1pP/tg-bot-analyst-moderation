@@ -7,4 +7,5 @@ class WorkHoursState(StatesGroup):
     waiting_work_start_input = State()
     waiting_work_end_input = State()
     waiting_tolerance_input = State()
+    waiting_breaks_time_input = State()
 

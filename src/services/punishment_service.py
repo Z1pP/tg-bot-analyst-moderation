@@ -402,25 +402,37 @@ class PunishmentService:
         if not ladder:
             return Dialog.Punishment.LADDER_EMPTY
 
+        digit_map = {
+            "0": "0️⃣",
+            "1": "1️⃣",
+            "2": "2️⃣",
+            "3": "3️⃣",
+            "4": "4️⃣",
+            "5": "5️⃣",
+            "6": "6️⃣",
+            "7": "7️⃣",
+            "8": "8️⃣",
+            "9": "9️⃣",
+        }
+
+        def step_to_emoji(step: int) -> str:
+            return "".join(digit_map.get(ch, ch) for ch in str(step))
+
         ladder_lines = []
         for p in ladder:
-            duration = ""
-            if p.punishment_type == PunishmentType.MUTE and p.duration_seconds:
-                duration = f"({format_duration(p.duration_seconds)})"
+            step_emoji = step_to_emoji(p.step)
+            if p.punishment_type == PunishmentType.WARNING:
+                label = "Предупреждение"
+            elif p.punishment_type == PunishmentType.MUTE:
+                if p.duration_seconds:
+                    label = f"Ограничение - {format_duration(p.duration_seconds)}"
+                else:
+                    label = "Ограничение"
+            elif p.punishment_type == PunishmentType.BAN:
+                label = "Блокировка"
+            else:
+                label = p.punishment_type.value
 
-            p_type_map = {
-                PunishmentType.WARNING: "Предупреждение",
-                PunishmentType.MUTE: "Мут",
-                PunishmentType.BAN: "Бан",
-            }
-
-            line = Dialog.Punishment.LADDER_STEP_FORMAT.format(
-                step=p.step,
-                punishment_type=p_type_map.get(
-                    p.punishment_type, p.punishment_type.value
-                ),
-                duration=duration,
-            )
-            ladder_lines.append(line)
+            ladder_lines.append(f"{step_emoji} {label}")
 
         return "\n".join(ladder_lines)

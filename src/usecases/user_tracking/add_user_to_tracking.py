@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 class AddUserToTrackingResult:
     success: bool
     message: Optional[str] = None
+    user_id: Optional[int] = None
 
 
 class AddUserToTrackingUseCase:
@@ -35,16 +36,9 @@ class AddUserToTrackingUseCase:
         )
 
         if user is None:
-            identificator = (
-                f"<code>{dto.user_tgid}</code>"
-                if dto.user_tgid
-                else f"<b>@{dto.user_username}</b>"
-            )
             return AddUserToTrackingResult(
                 success=False,
-                message=Dialog.UserTracking.USER_NOT_FOUND.format(
-                    identificator=identificator
-                ),
+                message=Dialog.UserTracking.USER_NOT_FOUND,
             )
 
         admin = await self._user_service.get_user(
@@ -60,9 +54,8 @@ class AddUserToTrackingUseCase:
         if user.id in tracked_user_ids:
             return AddUserToTrackingResult(
                 success=False,
-                message=Dialog.UserTracking.USER_ALREADY_TRACKED.format(
-                    user_username=user.username
-                ),
+                message=Dialog.UserTracking.USER_ALREADY_TRACKED,
+                user_id=user.id,
             )
 
         try:
@@ -81,11 +74,8 @@ class AddUserToTrackingUseCase:
 
             return AddUserToTrackingResult(
                 success=True,
-                message=Dialog.UserTracking.SUCCESS_ADD_USER_TO_TRACKING.format(
-                    user_username=user.username,
-                    user_tgid=user.tg_id,
-                    admin_username=admin.username,
-                ),
+                message=Dialog.UserTracking.SUCCESS_ADD_USER_TO_TRACKING,
+                user_id=user.id,
             )
         except Exception as e:
             logger.error(

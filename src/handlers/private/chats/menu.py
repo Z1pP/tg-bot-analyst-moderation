@@ -2,6 +2,7 @@ import logging
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
+from punq import Container
 
 from constants.callback import CallbackData
 
@@ -11,7 +12,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == CallbackData.Chat.BACK_TO_CHATS_MANAGEMENT)
+@router.callback_query(F.data == CallbackData.Chat.SHOW_MENU)
 async def show_chats_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
@@ -25,7 +26,8 @@ async def return_to_main_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
     user_language: str,
+    container: Container,
 ) -> None:
     """Обработчик возврата в главное меню из меню чатов"""
     await callback.answer()
-    await show_main_menu(callback, state, user_language)
+    await show_main_menu(callback, state, user_language, container)

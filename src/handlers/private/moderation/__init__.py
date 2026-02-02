@@ -6,7 +6,7 @@ from .block_user import router as block_user_router
 from .menu import router as menu_router
 from .warn_user import router as warn_user_router
 
-router = Router(name="banhammer_router")
+router = Router(name="moderation_router")
 
 router.include_router(back_to_block_menu_router)
 router.include_router(menu_router)

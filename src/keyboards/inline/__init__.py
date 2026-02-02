@@ -1,5 +1,6 @@
+from .analytics import analytics_menu_ikb
 from .calendar_kb import CalendarKeyboard
-from .menu import admin_menu_ikb
+from .menu import main_menu_ikb
 from .punishments import (
     punishment_action_ikb,
     punishment_next_step_ikb,
@@ -18,19 +19,17 @@ from .time_period import (
 )
 from .users import (
     all_users_actions_ikb,
-    cancel_add_user_ikb,
+    back_to_users_menu_ikb,
     remove_user_inline_kb,
     user_actions_ikb,
-    users_inline_kb,
     users_menu_ikb,
 )
 
 __all__ = [
-    "admin_menu_ikb",
-    "users_inline_kb",
+    "main_menu_ikb",
     "remove_user_inline_kb",
     "users_menu_ikb",
-    "cancel_add_user_ikb",
+    "back_to_users_menu_ikb",
     "user_actions_ikb",
     "all_users_actions_ikb",
     "order_details_kb_single_user",
@@ -45,4 +44,5 @@ __all__ = [
     "punishment_setting_ikb",
     "punishment_action_ikb",
     "punishment_next_step_ikb",
+    "analytics_menu_ikb",
 ]

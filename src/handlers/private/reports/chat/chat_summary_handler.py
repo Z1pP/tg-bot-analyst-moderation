@@ -9,7 +9,11 @@ from constants import Dialog
 from constants.callback import CallbackData
 from constants.enums import SummaryType
 from constants.period import SummaryTimePeriod
-from keyboards.inline.chats import chat_actions_ikb, summary_type_ikb
+from keyboards.inline.chats import (
+    analytics_chat_actions_ikb,
+    chat_actions_ikb,
+    summary_type_ikb,
+)
 from keyboards.inline.report import hide_details_ikb
 from services.chat import ChatService
 from states import ChatStateManager
@@ -27,24 +31,41 @@ logger = logging.getLogger(__name__)
     F.data == CallbackData.Chat.GET_CHAT_SUMMARY_24H,
     ChatStateManager.selecting_chat,
 )
+@router.callback_query(
+    F.data == CallbackData.Chat.GET_CHAT_SUMMARY_24H,
+    ChatStateManager.selecting_chat_report_action,
+)
 async def process_get_chat_summary_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """Обработчик запроса на выбор типа ИИ-сводки по чату за последние 24 часа."""
     await callback.answer()
 
+    current_state = await state.get_state()
+    is_analytics_flow = (
+        current_state == ChatStateManager.selecting_chat_report_action.state
+    )
+    back_callback = (
+        CallbackData.Chat.BACK_TO_ANALYTICS_CHAT_ACTIONS
+        if is_analytics_flow
+        else CallbackData.Chat.BACK_TO_CHAT_ACTIONS
+    )
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text="Выберите тип сводки:",
-        reply_markup=summary_type_ikb(),
+        text=Dialog.Summary.SELECT_FORMAT,
+        reply_markup=summary_type_ikb(back_callback=back_callback),
     )
 
 
 @router.callback_query(
     F.data.startswith(CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE),
     ChatStateManager.selecting_chat,
+)
+@router.callback_query(
+    F.data.startswith(CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE),
+    ChatStateManager.selecting_chat_report_action,
 )
 async def process_summary_type_selection_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
@@ -57,6 +78,13 @@ async def process_summary_type_selection_handler(
     )
     summary_type = SummaryType(summary_type_str)
 
+    current_state = await state.get_state()
+    finish_keyboard = (
+        analytics_chat_actions_ikb()
+        if current_state == ChatStateManager.selecting_chat_report_action.state
+        else chat_actions_ikb()
+    )
+
     data = await state.get_data()
     chat_id = data.get("chat_id")
 
@@ -65,8 +93,7 @@ async def process_summary_type_selection_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-            reply_markup=chat_actions_ikb(),
+            text=Dialog.Chat.CHAT_NOT_SELECTED,
         )
         return
 
@@ -79,7 +106,7 @@ async def process_summary_type_selection_handler(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text="⏳ <b>Сводка на этапе выполнения</b>\nПожалуйста, подождите, это может занять до 30 секунд...",
+        text=Dialog.Summary.GENERATING,
     )
 
     try:
@@ -120,20 +147,20 @@ async def process_summary_type_selection_handler(
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
-                text=Dialog.Chat.CHAT_ACTIONS.format(
+                text=Dialog.Chat.CHAT_ACTIONS_INFO.format(
                     title=chat.title,
                     start_time=chat.start_time.strftime("%H:%M"),
                     end_time=chat.end_time.strftime("%H:%M"),
                 ),
-                reply_markup=chat_actions_ikb(),
+                reply_markup=finish_keyboard,
             )
         else:
             await safe_edit_message(
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
-                text="✅ Сводка готова! Она отправлена отдельным сообщением.",
-                reply_markup=chat_actions_ikb(),
+                text=Dialog.Summary.READY,
+                reply_markup=finish_keyboard,
             )
 
     except Exception as e:
@@ -144,6 +171,6 @@ async def process_summary_type_selection_handler(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="❌ Произошла ошибка при генерации сводки. Попробуйте позже.",
-            reply_markup=chat_actions_ikb(),
+            text=Dialog.Summary.ERROR,
+            reply_markup=finish_keyboard,
         )

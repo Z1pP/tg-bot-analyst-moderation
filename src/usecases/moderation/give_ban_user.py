@@ -105,18 +105,25 @@ class GiveUserBanUseCase(ModerationUseCase):
 
         correct_date = TimeZoneService.now()
 
+        violator_name_token = self._get_violator_name_token(
+            username=context.dto.violator_username,
+            tg_id=context.violator.tg_id,
+        )
+        violator_display = self._get_violator_display_name(
+            username=context.dto.violator_username,
+            tg_id=context.violator.tg_id,
+        )
+
         report_text = self.punishment_service.generate_ban_report(
             dto=context.dto,
             date=correct_date,
             message_deleted=True,
         )
 
-        reason_text = PunishmentText.BAN.value.format(
-            username=context.dto.violator_username
-        )
+        reason_text = PunishmentText.BAN.value.format(username=violator_name_token)
 
         admin_answer_text = self.punishment_service.generate_admin_answer(
-            violator_username=context.dto.violator_username,
+            violator_username=violator_name_token,
             chat_title=context.chat.title,
             archive_title=context.archive_chat.title,
             punishment_type=PunishmentType.BAN,
@@ -131,7 +138,7 @@ class GiveUserBanUseCase(ModerationUseCase):
 
         # Логируем действие администратора
         details = (
-            f"Нарушитель: @{context.violator.username} ({context.violator.tg_id}), "
+            f"Нарушитель: {violator_display} ({context.violator.tg_id}), "
             f"Чат: {context.chat.title} ({context.chat.chat_id}), "
             f"Период: бессрочно"
         )
@@ -140,3 +147,15 @@ class GiveUserBanUseCase(ModerationUseCase):
             action_type=AdminActionType.BAN_USER,
             details=details,
         )
+
+    @staticmethod
+    def _get_violator_name_token(username: str | None, tg_id: str) -> str:
+        if username and username != "hidden":
+            return username
+        return f"ID:{tg_id}"
+
+    @staticmethod
+    def _get_violator_display_name(username: str | None, tg_id: str) -> str:
+        if username and username != "hidden":
+            return f"@{username}"
+        return f"ID:{tg_id}"

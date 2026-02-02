@@ -1,19 +1,27 @@
 from .dialogs import (
     AdminLogsDialogs,
     AmnestyUserDialogs,
+    AnalyticsDialogs,
     AntibotDialogs,
     BanUserDialogs,
+    BotSettingsDialogs,
     CalendarDialogs,
     ChatDialogs,
+    CommonDialogs,
+    HelpDialogs,
     MenuDialogs,
     MessageManagerDialogs,
     ModerationMenuDialogs,
+    NewsDialogs,
     PunishmentDialogs,
     RatingDialogs,
     ReleaseNotesDialogs,
     ReportDialogs,
     RolesDialogs,
+    RootDialogs,
+    SummaryDialogs,
     TemplateDialogs,
+    UserAndChatsSettingsDialogs,
     UserDialogs,
     UserTrackingDialogs,
     WarnUserDialogs,
@@ -31,6 +39,15 @@ PROTECTED_USER_TG_ID = "879565689"
 class InlineButtons:
     """Тексты для inline кнопок"""
 
+    class Common:
+        """Кнопки для общих действий"""
+
+        COME_BACK = "◀️ Вернуться"
+        CANCEL = "❌ Отмена"
+        HIDE_NOTIFICATION = "⬆️ Скрыть"
+        YES = "✅ Да"
+        NO = "❌ Нет"
+
     class TemplateButtons:
         """Кнопки для действий с шаблонами"""
 
@@ -42,8 +59,6 @@ class InlineButtons:
         SELECT_CATEGORY = "🗃️ Категории"
         ADD_CATEGORY = "➕ Добавить категорию"
         # Common
-        BACK_TO_TEMPLATES_MENU = "⬅️ Назад в меню шаблонов"
-        CANCEL = "❌ Отмена"
 
         EDIT = "✏️ Изменить"
         REMOVE = "🗑 Удалить"
@@ -51,77 +66,147 @@ class InlineButtons:
         CONFIRM_ADD = "✅ Подтвердить"
         CONFIRM_SAVE = "✅ Сохранить"
         CONFIRM_REMOVE = "✅ Удалить"
-        CANCEL_REMOVE = "❌ Отмена"
 
         EDIT_TITLE = "✏️ Изменить название"
         EDIT_CONTENT = "📝 Изменить содержимое"
-        CANCEL_EDIT = "❌ Отмена"
 
-    class MessageButtons:
-        """Кнопки для действий с сообщениями"""
+    class Templates:
+        """Кнопки для действий с шаблонами"""
 
+        MENU = "🚀 Шаблоны ответов"
+
+    class RoleButtons:
+        """Кнопки для действий с ролями"""
+
+        MENU = "📋 Управление доступом"
+        SELECT_ROLE = "📋 Выбрать роль"
+
+    class AdminLogs:
+        """Кнопки для админ-логов"""
+
+        MENU = "📋 Логи действий"
+
+    class Report:
+        """Кнопки для отчетов"""
+
+        GET_REPORT = "⏱️ Получить отчет"
+
+    class Punishment:
+        """Кнопки для наказаний"""
+
+        ACTION_WARNING = "❗️Пред"
+        ACTION_MUTE = "🔇 Мут"
+        ACTION_BAN = "❌ Блок"
+        STEP_ADD_MORE = "➕ Добавить еще"
+        STEP_SAVE_LADDER = "✅ Сохранить лестницу"
+
+    class Analytics:
+        """Кнопки для аналитики"""
+
+        MENU = "📊 Аналитика"
+
+    class Moderation:
+        """Кнопки для модерации"""
+
+        MENU = "🚫 Модерация"
+
+    class Messages:
+        """Кнопки для управления сообщениями"""
+
+        MENU = "💬 Сообщения"
         DELETE = "🗑 Удалить"
         REPLY = "💬 Ответить"
-        CANCEL = "❌ Отмена"
         CONFIRM_DELETE = "✅ Да, удалить"
         SEND_MESSAGE = "💬 Отправить сообщение"
-        # Templates
-        TEMPLATES_MENU = "🚀 Шаблоны ответов"
-        BACK_TO_MESSAGE_MANAGEMENT = "⬅️ Назад в меню управления сообщениями"
         HIDE_TEMPLATE = "🗑 Скрыть"
         HIDE_ALBUM = "🗑 Скрыть альбом"
         HIDE_DETAILS = "🗑 Скрыть детализацию"
 
-    class UserButtons:
+    class UserAndChatsSettings:
+        """Кнопки для настроек пользователей и чатов"""
+
+        MENU = "⚙️ Настройка польз. и чатов"
+        USERS_MENU = "👤 Пользователи"
+        CHATS_MENU = "🗯 Чаты"
+        RESET_SETTINGS = "⚰️ Сброс всех настроек"
+        FIRST_TIME_SETTINGS = "🆕 Первоначальная настройка"
+        START_FIRST_TIME_SETTINGS = "🙂‍↔️ Начать первоначальную настройку"
+        CONTINUE_SETTINGS = "➡️ Продолжить настройку"
+        SAVE_AND_FINISH_SETUP = "✅ Сохранить и закончить настройку"
+        GO_TO_CHAT_SETTINGS = "🔗 Перейти в Настройки чата"
+
+    class BotSettings:
+        """Кнопки для настроек бота"""
+
+        MENU = "⚙️ Настройки Analyst AI"
+
+    class Help:
+        """Кнопки для помощи"""
+
+        MENU = "❔ Помощь"
+
+    class News:
+        """Кнопки для новостей"""
+
+        MENU = "📰 Новости бота"
+
+    class Root:
+        """Кнопки для root-меню"""
+
+        MENU = "👑 Root"
+
+    class User:
         """Кнопки для действий с пользователями"""
 
-        SELECT_USER = "📊 Статистика"
-        ADD_USER = "➕ Добавить"
-        REMOVE_USER = "❌ Удалить"
-        BACK_TO_USERS_MENU = "⬅️ Назад в меню пользователей"
-        BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
-        CANCEL = "❌ Отмена"
+        SHOW_TRACKED_USERS_LIST = "📋 Все отсл. пользователи"
+        SHOW_TRACKED_USERS = "😏 Пользователи"
+        ADD = "➕ Добавить"
+        REMOVE = "🗑 Удалить"
+        COME_BACK = "◀️ Вернуться"
+        MOVE_TO_ANALYTICS = "🔗 Перейти в Аналитику"
+        MANAGEMENT = "⚙️ Управление пользователями"
+        SELECT_USER = "🔄 Выбрать другого пользователя"
 
-    class ChatButtons:
+    class Chat:
         """Кнопки для действий с чатами"""
 
-        # Main menu
-        CHATS_MANAGEMENT = "📋 Упр. чатами"
+        MANAGEMENT = "⚙️ Управление чатами"
+        SHOW_TRACKED_CHATS = "🗯 Чаты"
         # Chat management menu
         SELECT_CHAT = "📋 Выбрать чат"
         ADD = "➕ Добавить"
-        REMOVE = "❌ Удалить"
-        BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
-        # List of chats
-        BACK_TO_CHATS_MANAGEMENT = "⬅️ Вернуться к упр. чатами"
+        REMOVE = "🗑 Удалить"
+        COME_BACK = "◀️ Вернуться"
         # Actions with chat
-        GET_STATISTICS = "📊 Статистика"
+        PROHIBITIONS_SETTINGS = "❌ Запреты (Не раб.)"
         GET_DAILY_RATING = "🏆 Рейтинг активности"
-        GET_SUMMARY = "📝 Получить сводку"
-        GET_SUMMARY_24H = "📝 Сводка за 24ч"
-        SUMMARY_SHORT = "Краткая"
-        SUMMARY_FULL = "Полная"
-        ARCHIVE_CHANNEL_SETTING = "⚙️ Настройка архив. канала"
-        BACK_TO_SELECTION_CHAT = "⬅️ Вернуться к выбору чата"
-        REPORT_TIME_SETTING = "⏰ Настройка времени отчета"
-        CHANGE_WORK_START = "🕐 Изменить начало"
-        CHANGE_WORK_END = "🕐 Изменить конец"
-        CHANGE_TOLERANCE = "⏱ Изменить отклонение"
-        CANCEL_WORK_HOURS = "❌ Отмена"
+        ARCHIVE_CHANNEL_SETTING = "🗄 Архивный чат"
+        REPORT_TIME_SETTING = "🕐 Время сбора данных"
+        CHANGE_WORK_START = "🕗 Начало"
+        CHANGE_WORK_END = "🕓 Окончание"
+        CHANGE_TOLERANCE = "🕕 Отклонение"
+        CHANGE_BREAKS_TIME = "⏲️ Интервал паузы"
         ARCHIVE_CHANNEL_REBIND = "🔄 Перепривязать"
         ARCHIVE_CHANNEL_BIND = "🔗 Привязать"
-        ARCHIVE_TIME_SETTING = "🕓 Настройка времени отправки отчёта"
-        ARCHIVE_SCHEDULE_ENABLE = "✅ Включить рассылку"
+        ARCHIVE_TIME_SETTING = "🕐 Время отправки аналитики"
+        ARCHIVE_SCHEDULE_ENABLE = "🟢 Включить рассылку"
         ARCHIVE_SCHEDULE_DISABLE = "🛑 Отключить рассылку"
-        BACK_TO_ARCHIVE_SETTING = "⬅️ Вернуться"
-        BACK_TO_SELECT_ACTION = "⬅️ Назад к выбору действия"
-        PUNISHMENT_SETTING = "⚖️ Настройка наказаний"
+        PUNISHMENT_SETTING = "⚖️ Наказания"
         PUNISHMENT_CREATE_NEW = "🆕 Создать новую"
         PUNISHMENT_SET_DEFAULT = "🔄 Установить по умолчанию"
-        ANTIBOT_SETTING = "🛡️ Антибот"
-        ANTIBOT_ENABLE = "🤖 Включить Антибот"
-        ANTIBOT_DISABLE = "🤖 Выключить Антибот"
+        CANCEL_SET_DEFAULT = "❌ Нет"
+        CONFIRM_SET_DEFAULT = "✅ Да"
+        ANTIBOT_SETTING = "🛡 Антибот"
+        ANTIBOT_ENABLE = "🟢 Включить Антибот"
+        ANTIBOT_DISABLE = "🛑 Выключить Антибот"
         WELCOME_TEXT_SETTING = "👋 Приветствие"
+        AUTO_DELETE_DISABLE = "🛑 Выключить авт. удаление"
+        AUTO_DELETE_ENABLE = "🟢 Включить авт. удаление"
+        CHANGE_WELCOME_TEXT = "📝 Изменить текст приветствия"
+        WELCOME_TEXT_DISABLE = "🛑 Выключить Приветствие"
+        WELCOME_TEXT_ENABLE = "🟢 Включить Приветствие"
+        SUMMARY_SHORT = "Краткая"
+        SUMMARY_FULL = "Полная"
 
     class BlockButtons:
         AMNESTY = "🕊️ Амнистия"
@@ -135,45 +220,25 @@ class InlineButtons:
         CONFIRM_ACTION = "Да"
         CANCEL_ACTION = "Нет"
         NO_REASON = "❌ Без причины"
-        CANCEL = "❌ Отмена"
 
     class ReleaseNotesButtons:
         """Кнопки для действий с релизными заметками"""
 
         ADD_NOTE = "➕ Добавить заметку"
-        BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
-        BACK_TO_LIST = "⬅️ Вернуться к списку"
         EDIT = "✏️ Изменить"
         DELETE = "🗑 Удалить"
         EDIT_TITLE = "✏️ Изменить заголовок"
         EDIT_CONTENT = "📝 Изменить содержимое"
-        CANCEL_EDIT = "❌ Отмена"
         BROADCAST = "📢 Рассылка"
-
-    class AdminLogsButtons:
-        """Кнопки для действий с логами администраторов"""
-
-        SELECT_ADMIN = "🔄 Выбрать администратора"
-        BACK_TO_MAIN_MENU = "⬅️ Назад в главное меню"
-        BACK_TO_ADMIN_LOGS_MENU = "⬅️ Назад в меню логов"
-
-    class RoleButtons:
-        """Кнопки для действий с ролями"""
-
-        CANCEL = "❌ Отмена"
-
-    class RatingButtons:
-        """Кнопки для действий с рейтингом"""
-
-        BACK_TO_PERIOD = "⬅️ Назад к выбору периода"
-        BACK_TO_DASHBOARD = "⬅️ Назад к действиям"
 
 
 class Dialog:
+    # Common
+    Common = CommonDialogs
     # User Tracking
     UserTracking = UserTrackingDialogs
     # Moderation User
-    ModerationMenu = ModerationMenuDialogs
+    Moderation = ModerationMenuDialogs
     # Ban User
     BanUser = BanUserDialogs
     # Warn User
@@ -181,7 +246,7 @@ class Dialog:
     # Amnesty User
     AmnestyUser = AmnestyUserDialogs
     # Message Management
-    MessageManager = MessageManagerDialogs
+    Messages = MessageManagerDialogs
     # Reports
     Report = ReportDialogs
     # Users
@@ -206,3 +271,17 @@ class Dialog:
     Rating = RatingDialogs
     # Punishments
     Punishment = PunishmentDialogs
+    # Analytics
+    Analytics = AnalyticsDialogs
+    # Summary
+    Summary = SummaryDialogs
+    # User and Chats Settings
+    UserAndChatsSettings = UserAndChatsSettingsDialogs
+    # Bot Settings
+    BotSettings = BotSettingsDialogs
+    # Root
+    Root = RootDialogs
+    # Help
+    Help = HelpDialogs
+    # News
+    News = NewsDialogs

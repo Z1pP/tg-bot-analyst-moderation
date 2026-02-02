@@ -32,7 +32,9 @@ async def chat_daily_rating_handler(callback: CallbackQuery, state: FSMContext) 
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=Dialog.Rating.SELECT_PERIOD,
-        reply_markup=time_period_ikb_chat(),
+        reply_markup=time_period_ikb_chat(
+            back_callback=CallbackData.Chat.BACK_TO_ANALYTICS_CHAT_ACTIONS
+        ),
     )
 
     await state.set_state(RatingStateManager.selecting_period)
@@ -75,7 +77,7 @@ async def process_period_selection_callback(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.Report.SELECT_START_DATE,
+            text=Dialog.Calendar.SELECT_START_DATE,
             reply_markup=calendar_kb,
         )
         return
@@ -168,5 +170,7 @@ async def _render_rating_view(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=rating_text,
-        reply_markup=rating_report_ikb(),
+        reply_markup=rating_report_ikb(
+            back_callback=CallbackData.Report.BACK_TO_PERIODS
+        ),
     )

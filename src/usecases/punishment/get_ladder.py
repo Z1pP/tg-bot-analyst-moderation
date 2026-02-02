@@ -14,8 +14,10 @@ class GetPunishmentLadderUseCase:
         self._chat_service = chat_service
         self._punishment_service = punishment_service
 
-    async def execute(self, chat_db_id: int) -> PunishmentLadderResultDTO:
-        chat = await self._chat_service.get_chat_with_archive(chat_id=chat_db_id)
+    async def execute(self, chat_id: int) -> PunishmentLadderResultDTO:
+        """Получает лестницу наказаний для чата"""
+        chat = await self._chat_service.get_chat_with_archive(chat_id=chat_id)
+
         if not chat:
             return PunishmentLadderResultDTO(steps=[], formatted_text="")
 

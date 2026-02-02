@@ -26,11 +26,17 @@ class RemoveUserFromTrackingUseCase:
             return False
 
         # Получаем информацию о пользователе до удаления для логирования
-        target_user = await self.user_service.get_user_by_id(user_id=dto.user_id)
+        target_user = await self.user_service.get_user(
+            tg_id=dto.user_tgid,
+            username=dto.user_username,
+        )
+
+        if not target_user:
+            return False
 
         await self.user_tracking_repository.remove_user_from_tracking(
             admin_id=admin.id,
-            user_id=dto.user_id,
+            user_id=target_user.id,
         )
 
         if target_user:

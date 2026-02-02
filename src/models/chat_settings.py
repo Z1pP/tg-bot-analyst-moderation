@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING, Optional
 from sqlalchemy import Boolean, ForeignKey, Integer, String, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from constants.work_time import END_TIME, START_TIME, TOLERANCE
-
 from .base import BaseModel
 
 if TYPE_CHECKING:
@@ -24,20 +22,26 @@ class ChatSettings(BaseModel):
 
     start_time: Mapped[time] = mapped_column(
         Time,
-        default=START_TIME,
-        doc="Start work time for report filtering. Default is global START_TIME.",
+        nullable=True,
+        doc="Start work time for report filtering. Default is None.",
     )
 
     end_time: Mapped[time] = mapped_column(
         Time,
-        default=END_TIME,
-        doc="End work time for report filtering. Default is global END_TIME.",
+        nullable=True,
+        doc="End work time for report filtering. Default is None.",
     )
 
     tolerance: Mapped[int] = mapped_column(
         Integer,
-        default=TOLERANCE,
-        doc="Tolerance for report filtering. Default is global TOLERANCE.",
+        nullable=True,
+        doc="Tolerance for report filtering. Default is None.",
+    )
+
+    breaks_time: Mapped[int] = mapped_column(
+        Integer,
+        nullable=True,
+        doc="Breaks time for report filtering. Default is None.",
     )
 
     is_antibot_enabled: Mapped[bool] = mapped_column(
@@ -51,6 +55,20 @@ class ChatSettings(BaseModel):
         String(length=4096),  # Maximum message length in TG
         nullable=True,
         doc="Custom welcome message for new members.",
+    )
+
+    auto_delete_welcome_text: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        doc="Whether auto delete welcome text is enabled for this chat.",
+    )
+
+    show_welcome_text: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        doc="Whether welcome text is enabled for this chat.",
     )
 
     # Relationships

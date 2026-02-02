@@ -13,21 +13,24 @@ logger = logging.getLogger(__name__)
 
 
 class MessageReplyRepository(BaseRepository):
-    async def get_replies_by_period_date(
+    async def get_replies_by_period_date_for_users(
         self,
-        user_id: int,
+        user_ids: list[int],
         start_date: datetime,
         end_date: datetime,
     ) -> list[MessageReply]:
         """
-        Получает все ответы пользователя за указанный период.
+        Получает все ответы пользователей за указанный период.
         """
+        if not user_ids:
+            return []
+
         async with self._db.session() as session:
             query = (
                 select(MessageReply)
                 .options(joinedload(MessageReply.chat_session))
                 .where(
-                    MessageReply.reply_user_id == user_id,
+                    MessageReply.reply_user_id.in_(user_ids),
                     MessageReply.created_at.between(start_date, end_date),
                 )
             )
@@ -35,17 +38,17 @@ class MessageReplyRepository(BaseRepository):
                 result = await session.execute(query)
                 replies = result.scalars().all()
                 logger.info(
-                    "Получено %d ответов для user_id=%s за период %s - %s",
+                    "Получено %d ответов для пользователей (%d) за период %s - %s",
                     len(replies),
-                    user_id,
+                    len(user_ids),
                     start_date,
                     end_date,
                 )
                 return replies
             except Exception as e:
                 logger.error(
-                    "Ошибка при получении ответов по периоду: user_id=%s, период=%s-%s, %s",
-                    user_id,
+                    "Ошибка при получении ответов по периоду для пользователей: users=%s, период=%s-%s, %s",
+                    user_ids,
                     start_date,
                     end_date,
                     e,

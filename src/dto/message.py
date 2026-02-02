@@ -12,6 +12,7 @@ class CreateMessageDTO(BaseModel):
 
     chat_tgid: str
     user_tgid: str
+    user_username: Optional[str] = None
     message_id: str
     message_type: str
     content_type: str

@@ -13,7 +13,7 @@ def cancel_category_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL,
+            text=InlineButtons.Common.CANCEL,
             callback_data="cancel_category",
         )
     )
@@ -28,7 +28,7 @@ def confirmation_add_category_ikb() -> InlineKeyboardMarkup:
             callback_data="conf_add_category",
         ),
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL, callback_data="cancel_category"
+            text=InlineButtons.Common.CANCEL, callback_data="cancel_category"
         ),
     )
     return builder.as_markup()
@@ -42,7 +42,7 @@ def confirmation_edit_category_ikb() -> InlineKeyboardMarkup:
             callback_data="conf_edit_category",
         ),
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL, callback_data="cancel_category"
+            text=InlineButtons.Common.CANCEL, callback_data="cancel_category"
         ),
     )
     return builder.as_markup()
@@ -111,7 +111,7 @@ def categories_inline_ikb(
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.BACK_TO_TEMPLATES_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data="templates_menu",
         )
     )
@@ -172,7 +172,7 @@ def categories_select_only_ikb(
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.BACK_TO_TEMPLATES_MENU,
+            text=InlineButtons.Common.COME_BACK,
             callback_data="templates_menu",
         )
     )
@@ -189,7 +189,7 @@ def conf_remove_category_kb() -> InlineKeyboardBuilder:
             callback_data="conf_remove_category",
         ),
         InlineKeyboardButton(
-            text=InlineButtons.TemplateButtons.CANCEL_REMOVE,
+            text=InlineButtons.Common.CANCEL,
             callback_data="cancel_remove_category",
         ),
         width=2,

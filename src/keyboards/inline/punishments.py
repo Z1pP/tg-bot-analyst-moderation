@@ -11,22 +11,24 @@ def punishment_setting_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.PUNISHMENT_CREATE_NEW,
+            text=InlineButtons.Chat.PUNISHMENT_CREATE_NEW,
             callback_data=CallbackData.Chat.PUNISHMENT_CREATE_NEW,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.PUNISHMENT_SET_DEFAULT,
+            text=InlineButtons.Chat.PUNISHMENT_SET_DEFAULT,
             callback_data=CallbackData.Chat.PUNISHMENT_SET_DEFAULT,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ChatButtons.BACK_TO_SELECT_ACTION,
+            text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
         )
     )
+
+    builder.adjust(2, 1)
 
     return builder.as_markup()
 
@@ -37,28 +39,30 @@ def punishment_action_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text="Предупреждение",
-            callback_data="punish_action_warning",
+            text=InlineButtons.Punishment.ACTION_WARNING,
+            callback_data=CallbackData.Chat.PUNISH_ACTION_WARNING,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="Мут",
-            callback_data="punish_action_mute",
+            text=InlineButtons.Punishment.ACTION_MUTE,
+            callback_data=CallbackData.Chat.PUNISH_ACTION_MUTE,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="Бан",
-            callback_data="punish_action_ban",
+            text=InlineButtons.Punishment.ACTION_BAN,
+            callback_data=CallbackData.Chat.PUNISH_ACTION_BAN,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="❌ Отмена",
-            callback_data="punish_action_cancel",
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Chat.PUNISHMENT_SETTING,
         )
     )
+
+    builder.adjust(3, 1)
 
     return builder.as_markup()
 
@@ -69,21 +73,33 @@ def punishment_next_step_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text="➕ Добавить еще",
-            callback_data="punish_step_next",
+            text=InlineButtons.Punishment.STEP_ADD_MORE,
+            callback_data=CallbackData.Chat.PUNISH_STEP_NEXT,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="✅ Сохранить лестницу",
-            callback_data="punish_step_save",
+            text=InlineButtons.Punishment.STEP_SAVE_LADDER,
+            callback_data=CallbackData.Chat.PUNISH_STEP_SAVE,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="❌ Отмена",
-            callback_data="punish_step_cancel",
+            text=InlineButtons.Common.CANCEL,
+            callback_data=CallbackData.Chat.PUNISH_STEP_CANCEL,
         )
     )
 
+    return builder.as_markup()
+
+
+def cancel_punishment_creation_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура отмены создания лестницы наказаний"""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.Common.CANCEL,
+            callback_data=CallbackData.Chat.PUNISH_STEP_CANCEL,
+        )
+    )
     return builder.as_markup()

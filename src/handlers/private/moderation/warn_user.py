@@ -6,7 +6,7 @@ from punq import Container
 
 from constants import Dialog, InlineButtons
 from constants.punishment import PunishmentActions as Actions
-from keyboards.inline.banhammer import (
+from keyboards.inline.moderation import (
     no_reason_ikb,
 )
 from states import ModerationStates, WarnUserStates
@@ -52,7 +52,7 @@ async def process_user_data_input(
         bot=bot,
         container=container,
         dialog_texts={
-            "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT,
+            "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT_ADD,
             "user_not_found": Dialog.WarnUser.USER_NOT_FOUND,
             "user_info": Dialog.WarnUser.USER_INFO,
         },

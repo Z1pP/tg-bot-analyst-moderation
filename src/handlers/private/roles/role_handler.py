@@ -58,7 +58,7 @@ async def process_user_data_input(
                 bot=message.bot,
                 chat_id=message.chat.id,
                 message_id=active_message_id,
-                text=Dialog.User.INVALID_USERNAME_FORMAT,
+                text=Dialog.User.INVALID_USERNAME_FORMAT_ADD,
                 reply_markup=cancel_role_select_ikb(),
             )
         return

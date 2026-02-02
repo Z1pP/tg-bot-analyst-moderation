@@ -7,7 +7,7 @@ from punq import Container
 
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
-from keyboards.inline.chats import remove_chat_ikb, tracked_chats_ikb
+from keyboards.inline.chats import remove_chat_ikb, show_tracked_chats_ikb
 from models import ChatSession
 from usecases.chat import GetTrackedChatsUseCase
 from utils.pagination_handler import BasePaginationHandler
@@ -36,10 +36,46 @@ class ChatsPaginationHandler(BasePaginationHandler):
         page: int,
         total_count: int,
     ) -> InlineKeyboardMarkup:
-        return tracked_chats_ikb(
+        return show_tracked_chats_ikb(
             chats=items,
             page=page,
             total_count=total_count,
+            back_callback=CallbackData.Chat.SHOW_MENU,
+            show_management_button=False,
+            prev_page_prefix=CallbackData.Chat.PREFIX_PREV_CHATS_PAGE,
+            next_page_prefix=CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE,
+        )
+
+
+class ReportChatsPaginationHandler(BasePaginationHandler):
+    def __init__(self):
+        super().__init__("чатов")
+
+    async def get_page_data(
+        self,
+        page: int,
+        callback: CallbackQuery,
+        state: FSMContext,
+        container: Container,
+    ) -> Tuple[List[ChatSession], int]:
+        chats = await get_tracked_chats(callback.from_user.username, container)
+        chats_page, total_count = paginate_chats(chats, page)
+        return chats_page, total_count
+
+    async def build_keyboard(
+        self,
+        items: List[ChatSession],
+        page: int,
+        total_count: int,
+    ) -> InlineKeyboardMarkup:
+        return show_tracked_chats_ikb(
+            chats=items,
+            page=page,
+            total_count=total_count,
+            back_callback=CallbackData.Analytics.SHOW_MENU,
+            show_management_button=True,
+            prev_page_prefix=CallbackData.Chat.PREFIX_PREV_CHATS_REPORT_PAGE,
+            next_page_prefix=CallbackData.Chat.PREFIX_NEXT_CHATS_REPORT_PAGE,
         )
 
 
@@ -72,6 +108,7 @@ class RemoveChatsPaginationHandler(BasePaginationHandler):
 
 
 chats_handler = ChatsPaginationHandler()
+report_chats_handler = ReportChatsPaginationHandler()
 remove_chats_handler = RemoveChatsPaginationHandler()
 
 
@@ -87,6 +124,24 @@ async def next_chats_page_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     await chats_handler.handle_next_page(callback, state, container)
+
+
+@router.callback_query(
+    F.data.startswith(CallbackData.Chat.PREFIX_PREV_CHATS_REPORT_PAGE)
+)
+async def prev_chats_report_page_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
+    await report_chats_handler.handle_prev_page(callback, state, container)
+
+
+@router.callback_query(
+    F.data.startswith(CallbackData.Chat.PREFIX_NEXT_CHATS_REPORT_PAGE)
+)
+async def next_chats_report_page_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
+    await report_chats_handler.handle_next_page(callback, state, container)
 
 
 @router.callback_query(

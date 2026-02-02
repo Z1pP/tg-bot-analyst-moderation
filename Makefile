@@ -1,5 +1,6 @@
 # Variables
 DOCKER_COMPOSE = docker compose
+DOCKER = docker
 PYTHON = python3
 SRC_DIR = src
 
@@ -37,6 +38,9 @@ build:
 logs:
 	$(DOCKER_COMPOSE) logs -f
 
+logs-bot:
+	$(DOCKER_COMPOSE) logs -f bot
+
 ps:
 	$(DOCKER_COMPOSE) ps
 
@@ -50,5 +54,5 @@ redis-clear:
 	${DOCKER_COMPOSE} exec redis redis-cli flushall
 
 prune:
-	${DOCKER_COMPOSE} prune -f
+	${DOCKER} image prune -f
 

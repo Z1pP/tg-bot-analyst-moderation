@@ -26,6 +26,7 @@ class SaveMessageUseCase:
 
         user = await self.user_service.get_or_create(
             tg_id=message_dto.user_tgid,
+            username=message_dto.user_username,
         )
         chat = await self.chat_service.get_or_create(
             chat_tgid=message_dto.chat_tgid,
