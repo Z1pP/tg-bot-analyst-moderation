@@ -61,26 +61,30 @@ async def safe_edit_message(
     text: str | None = None,
     reply_markup: types.InlineKeyboardMarkup | None = None,
     parse_mode: str | None = ParseMode.HTML,
-) -> bool:
+) -> types.Message | None:
     """Безопасное редактирование сообщения с обработкой типичных ошибок Telegram"""
     try:
-        await bot.edit_message_text(
+        return await bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
             text=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode,
         )
-    except Exception as e:
+    except TelegramBadRequest as e:
+        if "message is not modified" in str(e).lower():
+            return None
         logger.error(f"Ошибка при редактировании сообщения с {parse_mode}: {e}")
-        await bot.edit_message_text(
+        return await bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
             text=text,
             reply_markup=reply_markup,
             parse_mode=None,
         )
-    return True
+    except Exception as e:
+        logger.error(f"Критическая ошибка при редактировании сообщения: {e}")
+        return None
 
 
 @safe_telegram_edit
