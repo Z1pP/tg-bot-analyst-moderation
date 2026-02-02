@@ -244,11 +244,13 @@ class UserRepository(BaseRepository):
                 return []
 
     async def get_user_by_username(self, username: str) -> Optional[User]:
-        """Получает пользователя по имени пользователя."""
+        """Получает пользователя по имени пользователя (регистронезависимо)."""
         async with self._db.session() as session:
             try:
                 result = await session.execute(
-                    select(User).where(User.username == username)
+                    select(User).where(
+                        func.lower(User.username) == func.lower(username)
+                    )
                 )
                 user = result.scalars().first()
 
