@@ -10,6 +10,7 @@ from .analytics import router as analytics_router
 from .categories import router as categories_router
 from .chats import router as chats_router
 from .common import router as common_router
+from .first_time_setup import router as first_time_setup_router
 from .message_management import router as message_management_router
 from .moderation import router as moderation_router
 from .release_notes import router as release_notes_router
@@ -34,3 +35,4 @@ router.include_router(admin_logs_pagination_router)
 router.include_router(release_notes_router)
 router.include_router(roles_router)
 router.include_router(scheduler_router)
+router.include_router(first_time_setup_router)
