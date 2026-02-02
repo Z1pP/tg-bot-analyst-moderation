@@ -193,6 +193,14 @@ class UserAndChatsSettingsCallbackData:
     CONFIRM_RESET = "confirm_reset"
     CANCEL_RESET = "cancel_reset"
     FIRST_TIME_SETTINGS = "first_time_settings"
+    CONTINUE_SETTINGS = "continue_settings"
+    # First-time work hours
+    FIRST_TIME_CHANGE_WORK_START = "first_time_change_work_start"
+    FIRST_TIME_CHANGE_WORK_END = "first_time_change_work_end"
+    FIRST_TIME_CHANGE_TOLERANCE = "first_time_change_tolerance"
+    FIRST_TIME_CHANGE_BREAKS_TIME = "first_time_change_breaks_time"
+    FIRST_TIME_SAVE_AND_FINISH = "first_time_save_and_finish"
+    FIRST_TIME_CANCEL_TIME_INPUT = "first_time_cancel_time_input"
 
 
 class BotSettingsCallbackData:
