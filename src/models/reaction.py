@@ -33,7 +33,7 @@ class MessageReaction(BaseModel):
         nullable=False,
     )
     emoji: Mapped[str] = mapped_column(
-        String(10),
+        String(64),
         nullable=False,
     )
     message_url: Mapped[str] = mapped_column(
