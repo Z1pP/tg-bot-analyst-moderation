@@ -1,3 +1,9 @@
+"""Модуль хендлеров для блокировки пользователей.
+
+Содержит логику для инициации блокировки, ввода данных пользователя,
+указания причины и выбора чатов для применения наказания.
+"""
+
 import logging
 
 from aiogram import Bot, F, Router, types
@@ -9,14 +15,14 @@ from constants.punishment import PunishmentActions as Actions
 from keyboards.inline.moderation import (
     no_reason_ikb,
 )
-from states import BanUserStates, ModerationStates
+from states import BanUserStates
 from usecases.moderation import GiveUserBanUseCase
 
-from .common import (
-    process_moderation_action,
-    process_reason_common,
-    process_user_handler_common,
-    process_user_input_common,
+from .helpers import (
+    execute_moderation_logic,
+    handle_reason_input_logic,
+    handle_user_search_logic,
+    setup_user_input_view,
 )
 
 router = Router()
@@ -24,15 +30,18 @@ logger = logging.getLogger(__name__)
 block_buttons = InlineButtons.Moderation()
 
 
-@router.callback_query(
-    F.data == block_buttons.BLOCK_USER,
-    ModerationStates.menu,
-)
-async def block_user_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
+@router.callback_query(F.data == InlineButtons.Moderation.BLOCK_USER)
+async def block_start_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
+    """Инициализирует процесс блокировки пользователя.
+
+    Args:
+        callback: Объект callback-запроса от кнопки 'Блокировка'.
+        state: Контекст состояния FSM.
+
+    State:
+        Устанавливает: BanUserStates.waiting_user_input.
     """
-    Обработчик для блокировки пользователя.
-    """
-    await process_user_handler_common(
+    await setup_user_input_view(
         callback=callback,
         state=state,
         next_state=BanUserStates.waiting_user_input,
@@ -41,16 +50,25 @@ async def block_user_handler(callback: types.CallbackQuery, state: FSMContext) -
 
 
 @router.message(BanUserStates.waiting_user_input)
-async def process_user_data_input(
+async def block_user_input_handler(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
     container: Container,
 ) -> None:
+    """Обрабатывает ввод данных пользователя для блокировки.
+
+    Args:
+        message: Сообщение с username или ID пользователя.
+        state: Контекст состояния FSM.
+        bot: Экземпляр бота.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: BanUserStates.waiting_user_input.
+        Устанавливает: BanUserStates.waiting_reason_input при успехе.
     """
-    Обработчик для получения данных о пользователе.
-    """
-    await process_user_input_common(
+    await handle_user_search_logic(
         message=message,
         state=state,
         bot=bot,
@@ -62,21 +80,31 @@ async def process_user_data_input(
         },
         success_keyboard=no_reason_ikb,
         next_state=BanUserStates.waiting_reason_input,
-        error_state=ModerationStates.menu,
     )
 
 
 @router.message(BanUserStates.waiting_reason_input)
-async def process_reason_input(
+async def block_reason_input_handler(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
     container: Container,
 ) -> None:
-    """Обработка причины блокировки (введённой вручную)."""
+    """Обрабатывает текстовый ввод причины блокировки.
+
+    Args:
+        message: Сообщение с текстом причины.
+        state: Контекст состояния FSM.
+        bot: Экземпляр бота.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: BanUserStates.waiting_reason_input.
+        Устанавливает: BanUserStates.waiting_chat_select при наличии доступных чатов.
+    """
     reason = message.text.strip()
 
-    await process_reason_common(
+    await handle_reason_input_logic(
         reason=reason,
         sender=message,
         state=state,
@@ -91,16 +119,27 @@ async def process_reason_input(
     BanUserStates.waiting_reason_input,
     F.data == block_buttons.NO_REASON,
 )
-async def process_no_reason(
+async def block_no_reason_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
     bot: Bot,
     container: Container,
 ) -> None:
-    """Обработка нажатия кнопки 'Без причины'."""
+    """Обрабатывает выбор блокировки без указания причины.
+
+    Args:
+        callback: Объект callback-запроса от кнопки 'Без причины'.
+        state: Контекст состояния FSM.
+        bot: Экземпляр бота.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: BanUserStates.waiting_reason_input.
+        Устанавливает: BanUserStates.waiting_chat_select при наличии доступных чатов.
+    """
     await callback.answer()
 
-    await process_reason_common(
+    await handle_reason_input_logic(
         reason=None,
         sender=callback,
         state=state,
@@ -115,15 +154,22 @@ async def process_no_reason(
     BanUserStates.waiting_chat_select,
     F.data.startswith("chat__"),
 )
-async def process_chat_selection(
+async def block_chat_select_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
     container: Container,
 ) -> None:
+    """Обрабатывает выбор чата для применения блокировки.
+
+    Args:
+        callback: Объект callback-запроса с ID чата.
+        state: Контекст состояния FSM.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: BanUserStates.waiting_chat_select.
     """
-    Обработчик для выбора чата для блокировки.
-    """
-    await process_moderation_action(
+    await execute_moderation_logic(
         callback=callback,
         state=state,
         action=Actions.BAN,
