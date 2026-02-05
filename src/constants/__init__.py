@@ -217,7 +217,7 @@ class InlineButtons:
         UNMUTE = "🔊 Размут"
         CONFIRM_ACTION = "Да"
         CANCEL_ACTION = "Нет"
-        NO_REASON = "❌ Без причины"
+        NO_REASON = "❌ Без указания причины"
 
     class ReleaseNotesButtons:
         """Кнопки для действий с релизными заметками"""
