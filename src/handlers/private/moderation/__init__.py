@@ -1,14 +1,12 @@
 from aiogram import Router
 
 from .amnesty import router as amnesty_router
-from .back_to_block_menu import router as back_to_block_menu_router
 from .block_user import router as block_user_router
 from .menu import router as menu_router
 from .warn_user import router as warn_user_router
 
 router = Router(name="moderation_router")
 
-router.include_router(back_to_block_menu_router)
 router.include_router(menu_router)
 router.include_router(amnesty_router)
 router.include_router(block_user_router)
