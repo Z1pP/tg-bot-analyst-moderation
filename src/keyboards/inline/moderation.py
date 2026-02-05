@@ -1,3 +1,9 @@
+"""Модуль инлайн-клавиатур для раздела модерации.
+
+Содержит функции для создания клавиатур управления пользователями,
+выбора причин наказания и навигации по меню модерации.
+"""
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
@@ -6,7 +12,11 @@ from constants.callback import CallbackData
 
 
 def no_reason_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура с кнопкой 'Без причины'."""
+    """Создает клавиатуру с кнопкой для пропуска ввода причины.
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопкой 'Без причины'.
+    """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
@@ -18,7 +28,14 @@ def no_reason_ikb() -> InlineKeyboardMarkup:
 
 
 def moderation_menu_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура с действиями по модерации"""
+    """Создает главное меню раздела модерации.
+
+    Включает кнопки для выдачи предупреждений, блокировки, амнистии,
+    управления чатами и возврата в главное меню.
+
+    Returns:
+        InlineKeyboardMarkup: Разметка главного меню модерации.
+    """
     builder = InlineKeyboardBuilder()
 
     builder.row(
@@ -48,20 +65,30 @@ def moderation_menu_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def back_to_block_menu_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура для возврата в меню блокировок"""
+def back_to_moderation_menu_ikb() -> InlineKeyboardMarkup:
+    """Создает клавиатуру с кнопкой отмены и возврата в меню модерации.
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопкой 'Отмена'.
+    """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Common.COME_BACK,
-            callback_data=InlineButtons.Moderation.BACK_TO_BLOCK_MENU,
+            text=InlineButtons.Common.CANCEL,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
         )
     )
     return builder.as_markup()
 
 
 def amnesty_actions_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура с действиями по амнистии"""
+    """Создает меню выбора действий для амнистии пользователя.
+
+    Включает опции отмены варна, размута, разбана и кнопку возврата.
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с действиями амнистии.
+    """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
@@ -78,7 +105,7 @@ def amnesty_actions_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=InlineButtons.Moderation.BACK_TO_BLOCK_MENU,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
         ),
     )
     builder.adjust(2, 1, 1)
