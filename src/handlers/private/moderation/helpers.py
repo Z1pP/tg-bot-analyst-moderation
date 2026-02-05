@@ -207,39 +207,34 @@ async def handle_user_search_logic(
     data = await state.get_data()
     message_to_edit_id = data.get("message_to_edit_id")
 
+    # --- Если данные пользователя не введены или введены некорректно
     if user_data is None:
-        reply_markup = moderation_menu_ikb() if show_block_actions_on_error else None
         await handle_moderation_error(
             event=message,
             state=state,
             text=dialog_texts["invalid_format"],
             message_to_edit_id=message_to_edit_id,
-            reply_markup=reply_markup,
+            reply_markup=back_to_moderation_menu_ikb(),
         )
         return
 
     user_service: UserService = container.resolve(UserService)
 
     user = None
-    if user_data.tg_id:
-        user = await user_service.get_user(tg_id=user_data.tg_id)
-    elif user_data.username:
-        user = await user_service.get_by_username(username=user_data.username)
+
+    user = await user_service.get_user(
+        tg_id=user_data.tg_id, username=user_data.username
+    )
 
     # --- Если пользователь не найден
     if user is None:
-        identificator = (
-            f"<code>{user_data.tg_id}</code>"
-            if user_data.tg_id
-            else f"<b>@{user_data.username}</b>"
-        )
-        reply_markup = moderation_menu_ikb() if show_block_actions_on_error else None
+        identificator = user_data.tg_id or user_data.username
         await handle_moderation_error(
             event=message,
             state=state,
             text=dialog_texts["user_not_found"].format(identificator=identificator),
             message_to_edit_id=message_to_edit_id,
-            reply_markup=reply_markup,
+            reply_markup=back_to_moderation_menu_ikb(),
         )
         return
 
