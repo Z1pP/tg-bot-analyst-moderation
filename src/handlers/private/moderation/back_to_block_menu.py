@@ -7,7 +7,7 @@ from states.moderation import ModerationStates
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
-block_buttons = InlineButtons.BlockButtons()
+block_buttons = InlineButtons.Moderation()
 
 
 @router.callback_query(F.data == block_buttons.BACK_TO_BLOCK_MENU)
