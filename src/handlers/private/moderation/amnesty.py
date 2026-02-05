@@ -1,5 +1,10 @@
+"""Модуль хендлеров для амнистии пользователей.
+
+Содержит логику для снятия ограничений (бан, мут) и отмены предупреждений
+в одном или нескольких чатах.
+"""
+
 import logging
-from dataclasses import dataclass
 
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
@@ -15,7 +20,7 @@ from keyboards.inline.moderation import (
     amnesty_actions_ikb,
     moderation_menu_ikb,
 )
-from states import AmnestyStates, ModerationStates
+from states import AmnestyStates
 from usecases.amnesty import (
     CancelLastWarnUseCase,
     GetChatsWithAnyRestrictionUseCase,
@@ -25,25 +30,32 @@ from usecases.amnesty import (
     UnmuteUserUseCase,
 )
 from utils.formatter import format_duration
+from utils.moderation import ViolatorData, extract_violator_data_from_state
 from utils.send_message import safe_edit_message
 
-from .common import process_user_handler_common, process_user_input_common
 from .errors import handle_chats_error
+from .helpers import handle_user_search_logic, setup_user_input_view
 
 router = Router()
 logger = logging.getLogger(__name__)
-block_buttons = InlineButtons.Moderation()
 
 
 @router.callback_query(
-    F.data == block_buttons.AMNESTY,
-    ModerationStates.menu,
+    F.data == InlineButtons.Moderation.AMNESTY,
 )
-async def amnesty_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
+async def amnesty_start_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
+    """Инициализирует процесс амнистии пользователя.
+
+    Args:
+        callback: Объект callback-запроса от кнопки 'Амнистия'.
+        state: Контекст состояния FSM.
+
+    State:
+        Устанавливает: AmnestyStates.waiting_user_input.
     """
-    Обработчик отвечающий за действия по амнистии пользователя в чате.
-    """
-    await process_user_handler_common(
+    await setup_user_input_view(
         callback=callback,
         state=state,
         next_state=AmnestyStates.waiting_user_input,
@@ -52,16 +64,25 @@ async def amnesty_handler(callback: types.CallbackQuery, state: FSMContext) -> N
 
 
 @router.message(AmnestyStates.waiting_user_input)
-async def waiting_user_data_input(
+async def amnesty_user_input_handler(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
     container: Container,
 ) -> None:
+    """Обрабатывает ввод данных пользователя для амнистии.
+
+    Args:
+        message: Сообщение с username или ID пользователя.
+        state: Контекст состояния FSM.
+        bot: Экземпляр бота.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: AmnestyStates.waiting_user_input.
+        Устанавливает: AmnestyStates.waiting_action_select при успехе.
     """
-    Обработчик для обработки введенной информации о пользователе
-    """
-    await process_user_input_common(
+    await handle_user_search_logic(
         message=message,
         state=state,
         bot=bot,
@@ -73,15 +94,14 @@ async def waiting_user_data_input(
         },
         success_keyboard=amnesty_actions_ikb,
         next_state=AmnestyStates.waiting_action_select,
-        error_state=ModerationStates.menu,
         show_block_actions_on_error=True,
     )
 
 
 ACTION_MAP = {
-    block_buttons.UNBAN: Dialog.AmnestyUser.UNBAN_CONFIRMATION,
-    block_buttons.UNMUTE: Dialog.AmnestyUser.UNMUTE_CONFIRMATION,
-    block_buttons.CANCEL_WARN: Dialog.AmnestyUser.CANCEL_WARN_CONFIRMATION,
+    InlineButtons.Moderation.UNBAN: Dialog.AmnestyUser.UNBAN_CONFIRMATION,
+    InlineButtons.Moderation.UNMUTE: Dialog.AmnestyUser.UNMUTE_CONFIRMATION,
+    InlineButtons.Moderation.CANCEL_WARN: Dialog.AmnestyUser.CANCEL_WARN_CONFIRMATION,
 }
 
 
@@ -89,10 +109,19 @@ ACTION_MAP = {
     F.data.in_(ACTION_MAP.keys()),
     AmnestyStates.waiting_action_select,
 )
-async def amnsesy_action_handler(
+async def amnesty_action_select_handler(
     callback: types.CallbackQuery, state: FSMContext
 ) -> None:
-    """Универсальный обработчик для действий по амнистии пользователя"""
+    """Обрабатывает выбор типа амнистии (разбан, размут, отмена варна).
+
+    Args:
+        callback: Объект callback-запроса с выбранным действием.
+        state: Контекст состояния FSM.
+
+    State:
+        Ожидает: AmnestyStates.waiting_action_select.
+        Устанавливает: AmnestyStates.waiting_confirmation_action.
+    """
     await callback.answer()
     action = callback.data
 
@@ -108,14 +137,22 @@ async def amnsesy_action_handler(
 
 
 @router.callback_query(
-    F.data == block_buttons.CONFIRM_ACTION,
+    F.data == InlineButtons.Moderation.CONFIRM_ACTION,
     AmnestyStates.waiting_confirmation_action,
 )
-async def confirm_action(
+async def amnesty_confirm_handler(
     callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
-    """
-    Обработчик для подтверждения действия по амнистии пользователя
+    """Обрабатывает подтверждение выбранного действия амнистии.
+
+    Args:
+        callback: Объект callback-запроса подтверждения.
+        state: Контекст состояния FSM.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: AmnestyStates.waiting_confirmation_action.
+        Устанавливает: AmnestyStates.waiting_chat_select при наличии чатов с ограничениями.
     """
     await callback.answer()
 
@@ -172,12 +209,21 @@ async def confirm_action(
 
 
 @router.callback_query(
-    F.data == block_buttons.CANCEL_ACTION,
+    F.data == InlineButtons.Moderation.CANCEL_ACTION,
     AmnestyStates.waiting_confirmation_action,
 )
-async def cancel_action(callback: types.CallbackQuery, state: FSMContext) -> None:
-    """
-    Обработчик для отмены действия по амнистии пользователя и возвращения в меню
+async def amnesty_cancel_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
+    """Отменяет подтверждение и возвращает к выбору типа амнистии.
+
+    Args:
+        callback: Объект callback-запроса отмены.
+        state: Контекст состояния FSM.
+
+    State:
+        Ожидает: AmnestyStates.waiting_confirmation_action.
+        Устанавливает: AmnestyStates.waiting_action_select.
     """
     await callback.answer()
 
@@ -193,10 +239,20 @@ async def cancel_action(callback: types.CallbackQuery, state: FSMContext) -> Non
     AmnestyStates.waiting_chat_select,
     F.data.startswith("chat__"),
 )
-async def execute_amnesty_action(
+async def amnesty_execute_handler(
     callback: types.CallbackQuery, state: FSMContext, container: Container
 ) -> None:
-    """Выполняет выбранное действие амнистии в указанном чате"""
+    """Выполняет выбранное действие амнистии в указанном чате (или во всех).
+
+    Args:
+        callback: Объект callback-запроса с ID чата.
+        state: Контекст состояния FSM.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: AmnestyStates.waiting_chat_select.
+        Устанавливает: AmnestyStates.waiting_action_select после выполнения.
+    """
     await callback.answer()
 
     data = await state.get_data()
@@ -229,7 +285,7 @@ async def execute_amnesty_action(
         chat_dtos=chat_dtos,
     )
 
-    if action == block_buttons.CANCEL_WARN:
+    if action == InlineButtons.Moderation.CANCEL_WARN:
         usecase: CancelLastWarnUseCase = container.resolve(CancelLastWarnUseCase)
         try:
             result = await usecase.execute(dto=amnesty_dto)
@@ -265,7 +321,7 @@ async def execute_amnesty_action(
                 f"Обработано чатов: <b>{len(amnesty_dto.chat_dtos)}</b>\n"
                 f"Пользователь: @{amnesty_dto.violator_username}"
             )
-    elif action == block_buttons.UNMUTE:
+    elif action == InlineButtons.Moderation.UNMUTE:
         usecase: UnmuteUserUseCase = container.resolve(UnmuteUserUseCase)
         try:
             await usecase.execute(dto=amnesty_dto)
@@ -284,7 +340,7 @@ async def execute_amnesty_action(
             f"✅ @{amnesty_dto.violator_username} размучен!\n\n"
             "❗Все предыдущие предупреждения для пользователя сохранены."
         )
-    elif action == block_buttons.UNBAN:
+    elif action == InlineButtons.Moderation.UNBAN:
         usecase: UnbanUserUseCase = container.resolve(UnbanUserUseCase)
         try:
             await usecase.execute(dto=amnesty_dto)
@@ -323,22 +379,6 @@ async def execute_amnesty_action(
     )
 
     await state.set_state(AmnestyStates.waiting_action_select)
-
-
-@dataclass(frozen=True, slots=True)
-class ViolatorData:
-    id: int
-    username: str
-    tg_id: int
-
-
-async def extract_violator_data_from_state(state: FSMContext) -> ViolatorData:
-    data = await state.get_data()
-    return ViolatorData(
-        id=data.get("id"),
-        username=data.get("username"),
-        tg_id=data.get("tg_id"),
-    )
 
 
 ACTION_CONFIG = {
