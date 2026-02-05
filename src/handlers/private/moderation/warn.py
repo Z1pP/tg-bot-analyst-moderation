@@ -12,6 +12,7 @@ from aiogram.types import CallbackQuery, Message
 from punq import Container
 
 from constants import Dialog, InlineButtons
+from constants.callback import CallbackData
 from constants.punishment import PunishmentActions as Actions
 from keyboards.inline.moderation import (
     no_reason_ikb,
@@ -74,7 +75,7 @@ async def warn_user_input_handler(
         bot=bot,
         container=container,
         dialog_texts={
-            "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT_ADD,
+            "invalid_format": Dialog.WarnUser.INVALID_USER_DATA_FORMAT,
             "user_not_found": Dialog.WarnUser.USER_NOT_FOUND,
             "user_info": Dialog.WarnUser.USER_INFO,
         },
@@ -117,7 +118,7 @@ async def warn_reason_input_handler(
 
 @router.callback_query(
     WarnUserStates.waiting_reason_input,
-    F.data == InlineButtons.Moderation.NO_REASON,
+    F.data == CallbackData.Moderation.NO_REASON,
 )
 async def warn_no_reason_handler(
     callback: CallbackQuery,
