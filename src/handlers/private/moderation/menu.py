@@ -15,11 +15,11 @@ router = Router(name=__name__)
 
 
 @router.callback_query(F.data == CallbackData.Moderation.SHOW_MENU)
-async def lock_menu_callback_handler(
+async def moderation_menu_handler(
     callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
-    """Обработчик меню блокировок через callback"""
+    """Обработчик меню модерации через callback"""
 
     await callback.answer()
     await state.clear()
