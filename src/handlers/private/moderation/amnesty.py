@@ -31,7 +31,7 @@ from .common import process_user_handler_common, process_user_input_common
 
 router = Router()
 logger = logging.getLogger(__name__)
-block_buttons = InlineButtons.BlockButtons()
+block_buttons = InlineButtons.Moderation()
 
 
 @router.callback_query(
