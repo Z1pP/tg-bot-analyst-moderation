@@ -24,7 +24,7 @@ ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
 logger = logging.getLogger(__name__)
 
 
-async def process_user_handler_common(
+async def process_user_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
     *,
@@ -147,7 +147,7 @@ async def process_moderation_action(
     await state.set_state(ModerationStates.menu)
 
 
-async def process_user_input_common(
+async def process_user_data_input(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
@@ -233,7 +233,7 @@ async def process_user_input_common(
     await state.set_state(next_state)
 
 
-async def process_reason_common(
+async def process_reason_input(
     reason: Optional[str],
     sender: types.Message | types.CallbackQuery,
     state: FSMContext,
