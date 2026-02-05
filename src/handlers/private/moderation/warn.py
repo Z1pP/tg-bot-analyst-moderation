@@ -21,11 +21,10 @@ from .common import (
 
 router = Router()
 logger = logging.getLogger(__name__)
-block_buttons = InlineButtons.Moderation()
 
 
 @router.callback_query(
-    F.data == block_buttons.WARN_USER,
+    F.data == InlineButtons.Moderation.WARN_USER,
     ModerationStates.menu,
 )
 async def warn_user_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
@@ -84,7 +83,7 @@ async def process_reason_input(
 
 @router.callback_query(
     WarnUserStates.waiting_reason_input,
-    F.data == block_buttons.NO_REASON,
+    F.data == InlineButtons.Moderation.NO_REASON,
 )
 async def process_no_reason(
     callback: types.CallbackQuery,
