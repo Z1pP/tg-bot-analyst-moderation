@@ -28,6 +28,7 @@ from utils.formatter import format_duration
 from utils.send_message import safe_edit_message
 
 from .common import process_user_handler_common, process_user_input_common
+from .errors import handle_chats_error
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -338,26 +339,6 @@ async def extract_violator_data_from_state(state: FSMContext) -> ViolatorData:
         username=data.get("username"),
         tg_id=data.get("tg_id"),
     )
-
-
-async def handle_chats_error(
-    callback: types.CallbackQuery,
-    state: FSMContext,
-    violator_username: str,
-    error: Exception = None,
-) -> None:
-    """Обрабатывает ошибки получения чатов."""
-    if error:
-        logger.error("Ошибка получения чатов: %s", error, exc_info=True)
-        text = "❌️ Произошла ошибка при получении списка чатов. Попробуйте еще раз."
-    else:
-        text = (
-            f"❌️ Мы не нашли чатов, где @{violator_username} получил ограничение. "
-            "Перепроверьте введённые данные, либо попробуйте снять ограничение вручную."
-        )
-
-    await callback.message.edit_text(text=text, reply_markup=moderation_menu_ikb())
-    await state.set_state(ModerationStates.menu)
 
 
 ACTION_CONFIG = {
