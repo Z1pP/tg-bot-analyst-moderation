@@ -21,7 +21,7 @@ from .common import (
 
 router = Router()
 logger = logging.getLogger(__name__)
-block_buttons = InlineButtons.BlockButtons()
+block_buttons = InlineButtons.Moderation()
 
 
 @router.callback_query(
