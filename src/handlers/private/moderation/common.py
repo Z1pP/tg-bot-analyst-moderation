@@ -22,7 +22,7 @@ from utils.user_data_parser import parse_data_from_text
 ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
 
 logger = logging.getLogger(__name__)
-block_buttons = InlineButtons.BlockButtons()
+block_buttons = InlineButtons.Moderation()
 
 
 async def process_user_handler_common(
