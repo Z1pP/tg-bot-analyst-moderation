@@ -20,13 +20,10 @@ def no_reason_ikb() -> InlineKeyboardMarkup:
 
 
 def moderation_menu_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура с действия"""
+    """Клавиатура с действиями по модерации"""
     builder = InlineKeyboardBuilder()
+
     builder.row(
-        InlineKeyboardButton(
-            text=block_actions.AMNESTY,
-            callback_data=block_actions.AMNESTY,
-        ),
         InlineKeyboardButton(
             text=block_actions.WARN_USER,
             callback_data=block_actions.WARN_USER,
@@ -35,14 +32,21 @@ def moderation_menu_ikb() -> InlineKeyboardMarkup:
             text=block_actions.BLOCK_USER,
             callback_data=block_actions.BLOCK_USER,
         ),
-    )
-    builder.adjust(1, 2)
-    builder.row(
+        InlineKeyboardButton(
+            text=block_actions.AMNESTY,
+            callback_data=block_actions.AMNESTY,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.Chat.MANAGEMENT,
+            callback_data=CallbackData.Chat.MANAGEMENT,
+        ),
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Menu.MAIN_MENU,
-        )
+        ),
     )
+
+    builder.adjust(2, 1, 1, 1)
     return builder.as_markup()
 
 
