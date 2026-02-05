@@ -1,3 +1,9 @@
+"""Модуль вспомогательных функций для модерации.
+
+Содержит общую логику для поиска пользователей, обработки ввода причин
+и выполнения действий модерации (бан, предупреждение и т.д.).
+"""
+
 import logging
 from typing import Optional, Type, Union
 
@@ -11,27 +17,39 @@ from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
 from dto.chat_dto import ChatDTO
 from keyboards.inline.chats import tracked_chats_with_all_ikb
-from keyboards.inline.moderation import back_to_block_menu_ikb, moderation_menu_ikb
+from keyboards.inline.moderation import back_to_moderation_menu_ikb, moderation_menu_ikb
 from services import UserService
-from states.moderation import ModerationStates
 from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
 from utils.send_message import safe_edit_message
 from utils.user_data_parser import parse_data_from_text
+
+from .errors import handle_moderation_error
 
 ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
 
 logger = logging.getLogger(__name__)
 
 
-async def process_user_handler(
+async def setup_user_input_view(
     callback: types.CallbackQuery,
     state: FSMContext,
     *,
     next_state: State,
     dialog_text: str,
 ) -> None:
-    """Общая логика для обработчиков пользователя (warn / block / amnesty)"""
+    """Инициализирует процесс поиска пользователя, отображая приглашение к вводу.
+
+    Args:
+        callback: Объект callback-запроса от кнопки модерации.
+        state: Контекст состояния FSM.
+        next_state: Состояние, в которое нужно переключиться для ожидания ввода.
+        dialog_text: Текст сообщения с инструкцией для пользователя.
+
+    State:
+        Устанавливает: next_state.
+        Сохраняет: message_to_edit_id для последующего редактирования.
+    """
     await callback.answer()
     await state.update_data(message_to_edit_id=callback.message.message_id)
 
@@ -40,12 +58,12 @@ async def process_user_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=dialog_text,
-        reply_markup=back_to_block_menu_ikb(),
+        reply_markup=back_to_moderation_menu_ikb(),
     )
     await state.set_state(next_state)
 
 
-async def process_moderation_action(
+async def execute_moderation_logic(
     callback: types.CallbackQuery,
     state: FSMContext,
     action: Actions,
@@ -55,8 +73,21 @@ async def process_moderation_action(
     fail_text: str,
     container: Container,
 ) -> None:
-    """Общая логика для выдачи бана/предупреждения пользователю"""
+    """Выполняет действие модерации (бан/варн) в выбранных чатах.
 
+    Args:
+        callback: Объект callback-запроса с ID выбранного чата (или "all").
+        state: Контекст состояния FSM.
+        action: Тип выполняемого действия (Actions.BAN, Actions.WARNING).
+        usecase_cls: Класс юзкейса для выполнения действия.
+        success_text: Текст при успешном выполнении во всех чатах.
+        partial_text: Текст при частичном успехе.
+        fail_text: Текст при полной неудаче.
+        container: DI-контейнер для разрешения зависимостей.
+
+    State:
+        Ожидает: данные о нарушителе (username, tg_id) и список чатов (chat_dtos).
+    """
     data = await state.get_data()
     chat_id_from_callback = callback.data.split("__")[1]
     chat_dtos_data = data.get("chat_dtos")
@@ -65,12 +96,10 @@ async def process_moderation_action(
 
     if not chat_dtos_data or not username or not user_tgid:
         logger.error("Некорректные данные в state: %s", data)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await handle_moderation_error(
+            event=callback,
+            state=state,
             text="❌ Ошибка: некорректные данные. Попробуйте снова.",
-            reply_markup=moderation_menu_ikb(),
         )
         return
 
@@ -144,10 +173,8 @@ async def process_moderation_action(
         reply_markup=moderation_menu_ikb(),
     )
 
-    await state.set_state(ModerationStates.menu)
 
-
-async def process_user_data_input(
+async def handle_user_search_logic(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
@@ -156,11 +183,23 @@ async def process_user_data_input(
     dialog_texts: dict[str, str],
     success_keyboard: types.InlineKeyboardMarkup,
     next_state: State,
-    error_state: Optional[State] = None,
     show_block_actions_on_error: bool = False,
-):
-    """
-    Общая логика для хендлеров получения данных пользователя (ban / warn / amnesty).
+) -> None:
+    """Обрабатывает ввод данных пользователя и выполняет поиск в базе.
+
+    Args:
+        message: Объект сообщения с введенными данными (username или ID).
+        state: Контекст состояния FSM.
+        bot: Экземпляр бота.
+        container: DI-контейнер.
+        dialog_texts: Словарь с текстами ответов (invalid_format, user_not_found, user_info).
+        success_keyboard: Клавиатура, отображаемая при успешном нахождении пользователя.
+        next_state: Состояние для перехода после успешного поиска.
+        show_block_actions_on_error: Флаг для отображения меню модерации при ошибке.
+
+    State:
+        Устанавливает: next_state при успехе.
+        Сохраняет: данные найденного пользователя (username, id, tg_id).
     """
     user_data = parse_data_from_text(text=message.text)
     await message.delete()
@@ -169,18 +208,14 @@ async def process_user_data_input(
     message_to_edit_id = data.get("message_to_edit_id")
 
     if user_data is None:
-        kwargs = dict(
+        reply_markup = moderation_menu_ikb() if show_block_actions_on_error else None
+        await handle_moderation_error(
+            event=message,
+            state=state,
             text=dialog_texts["invalid_format"],
-            chat_id=message.chat.id,
-            message_id=message_to_edit_id,
+            message_to_edit_id=message_to_edit_id,
+            reply_markup=reply_markup,
         )
-        if show_block_actions_on_error:
-            kwargs["reply_markup"] = moderation_menu_ikb()
-
-        await safe_edit_message(bot=bot, **kwargs)
-
-        if error_state:
-            await state.set_state(error_state)
         return
 
     user_service: UserService = container.resolve(UserService)
@@ -198,18 +233,14 @@ async def process_user_data_input(
             if user_data.tg_id
             else f"<b>@{user_data.username}</b>"
         )
-        kwargs = dict(
+        reply_markup = moderation_menu_ikb() if show_block_actions_on_error else None
+        await handle_moderation_error(
+            event=message,
+            state=state,
             text=dialog_texts["user_not_found"].format(identificator=identificator),
-            chat_id=message.chat.id,
-            message_id=message_to_edit_id,
+            message_to_edit_id=message_to_edit_id,
+            reply_markup=reply_markup,
         )
-        if show_block_actions_on_error:
-            kwargs["reply_markup"] = moderation_menu_ikb()
-
-        await safe_edit_message(bot=bot, **kwargs)
-
-        if error_state:
-            await state.set_state(error_state)
         return
 
     await state.update_data(
@@ -233,18 +264,29 @@ async def process_user_data_input(
     await state.set_state(next_state)
 
 
-async def process_reason_input(
+async def handle_reason_input_logic(
     reason: Optional[str],
-    sender: types.Message | types.CallbackQuery,
+    sender: Union[types.Message, types.CallbackQuery],
     state: FSMContext,
     bot: Bot,
     container: Container,
     is_callback: bool,
     next_state: State,
 ) -> None:
-    """
-    Общая логика для получения причины предупреждения.
-    Работает и для сообщений, и для callback-запросов.
+    """Обрабатывает ввод причины и подготавливает список доступных чатов.
+
+    Args:
+        reason: Текст причины или None.
+        sender: Объект сообщения или callback-запроса.
+        state: Контекст состояния FSM.
+        bot: Экземпляр бота.
+        container: DI-контейнер.
+        is_callback: Флаг, указывающий, является ли отправитель callback-запросом.
+        next_state: Состояние для перехода после обработки причины.
+
+    State:
+        Устанавливает: next_state при наличии доступных чатов.
+        Сохраняет: причину (reason) и список чатов (chat_dtos).
     """
     chat_id = sender.message.chat.id if is_callback else sender.chat.id
     from_user_id = sender.from_user.id
@@ -272,14 +314,13 @@ async def process_reason_input(
     chat_dtos = await usecase.execute(admin_tgid=str(from_user_id), user_tgid=user_tgid)
 
     if not chat_dtos:
-        await safe_edit_message(
-            bot=bot,
-            chat_id=chat_id,
-            message_id=message_to_edit_id,
+        await handle_moderation_error(
+            event=sender,
+            state=state,
             text=Dialog.WarnUser.NO_CHATS.format(username=username),
-            reply_markup=moderation_menu_ikb(),
+            message_to_edit_id=message_to_edit_id,
         )
-        await state.set_state(ModerationStates.menu)
+
         logger.warning(
             "Отслеживаемы чаты не найдены для пользователя %s (%s)",
             username,
