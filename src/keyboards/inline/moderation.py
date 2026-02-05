@@ -15,14 +15,19 @@ def no_reason_ikb() -> InlineKeyboardMarkup:
     """Создает клавиатуру с кнопкой для пропуска ввода причины.
 
     Returns:
-        InlineKeyboardMarkup: Клавиатура с кнопкой 'Без причины'.
+        InlineKeyboardMarkup: Клавиатура с кнопками 'Без причины' и 'Вернуться'.
     """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Moderation.NO_REASON,
-            callback_data=InlineButtons.Moderation.NO_REASON,
-        )
+            callback_data=CallbackData.Moderation.NO_REASON,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
+        ),
+        width=1,
     )
     return builder.as_markup()
 
