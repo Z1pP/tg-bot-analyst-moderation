@@ -160,6 +160,7 @@ class ModerationCallbackData:
 
     # Commands
     SHOW_MENU = "moderation_menu"
+    NO_REASON = "no_reason"
 
 
 class AnalyticsCallbackData:
