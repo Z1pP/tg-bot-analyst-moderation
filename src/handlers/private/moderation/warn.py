@@ -1,3 +1,9 @@
+"""Модуль хендлеров для выдачи предупреждений пользователям.
+
+Содержит логику для инициации выдачи варна, ввода данных пользователя,
+указания причины и выбора чатов для применения наказания.
+"""
+
 import logging
 
 from aiogram import Bot, F, Router
@@ -10,27 +16,32 @@ from constants.punishment import PunishmentActions as Actions
 from keyboards.inline.moderation import (
     no_reason_ikb,
 )
-from states import ModerationStates, WarnUserStates
+from states import WarnUserStates
 from usecases.moderation import GiveUserWarnUseCase
 
-from .common import (
-    process_moderation_action,
-    process_reason_common,
-    process_user_handler_common,
-    process_user_input_common,
+from .helpers import (
+    execute_moderation_logic,
+    handle_reason_input_logic,
+    handle_user_search_logic,
+    setup_user_input_view,
 )
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(
-    F.data == InlineButtons.Moderation.WARN_USER,
-    ModerationStates.menu,
-)
-async def warn_user_handler(callback: CallbackQuery, state: FSMContext) -> None:
-    """Обработчик для предупреждения пользователя."""
-    await process_user_handler_common(
+@router.callback_query(F.data == InlineButtons.Moderation.WARN_USER)
+async def warn_start_handler(callback: CallbackQuery, state: FSMContext) -> None:
+    """Инициализирует процесс выдачи предупреждения пользователю.
+
+    Args:
+        callback: Объект callback-запроса от кнопки 'Предупреждение'.
+        state: Контекст состояния FSM.
+
+    State:
+        Устанавливает: WarnUserStates.waiting_user_input.
+    """
+    await setup_user_input_view(
         callback=callback,
         state=state,
         next_state=WarnUserStates.waiting_user_input,
@@ -39,14 +50,25 @@ async def warn_user_handler(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.message(WarnUserStates.waiting_user_input)
-async def process_user_data_input(
+async def warn_user_input_handler(
     message: Message,
     state: FSMContext,
     bot: Bot,
     container: Container,
 ) -> None:
-    """Обработчик для получения данных о пользователе."""
-    await process_user_input_common(
+    """Обрабатывает ввод данных пользователя для выдачи предупреждения.
+
+    Args:
+        message: Сообщение с username или ID пользователя.
+        state: Контекст состояния FSM.
+        bot: Экземпляр бота.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: WarnUserStates.waiting_user_input.
+        Устанавливает: WarnUserStates.waiting_reason_input при успехе.
+    """
+    await handle_user_search_logic(
         message=message,
         state=state,
         bot=bot,
@@ -62,16 +84,27 @@ async def process_user_data_input(
 
 
 @router.message(WarnUserStates.waiting_reason_input)
-async def process_reason_input(
+async def warn_reason_input_handler(
     message: Message,
     state: FSMContext,
     bot: Bot,
     container: Container,
 ) -> None:
-    """Обработка причины предупреждения (введённой вручную)."""
+    """Обрабатывает текстовый ввод причины предупреждения.
+
+    Args:
+        message: Сообщение с теклем причины.
+        state: Контекст состояния FSM.
+        bot: Экземпляр бота.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: WarnUserStates.waiting_reason_input.
+        Устанавливает: WarnUserStates.waiting_chat_select при наличии доступных чатов.
+    """
     reason = message.text.strip()
 
-    await process_reason_common(
+    await handle_reason_input_logic(
         reason=reason,
         sender=message,
         state=state,
@@ -86,16 +119,27 @@ async def process_reason_input(
     WarnUserStates.waiting_reason_input,
     F.data == InlineButtons.Moderation.NO_REASON,
 )
-async def process_no_reason(
+async def warn_no_reason_handler(
     callback: CallbackQuery,
     state: FSMContext,
     bot: Bot,
     container: Container,
 ) -> None:
-    """Обработка нажатия кнопки 'Без причины'."""
+    """Обрабатывает выбор предупреждения без указания причины.
+
+    Args:
+        callback: Объект callback-запроса от кнопки 'Без причины'.
+        state: Контекст состояния FSM.
+        bot: Экземпляр бота.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: WarnUserStates.waiting_reason_input.
+        Устанавливает: WarnUserStates.waiting_chat_select при наличии доступных чатов.
+    """
     await callback.answer()
 
-    await process_reason_common(
+    await handle_reason_input_logic(
         reason=None,
         sender=callback,
         state=state,
@@ -110,13 +154,22 @@ async def process_no_reason(
     WarnUserStates.waiting_chat_select,
     F.data.startswith("chat__"),
 )
-async def process_chat_selection(
+async def warn_chat_select_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
 ) -> None:
-    """Обработчик для выбора чата для предупреждения."""
-    await process_moderation_action(
+    """Обрабатывает выбор чата для выдачи предупреждения.
+
+    Args:
+        callback: Объект callback-запроса с ID чата.
+        state: Контекст состояния FSM.
+        container: DI-контейнер.
+
+    State:
+        Ожидает: WarnUserStates.waiting_chat_select.
+    """
+    await execute_moderation_logic(
         callback=callback,
         state=state,
         action=Actions.WARNING,
