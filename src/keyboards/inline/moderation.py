@@ -4,16 +4,14 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import InlineButtons
 from constants.callback import CallbackData
 
-block_actions = InlineButtons.BlockButtons()
-
 
 def no_reason_ikb() -> InlineKeyboardMarkup:
     """Клавиатура с кнопкой 'Без причины'."""
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=block_actions.NO_REASON,
-            callback_data=block_actions.NO_REASON,
+            text=InlineButtons.Moderation.NO_REASON,
+            callback_data=InlineButtons.Moderation.NO_REASON,
         )
     )
     return builder.as_markup()
@@ -25,16 +23,16 @@ def moderation_menu_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text=block_actions.WARN_USER,
-            callback_data=block_actions.WARN_USER,
+            text=InlineButtons.Moderation.WARN_USER,
+            callback_data=InlineButtons.Moderation.WARN_USER,
         ),
         InlineKeyboardButton(
-            text=block_actions.BLOCK_USER,
-            callback_data=block_actions.BLOCK_USER,
+            text=InlineButtons.Moderation.BLOCK_USER,
+            callback_data=InlineButtons.Moderation.BLOCK_USER,
         ),
         InlineKeyboardButton(
-            text=block_actions.AMNESTY,
-            callback_data=block_actions.AMNESTY,
+            text=InlineButtons.Moderation.AMNESTY,
+            callback_data=InlineButtons.Moderation.AMNESTY,
         ),
         InlineKeyboardButton(
             text=InlineButtons.Chat.MANAGEMENT,
@@ -56,7 +54,7 @@ def back_to_block_menu_ikb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=block_actions.BACK_TO_BLOCK_MENU,
+            callback_data=InlineButtons.Moderation.BACK_TO_BLOCK_MENU,
         )
     )
     return builder.as_markup()
@@ -67,20 +65,20 @@ def amnesty_actions_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=block_actions.CANCEL_WARN,
-            callback_data=block_actions.CANCEL_WARN,
+            text=InlineButtons.Moderation.CANCEL_WARN,
+            callback_data=InlineButtons.Moderation.CANCEL_WARN,
         ),
         InlineKeyboardButton(
-            text=block_actions.UNMUTE,
-            callback_data=block_actions.UNMUTE,
+            text=InlineButtons.Moderation.UNMUTE,
+            callback_data=InlineButtons.Moderation.UNMUTE,
         ),
         InlineKeyboardButton(
-            text=block_actions.UNBAN,
-            callback_data=block_actions.UNBAN,
+            text=InlineButtons.Moderation.UNBAN,
+            callback_data=InlineButtons.Moderation.UNBAN,
         ),
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=block_actions.BACK_TO_BLOCK_MENU,
+            callback_data=InlineButtons.Moderation.BACK_TO_BLOCK_MENU,
         ),
     )
     builder.adjust(2, 1, 1)
