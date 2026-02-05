@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
 from punq import Container
 
-from constants import Dialog, InlineButtons
+from constants import Dialog
 from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
 from dto.chat_dto import ChatDTO
@@ -22,7 +22,6 @@ from utils.user_data_parser import parse_data_from_text
 ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
 
 logger = logging.getLogger(__name__)
-block_buttons = InlineButtons.Moderation()
 
 
 async def process_user_handler_common(
