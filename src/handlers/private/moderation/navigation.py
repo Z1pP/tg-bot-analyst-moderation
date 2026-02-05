@@ -1,3 +1,9 @@
+"""Модуль навигации по меню модерации.
+
+Содержит обработчики для отображения главного меню модерации
+и управления переходами между разделами.
+"""
+
 import logging
 
 from aiogram import F, Router
@@ -7,7 +13,6 @@ from aiogram.types import CallbackQuery
 from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.moderation import moderation_menu_ikb
-from states import ModerationStates
 from utils.send_message import safe_edit_message
 
 logger = logging.getLogger(__name__)
@@ -19,8 +24,15 @@ async def moderation_menu_handler(
     callback: CallbackQuery,
     state: FSMContext,
 ) -> None:
-    """Обработчик меню модерации через callback"""
+    """Отображает главное меню модерации.
 
+    Args:
+        callback: Объект callback-запроса от кнопки 'Меню модерации'.
+        state: Контекст состояния FSM.
+
+    State:
+        Выполняет: state.clear() для сброса всех текущих процессов модерации.
+    """
     await callback.answer()
     await state.clear()
 
@@ -31,5 +43,3 @@ async def moderation_menu_handler(
         text=Dialog.Moderation.SELECT_ACTION,
         reply_markup=moderation_menu_ikb(),
     )
-
-    await state.set_state(ModerationStates.menu)
