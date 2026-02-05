@@ -1,7 +1,8 @@
 import logging
 
-from aiogram import Bot, F, Router, types
+from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
 from punq import Container
 
 from constants import Dialog, InlineButtons
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
     F.data == InlineButtons.Moderation.WARN_USER,
     ModerationStates.menu,
 )
-async def warn_user_handler(callback: types.CallbackQuery, state: FSMContext) -> None:
+async def warn_user_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик для предупреждения пользователя."""
     await process_user_handler_common(
         callback=callback,
@@ -39,7 +40,7 @@ async def warn_user_handler(callback: types.CallbackQuery, state: FSMContext) ->
 
 @router.message(WarnUserStates.waiting_user_input)
 async def process_user_data_input(
-    message: types.Message,
+    message: Message,
     state: FSMContext,
     bot: Bot,
     container: Container,
@@ -62,7 +63,7 @@ async def process_user_data_input(
 
 @router.message(WarnUserStates.waiting_reason_input)
 async def process_reason_input(
-    message: types.Message,
+    message: Message,
     state: FSMContext,
     bot: Bot,
     container: Container,
@@ -86,7 +87,7 @@ async def process_reason_input(
     F.data == InlineButtons.Moderation.NO_REASON,
 )
 async def process_no_reason(
-    callback: types.CallbackQuery,
+    callback: CallbackQuery,
     state: FSMContext,
     bot: Bot,
     container: Container,
@@ -110,7 +111,7 @@ async def process_no_reason(
     F.data.startswith("chat__"),
 )
 async def process_chat_selection(
-    callback: types.CallbackQuery,
+    callback: CallbackQuery,
     state: FSMContext,
     container: Container,
 ) -> None:
