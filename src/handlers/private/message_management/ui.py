@@ -15,7 +15,7 @@ async def show_message_management_menu(
     text_prefix: str = "",
 ) -> None:
     """Показывает главное меню управления сообщениями (ввод ссылки)."""
-    text = Dialog.Messages.INPUT_MESSAGE_LINK
+    text = Dialog.Messages.MESSAGE_LINK_INSTRUCTION
     if text_prefix:
         text = f"{text_prefix}\n\n{text}"
 
