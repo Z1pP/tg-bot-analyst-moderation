@@ -297,17 +297,63 @@ def move_to_chat_analytics_ikb(chat_id: int) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def select_chat_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
-    """Клавиатура для выбора чата для отправки сообщения."""
+def select_chat_ikb(
+    chats: List[ChatDTO],
+    page: int = 1,
+    total_count: int = 0,
+    page_size: int = CHATS_PAGE_SIZE,
+) -> InlineKeyboardMarkup:
+    """Клавиатура для выбора чата для отправки сообщения с пагинацией."""
     builder = InlineKeyboardBuilder()
 
-    for chat in chats:
+    if total_count > 1:
         builder.row(
             InlineKeyboardButton(
-                text=chat.title[:40],
+                text=InlineButtons.Messages.SEND_TO_ALL_CHATS,
+                callback_data=CallbackData.Messages.SELECT_ALL_CHATS,
+            ),
+        )
+
+    start_index = (page - 1) * page_size
+    for index, chat in enumerate(chats):
+        builder.row(
+            InlineKeyboardButton(
+                text=f"{start_index + index + 1}. {chat.title[:30]}",
                 callback_data=f"{CallbackData.Messages.PREFIX_SELECT_CHAT}{chat.id}",
             )
         )
+
+    if total_count > page_size:
+        max_pages = (total_count + page_size - 1) // page_size
+        pagination_buttons = []
+
+        if page > 1:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text="◀️",
+                    callback_data=f"{CallbackData.Messages.PREFIX_PREV_SELECT_CHAT_PAGE}{page}",
+                )
+            )
+
+        start_item = (page - 1) * page_size + 1
+        end_item = min(page * page_size, total_count)
+        pagination_buttons.append(
+            InlineKeyboardButton(
+                text=f"{start_item}-{end_item} из {total_count}",
+                callback_data=CallbackData.Messages.SELECT_CHAT_PAGE_INFO,
+            )
+        )
+
+        if page < max_pages:
+            pagination_buttons.append(
+                InlineKeyboardButton(
+                    text="▶️",
+                    callback_data=f"{CallbackData.Messages.PREFIX_NEXT_SELECT_CHAT_PAGE}{page}",
+                )
+            )
+
+        if pagination_buttons:
+            builder.row(*pagination_buttons)
 
     builder.row(
         InlineKeyboardButton(
