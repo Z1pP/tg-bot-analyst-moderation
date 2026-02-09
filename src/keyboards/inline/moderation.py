@@ -115,3 +115,27 @@ def amnesty_actions_ikb() -> InlineKeyboardMarkup:
     )
     builder.adjust(2, 1, 1)
     return builder.as_markup()
+
+
+def try_again_ikb(action_callback: str) -> InlineKeyboardMarkup:
+    """Создает клавиатуру с кнопкой повтора действия и возврата в меню.
+
+    Args:
+        action_callback: Callback-данные для кнопки 'Попробовать ещё раз'.
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопками 'Попробовать ещё раз' и 'Вернуться'.
+    """
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.Common.TRY_AGAIN,
+            callback_data=action_callback,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
+        ),
+        width=1,
+    )
+    return builder.as_markup()
