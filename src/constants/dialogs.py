@@ -877,3 +877,30 @@ class ArchiveNotificationDialogs:
         "Когда: {date} {time}\n"
         "Чат: {chat_title}"
     )
+
+
+class ModerationReportDialogs:
+    """Шаблоны для отчетов о наказаниях в архивный чат"""
+
+    REPORT_HEADER = "❗️Предупреждение"
+
+    REPORT_BODY = (
+        "{header}\n"
+        "Кто: @{admin_username}\n"
+        "Когда: {date_str}\n"
+        "Нарушитель: @{violator_username} ({violator_tgid})\n"
+        "Причина: {reason}\n"
+        "Чат: {chat_title}\n"
+        "Наказание: {punishment_name}\n"
+        "Период: {period}"
+    )
+
+    NO_REASON = "Без причины"
+    NO_PERIOD = "Нет"
+    INFINITE_PERIOD = "бессрочно"
+
+    PUNISHMENT_NAMES = {
+        "WARNING": "Предупреждение",
+        "MUTE": "Мут",
+        "BAN": "Блокировка",
+    }
