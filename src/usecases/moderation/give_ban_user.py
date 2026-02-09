@@ -1,7 +1,7 @@
 import logging
 
 from constants.enums import AdminActionType
-from constants.punishment import PunishmentText, PunishmentType
+from constants.punishment import PunishmentType
 from dto import ModerationActionDTO
 from exceptions.moderation import ModerationError
 from repositories.user_chat_status_repository import UserChatStatusRepository
@@ -105,10 +105,6 @@ class GiveUserBanUseCase(ModerationUseCase):
 
         correct_date = TimeZoneService.now()
 
-        violator_name_token = self._get_violator_name_token(
-            username=context.dto.violator_username,
-            tg_id=context.violator.tg_id,
-        )
         violator_display = self._get_violator_display_name(
             username=context.dto.violator_username,
             tg_id=context.violator.tg_id,
@@ -120,7 +116,12 @@ class GiveUserBanUseCase(ModerationUseCase):
             message_deleted=True,
         )
 
-        reason_text = PunishmentText.BAN.value.format(username=violator_name_token)
+        reason_text = self.punishment_service.generate_reason_for_user(
+            duration_of_punishment=0,
+            violator_username=context.dto.violator_username,
+            violator_tg_id=context.violator.tg_id,
+            punishment_type=PunishmentType.BAN,
+        )
 
         await self._finalize_moderation(
             context=context,
@@ -140,12 +141,6 @@ class GiveUserBanUseCase(ModerationUseCase):
             action_type=AdminActionType.BAN_USER,
             details=details,
         )
-
-    @staticmethod
-    def _get_violator_name_token(username: str | None, tg_id: str) -> str:
-        if username and username != "hidden":
-            return username
-        return f"ID:{tg_id}"
 
     @staticmethod
     def _get_violator_display_name(username: str | None, tg_id: str) -> str:
