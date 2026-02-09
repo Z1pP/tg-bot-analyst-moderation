@@ -61,7 +61,10 @@ from usecases.amnesty import (
     UnmuteUserUseCase,
 )
 from usecases.antibot import GetAntibotSettingsUseCase
-from usecases.archive import GetArchiveSettingsUseCase
+from usecases.archive import (
+    GetArchiveSettingsUseCase,
+    NotifyArchiveChatNewMemberUseCase,
+)
 from usecases.categories import (
     CreateCategoryUseCase,
     DeleteCategoryUseCase,
@@ -275,6 +278,7 @@ class ContainerSetup:
     def _register_archive_usecases(container: Container) -> None:
         """Регистрация use cases для архива."""
         container.register(GetArchiveSettingsUseCase)
+        container.register(NotifyArchiveChatNewMemberUseCase)
 
     @staticmethod
     def _register_summarize_usecases(container: Container) -> None:
