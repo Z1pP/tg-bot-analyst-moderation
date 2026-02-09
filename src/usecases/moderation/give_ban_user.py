@@ -122,18 +122,11 @@ class GiveUserBanUseCase(ModerationUseCase):
 
         reason_text = PunishmentText.BAN.value.format(username=violator_name_token)
 
-        admin_answer_text = self.punishment_service.generate_admin_answer(
-            violator_username=violator_name_token,
-            chat_title=context.chat.title,
-            archive_title=context.archive_chat.title,
-            punishment_type=PunishmentType.BAN,
-        )
-
         await self._finalize_moderation(
             context=context,
             report_text=report_text,
             reason_text=reason_text,
-            admin_answer_text=admin_answer_text,
+            admin_answer_text="",
         )
 
         # Логируем действие администратора
