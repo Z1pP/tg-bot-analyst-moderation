@@ -113,6 +113,7 @@ async def warn_reason_input_handler(
         container=container,
         is_callback=False,
         next_state=WarnUserStates.waiting_chat_select,
+        action=Actions.WARNING,
     )
 
 
@@ -148,6 +149,7 @@ async def warn_no_reason_handler(
         container=container,
         is_callback=True,
         next_state=WarnUserStates.waiting_chat_select,
+        action=Actions.WARNING,
     )
 
 
