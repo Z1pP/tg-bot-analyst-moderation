@@ -184,7 +184,11 @@ class MessagesCallbackData:
     DELETE_MESSAGE_CONFIRM = "delete_message_confirm"
     DELETE_MESSAGE_CANCEL = "delete_message_cancel"
     SEND_MESSAGE_TO_CHAT = "send_message_to_chat"
+    SELECT_ALL_CHATS = "select_chat_all"
     PREFIX_SELECT_CHAT = "select_chat_"
+    PREFIX_PREV_SELECT_CHAT_PAGE = "prev_select_chat_page__"
+    PREFIX_NEXT_SELECT_CHAT_PAGE = "next_select_chat_page__"
+    SELECT_CHAT_PAGE_INFO = "select_chat_page_info"
 
 
 class UserAndChatsSettingsCallbackData:
