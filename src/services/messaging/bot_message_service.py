@@ -4,7 +4,7 @@ from typing import Optional
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import ChatIdUnion, ChatPermissions
+from aiogram.types import ChatIdUnion, ChatPermissions, InlineKeyboardMarkup
 
 from constants.punishment import PunishmentType
 from exceptions.moderation import MessageTooOldError
@@ -35,19 +35,26 @@ class BotMessageService:
         self.bot = bot
         self.permission_service = permission_service
 
-    async def send_private_message(self, user_tgid: ChatIdUnion, text: str) -> None:
+    async def send_private_message(
+        self,
+        user_tgid: ChatIdUnion,
+        text: str,
+        reply_markup: Optional[InlineKeyboardMarkup] = None,
+    ) -> None:
         """
         Отправляет личное сообщение пользователю.
 
         Args:
             user_tgid: Telegram ID пользователя
             text: Текст сообщения (HTML)
+            reply_markup: Опциональная клавиатура
         """
         try:
             await self.bot.send_message(
                 chat_id=user_tgid,
                 text=text,
                 parse_mode="HTML",
+                reply_markup=reply_markup,
             )
         except TelegramAPIError as e:
             logger.error(
