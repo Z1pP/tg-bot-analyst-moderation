@@ -475,7 +475,7 @@ class BanUserDialogs:
         f"{INPUT_REASON}"
     )
 
-    SUCCESS_BAN = "✅ Пользователь @{username} заблокирован!"
+    SUCCESS_BAN = '❗️@{username} заблокирован в чате "{chats_titles}"'
     PARTIAL_BAN = (
         "⚠️ Пользователь @{username} частично заблокирован\n\n"
         "✅ Успешно: {ok}\n❌ Ошибки: {fail}"
@@ -512,7 +512,8 @@ class WarnUserDialogs:
         "Проверьте, правильно ли введены данные пользователя, и попробуйте ещё раз."
     )
     NO_CHATS = (
-        "❌ Среди чатов, отслеживаемыми Вами, пользователь @{username} не является участником.\n\n"
+        "❌ Среди чатов, отслеживаемыми Вами, пользователь @{username} "
+        "не является участником.\n\n"
         "Предупреждение не может быть выдано."
     )
 
@@ -523,7 +524,7 @@ class WarnUserDialogs:
         f"{INPUT_REASON}"
     )
 
-    SUCCESS_WARN = "✅ Пользователь @{username} предупрежден!"
+    SUCCESS_WARN = '❗️@{username} предупрежден в чате "{chats_titles}"'
     PARTIAL_WARN = (
         "⚠️ Пользователь @{username} частично предупрежден\n\n"
         "✅ Успешно: {ok}\n❌ Ошибки: {fail}"
