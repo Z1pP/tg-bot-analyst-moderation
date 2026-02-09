@@ -1,6 +1,6 @@
 import logging
-from typing import Optional, Tuple
 
+from dto.moderation import NewMemberRestrictionDTO
 from services import ChatService
 from services.messaging.bot_message_service import BotMessageService
 from services.permissions import BotPermissionService
@@ -29,9 +29,9 @@ class RestrictNewMemberUseCase:
         chat_tgid: str,
         user_id: int,
         bot_username: str,
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> NewMemberRestrictionDTO:
         """
-        Проверяет настройки чата, мьютит пользователя и возвращает ссылку для верификации и текст приветствия.
+        Проверяет настройки чата, мьютит пользователя и возвращает DTO с данными для ограничения.
 
         Args:
             chat_tgid: Telegram ID чата
@@ -39,42 +39,48 @@ class RestrictNewMemberUseCase:
             bot_username: Username бота для генерации ссылки
 
         Returns:
-            Кортеж (ссылка на верификацию, текст приветствия) или (None, None)
+            NewMemberRestrictionDTO с информацией о верификации и приветствии.
         """
         chat = await self.chat_service.get_chat(chat_tgid=chat_tgid)
 
-        if not chat or not chat.is_antibot_enabled:
-            return None, None
+        if not chat:
+            return NewMemberRestrictionDTO()
 
-        # Проверяем права бота на модерацию
-        can_moderate = await self.bot_permission_service.can_moderate(
-            chat_tgid=chat_tgid
-        )
-
-        if not can_moderate:
-            logger.warning(
-                "Бот не имеет прав модератора в чате %s. Антибот не может ограничить пользователя.",
-                chat_tgid,
+        verify_link = None
+        if chat.is_antibot_enabled:
+            # Проверяем права бота на модерацию
+            can_moderate = await self.bot_permission_service.can_moderate(
+                chat_tgid=chat_tgid
             )
-            return None, None
 
-        # Мьютим пользователя (0 = бессрочно до ручного изменения)
-        success = await self.bot_message_service.mute_chat_member(
-            chat_tg_id=chat_tgid,
-            user_tg_id=user_id,
-            duration_seconds=0,
+            if can_moderate:
+                # Мьютим пользователя (0 = бессрочно до ручного изменения)
+                success = await self.bot_message_service.mute_chat_member(
+                    chat_tg_id=chat_tgid,
+                    user_tg_id=user_id,
+                    duration_seconds=0,
+                )
+
+                if success:
+                    # Генерируем ссылку
+                    payload = encode_antibot_params(chat_tgid, user_id)
+                    verify_link = f"https://t.me/{bot_username}?start={payload}"
+                else:
+                    logger.error(
+                        "Не удалось ограничить пользователя %s в чате %s для антибот-проверки",
+                        user_id,
+                        chat_tgid,
+                    )
+            else:
+                logger.warning(
+                    "Бот не имеет прав модератора в чате %s. Антибот не может ограничить пользователя.",
+                    chat_tgid,
+                )
+
+        return NewMemberRestrictionDTO(
+            verify_link=verify_link,
+            welcome_text=chat.welcome_text,
+            is_antibot_enabled=chat.is_antibot_enabled,
+            show_welcome_text=chat.show_welcome_text,
+            auto_delete_welcome_text=chat.auto_delete_welcome_text,
         )
-
-        if not success:
-            logger.error(
-                "Не удалось ограничить пользователя %s в чате %s для антибот-проверки",
-                user_id,
-                chat_tgid,
-            )
-            return None, None
-
-        # Генерируем ссылку
-        payload = encode_antibot_params(chat_tgid, user_id)
-        verify_link = f"https://t.me/{bot_username}?start={payload}"
-
-        return verify_link, chat.welcome_text
