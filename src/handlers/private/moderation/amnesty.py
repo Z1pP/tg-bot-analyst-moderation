@@ -88,7 +88,7 @@ async def amnesty_user_input_handler(
         bot=bot,
         container=container,
         dialog_texts={
-            "invalid_format": Dialog.User.INVALID_USERNAME_FORMAT_ADD,
+            "invalid_format": Dialog.WarnUser.INVALID_USER_DATA_FORMAT,
             "user_not_found": Dialog.BanUser.USER_NOT_FOUND,
             "user_info": Dialog.AmnestyUser.SELECT_ACTION,
         },
