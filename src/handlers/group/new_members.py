@@ -4,6 +4,7 @@ from aiogram import F, Router, types
 from punq import Container
 
 from constants import Dialog
+from tasks.moderation_tasks import delete_welcome_message_task
 from usecases.moderation import RestrictNewMemberUseCase
 from utils.exception_handler import handle_exception
 
@@ -35,39 +36,86 @@ async def process_new_chat_members(message: types.Message, container: Container)
                     f"Пользователь {username} (ID: {user.id}) добавлен в группу '{chat_title}'"
                 )
 
-                # Проверка антиботом
+                # Проверка антиботом и приветствие
                 restrict_usecase: RestrictNewMemberUseCase = container.resolve(
                     RestrictNewMemberUseCase
                 )
                 bot_info = await message.bot.get_me()
-                verify_link, custom_welcome = await restrict_usecase.execute(
+                restriction_data = await restrict_usecase.execute(
                     chat_tgid=str(message.chat.id),
                     user_id=user.id,
                     bot_username=bot_info.username,
                 )
 
-                if verify_link:
-                    username_val = user.username or user.first_name or str(user.id)
+                username_val = user.username or user.first_name or str(user.id)
+                greeting_text = ""
 
-                    if custom_welcome:
+                # Сценарий 1 и 3: Антибот включен
+                if restriction_data.is_antibot_enabled and restriction_data.verify_link:
+                    # Если приветствие тоже включено (Сценарий 3)
+                    if restriction_data.show_welcome_text:
+                        if restriction_data.welcome_text:
+                            try:
+                                greeting_text = restriction_data.welcome_text.format(
+                                    username=username_val
+                                )
+                            except (KeyError, ValueError):
+                                greeting_text = restriction_data.welcome_text
+                        else:
+                            greeting_text = Dialog.Antibot.GREETING.format(
+                                username=username_val
+                            )
+
+                    # Добавляем ссылку на верификацию (всегда для Антибота)
+                    greeting_template = (
+                        greeting_text
+                        + Dialog.Antibot.VERIFIED_LINK.format(
+                            link=restriction_data.verify_link
+                        )
+                    )
+
+                    sent_message = await message.answer(
+                        text=greeting_template,
+                        parse_mode="HTML",
+                    )
+
+                    # Планируем удаление, если включено
+                    if restriction_data.auto_delete_welcome_text:
+                        await delete_welcome_message_task.kiq(
+                            chat_id=message.chat.id,
+                            message_id=sent_message.message_id,
+                            delay_seconds=3600,
+                        )
+
+                # Сценарий 2: Антибот выключен, но приветствие включено
+                elif (
+                    not restriction_data.is_antibot_enabled
+                    and restriction_data.show_welcome_text
+                ):
+                    if restriction_data.welcome_text:
                         try:
-                            greeting_text = custom_welcome.format(username=username_val)
+                            greeting_text = restriction_data.welcome_text.format(
+                                username=username_val
+                            )
                         except (KeyError, ValueError):
-                            greeting_text = custom_welcome
+                            greeting_text = restriction_data.welcome_text
                     else:
                         greeting_text = Dialog.Antibot.GREETING.format(
                             username=username_val
                         )
 
-                    greeting_template = (
-                        greeting_text
-                        + Dialog.Antibot.VERIFIED_LINK.format(link=verify_link)
-                    )
-
-                    await message.answer(
-                        text=greeting_template,
+                    sent_message = await message.answer(
+                        text=greeting_text,
                         parse_mode="HTML",
                     )
+
+                    # Планируем удаление, если включено
+                    if restriction_data.auto_delete_welcome_text:
+                        await delete_welcome_message_task.kiq(
+                            chat_id=message.chat.id,
+                            message_id=sent_message.message_id,
+                            delay_seconds=3600,
+                        )
 
         logger.info(
             f"Обработка {len(message.new_chat_members)} новых участников завершена"
