@@ -45,7 +45,8 @@ logger = logging.getLogger(__name__)
     F.data == InlineButtons.Moderation.AMNESTY,
 )
 async def amnesty_start_handler(
-    callback: types.CallbackQuery, state: FSMContext
+    callback: types.CallbackQuery,
+    state: FSMContext,
 ) -> None:
     """Инициализирует процесс амнистии пользователя.
 
@@ -228,7 +229,7 @@ async def amnesty_cancel_handler(
     """
     await callback.answer()
 
-    text = "❌️ Действие отменено!"
+    text = "❌️ Действие отменено. Вы вернулись к выбору типа амнистии."
     await callback.message.edit_text(
         text=text,
         reply_markup=amnesty_actions_ikb(),
