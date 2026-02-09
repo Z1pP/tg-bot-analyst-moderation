@@ -13,6 +13,7 @@ from .dialogs import (
     MenuDialogs,
     MessageManagerDialogs,
     ModerationMenuDialogs,
+    ModerationReportDialogs,
     NewsDialogs,
     PunishmentDialogs,
     RatingDialogs,
@@ -286,3 +287,5 @@ class Dialog:
     News = NewsDialogs
     # Archive Notifications
     ArchiveNotification = ArchiveNotificationDialogs
+    # Moderation Reports
+    ModerationReport = ModerationReportDialogs
