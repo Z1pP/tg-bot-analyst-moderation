@@ -39,7 +39,8 @@ class PunishmentService:
     def generate_reason_for_user(
         self,
         duration_of_punishment: int,
-        punished_username: str,
+        violator_username: Optional[str],
+        violator_tg_id: str,
         punishment_type: PunishmentType = PunishmentType.WARNING,
     ) -> str:
         """
@@ -47,19 +48,28 @@ class PunishmentService:
 
         Args:
             duration_of_punishment: Длительность наказания в секундах
-            punished_username: Username наказанного пользователя
+            violator_username: Username нарушителя
+            violator_tg_id: Telegram ID нарушителя
             punishment_type: Тип наказания (WARNING/MUTE/BAN)
 
         Returns:
             Форматированный текст уведомления
         """
+        user_mention = (
+            f"@{violator_username}"
+            if violator_username and violator_username != "hidden"
+            else f"ID:{violator_tg_id}"
+        )
+
         punishment_text_template = PunishmentText[punishment_type.name].value
 
         if punishment_type == PunishmentType.MUTE:
             period = format_duration(seconds=duration_of_punishment)
-            return PunishmentText.MUTE.format(username=punished_username, period=period)
+            return punishment_text_template.format(
+                user_mention=user_mention, period=period
+            )
 
-        return punishment_text_template.format(username=punished_username)
+        return punishment_text_template.format(user_mention=user_mention)
 
     async def get_punishment_count(
         self, user_id: int, chat_id: Optional[int] = None
