@@ -36,34 +36,6 @@ class PunishmentService:
         self.punishment_ladder_repository = punishment_ladder_repository
         self.user_chat_status_repository = user_chat_status_repository
 
-    def generate_admin_answer(
-        self,
-        violator_username: str,
-        chat_title: str,
-        archive_title: str,
-        punishment_type: PunishmentType,
-    ) -> str:
-        """
-        Генерирует текст уведомления о наказании для отправки админу выдавшему наказание
-
-        Args:
-            archive_chats: список архивных чатов
-
-        Returns:
-            Форматированный текст
-        """
-
-        if punishment_type == PunishmentType.BAN:
-            text = f"✅ Пользователь @{violator_username} забанен в чате <b>{chat_title}</b>!\n Данные отобразятся в <b>{archive_title}</b>"
-            return text
-        elif punishment_type == PunishmentType.MUTE:
-            text = f"✅ Пользователь @{violator_username} замучен в чате <b>{chat_title}</b>!\n Данные отобразятся в <b>{archive_title}</b>"
-            return text
-
-        text = f"✅ Пользователь @{violator_username} предупрежден в чате <b>{chat_title}</b>!\n Данные отобразятся в <b>{archive_title}</b>"
-
-        return text
-
     def generate_reason_for_user(
         self,
         duration_of_punishment: int,
