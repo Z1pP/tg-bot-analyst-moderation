@@ -234,10 +234,6 @@ class ModerationUseCase:
         )
         context.message_deleted = violator_msg_deleted
 
-        if context.dto.from_admin_panel:
-            report_text = report_text.replace(
-                "Сообщение удалено", "Действие через Админ-панель"
-            )
         await self._archive_event(context, report_text)
 
         await self._notify_participants(context, reason_text, admin_answer_text)
