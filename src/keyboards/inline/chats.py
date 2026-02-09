@@ -219,6 +219,13 @@ def tracked_chats_with_all_ikb(
         if pagination_buttons:
             builder.row(*pagination_buttons)
 
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.Common.CANCEL,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
+        )
+    )
+
     return builder.as_markup()
 
 
