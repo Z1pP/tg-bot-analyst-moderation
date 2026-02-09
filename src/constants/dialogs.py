@@ -863,3 +863,16 @@ class CommonDialogs:
     """Сообщения для общих действий"""
 
     COME_BACK = "◀️ Вернуться"
+
+
+# --- Archive Notifications ---
+class ArchiveNotificationDialogs:
+    """Сообщения для уведомлений в архивный чат"""
+
+    NEW_MEMBER = (
+        "👤 <b>Новый участник</b>\n"
+        "Нейм: {username}\n"
+        "ID: <code>{tg_id}</code>\n"
+        "Когда: {date} {time}\n"
+        "Чат: {chat_title}"
+    )
