@@ -128,7 +128,8 @@ class GiveUserWarnUseCase(ModerationUseCase):
         reason_text = self.punishment_service.generate_reason_for_user(
             punishment_type=punishment_ladder.punishment_type,
             duration_of_punishment=punishment_ladder.duration_seconds,
-            punished_username=context.violator.username,
+            violator_username=context.violator.username,
+            violator_tg_id=context.violator.tg_id,
         )
 
         report = self.punishment_service.generate_report(
