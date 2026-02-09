@@ -79,7 +79,7 @@ async def messages_menu_handler(callback: CallbackQuery, state: FSMContext) -> N
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.Messages.INPUT_MESSAGE_LINK,
+        text=Dialog.Messages.MESSAGE_LINK_INSTRUCTION,
         reply_markup=send_message_ikb(),
     )
 
