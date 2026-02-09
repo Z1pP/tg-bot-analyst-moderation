@@ -173,12 +173,11 @@ async def amnesty_confirm_handler(
 
     config = ACTION_CONFIG.get(action)
     if not config:
-        text = "❗️Неизвестное действие. Попробуйте еще раз."
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=text,
+            text=Dialog.AmnestyUser.UNKNOWN_ACTION,
             reply_markup=moderation_menu_ikb(),
         )
         return
@@ -195,7 +194,7 @@ async def amnesty_confirm_handler(
         await handle_chats_error(callback, state, violator.username)
         return
 
-    text = config["text"](amnesy_dto.violator_username)
+    text = config["text"].format(username=amnesy_dto.violator_username)
     await state.update_data(
         chat_dtos=[chat.model_dump(mode="json") for chat in chat_dtos]
     )
@@ -229,9 +228,8 @@ async def amnesty_cancel_handler(
     """
     await callback.answer()
 
-    text = "❌️ Действие отменено. Вы вернулись к выбору типа амнистии."
     await callback.message.edit_text(
-        text=text,
+        text=Dialog.AmnestyUser.ACTION_CANCELLED,
         reply_markup=amnesty_actions_ikb(),
     )
     await state.set_state(AmnestyStates.waiting_action_select)
@@ -312,16 +310,15 @@ async def amnesty_execute_handler(
             else:
                 next_step = "предупреждению."
 
-            text = (
-                f"✅ <b>Последнее предупреждение отменено!</b>\n\n"
-                f"Текущее количество предупреждений: <b>{result.current_warns_count}</b>\n"
-                f"Следующий /warn для @{amnesty_dto.violator_username} приведёт к: <b>{next_step}</b>"
+            text = Dialog.AmnestyUser.CANCEL_WARN_SUCCESS_SINGLE.format(
+                warn_count=result.current_warns_count,
+                username=amnesty_dto.violator_username,
+                next_step=next_step,
             )
         else:
-            text = (
-                f"✅ <b>Последнее предупреждение отменено во всех чатах!</b>\n\n"
-                f"Обработано чатов: <b>{len(amnesty_dto.chat_dtos)}</b>\n"
-                f"Пользователь: @{amnesty_dto.violator_username}"
+            text = Dialog.AmnestyUser.CANCEL_WARN_SUCCESS_ALL.format(
+                chats_count=len(amnesty_dto.chat_dtos),
+                username=amnesty_dto.violator_username,
             )
     elif action == InlineButtons.Moderation.UNMUTE:
         usecase: UnmuteUserUseCase = container.resolve(UnmuteUserUseCase)
@@ -338,9 +335,8 @@ async def amnesty_execute_handler(
             )
             return
 
-        text = (
-            f"✅ @{amnesty_dto.violator_username} размучен!\n\n"
-            "❗Все предыдущие предупреждения для пользователя сохранены."
+        text = Dialog.AmnestyUser.UNMUTE_SUCCESS.format(
+            username=amnesty_dto.violator_username
         )
     elif action == InlineButtons.Moderation.UNBAN:
         usecase: UnbanUserUseCase = container.resolve(UnbanUserUseCase)
@@ -357,17 +353,15 @@ async def amnesty_execute_handler(
             )
             return
 
-        text = (
-            f"✅ @{amnesty_dto.violator_username} полностью амнистирован!\n\n"
-            "Все ограничения (бан, мут) сняты, а лестница наказаний обнулена."
+        text = Dialog.AmnestyUser.UNBAN_SUCCESS.format(
+            username=amnesty_dto.violator_username
         )
     else:
-        text = "❗️Неизвестное действие. Попробуйте еще раз."
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=text,
+            text=Dialog.AmnestyUser.UNKNOWN_ACTION,
             reply_markup=moderation_menu_ikb(),
         )
         return
@@ -386,14 +380,14 @@ async def amnesty_execute_handler(
 ACTION_CONFIG = {
     Dialog.AmnestyUser.UNBAN: {
         "usecase": GetChatsWithAnyRestrictionUseCase,
-        "text": lambda username: f"Выберите чат, где нужно произвести полную амнистию для @{username}",
+        "text": Dialog.AmnestyUser.SELECT_CHAT_UNBAN,
     },
     Dialog.AmnestyUser.UNMUTE: {
         "usecase": GetChatsWithMutedUserUseCase,
-        "text": lambda username: f"Выберите чат, где нужно произвести размут @{username}",
+        "text": Dialog.AmnestyUser.SELECT_CHAT_UNMUTE,
     },
     Dialog.AmnestyUser.CANCEL_WARN: {
         "usecase": GetChatsWithPunishedUserUseCase,
-        "text": lambda username: f"Выберите чат, где нужно отменить последнее предупреждение для @{username}",
+        "text": Dialog.AmnestyUser.SELECT_CHAT_CANCEL_WARN,
     },
 }
