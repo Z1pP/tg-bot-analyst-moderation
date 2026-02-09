@@ -3,6 +3,7 @@ from .dialogs import (
     AmnestyUserDialogs,
     AnalyticsDialogs,
     AntibotDialogs,
+    ArchiveNotificationDialogs,
     BanUserDialogs,
     BotSettingsDialogs,
     CalendarDialogs,
@@ -283,3 +284,5 @@ class Dialog:
     Help = HelpDialogs
     # News
     News = NewsDialogs
+    # Archive Notifications
+    ArchiveNotification = ArchiveNotificationDialogs
