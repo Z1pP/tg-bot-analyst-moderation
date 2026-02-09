@@ -119,8 +119,8 @@ async def execute_moderation_logic(
 
     usecase = container.resolve(usecase_cls)
 
-    success_chats = []
-    failed_chats = []
+    success_chats_titles: list[str] = []
+    failed_chats_titles: list[str] = []
 
     for chat in chat_dtos:
         dto = ModerationActionDTO(
@@ -137,10 +137,10 @@ async def execute_moderation_logic(
 
         try:
             await usecase.execute(dto=dto)
-            success_chats.append(chat.title)
+            success_chats_titles.append(chat.title)
             logger.info("Действие %s в чате %s успешно", action.value, chat.title)
         except Exception as e:
-            failed_chats.append(chat.title)
+            failed_chats_titles.append(chat.title)
             logger.error(
                 "Ошибка действия %s в чате %s: %s",
                 action.value,
@@ -150,17 +150,24 @@ async def execute_moderation_logic(
             )
 
     # Формирование ответа
-    if success_chats and not failed_chats:
-        response_text = success_text.format(username=username)
-        if len(success_chats) > 1:
-            response_text += (
-                f"\n\nЧаты ({len(success_chats)}): {', '.join(success_chats)}"
+    if success_chats_titles and not failed_chats_titles:
+        if len(success_chats_titles) > 1:
+            # Формируем блок с перечнем названий чатов
+            titles_block = "\n".join(
+                f"{i}. {title}" for i, title in enumerate(success_chats_titles, 1)
             )
-    elif success_chats and failed_chats:
+        else:
+            titles_block = success_chats_titles[0]
+
+        response_text = success_text.format(
+            username=username, chats_titles=titles_block
+        )
+
+    elif success_chats_titles and failed_chats_titles:
         response_text = partial_text.format(
             username=username,
-            ok=", ".join(success_chats),
-            fail=", ".join(failed_chats),
+            ok=", ".join(success_chats_titles),
+            fail=", ".join(failed_chats_titles),
         )
     else:
         response_text = fail_text.format(username=username)
