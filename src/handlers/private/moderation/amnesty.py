@@ -11,6 +11,7 @@ from aiogram.fsm.context import FSMContext
 from punq import Container
 
 from constants import Dialog, InlineButtons
+from constants.callback import CallbackData
 from constants.punishment import PunishmentType
 from dto import AmnestyUserDTO
 from exceptions import AmnestyError
@@ -137,7 +138,7 @@ async def amnesty_action_select_handler(
 
 
 @router.callback_query(
-    F.data == InlineButtons.Moderation.CONFIRM_ACTION,
+    F.data == CallbackData.Moderation.CONFIRM_ACTION,
     AmnestyStates.waiting_confirmation_action,
 )
 async def amnesty_confirm_handler(
@@ -209,7 +210,7 @@ async def amnesty_confirm_handler(
 
 
 @router.callback_query(
-    F.data == InlineButtons.Moderation.CANCEL_ACTION,
+    F.data == CallbackData.Moderation.CANCEL_ACTION,
     AmnestyStates.waiting_confirmation_action,
 )
 async def amnesty_cancel_handler(
