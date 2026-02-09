@@ -10,6 +10,39 @@ from dto import ChatDTO
 from models import ChatSession
 
 
+def _build_pagination_row(
+    page: int,
+    total_count: int,
+    page_size: int,
+    *,
+    prev_prefix: str,
+    next_prefix: str,
+    page_info_callback: str,
+) -> List[InlineKeyboardButton]:
+    """Строит ряд кнопок пагинации (prev, info, next)."""
+    if total_count <= page_size:
+        return []
+    max_pages = (total_count + page_size - 1) // page_size
+    buttons: List[InlineKeyboardButton] = []
+    if page > 1:
+        buttons.append(
+            InlineKeyboardButton(text="◀️", callback_data=f"{prev_prefix}{page}")
+        )
+    start_item = (page - 1) * page_size + 1
+    end_item = min(page * page_size, total_count)
+    buttons.append(
+        InlineKeyboardButton(
+            text=f"{start_item}-{end_item} из {total_count}",
+            callback_data=page_info_callback,
+        )
+    )
+    if page < max_pages:
+        buttons.append(
+            InlineKeyboardButton(text="▶️", callback_data=f"{next_prefix}{page}")
+        )
+    return buttons
+
+
 def back_to_chats_menu_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
@@ -39,38 +72,16 @@ def remove_chat_ikb(
             )
         )
 
-    # Пагинация
-    if total_count > page_size:
-        max_pages = (total_count + page_size - 1) // page_size
-        pagination_buttons = []
-
-        if page > 1:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="◀️",
-                    callback_data=f"{CallbackData.Chat.PREFIX_PREV_REMOVE_CHATS_PAGE}{page}",
-                )
-            )
-
-        start_item = (page - 1) * page_size + 1
-        end_item = min(page * page_size, total_count)
-        pagination_buttons.append(
-            InlineKeyboardButton(
-                text=f"{start_item}-{end_item} из {total_count}",
-                callback_data=CallbackData.Chat.REMOVE_CHATS_PAGE_INFO,
-            )
-        )
-
-        if page < max_pages:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="▶️",
-                    callback_data=f"{CallbackData.Chat.PREFIX_NEXT_REMOVE_CHATS_PAGE}{page}",
-                )
-            )
-
-        if pagination_buttons:
-            builder.row(*pagination_buttons)
+    pagination_buttons = _build_pagination_row(
+        page=page,
+        total_count=total_count,
+        page_size=page_size,
+        prev_prefix=CallbackData.Chat.PREFIX_PREV_REMOVE_CHATS_PAGE,
+        next_prefix=CallbackData.Chat.PREFIX_NEXT_REMOVE_CHATS_PAGE,
+        page_info_callback=CallbackData.Chat.REMOVE_CHATS_PAGE_INFO,
+    )
+    if pagination_buttons:
+        builder.row(*pagination_buttons)
 
     # Кнопка возврата в меню (в самом низу)
     builder.row(
@@ -115,38 +126,16 @@ def show_tracked_chats_ikb(
             ),
         )
 
-    # Пагинация
-    if total_count > page_size:
-        max_pages = (total_count + page_size - 1) // page_size
-        pagination_buttons = []
-
-        if page > 1:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="◀️",
-                    callback_data=f"{prev_page_prefix}{page}",
-                )
-            )
-
-        start_item = (page - 1) * page_size + 1
-        end_item = min(page * page_size, total_count)
-        pagination_buttons.append(
-            InlineKeyboardButton(
-                text=f"{start_item}-{end_item} из {total_count}",
-                callback_data=CallbackData.Chat.CHATS_PAGE_INFO,
-            )
-        )
-
-        if page < max_pages:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="▶️",
-                    callback_data=f"{next_page_prefix}{page}",
-                )
-            )
-
-        if pagination_buttons:
-            builder.row(*pagination_buttons)
+    pagination_buttons = _build_pagination_row(
+        page=page,
+        total_count=total_count,
+        page_size=page_size,
+        prev_prefix=prev_page_prefix,
+        next_prefix=next_page_prefix,
+        page_info_callback=CallbackData.Chat.CHATS_PAGE_INFO,
+    )
+    if pagination_buttons:
+        builder.row(*pagination_buttons)
 
     # Кнопка возврата в меню (в самом низу)
     builder.row(
@@ -186,38 +175,16 @@ def tracked_chats_with_all_ikb(
             )
         )
 
-    # Пагинация
-    if total_count > page_size:
-        max_pages = (total_count + page_size - 1) // page_size
-        pagination_buttons = []
-
-        if page > 1:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="◀️",
-                    callback_data=f"{CallbackData.Chat.PREFIX_PREV_CHATS_PAGE}{page}",
-                )
-            )
-
-        start_item = (page - 1) * page_size + 1
-        end_item = min(page * page_size, total_count)
-        pagination_buttons.append(
-            InlineKeyboardButton(
-                text=f"{start_item}-{end_item} из {total_count}",
-                callback_data=CallbackData.Chat.CHATS_PAGE_INFO,
-            )
-        )
-
-        if page < max_pages:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="▶️",
-                    callback_data=f"{CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE}{page}",
-                )
-            )
-
-        if pagination_buttons:
-            builder.row(*pagination_buttons)
+    pagination_buttons = _build_pagination_row(
+        page=page,
+        total_count=total_count,
+        page_size=page_size,
+        prev_prefix=CallbackData.Chat.PREFIX_PREV_CHATS_PAGE,
+        next_prefix=CallbackData.Chat.PREFIX_NEXT_CHATS_PAGE,
+        page_info_callback=CallbackData.Chat.CHATS_PAGE_INFO,
+    )
+    if pagination_buttons:
+        builder.row(*pagination_buttons)
 
     builder.row(
         InlineKeyboardButton(
@@ -323,37 +290,16 @@ def select_chat_ikb(
             )
         )
 
-    if total_count > page_size:
-        max_pages = (total_count + page_size - 1) // page_size
-        pagination_buttons = []
-
-        if page > 1:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="◀️",
-                    callback_data=f"{CallbackData.Messages.PREFIX_PREV_SELECT_CHAT_PAGE}{page}",
-                )
-            )
-
-        start_item = (page - 1) * page_size + 1
-        end_item = min(page * page_size, total_count)
-        pagination_buttons.append(
-            InlineKeyboardButton(
-                text=f"{start_item}-{end_item} из {total_count}",
-                callback_data=CallbackData.Messages.SELECT_CHAT_PAGE_INFO,
-            )
-        )
-
-        if page < max_pages:
-            pagination_buttons.append(
-                InlineKeyboardButton(
-                    text="▶️",
-                    callback_data=f"{CallbackData.Messages.PREFIX_NEXT_SELECT_CHAT_PAGE}{page}",
-                )
-            )
-
-        if pagination_buttons:
-            builder.row(*pagination_buttons)
+    pagination_buttons = _build_pagination_row(
+        page=page,
+        total_count=total_count,
+        page_size=page_size,
+        prev_prefix=CallbackData.Messages.PREFIX_PREV_SELECT_CHAT_PAGE,
+        next_prefix=CallbackData.Messages.PREFIX_NEXT_SELECT_CHAT_PAGE,
+        page_info_callback=CallbackData.Messages.SELECT_CHAT_PAGE_INFO,
+    )
+    if pagination_buttons:
+        builder.row(*pagination_buttons)
 
     builder.row(
         InlineKeyboardButton(
