@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Optional, Type, Union
+from typing import Literal, Optional, Type, Union
 
 from aiogram import Bot, types
 from aiogram.fsm.context import FSMContext
@@ -325,6 +325,7 @@ async def handle_reason_input_logic(
     container: Container,
     is_callback: bool,
     next_state: State,
+    action: Literal[Actions.BAN, Actions.WARNING],
 ) -> None:
     """Обрабатывает ввод причины и подготавливает список доступных чатов.
 
@@ -336,7 +337,7 @@ async def handle_reason_input_logic(
         container: DI-контейнер.
         is_callback: Флаг, указывающий, является ли отправитель callback-запросом.
         next_state: Состояние для перехода после обработки причины.
-
+        action: Тип выполняемого действия (Actions.BAN, Actions.WARNING).
     State:
         Устанавливает: next_state при наличии доступных чатов.
         Сохраняет: причину (reason) и список чатов (chat_dtos).
@@ -386,11 +387,17 @@ async def handle_reason_input_logic(
         chat_dtos=[chat.model_dump(mode="json") for chat in chat_dtos],
     )
 
+    # Формируем текст для выбора чата в зависимости от действия
+    if action == Actions.BAN:
+        text = Dialog.BanUser.SELECT_CHAT.format(username=username)
+    else:
+        text = Dialog.WarnUser.SELECT_CHAT.format(username=username)
+
     await safe_edit_message(
         bot=bot,
         chat_id=chat_id,
         message_id=message_to_edit_id,
-        text=Dialog.WarnUser.SELECT_CHAT.format(username=username),
+        text=text,
         reply_markup=tracked_chats_with_all_ikb(dtos=chat_dtos),
     )
 
