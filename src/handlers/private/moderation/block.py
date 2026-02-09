@@ -113,6 +113,7 @@ async def block_reason_input_handler(
         container=container,
         is_callback=False,
         next_state=BanUserStates.waiting_chat_select,
+        action=Actions.BAN,
     )
 
 
@@ -148,6 +149,7 @@ async def block_no_reason_handler(
         container=container,
         is_callback=True,
         next_state=BanUserStates.waiting_chat_select,
+        action=Actions.BAN,
     )
 
 
