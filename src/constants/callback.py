@@ -161,6 +161,8 @@ class ModerationCallbackData:
     # Commands
     SHOW_MENU = "moderation_menu"
     NO_REASON = "no_reason"
+    CONFIRM_ACTION = "confirm_moderation_action"
+    CANCEL_ACTION = "cancel_moderation_action"
 
 
 class AnalyticsCallbackData:
