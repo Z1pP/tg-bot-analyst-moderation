@@ -12,13 +12,17 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State
 from punq import Container
 
-from constants import Dialog
+from constants import Dialog, InlineButtons
 from constants.enums import UserRole
 from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
 from dto.chat_dto import ChatDTO
 from keyboards.inline.chats import tracked_chats_with_all_ikb
-from keyboards.inline.moderation import back_to_moderation_menu_ikb, moderation_menu_ikb
+from keyboards.inline.moderation import (
+    back_to_moderation_menu_ikb,
+    moderation_menu_ikb,
+    try_again_ikb,
+)
 from services import UserService
 from usecases.chat import GetChatsForUserActionUseCase
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
@@ -215,6 +219,14 @@ async def handle_user_search_logic(
     data = await state.get_data()
     message_to_edit_id = data.get("message_to_edit_id")
 
+    # Определяем callback для кнопки повтора на основе текущего состояния
+    if next_state.state.startswith("BanUserStates"):
+        retry_callback = InlineButtons.Moderation.BLOCK_USER
+    elif next_state.state.startswith("WarnUserStates"):
+        retry_callback = InlineButtons.Moderation.WARN_USER
+    else:
+        retry_callback = InlineButtons.Moderation.AMNESTY
+
     # --- Если данные пользователя не введены или введены некорректно
     if user_data is None:
         await handle_moderation_error(
@@ -222,7 +234,7 @@ async def handle_user_search_logic(
             state=state,
             text=dialog_texts["invalid_format"],
             message_to_edit_id=message_to_edit_id,
-            reply_markup=back_to_moderation_menu_ikb(),
+            reply_markup=try_again_ikb(retry_callback),
         )
         return
 
@@ -242,7 +254,7 @@ async def handle_user_search_logic(
             state=state,
             text=dialog_texts["user_not_found"].format(identificator=identificator),
             message_to_edit_id=message_to_edit_id,
-            reply_markup=back_to_moderation_menu_ikb(),
+            reply_markup=try_again_ikb(retry_callback),
         )
         return
 
@@ -280,7 +292,7 @@ async def handle_user_search_logic(
                 state=state,
                 text=error_text,
                 message_to_edit_id=message_to_edit_id,
-                reply_markup=back_to_moderation_menu_ikb(),
+                reply_markup=try_again_ikb(retry_callback),
             )
             return
 
