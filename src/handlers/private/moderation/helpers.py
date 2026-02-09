@@ -13,6 +13,7 @@ from aiogram.fsm.state import State
 from punq import Container
 
 from constants import Dialog
+from constants.enums import UserRole
 from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
 from dto.chat_dto import ChatDTO
@@ -244,6 +245,44 @@ async def handle_user_search_logic(
             reply_markup=back_to_moderation_menu_ikb(),
         )
         return
+
+    # --- Проверка защищенных пользователей (для бана, варна или амнистии)
+    if next_state.state.startswith(
+        ("BanUserStates", "WarnUserStates", "AmnestyStates")
+    ):
+        is_protected = False
+        # Проверка на самого себя
+        if str(user.tg_id) == str(message.from_user.id):
+            is_protected = True
+        # Проверка на администратора бота
+        elif user.role == UserRole.ADMIN:
+            is_protected = True
+        # Проверка на модератора (отслеживаемого пользователя)
+        elif user.role == UserRole.MODERATOR:
+            is_protected = True
+
+        if is_protected:
+            from constants.dialogs import (
+                AmnestyUserDialogs,
+                BanUserDialogs,
+                WarnUserDialogs,
+            )
+
+            if next_state.state.startswith("BanUserStates"):
+                error_text = BanUserDialogs.PUNISHMENT_ERROR
+            elif next_state.state.startswith("WarnUserStates"):
+                error_text = WarnUserDialogs.PUNISHMENT_ERROR
+            else:
+                error_text = AmnestyUserDialogs.AMNESTY_ERROR
+
+            await handle_moderation_error(
+                event=message,
+                state=state,
+                text=error_text,
+                message_to_edit_id=message_to_edit_id,
+                reply_markup=back_to_moderation_menu_ikb(),
+            )
+            return
 
     await state.update_data(
         username=user.username,
