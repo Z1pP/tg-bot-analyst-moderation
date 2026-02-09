@@ -16,7 +16,6 @@ from services import (
     ChatService,
 )
 from services.time_service import TimeZoneService
-from utils.formatter import format_duration
 
 from .base_amnesty import BaseAmnestyUseCase
 
@@ -106,29 +105,16 @@ class CancelLastWarnUseCase(BaseAmnestyUseCase):
             step=current_warn_count + 1, chat_id=chat.tg_id
         )
 
-        if next_ladder and next_ladder.punishment_type == PunishmentType.BAN:
-            next_step = "бессрочная блокировка."
-        elif next_ladder and next_ladder.punishment_type == PunishmentType.MUTE:
-            next_step = f"мут на {format_duration(int(next_ladder.duration_seconds))}."
-        else:
-            next_step = "предупреждение."
-
-        active_punishment_status = "нет"
-        if member_status.is_banned:
-            active_punishment_status = "<b>блокировка</b>"
-        elif member_status.is_muted and member_status.muted_until:
-            duration = member_status.muted_until - TimeZoneService.now()
-            if duration and duration.total_seconds() > 0:
-                active_punishment_status = (
-                    f"<b>мут на {format_duration(int(duration.total_seconds()))}</b>"
-                )
+        now = TimeZoneService.now()
+        date_time_str = now.strftime("%d.%m.%Y %H:%M")
+        chat_name = "Все чаты" if len(dto.chat_dtos) > 1 else chat.title
 
         report_text = (
-            f"⏪ <b>Отмена последнего предупреждения для @{dto.violator_username}</b>\n\n"
-            f"• Чат: <b>{chat.title}</b>\n"
-            f"• Отменил: <b>@{dto.admin_username}</b>\n"
-            f"• Текущее наказание: {active_punishment_status}\n"
-            f"• След. шаг: <b>{next_step}</b>"
+            "⏮️ Отмена последнего предупреждения\n"
+            f"Кто: @{dto.admin_username}\n"
+            f"Когда: {date_time_str}\n"
+            f"Кого: @{dto.violator_username} ({dto.violator_tgid})\n"
+            f"Чат: {chat_name}"
         )
 
         await self._send_report_to_archives(archive_chats, report_text)
