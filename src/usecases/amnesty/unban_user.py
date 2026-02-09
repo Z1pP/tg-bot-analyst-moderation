@@ -8,6 +8,7 @@ from services import (
     ChatService,
     PunishmentService,
 )
+from services.time_service import TimeZoneService
 
 from .base_amnesty import BaseAmnestyUseCase
 
@@ -71,28 +72,20 @@ class UnbanUserUseCase(BaseAmnestyUseCase):
                 muted_until=None,
             )
 
-            deleted_warns = await self.punishment_service.delete_user_punishments(
+            await self.punishment_service.delete_user_punishments(
                 user_id=dto.violator_id,
                 chat_id=chat.id,
             )
 
-            removed_list = []
-            if member_status.is_banned:
-                removed_list.append("бан")
-            if member_status.is_muted:
-                removed_list.append("мут")
-            if deleted_warns > 0:
-                removed_list.append(f"предупреждения ({deleted_warns})")
-
-            removed_text = (
-                ", ".join(removed_list) if removed_list else "все ограничения"
-            )
+            now = TimeZoneService.now()
+            date_time_str = now.strftime("%d.%m.%Y %H:%M")
 
             report_text = (
-                f"😇 Полная амнистия пользователя @{dto.violator_username}\n\n"
-                f"• Снято: <b>{removed_text}</b>\n"
-                f"• Администратор: @{dto.admin_username}\n"
-                f"• Чат: <b>{chat.title}</b>"
+                "🕊️ Полная амнистия\n"
+                f"Кто: @{dto.admin_username}\n"
+                f"Когда: {date_time_str}\n"
+                f"Кого: @{dto.violator_username} ({dto.violator_tgid})\n"
+                f"Чат: {chat.title}"
             )
 
             await self._send_report_to_archives(archive_chats, report_text)
