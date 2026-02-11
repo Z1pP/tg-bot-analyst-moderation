@@ -893,11 +893,10 @@ class HelpDialogs:
 class RootDialogs:
     """Сообщения для функционала root"""
 
-    pass
-
-    # --- News ---
+    MENU_TEXT = "Привет, божок! Выбери необходимое действие."
 
 
+# --- News ---
 class NewsDialogs:
     """Сообщения для функционала новостей"""
 
