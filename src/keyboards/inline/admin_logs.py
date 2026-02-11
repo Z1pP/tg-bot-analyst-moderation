@@ -61,7 +61,7 @@ def admin_logs_ikb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.AdminLogs.MENU,
+            callback_data=CallbackData.AdminLogs.SHOW_MENU,
         )
     )
 

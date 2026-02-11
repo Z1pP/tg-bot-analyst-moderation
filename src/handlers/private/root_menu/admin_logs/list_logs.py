@@ -21,7 +21,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == CallbackData.AdminLogs.MENU)
+@router.callback_query(F.data == CallbackData.AdminLogs.SHOW_MENU)
 async def admin_logs_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
