@@ -118,7 +118,7 @@ class AdminLogsCallbackData:
     """Класс для хранения callback данных логов администраторов"""
 
     # Commands
-    MENU = "admin_logs_menu"
+    SHOW_MENU = "admin_logs_menu"
     SELECT_ADMIN = "admin_logs_select_admin"
 
 
