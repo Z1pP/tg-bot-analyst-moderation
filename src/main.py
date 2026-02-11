@@ -26,6 +26,16 @@ bot = None
 dp = None
 
 
+ALLOWED_UPDATES = [
+    "message",
+    "edited_message",
+    "callback_query",
+    "inline_query",
+    "chat_member",
+    "message_reaction",
+]
+
+
 async def init_bot() -> None:
     """Инициализирует контейнер зависимостей и настраивает бота."""
     global bot, dp
@@ -40,7 +50,7 @@ async def on_startup(app: web.Application) -> None:
     if args.webhook_url:
         url = f"{args.webhook_url}/webhook"
         logger.info("🚀 Устанавливаем webhook: %s", url)
-        await bot.set_webhook(url)
+        await bot.set_webhook(url, allowed_updates=ALLOWED_UPDATES)
         await set_bot_commands(bot)
 
 
@@ -126,7 +136,7 @@ async def run_polling():
 
     logger.info("Запуск polling...")
 
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, allowed_updates=ALLOWED_UPDATES)
 
 
 async def shutdown(bot, dp) -> None:
