@@ -72,7 +72,7 @@ def release_notes_menu_ikb(
     if user_tg_id and user_tg_id in RELEASE_NOTES_ADMIN_IDS:
         builder.row(
             InlineKeyboardButton(
-                text=InlineButtons.ReleaseNotesButtons.ADD_NOTE,
+                text=InlineButtons.ReleaseNotes.ADD_NOTE,
                 callback_data=CallbackData.ReleaseNotes.ADD,
             )
         )
@@ -104,18 +104,18 @@ def release_note_detail_ikb(
     if user_tg_id and user_tg_id in RELEASE_NOTES_ADMIN_IDS:
         builder.row(
             InlineKeyboardButton(
-                text=InlineButtons.ReleaseNotesButtons.EDIT,
+                text=InlineButtons.ReleaseNotes.EDIT,
                 callback_data=f"{CallbackData.ReleaseNotes.EDIT}__{note_id}",
             ),
             InlineKeyboardButton(
-                text=InlineButtons.ReleaseNotesButtons.DELETE,
+                text=InlineButtons.ReleaseNotes.DELETE,
                 callback_data=f"{CallbackData.ReleaseNotes.DELETE}__{note_id}",
             ),
             width=2,
         )
         builder.row(
             InlineKeyboardButton(
-                text=InlineButtons.ReleaseNotesButtons.BROADCAST,
+                text=InlineButtons.ReleaseNotes.BROADCAST,
                 callback_data=f"{CallbackData.ReleaseNotes.BROADCAST}__{note_id}",
             )
         )
@@ -135,11 +135,11 @@ def edit_release_note_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ReleaseNotesButtons.EDIT_TITLE,
+            text=InlineButtons.ReleaseNotes.EDIT_TITLE,
             callback_data=CallbackData.ReleaseNotes.EDIT_TITLE,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.ReleaseNotesButtons.EDIT_CONTENT,
+            text=InlineButtons.ReleaseNotes.EDIT_CONTENT,
             callback_data=CallbackData.ReleaseNotes.EDIT_CONTENT,
         ),
         width=2,
@@ -226,7 +226,7 @@ def change_title_or_cancel_add_ikb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.ReleaseNotesButtons.EDIT_TITLE,
+            text=InlineButtons.ReleaseNotes.EDIT_TITLE,
             callback_data=CallbackData.ReleaseNotes.CHANGE_TITLE_WHILE_ADDING,
         )
     )
