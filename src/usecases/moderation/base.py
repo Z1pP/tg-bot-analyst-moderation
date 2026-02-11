@@ -68,7 +68,7 @@ class ModerationUseCase:
         self,
         user: User,
     ) -> bool:
-        return user.role == UserRole.ADMIN
+        return True if user.role != UserRole.USER else False
 
     async def _verify_bot_permissions(self, chat: ChatSession) -> None:
         """Проверяет права бота в основном и архивном чатах."""
@@ -105,6 +105,7 @@ class ModerationUseCase:
     async def _prepare_moderation_context(
         self, dto: ModerationActionDTO
     ) -> Optional[ModerationContext]:
+        # Проверяем что не пытаемся наказать самого себя
         if not self.is_different_sender(
             reply_user_tg_id=dto.violator_tgid,
             owner_tg_id=dto.admin_tgid,
@@ -135,12 +136,14 @@ class ModerationUseCase:
             username=dto.admin_username,
         )
 
+        # Проверяем что не пытаемся наказать администратора чата
         if await self.is_chat_administrator(
             tg_id=dto.violator_tgid,
             chat_tg_id=dto.chat_tgid,
         ):
             raise CannotPunishChatAdminError()
 
+        # Проверяем что не пытаемся наказать бота администратора
         if self.is_bot_administrator(user=violator):
             raise CannotPunishBotAdminError()
 
