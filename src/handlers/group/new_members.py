@@ -94,6 +94,13 @@ async def _handle_new_member(
     )
 
     # 1. Уведомление в архивный чат
+    logger.debug(
+        "Вызов _notify_archive: chat_id=%s, user_id=%s, username=%s, chat_title=%s",
+        message.chat.id,
+        user.id,
+        user.username,
+        chat_title,
+    )
     await _notify_archive(
         container=container,
         chat_id=message.chat.id,
