@@ -177,7 +177,7 @@ class InlineButtons:
         REMOVE = "🗑 Удалить"
         COME_BACK = "◀️ Вернуться"
         # Actions with chat
-        PROHIBITIONS_SETTINGS = "❌ Запреты (Не раб.)"
+        CHECK_PERMISSIONS = "🔍 Проверка прав"
         GET_DAILY_RATING = "🏆 Рейтинг активности"
         ARCHIVE_CHANNEL_SETTING = "🗄 Архивный чат"
         REPORT_TIME_SETTING = "🕐 Время сбора данных"
@@ -206,6 +206,10 @@ class InlineButtons:
         WELCOME_TEXT_ENABLE = "🟢 Включить Приветствие"
         SUMMARY_SHORT = "Краткая"
         SUMMARY_FULL = "Полная"
+        # Аналитика по чату
+        STATISTICS = "📊 Статистика"
+        AI_SUMMARY = "📝 AI-сводка"
+        SELECT_OTHER_CHAT = "🔄 Выбрать другой чат"
 
     class Moderation:
         """Кнопки для модерации"""
