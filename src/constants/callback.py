@@ -256,7 +256,7 @@ class CallbackData:
     Moderation = ModerationCallbackData
     AdminLogs = AdminLogsCallbackData
     ReleaseNotes = ReleaseNotesCallbackData
-    Role = RoleCallbackData
+    Roles = RoleCallbackData
     Analytics = AnalyticsCallbackData
     Messages = MessagesCallbackData
     UserAndChatsSettings = UserAndChatsSettingsCallbackData
