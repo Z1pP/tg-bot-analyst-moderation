@@ -1,23 +1,26 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-
 from constants import InlineButtons
-
-block_actions = InlineButtons.BlockButtons()
+from constants.callback import CallbackData
 
 
 def confirm_action_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура подтверждения действия амнистии.
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопками подтверждения и отмены действия амнистии.
+    """
     builder = InlineKeyboardBuilder()
 
     builder.row(
         InlineKeyboardButton(
-            text=block_actions.CONFIRM_ACTION,
-            callback_data=block_actions.CONFIRM_ACTION,
+            text=InlineButtons.Common.YES,
+            callback_data=CallbackData.Moderation.CONFIRM_ACTION,
         ),
         InlineKeyboardButton(
-            text=block_actions.CANCEL_ACTION,
-            callback_data=block_actions.CANCEL_ACTION,
+            text=InlineButtons.Common.NO,
+            callback_data=CallbackData.Moderation.CANCEL_ACTION,
         ),
     )
 

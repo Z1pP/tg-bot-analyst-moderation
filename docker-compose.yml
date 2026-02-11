@@ -14,6 +14,7 @@ x-common-setup: &common-setup
       max-file: "3"
   volumes:
     - ./logs:/app/logs
+    - .:/app
 
 # 2. Шаблон переменных окружения для подключения к БД и Redis внутри сети Docker
 x-db-env: &db-env
@@ -41,7 +42,7 @@ services:
     command: >
       bash -c "
         echo '⏳ Waiting for Cloudflare Tunnel...';
-        until curl -s http://tunnel:4040/metrics | grep -q 'cloudflared_tunnel_user_hostnames_counts'; do 
+        until curl -s http://tunnel:4040/metrics | grep -q 'cloudflared_tunnel_user_hostnames_counts'; do
           sleep 2;
         done;
         PUBLIC_URL=\$$(curl -s http://tunnel:4040/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);

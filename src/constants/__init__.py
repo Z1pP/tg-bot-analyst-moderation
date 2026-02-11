@@ -3,6 +3,7 @@ from .dialogs import (
     AmnestyUserDialogs,
     AnalyticsDialogs,
     AntibotDialogs,
+    ArchiveNotificationDialogs,
     BanUserDialogs,
     BotSettingsDialogs,
     CalendarDialogs,
@@ -12,6 +13,7 @@ from .dialogs import (
     MenuDialogs,
     MessageManagerDialogs,
     ModerationMenuDialogs,
+    ModerationReportDialogs,
     NewsDialogs,
     PunishmentDialogs,
     RatingDialogs,
@@ -47,6 +49,7 @@ class InlineButtons:
         HIDE_NOTIFICATION = "⬆️ Скрыть"
         YES = "✅ Да"
         NO = "❌ Нет"
+        TRY_AGAIN = "🔄 Попробовать ещё раз"
 
     class TemplateButtons:
         """Кнопки для действий с шаблонами"""
@@ -105,11 +108,6 @@ class InlineButtons:
 
         MENU = "📊 Аналитика"
 
-    class Moderation:
-        """Кнопки для модерации"""
-
-        MENU = "🚫 Модерация"
-
     class Messages:
         """Кнопки для управления сообщениями"""
 
@@ -118,6 +116,7 @@ class InlineButtons:
         REPLY = "💬 Ответить"
         CONFIRM_DELETE = "✅ Да, удалить"
         SEND_MESSAGE = "💬 Отправить сообщение"
+        SEND_TO_ALL_CHATS = "Все чаты"
         HIDE_TEMPLATE = "🗑 Скрыть"
         HIDE_ALBUM = "🗑 Скрыть альбом"
         HIDE_DETAILS = "🗑 Скрыть детализацию"
@@ -178,7 +177,7 @@ class InlineButtons:
         REMOVE = "🗑 Удалить"
         COME_BACK = "◀️ Вернуться"
         # Actions with chat
-        PROHIBITIONS_SETTINGS = "❌ Запреты (Не раб.)"
+        CHECK_PERMISSIONS = "🔍 Проверка прав"
         GET_DAILY_RATING = "🏆 Рейтинг активности"
         ARCHIVE_CHANNEL_SETTING = "🗄 Архивный чат"
         REPORT_TIME_SETTING = "🕐 Время сбора данных"
@@ -207,10 +206,17 @@ class InlineButtons:
         WELCOME_TEXT_ENABLE = "🟢 Включить Приветствие"
         SUMMARY_SHORT = "Краткая"
         SUMMARY_FULL = "Полная"
+        # Аналитика по чату
+        STATISTICS = "📊 Статистика"
+        AI_SUMMARY = "📝 AI-сводка"
+        SELECT_OTHER_CHAT = "🔄 Выбрать другой чат"
 
-    class BlockButtons:
+    class Moderation:
+        """Кнопки для модерации"""
+
+        MENU = "⛔️ Модерация"
         AMNESTY = "🕊️ Амнистия"
-        BLOCK_USER = "🚫 Блок юзера"
+        BLOCK_USER = "🚫 Блок пользователя"
         WARN_USER = "❗Предупреждение"
         BACK_TO_BLOCK_MENU = "📋 Вернуться в меню"
         # Amnesty actions
@@ -219,7 +225,7 @@ class InlineButtons:
         UNMUTE = "🔊 Размут"
         CONFIRM_ACTION = "Да"
         CANCEL_ACTION = "Нет"
-        NO_REASON = "❌ Без причины"
+        NO_REASON = "❌ Без указания причины"
 
     class ReleaseNotesButtons:
         """Кнопки для действий с релизными заметками"""
@@ -285,3 +291,7 @@ class Dialog:
     Help = HelpDialogs
     # News
     News = NewsDialogs
+    # Archive Notifications
+    ArchiveNotification = ArchiveNotificationDialogs
+    # Moderation Reports
+    ModerationReport = ModerationReportDialogs

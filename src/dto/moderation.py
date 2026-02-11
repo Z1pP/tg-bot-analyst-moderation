@@ -6,6 +6,16 @@ from pydantic import BaseModel, ConfigDict
 from constants.punishment import PunishmentActions as Actions
 
 
+class NewMemberRestrictionDTO(BaseModel):
+    verify_link: Optional[str] = None
+    welcome_text: Optional[str] = None
+    is_antibot_enabled: bool = False
+    show_welcome_text: bool = False
+    auto_delete_welcome_text: bool = False
+
+    model_config = ConfigDict(frozen=True)
+
+
 class ModerationActionDTO(BaseModel):
     action: Actions
     # ID и username нарушителя

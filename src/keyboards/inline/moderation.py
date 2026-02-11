@@ -1,83 +1,141 @@
+"""Модуль инлайн-клавиатур для раздела модерации.
+
+Содержит функции для создания клавиатур управления пользователями,
+выбора причин наказания и навигации по меню модерации.
+"""
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import InlineButtons
 from constants.callback import CallbackData
 
-block_actions = InlineButtons.BlockButtons()
-
 
 def no_reason_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура с кнопкой 'Без причины'."""
+    """Создает клавиатуру с кнопкой для пропуска ввода причины.
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопками 'Без причины' и 'Вернуться'.
+    """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=block_actions.NO_REASON,
-            callback_data=block_actions.NO_REASON,
-        )
+            text=InlineButtons.Moderation.NO_REASON,
+            callback_data=CallbackData.Moderation.NO_REASON,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
+        ),
+        width=1,
     )
     return builder.as_markup()
 
 
 def moderation_menu_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура с действия"""
+    """Создает главное меню раздела модерации.
+
+    Включает кнопки для выдачи предупреждений, блокировки, амнистии,
+    управления чатами и возврата в главное меню.
+
+    Returns:
+        InlineKeyboardMarkup: Разметка главного меню модерации.
+    """
     builder = InlineKeyboardBuilder()
+
     builder.row(
         InlineKeyboardButton(
-            text=block_actions.AMNESTY,
-            callback_data=block_actions.AMNESTY,
+            text=InlineButtons.Moderation.WARN_USER,
+            callback_data=InlineButtons.Moderation.WARN_USER,
         ),
         InlineKeyboardButton(
-            text=block_actions.WARN_USER,
-            callback_data=block_actions.WARN_USER,
+            text=InlineButtons.Moderation.BLOCK_USER,
+            callback_data=InlineButtons.Moderation.BLOCK_USER,
         ),
         InlineKeyboardButton(
-            text=block_actions.BLOCK_USER,
-            callback_data=block_actions.BLOCK_USER,
+            text=InlineButtons.Moderation.AMNESTY,
+            callback_data=InlineButtons.Moderation.AMNESTY,
         ),
-    )
-    builder.adjust(1, 2)
-    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.Chat.MANAGEMENT,
+            callback_data=CallbackData.Chat.MANAGEMENT,
+        ),
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Menu.MAIN_MENU,
-        )
+        ),
     )
+
+    builder.adjust(2, 1, 1, 1)
     return builder.as_markup()
 
 
-def back_to_block_menu_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура для возврата в меню блокировок"""
+def back_to_moderation_menu_ikb() -> InlineKeyboardMarkup:
+    """Создает клавиатуру с кнопкой отмены и возврата в меню модерации.
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопкой 'Отмена'.
+    """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=InlineButtons.Common.COME_BACK,
-            callback_data=block_actions.BACK_TO_BLOCK_MENU,
+            text=InlineButtons.Common.CANCEL,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
         )
     )
     return builder.as_markup()
 
 
 def amnesty_actions_ikb() -> InlineKeyboardMarkup:
-    """Клавиатура с действиями по амнистии"""
+    """Создает меню выбора действий для амнистии пользователя.
+
+    Включает опции отмены варна, размута, разбана и кнопку возврата.
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с действиями амнистии.
+    """
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=block_actions.CANCEL_WARN,
-            callback_data=block_actions.CANCEL_WARN,
+            text=InlineButtons.Moderation.CANCEL_WARN,
+            callback_data=InlineButtons.Moderation.CANCEL_WARN,
         ),
         InlineKeyboardButton(
-            text=block_actions.UNMUTE,
-            callback_data=block_actions.UNMUTE,
+            text=InlineButtons.Moderation.UNMUTE,
+            callback_data=InlineButtons.Moderation.UNMUTE,
         ),
         InlineKeyboardButton(
-            text=block_actions.UNBAN,
-            callback_data=block_actions.UNBAN,
+            text=InlineButtons.Moderation.UNBAN,
+            callback_data=InlineButtons.Moderation.UNBAN,
         ),
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=block_actions.BACK_TO_BLOCK_MENU,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
         ),
     )
     builder.adjust(2, 1, 1)
+    return builder.as_markup()
+
+
+def try_again_ikb(action_callback: str) -> InlineKeyboardMarkup:
+    """Создает клавиатуру с кнопкой повтора действия и возврата в меню.
+
+    Args:
+        action_callback: Callback-данные для кнопки 'Попробовать ещё раз'.
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопками 'Попробовать ещё раз' и 'Вернуться'.
+    """
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.Common.TRY_AGAIN,
+            callback_data=action_callback,
+        ),
+        InlineKeyboardButton(
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Moderation.SHOW_MENU,
+        ),
+        width=1,
+    )
     return builder.as_markup()

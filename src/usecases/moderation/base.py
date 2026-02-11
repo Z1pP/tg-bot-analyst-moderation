@@ -16,6 +16,7 @@ from exceptions.moderation import (
     CannotPunishYouSelf,
     MessageTooOldError,
 )
+from keyboards.inline.users import hide_notification_ikb
 from models import ChatSession, User
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services import BotMessageService, BotPermissionService, ChatService, UserService
@@ -185,6 +186,7 @@ class ModerationUseCase:
             await self.bot_message_service.send_private_message(
                 user_tgid=context.admin.tg_id,
                 text=e.get_user_message(),
+                reply_markup=hide_notification_ikb(),
             )
 
         if not violator_msg_deleted:
@@ -234,10 +236,6 @@ class ModerationUseCase:
         )
         context.message_deleted = violator_msg_deleted
 
-        if context.dto.from_admin_panel:
-            report_text = report_text.replace(
-                "Сообщение удалено", "Действие через Админ-панель"
-            )
         await self._archive_event(context, report_text)
 
         await self._notify_participants(context, reason_text, admin_answer_text)

@@ -16,11 +16,16 @@ async def message_management_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
 ) -> None:
-    """Обработчик возврата в меню управления сообщениями."""
+    """Показывает главное меню управления сообщениями (ввод ссылки).
+
+    Args:
+        callback: Объект callback-запроса.
+        state: Контекст состояния FSM.
+    """
     await callback.answer()
 
     logger.info(
-        "Администратор %s вернулся в меню управления сообщениями",
+        "Администратор %s выбрал пункт управления сообщениями",
         callback.from_user.username,
     )
 

@@ -36,38 +36,11 @@ class PunishmentService:
         self.punishment_ladder_repository = punishment_ladder_repository
         self.user_chat_status_repository = user_chat_status_repository
 
-    def generate_admin_answer(
-        self,
-        violator_username: str,
-        chat_title: str,
-        archive_title: str,
-        punishment_type: PunishmentType,
-    ) -> str:
-        """
-        Генерирует текст уведомления о наказании для отправки админу выдавшему наказание
-
-        Args:
-            archive_chats: список архивных чатов
-
-        Returns:
-            Форматированный текст
-        """
-
-        if punishment_type == PunishmentType.BAN:
-            text = f"✅ Пользователь @{violator_username} забанен в чате <b>{chat_title}</b>!\n Данные отобразятся в <b>{archive_title}</b>"
-            return text
-        elif punishment_type == PunishmentType.MUTE:
-            text = f"✅ Пользователь @{violator_username} замучен в чате <b>{chat_title}</b>!\n Данные отобразятся в <b>{archive_title}</b>"
-            return text
-
-        text = f"✅ Пользователь @{violator_username} предупрежден в чате <b>{chat_title}</b>!\n Данные отобразятся в <b>{archive_title}</b>"
-
-        return text
-
     def generate_reason_for_user(
         self,
         duration_of_punishment: int,
-        punished_username: str,
+        violator_username: Optional[str],
+        violator_tg_id: str,
         punishment_type: PunishmentType = PunishmentType.WARNING,
     ) -> str:
         """
@@ -75,19 +48,28 @@ class PunishmentService:
 
         Args:
             duration_of_punishment: Длительность наказания в секундах
-            punished_username: Username наказанного пользователя
+            violator_username: Username нарушителя
+            violator_tg_id: Telegram ID нарушителя
             punishment_type: Тип наказания (WARNING/MUTE/BAN)
 
         Returns:
             Форматированный текст уведомления
         """
+        user_mention = (
+            f"@{violator_username}"
+            if violator_username and violator_username != "hidden"
+            else f"ID:{violator_tg_id}"
+        )
+
         punishment_text_template = PunishmentText[punishment_type.name].value
 
         if punishment_type == PunishmentType.MUTE:
             period = format_duration(seconds=duration_of_punishment)
-            return PunishmentText.MUTE.format(username=punished_username, period=period)
+            return punishment_text_template.format(
+                user_mention=user_mention, period=period
+            )
 
-        return punishment_text_template.format(username=punished_username)
+        return punishment_text_template.format(user_mention=user_mention)
 
     async def get_punishment_count(
         self, user_id: int, chat_id: Optional[int] = None
@@ -189,7 +171,7 @@ class PunishmentService:
             Строка с описанием длительности
         """
         if punishment_type == PunishmentType.BAN:
-            return "бессрочно"
+            return Dialog.ModerationReport.INFINITE_PERIOD
         if punishment_type == PunishmentType.MUTE and duration_seconds:
             return format_duration(seconds=duration_seconds)
         return ""
@@ -210,7 +192,7 @@ class PunishmentService:
     @classmethod
     def _build_report_header(cls, date: datetime, message_deleted: bool) -> str:
         """
-        Генерирует заголовок отчета с датой и статусом сообщения.
+        Генерирует заголовок отчета.
 
         Args:
             date: Дата события
@@ -219,10 +201,7 @@ class PunishmentService:
         Returns:
             Строка заголовка
         """
-        date_str = date.strftime("%d.%m.%Y")
-        time_str = date.strftime("%H:%M")
-        status = cls._get_message_deletion_status(message_deleted)
-        return f"❌️ Сообщение {status} {date_str} в {time_str}"
+        return Dialog.ModerationReport.REPORT_HEADER
 
     def generate_ban_report(
         self,
@@ -242,17 +221,20 @@ class PunishmentService:
             Форматированный отчет
         """
         header = self._build_report_header(date, message_deleted)
-        reason = dto.reason or "Не указана"
+        reason = dto.reason or Dialog.ModerationReport.NO_REASON
         period = self._format_punishment_period(PunishmentType.BAN, None)
+        date_str = date.strftime("%d.%m.%Y %H:%M")
 
-        return (
-            f"{header}\n\n"
-            f"• Юзер: @{dto.violator_username}\n"
-            f"• ID: {dto.violator_tgid}\n"
-            f"• Причина: {reason}\n"
-            f"• Время бана: {period}\n"
-            f"• Выдал бан: @{dto.admin_username}\n"
-            f"• Чат: {dto.chat_title}"
+        return Dialog.ModerationReport.REPORT_BODY.format(
+            header=header,
+            admin_username=dto.admin_username,
+            date_str=date_str,
+            violator_username=dto.violator_username,
+            violator_tgid=dto.violator_tgid,
+            reason=reason,
+            chat_title=dto.chat_title,
+            punishment_name=Dialog.ModerationReport.PUNISHMENT_NAMES["BAN"],
+            period=period,
         )
 
     def generate_report(
@@ -267,7 +249,7 @@ class PunishmentService:
 
         Args:
             dto: Данные о действии модерации
-            punishment: Примененное наказание
+            punishment_ladder: Примененное наказание
             date: Дата и время наказания
             message_deleted: Было ли удалено сообщение
 
@@ -275,21 +257,27 @@ class PunishmentService:
             Форматированный отчет
         """
         header = self._build_report_header(date, message_deleted)
-        reason = dto.reason or "Не указана"
+        reason = dto.reason or Dialog.ModerationReport.NO_REASON
         period = self._format_punishment_period(
             punishment_ladder.punishment_type, punishment_ladder.duration_seconds
         )
+        date_str = date.strftime("%d.%m.%Y %H:%M")
 
-        mute_line = f"• Время мута: {period}\n" if period else ""
+        punishment_name = Dialog.ModerationReport.PUNISHMENT_NAMES.get(
+            punishment_ladder.punishment_type.name,
+            punishment_ladder.punishment_type.value,
+        )
 
-        return (
-            f"{header}\n\n"
-            f"• Юзер: @{dto.violator_username}\n"
-            f"• ID: <code>{dto.violator_tgid}</code>\n"
-            f"• Причина: {reason}\n"
-            f"{mute_line}"
-            f"• Выдал пред: @{dto.admin_username}\n"
-            f"• Чат: {dto.chat_title}"
+        return Dialog.ModerationReport.REPORT_BODY.format(
+            header=header,
+            admin_username=dto.admin_username,
+            date_str=date_str,
+            violator_username=dto.violator_username,
+            violator_tgid=dto.violator_tgid,
+            reason=reason,
+            chat_title=dto.chat_title,
+            punishment_name=punishment_name,
+            period=period or Dialog.ModerationReport.NO_PERIOD,
         )
 
     async def create_punishment(

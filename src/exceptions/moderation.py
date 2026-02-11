@@ -60,21 +60,30 @@ class CannotPunishChatAdminError(PrivateModerationError):
     """Попытка наказать другого администратора."""
 
     def get_user_message(self) -> str:
-        return "❌ Данный пользователь является администратором чата – наказание невозможно."
+        return (
+            "❌ Ошибка\n\n"
+            "❗️Нельзя заблокировать: себя, администраторов чата, отслеживаемых пользователей (модераторов)"
+        )
 
 
 class CannotPunishBotAdminError(PrivateModerationError):
     """Попытка наказать бота администратора."""
 
     def get_user_message(self) -> str:
-        return "❌ Данный пользователь является администратором бота – наказание невозможно."
+        return (
+            "❌ Ошибка\n\n"
+            "❗️Нельзя заблокировать: себя, администраторов чата, отслеживаемых пользователей (модераторов)"
+        )
 
 
 class CannotPunishYouSelf(PrivateModerationError):
     """Попытка наказать самого себя."""
 
     def get_user_message(self) -> str:
-        return "❌ Нельзя применить наказание к себе - наказание невозможно"
+        return (
+            "❌ Ошибка\n\n"
+            "❗️Нельзя заблокировать: себя, администраторов чата, отслеживаемых пользователей (модераторов)"
+        )
 
 
 class MessageTooOldError(PrivateModerationError):

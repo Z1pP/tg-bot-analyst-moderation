@@ -38,18 +38,25 @@ async def archive_bind_message_handler(message: Message, container: Container) -
     )
 
     try:
-        # Извлекаем chat_id из hash
+        # Извлекаем данные из hash (work_chat_id, admin_tg_id)
         archive_bind_service: ArchiveBindService = container.resolve(ArchiveBindService)
-        work_chat_id = archive_bind_service.extract_chat_id(bind_hash)
+        bind_data = archive_bind_service.extract_bind_data(bind_hash)
 
-        if not work_chat_id:
+        if not bind_data:
             logger.warning("Невалидный hash: %s", bind_hash)
+            admin_tg_id = (
+                message.from_user.id
+                if message.from_user and not message.from_user.is_bot
+                else None
+            )
             await _send_error_notification(
                 bot=message.bot,
-                user_id=message.from_user.id if message.from_user else None,
+                user_id=admin_tg_id,
                 error_text="❌ Неверный код привязки. Проверьте правильность кода.",
             )
             return
+
+        work_chat_id, admin_tg_id = bind_data
 
         # Получаем информацию о текущем чате (архивном)
         archive_chat_tgid = str(message.chat.id)
@@ -69,14 +76,19 @@ async def archive_bind_message_handler(message: Message, container: Container) -
                 work_chat_id,
                 archive_chat_tgid,
             )
+            notify_user_id = admin_tg_id or (
+                message.from_user.id
+                if message.from_user and not message.from_user.is_bot
+                else None
+            )
             await _send_error_notification(
                 bot=message.bot,
-                user_id=message.from_user.id if message.from_user else None,
+                user_id=notify_user_id,
                 error_text="❌ Ошибка при привязке архивного чата. Рабочий чат не найден.",
             )
             return
 
-        # Отправляем уведомление об успехе
+        # Отправляем уведомление об успехе (user_id из hash — админ, создавший код)
         success_text = (
             "✅ <b>Архивный чат успешно привязан</b>\n\n"
             f"📋 <b>Рабочий чат:</b> {work_chat.title}\n"
@@ -84,9 +96,14 @@ async def archive_bind_message_handler(message: Message, container: Container) -
             f"🆔 <b>ID архивного чата:</b> <code>{archive_chat_tgid}</code>"
         )
 
+        notify_user_id = admin_tg_id or (
+            message.from_user.id
+            if message.from_user and not message.from_user.is_bot
+            else None
+        )
         await _send_success_notification(
             bot=message.bot,
-            user_id=message.from_user.id if message.from_user else None,
+            user_id=notify_user_id,
             success_text=success_text,
         )
 
@@ -109,9 +126,21 @@ async def archive_bind_message_handler(message: Message, container: Container) -
             e,
             exc_info=True,
         )
+        try:
+            uid = admin_tg_id or (
+                message.from_user.id
+                if message.from_user and not message.from_user.is_bot
+                else None
+            )
+        except NameError:
+            uid = (
+                message.from_user.id
+                if message.from_user and not message.from_user.is_bot
+                else None
+            )
         await _send_error_notification(
             bot=message.bot,
-            user_id=message.from_user.id if message.from_user else None,
+            user_id=uid,
             error_text="❌ Произошла ошибка при привязке архивного чата. Попробуйте позже.",
         )
 

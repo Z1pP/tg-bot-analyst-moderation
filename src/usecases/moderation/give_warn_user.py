@@ -128,7 +128,8 @@ class GiveUserWarnUseCase(ModerationUseCase):
         reason_text = self.punishment_service.generate_reason_for_user(
             punishment_type=punishment_ladder.punishment_type,
             duration_of_punishment=punishment_ladder.duration_seconds,
-            punished_username=context.violator.username,
+            violator_username=context.violator.username,
+            violator_tg_id=context.violator.tg_id,
         )
 
         report = self.punishment_service.generate_report(
@@ -138,18 +139,11 @@ class GiveUserWarnUseCase(ModerationUseCase):
             message_deleted=True,
         )
 
-        admin_answer_text = self.punishment_service.generate_admin_answer(
-            violator_username=context.dto.violator_username,
-            chat_title=context.chat.title,
-            archive_title=context.archive_chat.title,
-            punishment_type=punishment_ladder.punishment_type,
-        )
-
         await self._finalize_moderation(
             context=context,
             report_text=report,
             reason_text=reason_text,
-            admin_answer_text=admin_answer_text,
+            admin_answer_text="",
         )
 
         # Логируем действие администратора

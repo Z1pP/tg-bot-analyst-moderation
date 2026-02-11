@@ -5,7 +5,6 @@ from .message_management import MessageManagerState
 from .moderation import (
     AmnestyStates,
     BanUserStates,
-    ModerationStates,
     WarnUserStates,
 )
 from .punishment import PunishmentState
@@ -28,7 +27,6 @@ __all__ = [
     "SingleUserReportStates",
     "UserStateManager",
     "TemplateStateManager",
-    "ModerationStates",
     "AmnestyStates",
     "BanUserStates",
     "WarnUserStates",

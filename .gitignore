@@ -183,6 +183,7 @@ logs/
 # AI Providers
 .amazonq/
 .gemini/
+.cursor/
 
 docs/
 secrets/

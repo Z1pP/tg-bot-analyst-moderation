@@ -1,6 +1,8 @@
 from datetime import time
 from typing import Optional
 
+from cachetools import TTLCache
+
 from models import ChatSession
 from repositories import ChatRepository
 from services.caching import ICache
@@ -20,6 +22,7 @@ class ChatService:
     def __init__(self, chat_repository: ChatRepository, cache: ICache):
         self._chat_repository = chat_repository
         self._cache = cache
+        self._archive_chat_cache: TTLCache = TTLCache(maxsize=200, ttl=300)
 
     async def get_chat(
         self,
@@ -58,6 +61,7 @@ class ChatService:
                 )
             await self._cache.set(cache_key, chat)
             await self._cache.set(f"chat:archive:{chat_tgid}", chat)
+            self._archive_chat_cache[chat_tgid] = chat
 
         return chat or None
 
@@ -120,11 +124,13 @@ class ChatService:
         if current_chat:
             await self._cache.delete(f"chat:tg_id:{current_chat.chat_id}")
             await self._cache.delete(f"chat:archive:{current_chat.chat_id}")
+            self._archive_chat_cache.pop(current_chat.chat_id, None)
 
         chat = await update_func(chat_id=chat_id, **kwargs)
         if chat:
             await self._cache.set(f"chat:tg_id:{chat.chat_id}", chat)
             await self._cache.set(f"chat:archive:{chat.chat_id}", chat)
+            self._archive_chat_cache[chat.chat_id] = chat
         return chat
 
     async def get_chat_with_archive(
@@ -134,28 +140,26 @@ class ChatService:
     ) -> Optional[ChatSession]:
         """
         Получает чат и его архивный чат если есть.
-        Сначала проверяет кеш, затем БД.
+        Использует in-memory кеш (без pickle) — ORM relationships остаются работоспособными.
         """
         if not chat_tgid and not chat_id:
             raise ValueError("Необходимо передать chat_tgid или chat_id")
 
-        # Пробуем получить из кеша
+        # In-memory кеш (без Redis — pickle ломает archive_chat lazy load)
         if chat_tgid:
-            cache_key = f"chat:archive:{chat_tgid}"
-            chat = await self._cache.get(cache_key)
+            chat = self._archive_chat_cache.get(chat_tgid)
             if chat:
                 return chat
 
-        # Если в кеше нет или ищем по id, загружаем из репозитория
+        # Загрузка из репозитория
         if chat_id:
             chat = await self._chat_repository.get_chat_by_id(chat_id=chat_id)
         else:
             chat = await self._chat_repository.get_chat_by_tgid(chat_tgid)
 
-        # Кешируем результат если он найден и искали по tgid
-        if chat and chat_tgid:
-            await self._cache.set(f"chat:archive:{chat_tgid}", chat)
-            await self._cache.set(f"chat:tg_id:{chat_tgid}", chat)
+        if chat:
+            tgid = chat_tgid or chat.chat_id
+            self._archive_chat_cache[tgid] = chat
 
         return chat or None
 
@@ -183,7 +187,7 @@ class ChatService:
         )
 
         if work_chat:
-            # Обновляем кеш для рабочего чата
+            self._archive_chat_cache[work_chat.chat_id] = work_chat
             await self._cache.set(f"chat:tg_id:{work_chat.chat_id}", work_chat)
             await self._cache.set(f"chat:archive:{work_chat.chat_id}", work_chat)
             # Обновляем кеш для архивного чата если он был создан

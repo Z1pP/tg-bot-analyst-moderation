@@ -4,6 +4,7 @@ from .add import router as add_chat_router
 from .antibot import antibot_router
 from .archive import router as archive_router
 from .change_work_hours import router as change_work_hours_router
+from .check_permissions import router as check_permissions_router
 from .dashboard import router as dashboard_router
 from .list import router as list_chats_router
 from .management import router as management_router
@@ -23,6 +24,7 @@ router.include_router(chat_rating_router)
 router.include_router(untrack_chat_router)
 router.include_router(list_chats_router)
 router.include_router(dashboard_router)
+router.include_router(check_permissions_router)
 router.include_router(pagination_router)
 router.include_router(archive_router)
 router.include_router(change_work_hours_router)

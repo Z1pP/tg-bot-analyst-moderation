@@ -11,6 +11,7 @@ class ChatCallbackData:
     SELECT_CHAT_FOR_REPORT = "select_chat_for_report"
     SELECT_CHAT_FOR_SETTINGS = "select_chat_for_settings"
     REPORT_TIME_SETTING = "report_time_setting"
+    CHECK_PERMISSIONS = "check_permissions"
     CHANGE_WORK_START = "change_work_start"
     CHANGE_WORK_END = "change_work_end"
     CHANGE_TOLERANCE = "change_tolerance"
@@ -160,6 +161,9 @@ class ModerationCallbackData:
 
     # Commands
     SHOW_MENU = "moderation_menu"
+    NO_REASON = "no_reason"
+    CONFIRM_ACTION = "confirm_moderation_action"
+    CANCEL_ACTION = "cancel_moderation_action"
 
 
 class AnalyticsCallbackData:
@@ -181,7 +185,11 @@ class MessagesCallbackData:
     DELETE_MESSAGE_CONFIRM = "delete_message_confirm"
     DELETE_MESSAGE_CANCEL = "delete_message_cancel"
     SEND_MESSAGE_TO_CHAT = "send_message_to_chat"
+    SELECT_ALL_CHATS = "select_chat_all"
     PREFIX_SELECT_CHAT = "select_chat_"
+    PREFIX_PREV_SELECT_CHAT_PAGE = "prev_select_chat_page__"
+    PREFIX_NEXT_SELECT_CHAT_PAGE = "next_select_chat_page__"
+    SELECT_CHAT_PAGE_INFO = "select_chat_page_info"
 
 
 class UserAndChatsSettingsCallbackData:

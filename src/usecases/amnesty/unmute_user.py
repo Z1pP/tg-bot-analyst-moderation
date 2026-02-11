@@ -7,6 +7,7 @@ from services import (
     BotPermissionService,
     ChatService,
 )
+from services.time_service import TimeZoneService
 
 from .base_amnesty import BaseAmnestyUseCase
 
@@ -60,9 +61,16 @@ class UnmuteUserUseCase(BaseAmnestyUseCase):
                 muted_until=None,
             )
 
+            now = TimeZoneService.now()
+            date_time_str = now.strftime("%d.%m.%Y %H:%M")
+            chat_name = "Все чаты" if len(dto.chat_dtos) > 1 else chat.title
+
             report_text = (
-                f"🔊 Размут пользователя @{dto.violator_username}\n\n"
-                f"• Размутил: @{dto.admin_username} в чате <b>{chat.title}</b>"
+                "🔊 Размут\n"
+                f"Кто: @{dto.admin_username}\n"
+                f"Когда: {date_time_str}\n"
+                f"Кого: @{dto.violator_username} ({dto.violator_tgid})\n"
+                f"Чат: {chat_name}"
             )
 
             await self._send_report_to_archives(archive_chats, report_text)

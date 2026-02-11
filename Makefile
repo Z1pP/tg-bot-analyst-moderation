@@ -11,6 +11,7 @@ help:
 	@echo "  up        - Start containers in background"
 	@echo "  down      - Stop and remove containers"
 	@echo "  restart   - Restart all containers"
+	@echo "  start     - Start all containers"
 	@echo "  stop      - Stop all containers"
 	@echo "  build     - Build containers"
 	@echo "  logs      - View container logs"
@@ -28,6 +29,8 @@ down:
 
 restart:
 	$(DOCKER_COMPOSE) restart
+start:
+	$(DOCKER_COMPOSE) start
 
 stop:
 	$(DOCKER_COMPOSE) stop
