@@ -40,7 +40,10 @@ async def archive_bind_instruction_handler(
 
     try:
         archive_bind_service: ArchiveBindService = container.resolve(ArchiveBindService)
-        bind_hash = archive_bind_service.generate_bind_hash(chat_id=chat_id)
+        bind_hash = archive_bind_service.generate_bind_hash(
+            chat_id=chat_id,
+            admin_tg_id=callback.from_user.id,
+        )
 
         instruction_text = Dialog.Chat.ARCHIVE_BIND_WITH_CODE.format(
             instruction=Dialog.Chat.ARCHIVE_BIND_INSTRUCTION,
