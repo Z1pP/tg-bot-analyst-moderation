@@ -1,33 +1,48 @@
 import logging
 
-from aiogram import F, Router, types
+from aiogram import Bot, F, Router, types
+from aiogram.enums import ChatType
+from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 from punq import Container
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.message(F.left_chat_member)
-async def process_left_chat_member(message: types.Message, container: Container):
-    """Обработчик выхода участника из группы."""
+@router.chat_member(
+    ChatMemberUpdatedFilter(IS_MEMBER >> IS_NOT_MEMBER),
+    F.chat.type.in_([ChatType.GROUP, ChatType.SUPERGROUP]),
+)
+async def process_chat_member_left(
+    event: types.ChatMemberUpdated,
+    container: Container,
+    bot: Bot,
+) -> None:
+    """Обработчик выхода участника из группы (ChatMemberUpdated)."""
     try:
-        chat_title = message.chat.title or "Неизвестная группа"
-        left_user = message.left_chat_member
+        chat_title = event.chat.title or "Неизвестная группа"
+        left_user = event.old_chat_member.user
         username = left_user.username or left_user.first_name or f"user_{left_user.id}"
 
         if left_user.is_bot:
-            if left_user.id == message.bot.id:
+            bot_info = await bot.get_me()
+            if left_user.id == bot_info.id:
                 logger.info(
-                    f"Наш бот удален из группы '{chat_title}' (ID: {message.chat.id})"
+                    "Наш бот удален из группы '%s' (ID: %s)",
+                    chat_title,
+                    event.chat.id,
                 )
             else:
-                logger.info(f"Бот {username} покинул группу '{chat_title}'")
+                logger.info("Бот %s покинул группу '%s'", username, chat_title)
         else:
             logger.info(
-                f"Пользователь {username} (ID: {left_user.id}) покинул группу '{chat_title}'"
+                "Пользователь %s (ID: %s) покинул группу '%s'",
+                username,
+                left_user.id,
+                chat_title,
             )
 
     except Exception as e:
         logger.error(
-            f"Ошибка при обработке выхода участника из группы: {e}", exc_info=True
+            "Ошибка при обработке выхода участника из группы: %s", e, exc_info=True
         )
