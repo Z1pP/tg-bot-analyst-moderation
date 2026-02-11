@@ -11,6 +11,7 @@ class ChatCallbackData:
     SELECT_CHAT_FOR_REPORT = "select_chat_for_report"
     SELECT_CHAT_FOR_SETTINGS = "select_chat_for_settings"
     REPORT_TIME_SETTING = "report_time_setting"
+    CHECK_PERMISSIONS = "check_permissions"
     CHANGE_WORK_START = "change_work_start"
     CHANGE_WORK_END = "change_work_end"
     CHANGE_TOLERANCE = "change_tolerance"
