@@ -37,12 +37,30 @@ class NotifyArchiveChatNewMemberUseCase:
             username: Username нового пользователя
             chat_title: Название рабочего чата
         """
+        logger.info(
+            "Попытка уведомления о новом участнике: chat_tgid=%s, user_tgid=%s, username=%s, chat_title=%s",
+            chat_tgid,
+            user_tgid,
+            username,
+            chat_title,
+        )
+
         chat = await self.chat_service.get_chat_with_archive(chat_tgid=chat_tgid)
 
-        if not chat or not chat.archive_chat_id:
-            logger.debug(
-                "Для чата %s не привязан архивный чат. Уведомление о новом участнике пропущено.",
+        if chat is None:
+            logger.info(
+                "Чат %s не найден в БД. Уведомление о новом участнике %s пропущено.",
                 chat_tgid,
+                user_tgid,
+            )
+            return
+
+        if not chat.archive_chat_id:
+            logger.info(
+                "Для чата %s (%s) не привязан архив. Уведомление о новом участнике %s пропущено.",
+                chat_tgid,
+                chat_title,
+                user_tgid,
             )
             return
 
