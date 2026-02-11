@@ -54,6 +54,18 @@ def back_to_chats_menu_ikb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def back_to_chat_actions_only_ikb() -> InlineKeyboardMarkup:
+    """Клавиатура с одной кнопкой «Вернуться» к меню действий чата."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+        )
+    )
+    return builder.as_markup()
+
+
 def remove_chat_ikb(
     chats: List[ChatSession],
     page: int = 1,
@@ -333,8 +345,8 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             callback_data=CallbackData.Chat.WELCOME_TEXT_SETTING,
         ),
         InlineKeyboardButton(
-            text=InlineButtons.Chat.PROHIBITIONS_SETTINGS,
-            callback_data="prohibitions_settings",
+            text=InlineButtons.Chat.CHECK_PERMISSIONS,
+            callback_data=CallbackData.Chat.CHECK_PERMISSIONS,
         ),
         InlineKeyboardButton(
             text=InlineButtons.Chat.PUNISHMENT_SETTING,
@@ -360,25 +372,25 @@ def analytics_chat_actions_ikb() -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(
-            text="📊 Статистика",
+            text=InlineButtons.Chat.STATISTICS,
             callback_data=CallbackData.Chat.GET_REPORT,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="🏆 Рейтинг активности",
+            text=InlineButtons.Chat.GET_DAILY_RATING,
             callback_data=CallbackData.Chat.GET_DAILY_RATING,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="📝 AI-сводка",
+            text=InlineButtons.Chat.AI_SUMMARY,
             callback_data=CallbackData.Chat.GET_CHAT_SUMMARY_24H,
         )
     )
     builder.row(
         InlineKeyboardButton(
-            text="🔄 Выбрать другой чат",
+            text=InlineButtons.Chat.SELECT_OTHER_CHAT,
             callback_data=CallbackData.Chat.SELECT_CHAT_FOR_REPORT,
         )
     )
