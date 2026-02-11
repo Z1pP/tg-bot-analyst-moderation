@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import hmac
+import time
 from typing import Optional
 
 from config import settings
@@ -12,22 +13,21 @@ class ArchiveBindService:
     def __init__(self):
         self.secret_key = settings.BOT_TOKEN
 
-    def generate_bind_hash(self, chat_id: int) -> str:
+    def generate_bind_hash(self, chat_id: int, admin_tg_id: int) -> str:
         """
         Генерирует уникальный hash для привязки архивного чата.
 
-        Формат: ARCHIVE-{base64_urlsafe(chat_id:timestamp)}_{hmac_8_chars}
+        Формат: ARCHIVE-{base64_urlsafe(chat_id:timestamp:admin_tg_id)}_{hmac_8_chars}
 
         Args:
             chat_id: ID рабочего чата из БД
+            admin_tg_id: Telegram ID админа для отправки уведомления об успехе
 
         Returns:
             Hash в формате ARCHIVE-{encoded_data}_{hmac}
         """
-        import time
-
         timestamp = int(time.time())
-        message = f"{chat_id}:{timestamp}"
+        message = f"{chat_id}:{timestamp}:{admin_tg_id}"
 
         # Кодируем данные в base64
         encoded_data = base64.urlsafe_b64encode(message.encode()).decode().rstrip("=")
@@ -41,15 +41,16 @@ class ArchiveBindService:
 
         return f"ARCHIVE-{encoded_data}_{hmac_hash}"
 
-    def extract_chat_id(self, bind_hash: str) -> Optional[int]:
+    def extract_bind_data(self, bind_hash: str) -> Optional[tuple[int, Optional[int]]]:
         """
-        Извлекает и валидирует chat_id из hash.
+        Извлекает и валидирует данные из hash.
 
         Args:
             bind_hash: Hash в формате ARCHIVE-{encoded_data}_{hmac}
 
         Returns:
-            chat_id если hash валиден, иначе None
+            Кортеж (work_chat_id, admin_tg_id или None) если hash валиден, иначе None.
+            admin_tg_id = None для старых хешей (формат chat_id:timestamp).
         """
         try:
             # Убираем префикс ARCHIVE-
@@ -71,10 +72,16 @@ class ArchiveBindService:
 
             # Декодируем данные
             decoded = base64.urlsafe_b64decode(encoded_data).decode()
-            chat_id_str, timestamp_str = decoded.split(":")
+            decoded_parts = decoded.split(":")
+            if len(decoded_parts) < 2:
+                return None
+            chat_id_str = decoded_parts[0]
+            admin_tg_id: Optional[int] = None
+            if len(decoded_parts) >= 3:
+                admin_tg_id = int(decoded_parts[2])
 
-            # Проверяем HMAC
-            message = f"{chat_id_str}:{timestamp_str}"
+            # Проверяем HMAC (message должен совпадать с тем, что при генерации)
+            message = ":".join(decoded_parts)
             expected_hmac = hmac.new(
                 self.secret_key.encode(),
                 message.encode(),
@@ -84,7 +91,7 @@ class ArchiveBindService:
             if received_hmac != expected_hmac:
                 return None
 
-            return int(chat_id_str)
+            return (int(chat_id_str), admin_tg_id)
 
         except (ValueError, IndexError, TypeError):
             return None
