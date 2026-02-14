@@ -8,7 +8,10 @@ from models.release_note import ReleaseNote
 
 
 def release_notes_menu_ikb(
-    notes: list[ReleaseNote], page: int, total_pages: int, user_tg_id: str | None = None
+    notes: list[ReleaseNote],
+    page: int,
+    total_pages: int,
+    show_admin_buttons: bool = True,
 ) -> InlineKeyboardMarkup:
     """
     Клавиатура меню релизных заметок.
@@ -17,10 +20,8 @@ def release_notes_menu_ikb(
         notes: Список релизных заметок
         page: Текущая страница
         total_pages: Всего страниц
-        user_tg_id: Telegram ID пользователя для проверки прав доступа
+        show_admin_buttons: Показывать кнопки управления (добавить заметку)
     """
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
     builder = InlineKeyboardBuilder()
 
     # Список заметок (по 2 в ряд)
@@ -68,8 +69,8 @@ def release_notes_menu_ikb(
             )
         builder.row(*pagination_buttons)
 
-    # Кнопки управления (только для авторизованных пользователей)
-    if user_tg_id and user_tg_id in RELEASE_NOTES_ADMIN_IDS:
+    # Кнопки управления (для ROOT/DEV, роутер уже отфильтровал)
+    if show_admin_buttons:
         builder.row(
             InlineKeyboardButton(
                 text=InlineButtons.ReleaseNotes.ADD_NOTE,
@@ -87,21 +88,19 @@ def release_notes_menu_ikb(
 
 
 def release_note_detail_ikb(
-    note_id: int, user_tg_id: str | None = None
+    note_id: int, show_admin_buttons: bool = True
 ) -> InlineKeyboardMarkup:
     """
     Клавиатура для просмотра релизной заметки.
 
     Args:
         note_id: ID заметки
-        user_tg_id: Telegram ID пользователя для проверки прав доступа
+        show_admin_buttons: Показывать кнопки редактирования, удаления, рассылки
     """
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
     builder = InlineKeyboardBuilder()
 
-    # Кнопки редактирования, удаления и рассылки (только для авторизованных пользователей)
-    if user_tg_id and user_tg_id in RELEASE_NOTES_ADMIN_IDS:
+    # Кнопки редактирования, удаления и рассылки (для ROOT/DEV)
+    if show_admin_buttons:
         builder.row(
             InlineKeyboardButton(
                 text=InlineButtons.ReleaseNotes.EDIT,
