@@ -2,20 +2,30 @@ import logging
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
+from constants.pagination import RELEASE_NOTES_PAGE_SIZE
+from dto.release_note import (
+    DeleteReleaseNoteDTO,
+    GetReleaseNoteByIdDTO,
+    GetReleaseNotesPageDTO,
+)
+from exceptions import ReleaseNoteNotFoundError
 from keyboards.inline.release_notes import (
     confirm_delete_release_note_ikb,
+    release_note_detail_ikb,
     release_notes_menu_ikb,
 )
-from services.release_note_service import ReleaseNoteService
 from states.release_notes import ReleaseNotesStateManager
+from usecases.release_notes import (
+    DeleteReleaseNoteUseCase,
+    GetReleaseNotesPageUseCase,
+    GetReleaseNoteUseCase,
+)
 from utils.send_message import safe_edit_message
-
-from .pagination import get_notes_page_data
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -27,14 +37,19 @@ async def delete_note_start_handler(
 ) -> None:
     """Обработчик начала удаления релизной заметки"""
     await callback.answer()
+    if callback.data is None or callback.message is None:
+        return
+    if not isinstance(callback.message, Message):
+        return
 
     note_id = int(callback.data.split("__")[1])
 
-    release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-    note = await release_note_service.get_note_by_id(note_id)
-
-    if not note:
-        await callback.answer(Dialog.ReleaseNotes.NOTE_NOT_FOUND, show_alert=True)
+    dto = GetReleaseNoteByIdDTO(note_id=note_id)
+    usecase: GetReleaseNoteUseCase = container.resolve(GetReleaseNoteUseCase)
+    try:
+        await usecase.execute(dto)
+    except ReleaseNoteNotFoundError as e:
+        await callback.answer(e.get_user_message(), show_alert=True)
         return
 
     await state.update_data(delete_note_id=note_id)
@@ -59,32 +74,29 @@ async def confirm_delete_handler(
 ) -> None:
     """Обработчик подтверждения удаления"""
     await callback.answer()
+    if callback.data is None or callback.message is None:
+        return
+    if not isinstance(callback.message, Message):
+        return
 
     parts = callback.data.split("__")
     answer = parts[1]
     note_id = int(parts[2])
 
     if answer != "yes":
-        # Возвращаемся к просмотру заметки
-        release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-        note = await release_note_service.get_note_by_id(note_id)
-
-        if not note:
-            await callback.answer(Dialog.ReleaseNotes.NOTE_NOT_FOUND, show_alert=True)
+        dto = GetReleaseNoteByIdDTO(note_id=note_id)
+        usecase: GetReleaseNoteUseCase = container.resolve(GetReleaseNoteUseCase)
+        try:
+            result = await usecase.execute(dto)
+        except ReleaseNoteNotFoundError as e:
+            await callback.answer(e.get_user_message(), show_alert=True)
             return
 
-        from keyboards.inline.release_notes import release_note_detail_ikb
-
-        # Получаем автора
-        author_name = "Unknown"
-        if note.author:
-            author_name = note.author.username or str(note.author.tg_id)
-
         text = Dialog.ReleaseNotes.NOTE_DETAILS.format(
-            title=note.title,
-            content=note.content,
-            author=author_name,
-            date=note.created_at.strftime("%d.%m.%Y %H:%M"),
+            title=result.title,
+            content=result.content,
+            author=result.author_display_name,
+            date=result.date_str,
         )
 
         await safe_edit_message(
@@ -92,45 +104,26 @@ async def confirm_delete_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=f"{Dialog.ReleaseNotes.DELETE_CANCELLED}\n\n{text}",
-            reply_markup=release_note_detail_ikb(note_id),
+            reply_markup=release_note_detail_ikb(result.note_id),
         )
 
         await state.set_state(ReleaseNotesStateManager.view_note)
         return
 
     try:
-        release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-        success = await release_note_service.delete_note(note_id)
-
-        if not success:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=Dialog.ReleaseNotes.DELETE_ERROR,
-            )
-            return
-
-        page = 1
-        notes, total_pages = await get_notes_page_data(
-            release_note_service, user_language, page
+        delete_dto = DeleteReleaseNoteDTO(note_id=note_id)
+        delete_usecase: DeleteReleaseNoteUseCase = container.resolve(
+            DeleteReleaseNoteUseCase
         )
-
-        if not notes:
-            text = Dialog.ReleaseNotes.NO_RELEASE_NOTES
-        else:
-            text = Dialog.ReleaseNotes.RELEASE_NOTES_MENU
-
+        await delete_usecase.execute(delete_dto)
+    except ReleaseNoteNotFoundError:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=f"{Dialog.ReleaseNotes.DELETE_SUCCESS}\n\n{text}",
-            reply_markup=release_notes_menu_ikb(notes, page, total_pages),
+            text=Dialog.ReleaseNotes.DELETE_ERROR,
         )
-
-        await state.set_state(ReleaseNotesStateManager.menu)
-
+        return
     except Exception as e:
         logger.error("Ошибка при удалении заметки: %s", e, exc_info=True)
         await safe_edit_message(
@@ -139,3 +132,30 @@ async def confirm_delete_handler(
             message_id=callback.message.message_id,
             text=Dialog.ReleaseNotes.DELETE_ERROR,
         )
+        return
+
+    page_dto = GetReleaseNotesPageDTO(
+        language=user_language, page=1, page_size=RELEASE_NOTES_PAGE_SIZE
+    )
+    page_usecase: GetReleaseNotesPageUseCase = container.resolve(
+        GetReleaseNotesPageUseCase
+    )
+    page_result = await page_usecase.execute(page_dto)
+
+    text = (
+        Dialog.ReleaseNotes.NO_RELEASE_NOTES
+        if not page_result.notes
+        else Dialog.ReleaseNotes.RELEASE_NOTES_MENU
+    )
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=f"{Dialog.ReleaseNotes.DELETE_SUCCESS}\n\n{text}",
+        reply_markup=release_notes_menu_ikb(
+            page_result.notes, page_result.page, page_result.total_pages
+        ),
+    )
+
+    await state.set_state(ReleaseNotesStateManager.menu)
