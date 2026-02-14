@@ -223,26 +223,6 @@ class UserRepository(BaseRepository):
                 logger.error("Ошибка при получении списка модераторов: %s", e)
                 return []
 
-    async def get_all_admins(self) -> List[User]:
-        """Получает список всех администраторов."""
-        async with self._db.session() as session:
-            try:
-                result = await session.execute(
-                    select(User)
-                    .where(
-                        User.role == UserRole.ADMIN,
-                        User.is_active.is_(True),
-                    )
-                    .order_by(User.username),
-                )
-
-                users = result.scalars().all()
-                logger.info("Получено %d администраторов", len(users))
-                return users
-            except Exception as e:
-                logger.error("Ошибка при получении списка администраторов: %s", e)
-                return []
-
     async def get_owners_and_admins(self, language: str | None = None) -> List[User]:
         """
         Получает пользователей с ролями OWNER и ADMIN.
