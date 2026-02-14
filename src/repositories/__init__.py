@@ -8,7 +8,6 @@ from .message_repository import MessageRepository
 from .punishment_ladder_repository import PunishmentLadderRepository
 from .punishment_repository import PunishmentRepository
 from .reaction_repository import MessageReactionRepository
-from .release_note_repository import ReleaseNoteRepository
 from .report_schedule_repository import ReportScheduleRepository
 from .template_repository import MessageTemplateRepository
 from .user_chat_status_repository import UserChatStatusRepository
@@ -31,5 +30,4 @@ __all__ = [
     "PunishmentLadderRepository",
     "UserChatStatusRepository",
     "ReportScheduleRepository",
-    "ReleaseNoteRepository",
 ]
