@@ -85,6 +85,18 @@ class AdminLogsError(BotBaseException):
     default_message = "⚠️ Произошла ошибка при получении логов."
 
 
+class ReleaseNoteNotFoundError(BotBaseException):
+    """Релизная заметка не найдена."""
+
+    default_message = "❌ Заметка не найдена"
+
+
+class ReleaseNoteError(BotBaseException):
+    """Ошибка при работе с релизными заметками."""
+
+    default_message = "❌ Ошибка при работе с заметкой"
+
+
 __all__ = [
     "AmnestyError",
     "BotCannotUnbanError",
@@ -107,4 +119,6 @@ __all__ = [
     "DatabaseException",
     "UserNotFoundError",
     "AdminLogsError",
+    "ReleaseNoteNotFoundError",
+    "ReleaseNoteError",
 ]
