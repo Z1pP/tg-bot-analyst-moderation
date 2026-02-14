@@ -4,6 +4,7 @@ from typing import Optional
 from constants.enums import AdminActionType, UserRole
 from models import User
 from services import AdminActionLogService, UserService
+from services.time_service import TimeZoneService
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +32,23 @@ class UpdateUserRoleUseCase:
 
         if updated_user:
             # Логируем действие администратора
-            target_username = updated_user.username or f"ID:{updated_user.tg_id}"
+            admin = await self._user_service.get_user(tg_id=admin_tg_id)
+            if admin:
+                admin_who = (
+                    f"@{admin.username}" if admin.username else f"ID:{admin.tg_id}"
+                )
+            else:
+                admin_who = f"ID:{admin_tg_id}"
+            target_who = (
+                f"@{updated_user.username}"
+                if updated_user.username
+                else f"ID:{updated_user.tg_id}"
+            )
+            when_str = TimeZoneService.now().strftime("%d.%m.%Y %H:%M")
             details = (
-                f"Пользователь: @{target_username} ({updated_user.id}), "
+                f"🔑 Изменение прав для {target_who}\n"
+                f"Кто: {admin_who}\n"
+                f"Когда: {when_str}\n"
                 f"Роль: {old_role.value} -> {new_role.value}"
             )
             await self._admin_action_log_service.log_action(
