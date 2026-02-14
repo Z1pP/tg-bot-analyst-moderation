@@ -10,9 +10,9 @@ from exceptions.moderation import MessageSendError
 from states.message_management import MessageManagerState
 from usecases.admin_actions import ReplyToMessageUseCase
 
-from .ui import show_message_management_menu
+from .helpers import show_message_management_menu
 
-router = Router()
+router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 

@@ -8,7 +8,7 @@ from .check_permissions import router as check_permissions_router
 from .dashboard import router as dashboard_router
 from .list import router as list_chats_router
 from .management import router as management_router
-from .menu import router as chats_menu_router
+from .navigation import router as chats_navigation_router
 from .pagination import router as pagination_router
 from .punishments import router as punishments_router
 from .rating import router as chat_rating_router
@@ -19,7 +19,7 @@ router = Router(name="chats_router")
 
 router.include_router(add_chat_router)
 router.include_router(antibot_router)
-router.include_router(chats_menu_router)
+router.include_router(chats_navigation_router)
 router.include_router(chat_rating_router)
 router.include_router(untrack_chat_router)
 router.include_router(list_chats_router)

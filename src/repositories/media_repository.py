@@ -1,16 +1,13 @@
 import logging
 from typing import Optional
 
-from database.session import DatabaseContextManager
 from models import TemplateMedia
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class TemplateMediaRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class TemplateMediaRepository(BaseRepository):
     async def create_media(
         self,
         template_id: int,

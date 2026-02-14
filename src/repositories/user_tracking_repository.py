@@ -4,17 +4,14 @@ from datetime import datetime
 from sqlalchemy import delete, select
 from sqlalchemy.orm import aliased, selectinload
 
-from database.session import DatabaseContextManager
 from models import User
+from repositories.base import BaseRepository
 from models.associations import admin_user_tracking
 
 logger = logging.getLogger(__name__)
 
 
-class UserTrackingRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class UserTrackingRepository(BaseRepository):
     async def add_user_to_tracking(
         self,
         admin_id: int,

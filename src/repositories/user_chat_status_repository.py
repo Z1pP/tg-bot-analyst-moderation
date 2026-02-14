@@ -4,16 +4,13 @@ from typing import Optional
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.session import DatabaseContextManager
 from models.user_chat_status import UserChatStatus
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class UserChatStatusRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class UserChatStatusRepository(BaseRepository):
     async def _get_status(
         self,
         session: AsyncSession,

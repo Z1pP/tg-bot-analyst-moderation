@@ -4,16 +4,13 @@ from typing import Optional
 from sqlalchemy import delete, select
 from sqlalchemy.orm import joinedload, selectinload
 
-from database.session import DatabaseContextManager
 from models import AdminChatAccess, ChatSession
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class ChatTrackingRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class ChatTrackingRepository(BaseRepository):
     async def add_chat_to_tracking(
         self,
         admin_id: int,

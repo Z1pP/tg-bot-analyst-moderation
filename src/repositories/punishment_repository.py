@@ -3,16 +3,13 @@ from datetime import datetime
 
 from sqlalchemy import delete, func, select
 
-from database.session import DatabaseContextManager
 from models import Punishment
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class PunishmentRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class PunishmentRepository(BaseRepository):
     async def count_punishments(self, user_id: int, chat_id: int | None = None) -> int:
         """Подсчитывает количество наказаний пользователя (опционально в указанном чате)."""
         async with self._db.session() as session:

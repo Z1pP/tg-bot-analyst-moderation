@@ -1,42 +1,45 @@
-# --- Основные настройки ---
-BOT_TOKEN=7636130342:AAFGi... # Токен из BotFather
+# Токен бота из BotFather
+BOT_TOKEN=1234567890:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# OpenRouter (ИИ-сводка чатов)
+OPEN_ROUTER_TOKEN=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+OPEN_ROUTER_MODEL=mistralai/mistral-small-3.1-24b-instruct:free
+
 IS_DEVELOPMENT=True
-TIMEZONE=Europe/Moscow
 
-# --- Настройки нейросетей ---
-OPEN_ROUTER_TOKEN=sk-or-v1-... # API ключ OpenRouter
-OPEN_ROUTER_MODEL=xiaomi/mimo-v2-flash:free
-GROQ_API_KEY=gsk_... # API ключ Groq (если используется)
+# Разработка
+DEV_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/dev_analytics_bot
+DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:password@localhost:5432/dev_analytics_bot
 
-# --- База данных (Docker/Local) ---
+# Тесты
+TEST_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/test_analytics_bot
+
+# Настройки базы данных (для Docker)
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=12345
+POSTGRES_PASSWORD=password
 POSTGRES_DB=dev_analytics_bot
-POSTGRES_PORT=5432
-# Внешний порт для проброса из Docker
-POSTGRES_EXTERNAL_PORT=5434
 
-# --- Настройки Redis ---
+# Настройки Redis
 REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_DB=0
-# Для локального подключения вне Docker
-REDIS_URL=redis://localhost:6379/0
+
+# Сводка (кеш, порог инвалидации)
 SUMMARY_CACHE_TTL_MINUTES=60
 SUMMARY_INVALIDATION_THRESHOLD=50
 
-# --- База данных (Разработка) ---
-DEV_DATABASE_URL=postgresql+asyncpg://postgres:12345@localhost:5432/dev_analytics_bot
-DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@localhost:5432/dev_analytics_bot
+# Продакшн
+PROD_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/prod_analytics_bot
+PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:password@localhost:5432/prod_analytics_bot
 
-# --- База данных (Продакшн) ---
-PROD_DATABASE_URL=postgresql+asyncpg://postgres:12345@localhost:5432/prod_analytics_bot
-PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:12345@localhost:5432/prod_analytics_bot
+# API (webhook, health)
+API_HOST=127.0.0.1
+API_PORT=8080
 
-# --- Сервисные настройки (JWT и API) ---
-STATIC_URL=http://localhost:8000
-BACKEND_URL=http://localhost:8000
-SERVICE_BOT_PUBLIC_KEY_PATH=./secrets/service_bot_public.pem
-SERVICE_BOT_PRIVATE_KEY_PATH=./secrets/service_bot_private.pem
+# JWT для сервисных запросов (опционально)
 SERVICE_JWT_AUDIENCE=backend
 SERVICE_JWT_TTL_SECONDS=300
+
+# Пути к ключам для сервисного бота (опционально)
+SERVICE_BOT_PUBLIC_KEY_PATH=./secrets/service_bot_public.pem
+SERVICE_BOT_PRIVATE_KEY_PATH=./secrets/service_bot_private.pem

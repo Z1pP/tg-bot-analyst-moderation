@@ -12,9 +12,9 @@ from keyboards.inline.message_actions import (
 from states.message_management import MessageManagerState
 from utils.send_message import safe_edit_message
 
-from .ui import show_message_actions_menu, show_message_management_menu
+from .helpers import show_message_actions_menu, show_message_management_menu
 
-router = Router()
+router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
