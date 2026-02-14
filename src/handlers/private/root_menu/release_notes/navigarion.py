@@ -2,17 +2,17 @@ import logging
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
+from constants.pagination import RELEASE_NOTES_PAGE_SIZE
+from dto.release_note import GetReleaseNotesPageDTO
 from keyboards.inline.release_notes import release_notes_menu_ikb, select_language_ikb
-from services.release_note_service import ReleaseNoteService
 from states.release_notes import ReleaseNotesStateManager
+from usecases.release_notes import GetReleaseNotesPageUseCase
 from utils.send_message import safe_edit_message
-
-from .pagination import get_notes_page_data
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -26,6 +26,8 @@ async def release_notes_menu_handler(
 ) -> None:
     """Отображает главное меню релизных заметок (выбор языка)."""
     await callback.answer()
+    if callback.message is None or not isinstance(callback.message, Message):
+        return
     await state.clear()
 
     await safe_edit_message(
@@ -44,6 +46,8 @@ async def back_to_release_notes_menu_callback_handler(
 ) -> None:
     """Обработчик возврата в меню релизных заметок."""
     await callback.answer()
+    if callback.message is None or not isinstance(callback.message, Message):
+        return
     await state.clear()
 
     await safe_edit_message(
@@ -65,27 +69,34 @@ async def select_language_handler(
 ) -> None:
     """Обработчик выбора языка для просмотра заметок"""
     await callback.answer()
+    if callback.data is None or callback.message is None:
+        return
+    if not isinstance(callback.message, Message):
+        return
 
     lang_code = callback.data.split(CallbackData.ReleaseNotes.PREFIX_SELECT_LANGUAGE)[1]
 
-    release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-    page = 1
-    notes, total_pages = await get_notes_page_data(
-        release_note_service, lang_code, page
+    dto = GetReleaseNotesPageDTO(
+        language=lang_code, page=1, page_size=RELEASE_NOTES_PAGE_SIZE
     )
+    usecase: GetReleaseNotesPageUseCase = container.resolve(GetReleaseNotesPageUseCase)
+    result = await usecase.execute(dto)
 
-    if not notes:
-        text = Dialog.ReleaseNotes.NO_RELEASE_NOTES
-    else:
-        text = Dialog.ReleaseNotes.RELEASE_NOTES_MENU
+    text = (
+        Dialog.ReleaseNotes.NO_RELEASE_NOTES
+        if not result.notes
+        else Dialog.ReleaseNotes.RELEASE_NOTES_MENU
+    )
 
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=text,
-        reply_markup=release_notes_menu_ikb(notes, page, total_pages),
+        reply_markup=release_notes_menu_ikb(
+            result.notes, result.page, result.total_pages
+        ),
     )
 
-    await state.update_data(selected_language=lang_code, page=page)
+    await state.update_data(selected_language=lang_code, page=result.page)
     await state.set_state(ReleaseNotesStateManager.menu)
