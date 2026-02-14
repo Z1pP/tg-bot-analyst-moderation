@@ -73,10 +73,10 @@ def admin_select_ikb(admins: List[AdminWithLogsDTO]) -> InlineKeyboardMarkup:
     """Клавиатура для выбора администратора для просмотра логов."""
     builder = InlineKeyboardBuilder()
 
-    # Кнопка "Все администраторы"
+    # Кнопка "Все логи"
     builder.row(
         InlineKeyboardButton(
-            text="📋 Все администраторы",
+            text="Все логи",
             callback_data="admin_logs__all",
         )
     )
@@ -85,16 +85,16 @@ def admin_select_ikb(admins: List[AdminWithLogsDTO]) -> InlineKeyboardMarkup:
     for admin in admins:
         builder.row(
             InlineKeyboardButton(
-                text=f"👤 @{admin.username_display}",
+                text=f"🛡️ @{admin.username_display}",
                 callback_data=f"admin_logs__{admin.id}",
             )
         )
 
-    # Кнопка "Скрыть"
+    # Кнопка "Вернуться" возвращает в меню рута
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.Menu.MAIN_MENU,
+            callback_data=CallbackData.Root.SHOW_MENU,
         )
     )
 
