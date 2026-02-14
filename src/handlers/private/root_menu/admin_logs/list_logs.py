@@ -56,7 +56,6 @@ async def admin_logs_handler(
             reply_markup=main_menu_ikb(
                 user=None,
                 user_language=user_language,
-                admin_tg_id=str(callback.from_user.id),
             ),
         )
     except Exception as e:
@@ -72,7 +71,6 @@ async def admin_logs_handler(
             reply_markup=main_menu_ikb(
                 user=None,
                 user_language=user_language,
-                admin_tg_id=str(callback.from_user.id),
             ),
         )
 
