@@ -12,6 +12,7 @@ from services import (
     UserService,
 )
 from services.permissions.bot_permission import BotPermissionsCheck
+from services.time_service import TimeZoneService
 
 logger = logging.getLogger(__name__)
 
@@ -134,10 +135,19 @@ class AddChatToTrackUseCase:
             result.success = True
 
             # 6. Логируем действие администратора
+            admin_who = f"@{admin.username}" if admin.username else f"ID:{admin.tg_id}"
+            when_str = TimeZoneService.now().strftime("%d.%m.%Y %H:%M")
+            chat_name = chat.title or f"ID:{chat.chat_id}"
+            details = (
+                "➕ Добавление чата\n"
+                f"Кто: {admin_who}\n"
+                f"Когда: {when_str}\n"
+                f"Чат: {chat_name}"
+            )
             await self._admin_action_log_service.log_action(
                 admin_tg_id=admin.tg_id,
                 action_type=AdminActionType.ADD_CHAT,
-                details=f"Чат: {chat.title} ({chat.chat_id})",
+                details=details,
             )
 
             logger.info(

@@ -13,7 +13,6 @@ from dto.user import UserDTO
 def main_menu_ikb(
     user: Optional[UserDTO] = None,
     user_language: Optional[str] = None,
-    admin_tg_id: Optional[str] = None,
 ) -> InlineKeyboardMarkup:
     """
     Создает inline клавиатуру главного меню администратора с учетом языка пользователя.
@@ -32,18 +31,6 @@ def main_menu_ikb(
     # release_notes_text = get_text("RELEASE_NOTES", user_language)
 
     builder = InlineKeyboardBuilder()
-
-    # builder.row(
-    #     InlineKeyboardButton(
-    #         text=users_menu_text,
-    #         callback_data=CallbackData.Menu.USERS_MENU,
-    #     ),
-    #     InlineKeyboardButton(
-    #         text=InlineButtons.ChatButtons.CHATS_MANAGEMENT,
-    #         callback_data=CallbackData.Menu.CHATS_MENU,
-    #     ),
-    #     width=2,
-    # )
 
     builder.row(
         InlineKeyboardButton(
@@ -87,28 +74,5 @@ def main_menu_ikb(
         builder.adjust(1, 2, 1, 1, 2, 1)
     else:
         builder.adjust(1, 2, 1, 1, 2)
-
-    # # Добавляем кнопку для просмотра логов действий администраторов
-    # # (только для авторизованных пользователей)
-    # release_admin_id = user.tg_id if user else admin_tg_id
-    # if release_admin_id and release_admin_id in RELEASE_NOTES_ADMIN_IDS:
-    #     builder.row(
-    #         InlineKeyboardButton(
-    #             text=InlineButtons.AdminLogs.MENU,
-    #             callback_data=CallbackData.AdminLogs.MENU,
-    #         ),
-    #         InlineKeyboardButton(
-    #             text=InlineButtons.RoleButtons.MENU,
-    #             callback_data=CallbackData.Role.INPUT_USER_DATA,
-    #         ),
-    #         width=2,
-    #     )
-
-    # builder.row(
-    #     InlineKeyboardButton(
-    #         text=release_notes_text,
-    #         callback_data=CallbackData.ReleaseNotes.MENU,
-    #     ),
-    # )
 
     return builder.as_markup()

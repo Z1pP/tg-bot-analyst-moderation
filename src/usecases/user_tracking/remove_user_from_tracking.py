@@ -2,6 +2,7 @@ from constants.enums import AdminActionType
 from dto import RemoveUserTrackingDTO
 from repositories import UserTrackingRepository
 from services import AdminActionLogService, UserService
+from services.time_service import TimeZoneService
 
 
 class RemoveUserFromTrackingUseCase:
@@ -41,7 +42,19 @@ class RemoveUserFromTrackingUseCase:
 
         if target_user:
             # Логируем действие администратора
-            details = f"Пользователь: @{target_user.username} ({target_user.tg_id})"
+            admin_who = f"@{admin.username}" if admin.username else f"ID:{admin.tg_id}"
+            target_who = (
+                f"@{target_user.username}"
+                if target_user.username
+                else f"ID:{target_user.tg_id}"
+            )
+            when_str = TimeZoneService.now().strftime("%d.%m.%Y %H:%M")
+            details = (
+                "🗑 Удаление пользователя\n"
+                f"Кто: {admin_who}\n"
+                f"Когда: {when_str}\n"
+                f"Кого: {target_who}"
+            )
             await self.admin_action_log_service.log_action(
                 admin_tg_id=admin.tg_id,
                 action_type=AdminActionType.REMOVE_USER,

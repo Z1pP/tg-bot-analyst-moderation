@@ -176,19 +176,6 @@ class PunishmentService:
             return format_duration(seconds=duration_seconds)
         return ""
 
-    @staticmethod
-    def _get_message_deletion_status(message_deleted: bool) -> str:
-        """
-        Возвращает текстовый статус удаления сообщения.
-
-        Args:
-            message_deleted: Флаг удаления
-
-        Returns:
-            Текстовое описание статуса
-        """
-        return "удалено" if message_deleted else "не удалено (старше 48ч)"
-
     @classmethod
     def _build_report_header(cls, date: datetime, message_deleted: bool) -> str:
         """

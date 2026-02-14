@@ -6,7 +6,6 @@ from .chat import ArchiveBindService, ChatService
 from .messaging import BotMessageService
 from .permissions import BotPermissionService
 from .punishment_service import PunishmentService
-from .release_note_service import ReleaseNoteService
 from .report_schedule_service import ReportScheduleService
 from .scheduler.taskiq_scheduler import TaskiqSchedulerService
 from .templates.content_service import TemplateContentService
@@ -26,7 +25,6 @@ __all__ = [
     "CategoryService",
     "TemplateService",
     "TemplateContentService",
-    "ReleaseNoteService",
     "TaskiqSchedulerService",
     "ChatService",
 ]

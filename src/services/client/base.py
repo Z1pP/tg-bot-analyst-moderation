@@ -44,5 +44,5 @@ class BaseApiClient:
     async def __aenter__(self) -> "BaseApiClient":
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    async def __aexit__(self, _: Any, __: Any, ___: Any) -> None:
         await self.close()

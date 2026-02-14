@@ -18,7 +18,6 @@ from repositories import (
     MessageTemplateRepository,
     PunishmentLadderRepository,
     PunishmentRepository,
-    ReleaseNoteRepository,
     ReportScheduleRepository,
     TemplateCategoryRepository,
     TemplateMediaRepository,
@@ -35,7 +34,6 @@ from services import (
     CategoryService,
     ChatService,
     PunishmentService,
-    ReleaseNoteService,
     ReportScheduleService,
     TaskiqSchedulerService,
     TemplateContentService,
@@ -50,6 +48,10 @@ from usecases.admin_actions import (
     DeleteMessageUseCase,
     ReplyToMessageUseCase,
     SendMessageToChatUseCase,
+)
+from usecases.admin_logs import (
+    GetAdminLogsPageUseCase,
+    GetAdminsWithLogsUseCase,
 )
 from usecases.amnesty import (
     CancelLastWarnUseCase,
@@ -103,6 +105,7 @@ from usecases.punishment import (
     UpdatePunishmentLadderUseCase,
 )
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
+from usecases.release_notes import BroadcastTextToAdminsUseCase
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
     GetAllUsersReportUseCase,
@@ -193,7 +196,6 @@ class ContainerSetup:
             PunishmentLadderRepository,
             UserChatStatusRepository,
             AdminActionLogRepository,
-            ReleaseNoteRepository,
             ReportScheduleRepository,
         ]
 
@@ -226,7 +228,6 @@ class ContainerSetup:
         container.register(BotMessageService)
         container.register(PunishmentService)
         container.register(AdminActionLogService)
-        container.register(ReleaseNoteService)
         container.register(ReportScheduleService)
         container.register(TaskiqSchedulerService)
         container.register(
@@ -256,6 +257,8 @@ class ContainerSetup:
         ContainerSetup._register_reaction_usecases(container)
         ContainerSetup._register_moderation_usecases(container)
         ContainerSetup._register_punishment_usecases(container)
+        ContainerSetup._register_admin_logs_usecases(container)
+        ContainerSetup._register_release_notes_usecases(container)
 
     @staticmethod
     def _register_punishment_usecases(container: Container) -> None:
@@ -268,6 +271,17 @@ class ContainerSetup:
 
         for usecase in punishment_usecases:
             container.register(usecase)
+
+    @staticmethod
+    def _register_admin_logs_usecases(container: Container) -> None:
+        """Регистрация use cases для просмотра логов администраторов."""
+        container.register(GetAdminsWithLogsUseCase)
+        container.register(GetAdminLogsPageUseCase)
+
+    @staticmethod
+    def _register_release_notes_usecases(container: Container) -> None:
+        """Регистрация use cases для релизных заметок (рассылка текста)."""
+        container.register(BroadcastTextToAdminsUseCase)
 
     @staticmethod
     def _register_antibot_usecases(container: Container) -> None:

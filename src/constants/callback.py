@@ -96,7 +96,6 @@ class UserCallbackData:
     # Prefixes
     PREFIX_USER = "user__"
     PREFIX_REMOVE_USER = "remove_user__"
-    PREFIX_CONFIRM_REMOVE_USER = "conf_remove_user__"
     PREFIX_PREV_USERS_PAGE = "prev_users_page__"
     PREFIX_NEXT_USERS_PAGE = "next_users_page__"
     PREFIX_PREV_REMOVE_USERS_PAGE = "prev_remove_users_page__"
@@ -118,35 +117,18 @@ class AdminLogsCallbackData:
     """Класс для хранения callback данных логов администраторов"""
 
     # Commands
-    MENU = "admin_logs_menu"
+    SHOW_MENU = "admin_logs_menu"
     SELECT_ADMIN = "admin_logs_select_admin"
 
 
 class ReleaseNotesCallbackData:
-    """Класс для хранения callback данных релизных заметок"""
+    """Класс для хранения callback данных релизных заметок (рассылка текста)."""
 
-    # Commands
-    MENU = "release_notes_menu"
-    ADD = "add_release_note"
-    BACK = "back_to_release_notes"
-    PAGE_INFO = "release_notes_page_info"
-    EDIT = "edit_release_note"
-    DELETE = "delete_release_note"
-    EDIT_TITLE = "edit_release_note_title"
-    EDIT_CONTENT = "edit_release_note_content"
-    CANCEL_EDIT = "cancel_edit_release_note"
-    BROADCAST = "broadcast_release_note"
-    CANCEL_ADD = "cancel_add_release_note"
-    CHANGE_TITLE_WHILE_ADDING = "change_title_while_adding_release_note"
-
-    # Prefixes
-    PREFIX_SELECT = "release_note__"
-    PREFIX_PREV_PAGE = "prev_release_notes_page__"
-    PREFIX_NEXT_PAGE = "next_release_notes_page__"
-    PREFIX_CONFIRM_DELETE = "conf_delete_release_note__"
-    PREFIX_CONFIRM_BROADCAST = "conf_broadcast_release_note__"
-    PREFIX_SELECT_LANGUAGE = "select_language__"
-    PREFIX_SELECT_ADD_LANGUAGE = "select_add_language__"
+    SHOW_MENU = "release_notes_menu"
+    CHANGE_NOTE_TEXT = "release_notes_change_text"
+    TRY_AGAIN = "release_notes_try_again"
+    CONFIRM_BROADCAST_YES = "release_notes_confirm_broadcast_yes"
+    PREFIX_BROADCAST_LANG = "broadcast_lang__"
 
 
 class RoleCallbackData:
@@ -256,7 +238,7 @@ class CallbackData:
     Moderation = ModerationCallbackData
     AdminLogs = AdminLogsCallbackData
     ReleaseNotes = ReleaseNotesCallbackData
-    Role = RoleCallbackData
+    Roles = RoleCallbackData
     Analytics = AnalyticsCallbackData
     Messages = MessagesCallbackData
     UserAndChatsSettings = UserAndChatsSettingsCallbackData

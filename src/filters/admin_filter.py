@@ -1,32 +1,19 @@
 import logging
-from typing import Optional
 
-from aiogram.filters import Filter
 from aiogram.types import CallbackQuery, InlineQuery, Message
 from punq import Container
 
 from constants.enums import UserRole
-from models.user import User
+from filters.base_filter import BaseUserFilter
 
 logger = logging.getLogger(__name__)
 
 
-class BaseUserFilter(Filter):
-    """Базовый фильтр для работы с пользователями"""
-
-    async def get_user(
-        self, tg_id: str, current_username: str, container: Container
-    ) -> Optional[User]:
-        """Получает пользователя из кеша или БД через UserService"""
-        from services.user.user_service import UserService
-
-        user_service: UserService = container.resolve(UserService)
-        return await user_service.get_user(tg_id=tg_id, username=current_username)
-
-
 class AdminOnlyFilter(BaseUserFilter):
     async def __call__(
-        self, event: Message | CallbackQuery, container: Container
+        self,
+        event: Message | CallbackQuery,
+        container: Container,
     ) -> bool:
         if isinstance(event, Message):
             tg_id = str(event.from_user.id)

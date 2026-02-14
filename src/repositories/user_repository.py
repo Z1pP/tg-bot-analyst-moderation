@@ -223,24 +223,39 @@ class UserRepository(BaseRepository):
                 logger.error("Ошибка при получении списка модераторов: %s", e)
                 return []
 
-    async def get_all_admins(self) -> List[User]:
-        """Получает список всех администраторов."""
+    async def get_owners_and_admins(self, language: str | None = None) -> List[User]:
+        """
+        Получает пользователей с ролями OWNER и ADMIN.
+        Если указан language (ru/en), возвращает только с совпадающим языком интерфейса.
+        """
         async with self._db.session() as session:
             try:
-                result = await session.execute(
+                stmt = (
                     select(User)
                     .where(
-                        User.role == UserRole.ADMIN,
+                        User.role.in_((UserRole.OWNER, UserRole.ADMIN)),
                         User.is_active.is_(True),
                     )
-                    .order_by(User.username),
+                    .order_by(User.username)
                 )
-
-                users = result.scalars().all()
-                logger.info("Получено %d администраторов", len(users))
+                result = await session.execute(stmt)
+                users = list(result.scalars().all())
+                if language:
+                    lang_normalized = language.split("-")[0].lower()
+                    users = [
+                        u
+                        for u in users
+                        if u.language
+                        and u.language.split("-")[0].lower() == lang_normalized
+                    ]
+                logger.info(
+                    "Получено %d владельцев/админов (language=%s)",
+                    len(users),
+                    language,
+                )
                 return users
             except Exception as e:
-                logger.error("Ошибка при получении списка администраторов: %s", e)
+                logger.error("Ошибка при получении владельцев/админов: %s", e)
                 return []
 
     async def get_user_by_username(self, username: str) -> Optional[User]:

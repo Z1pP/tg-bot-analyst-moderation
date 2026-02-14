@@ -44,7 +44,6 @@ async def show_main_menu(
         reply_markup=main_menu_ikb(
             user=user,
             user_language=user_language,
-            admin_tg_id=str(callback.from_user.id),
         ),
     )
 

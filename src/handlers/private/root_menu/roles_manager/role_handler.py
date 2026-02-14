@@ -20,7 +20,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == CallbackData.Role.INPUT_USER_DATA)
+@router.callback_query(F.data == CallbackData.Roles.INPUT_USER_DATA)
 async def input_user_data_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """
     Обработчик ввода данных пользователя для изменения роли.

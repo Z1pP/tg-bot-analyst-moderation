@@ -2,14 +2,8 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class ReleaseNotesStateManager(StatesGroup):
-    menu = State()
-    selecting_language = State()
-    selecting_add_language = State()
-    waiting_for_title = State()
-    waiting_for_content = State()
-    view_note = State()
-    editing_note = State()
-    editing_title = State()
-    editing_content = State()
-    deleting_note = State()
-    broadcasting_note = State()
+    """Состояния сценария рассылки релизной заметки (ввод текста → язык → подтверждение)."""
+
+    waiting_for_note_text = State()
+    selecting_broadcast_language = State()
+    confirming_broadcast = State()

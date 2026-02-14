@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -7,13 +7,14 @@ from constants import InlineButtons
 from constants.callback import CallbackData
 from constants.enums import AdminActionType
 from constants.pagination import DEFAULT_PAGE_SIZE
+from dto.admin_log import AdminWithLogsDTO
 
 
 def admin_logs_ikb(
     page: int = 1,
     total_count: int = 0,
     page_size: int = DEFAULT_PAGE_SIZE,
-    admin_id: int = None,
+    admin_id: int | None = None,
 ) -> InlineKeyboardMarkup:
     """Клавиатура для списка логов действий администраторов."""
     builder = InlineKeyboardBuilder()
@@ -61,39 +62,39 @@ def admin_logs_ikb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.AdminLogs.MENU,
+            callback_data=CallbackData.AdminLogs.SHOW_MENU,
         )
     )
 
     return builder.as_markup()
 
 
-def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup:
+def admin_select_ikb(admins: List[AdminWithLogsDTO]) -> InlineKeyboardMarkup:
     """Клавиатура для выбора администратора для просмотра логов."""
     builder = InlineKeyboardBuilder()
 
-    # Кнопка "Все администраторы"
+    # Кнопка "Все логи"
     builder.row(
         InlineKeyboardButton(
-            text="📋 Все администраторы",
+            text="Все логи",
             callback_data="admin_logs__all",
         )
     )
 
     # Кнопки для каждого администратора
-    for admin_id, username, _ in admins:
+    for admin in admins:
         builder.row(
             InlineKeyboardButton(
-                text=f"👤 @{username}",
-                callback_data=f"admin_logs__{admin_id}",
+                text=f"🛡️ @{admin.username_display}",
+                callback_data=f"admin_logs__{admin.id}",
             )
         )
 
-    # Кнопка "Скрыть"
+    # Кнопка "Вернуться" возвращает в меню рута
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.Menu.MAIN_MENU,
+            callback_data=CallbackData.Root.SHOW_MENU,
         )
     )
 
@@ -131,11 +132,11 @@ def format_action_type(action_type: str | AdminActionType) -> str:
         "get_chat_summary_24h": "📝 Сводка за 24ч",
         "report_time_setting": "⚙️ Настройка времени",
         "punishment_setting": "⚙️ Настройка наказаний",
-        "add_user": "👤 Отслеживание пользователя",
+        "add_user": "➕ Добавление пользователя",
         "remove_user": "🗑 Удаление пользователя",
         "antibot_toggle": "🛡️ Переключение Антибота",
         "set_welcome_text": "👋 Установка приветствия",
         "update_punishment_ladder": "🪜 Обновление лестницы",
         "set_default_punishment_ladder": "🪜 Сброс лестницы (дефолт)",
     }
-    return action_names.get(action_type_str, action_type_str)
+    return str(action_names.get(action_type_str, action_type_str))

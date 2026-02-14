@@ -7,6 +7,7 @@ from constants.enums import AdminActionType
 from dto import UserTrackingDTO
 from repositories import UserTrackingRepository
 from services import AdminActionLogService, UserService
+from services.time_service import TimeZoneService
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,15 @@ class AddUserToTrackingUseCase:
             )
 
             # Логируем действие администратора
-            details = f"Пользователь: @{user.username} ({user.tg_id})"
+            admin_who = f"@{admin.username}" if admin.username else f"ID:{admin.tg_id}"
+            target_who = f"@{user.username}" if user.username else f"ID:{user.tg_id}"
+            when_str = TimeZoneService.now().strftime("%d.%m.%Y %H:%M")
+            details = (
+                "➕ Добавление пользователя\n"
+                f"Кто: {admin_who}\n"
+                f"Когда: {when_str}\n"
+                f"Кого: {target_who}"
+            )
             await self._admin_action_log_service.log_action(
                 admin_tg_id=admin.tg_id,
                 action_type=AdminActionType.ADD_USER,
