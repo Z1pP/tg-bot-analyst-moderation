@@ -1,5 +1,4 @@
 import logging
-import math
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -19,6 +18,8 @@ from services.user import UserService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
 
+from .pagination import get_notes_page_data
+
 router = Router(name="add_release_note_router")
 logger = logging.getLogger(__name__)
 
@@ -26,15 +27,7 @@ logger = logging.getLogger(__name__)
 @router.callback_query(F.data == CallbackData.ReleaseNotes.ADD)
 async def add_note_start_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик начала добавления релизной заметки"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
     await callback.answer()
-
-    # Проверка прав доступа
-    user_tg_id = str(callback.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await callback.answer("У вас нет прав для добавления заметок", show_alert=True)
-        return
 
     # Показываем выбор языка для новой заметки
     await safe_edit_message(
@@ -53,15 +46,6 @@ async def add_note_start_handler(callback: CallbackQuery, state: FSMContext) -> 
 @router.message(ReleaseNotesStateManager.waiting_for_title)
 async def add_note_title_handler(message: Message, state: FSMContext) -> None:
     """Обработчик ввода заголовка релизной заметки"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
-    # Проверка прав доступа
-    user_tg_id = str(message.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await message.reply("У вас нет прав для добавления заметок")
-        await state.clear()
-        return
-
     title = message.text
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
@@ -101,15 +85,6 @@ async def add_note_content_handler(
     message: Message, state: FSMContext, container: Container
 ) -> None:
     """Обработчик ввода содержимого релизной заметки и сохранение"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
-    # Проверка прав доступа
-    user_tg_id = str(message.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await message.reply("У вас нет прав для добавления заметок")
-        await state.clear()
-        return
-
     content = message.text
     data = await state.get_data()
     title = data.get("title")
@@ -149,12 +124,9 @@ async def add_note_content_handler(
 
     # Возвращаемся к списку заметок
     page = 1
-    limit = 10
-    offset = (page - 1) * limit
-
-    notes = await release_note_service.get_notes(note_language, limit, offset)
-    total_count = await release_note_service.count_notes(note_language)
-    total_pages = math.ceil(total_count / limit)
+    notes, total_pages = await get_notes_page_data(
+        release_note_service, note_language, page
+    )
 
     if not notes:
         text = Dialog.ReleaseNotes.NO_RELEASE_NOTES
@@ -163,9 +135,7 @@ async def add_note_content_handler(
 
     # Используем active_message_id для редактирования сообщения бота
     final_text = f"{Dialog.ReleaseNotes.NOTE_ADDED}\n\n{text}"
-    final_markup = release_notes_menu_ikb(
-        notes, page, total_pages, user_tg_id=str(message.from_user.id)
-    )
+    final_markup = release_notes_menu_ikb(notes, page, total_pages)
 
     if active_message_id:
         await safe_edit_message(
@@ -207,12 +177,9 @@ async def cancel_add_note_handler(
     release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
 
     page = 1
-    limit = 10
-    offset = (page - 1) * limit
-
-    notes = await release_note_service.get_notes(user_language, limit, offset)
-    total_count = await release_note_service.count_notes(user_language)
-    total_pages = math.ceil(total_count / limit)
+    notes, total_pages = await get_notes_page_data(
+        release_note_service, user_language, page
+    )
 
     if not notes:
         text = Dialog.ReleaseNotes.NO_RELEASE_NOTES
@@ -224,9 +191,7 @@ async def cancel_add_note_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=text,
-        reply_markup=release_notes_menu_ikb(
-            notes, page, total_pages, user_tg_id=str(callback.from_user.id)
-        ),
+        reply_markup=release_notes_menu_ikb(notes, page, total_pages),
     )
 
     await state.set_state(ReleaseNotesStateManager.menu)
@@ -240,81 +205,8 @@ async def select_add_language_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     """Обработчик выбора языка для новой заметки"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
     await callback.answer()
 
-    # Проверка прав доступа
-    user_tg_id = str(callback.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await callback.answer("У вас нет прав для добавления заметок", show_alert=True)
-        await state.clear()
-        return
-
-    # Извлекаем язык из callback_data
-    lang_code = callback.data.split(
-        CallbackData.ReleaseNotes.PREFIX_SELECT_ADD_LANGUAGE
-    )[1]
-
-    await state.update_data(
-        active_message_id=callback.message.message_id,
-        note_language=lang_code,
-    )
-
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=Dialog.ReleaseNotes.TITLE_INPUT,
-        reply_markup=cancel_add_release_note_ikb(),
-    )
-
-    await state.set_state(ReleaseNotesStateManager.waiting_for_title)
-
-
-@router.callback_query(
-    F.data == CallbackData.ReleaseNotes.CHANGE_TITLE_WHILE_ADDING,
-    ReleaseNotesStateManager.waiting_for_content,
-)
-async def change_title_while_adding_handler(
-    callback: CallbackQuery, state: FSMContext
-) -> None:
-    """Обработчик изменения заголовка при добавлении релизной заметки"""
-    await callback.answer()
-
-    await state.update_data(active_message_id=callback.message.message_id)
-
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
-        text=Dialog.ReleaseNotes.TITLE_INPUT,
-        reply_markup=cancel_add_release_note_ikb(),
-    )
-
-    await state.set_state(ReleaseNotesStateManager.waiting_for_title)
-
-
-@router.callback_query(
-    F.data.startswith(CallbackData.ReleaseNotes.PREFIX_SELECT_ADD_LANGUAGE),
-    ReleaseNotesStateManager.selecting_add_language,
-)
-async def select_add_language_handler(
-    callback: CallbackQuery, state: FSMContext
-) -> None:
-    """Обработчик выбора языка для новой заметки"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
-    await callback.answer()
-
-    # Проверка прав доступа
-    user_tg_id = str(callback.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await callback.answer("У вас нет прав для добавления заметок", show_alert=True)
-        await state.clear()
-        return
-
-    # Извлекаем язык из callback_data
     lang_code = callback.data.split(
         CallbackData.ReleaseNotes.PREFIX_SELECT_ADD_LANGUAGE
     )[1]
