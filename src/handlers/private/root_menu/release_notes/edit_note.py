@@ -7,17 +7,28 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
+from constants.pagination import RELEASE_NOTES_PAGE_SIZE
+from dto.release_note import (
+    GetReleaseNoteByIdDTO,
+    GetReleaseNotesPageDTO,
+    UpdateReleaseNoteContentDTO,
+    UpdateReleaseNoteTitleDTO,
+)
+from exceptions import ReleaseNoteNotFoundError
 from keyboards.inline.release_notes import (
     cancel_edit_release_note_ikb,
     edit_release_note_ikb,
     release_note_detail_ikb,
     release_notes_menu_ikb,
 )
-from services.release_note_service import ReleaseNoteService
 from states.release_notes import ReleaseNotesStateManager
+from usecases.release_notes import (
+    GetReleaseNotesPageUseCase,
+    GetReleaseNoteUseCase,
+    UpdateReleaseNoteContentUseCase,
+    UpdateReleaseNoteTitleUseCase,
+)
 from utils.send_message import safe_edit_message
-
-from .pagination import get_notes_page_data
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -29,27 +40,31 @@ async def edit_note_start_handler(
 ) -> None:
     """Обработчик начала редактирования релизной заметки"""
     await callback.answer()
+    if callback.data is None or callback.message is None:
+        return
+    if not isinstance(callback.message, Message):
+        return
 
     note_id = int(callback.data.split("__")[1])
 
-    release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-    note = await release_note_service.get_note_by_id(note_id)
-
-    if not note:
-        await callback.answer(Dialog.ReleaseNotes.NOTE_NOT_FOUND, show_alert=True)
+    dto = GetReleaseNoteByIdDTO(note_id=note_id)
+    usecase: GetReleaseNoteUseCase = container.resolve(GetReleaseNoteUseCase)
+    try:
+        result = await usecase.execute(dto)
+    except ReleaseNoteNotFoundError as e:
+        await callback.answer(e.get_user_message(), show_alert=True)
         return
 
-    # Сохраняем данные заметки
     await state.update_data(
-        edit_note_id=note_id,
-        original_title=note.title,
+        edit_note_id=result.note_id,
+        original_title=result.title,
     )
 
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.ReleaseNotes.EDIT_NOTE.format(title=note.title),
+        text=Dialog.ReleaseNotes.EDIT_NOTE.format(title=result.title),
         reply_markup=edit_release_note_ikb(),
     )
 
@@ -63,6 +78,8 @@ async def edit_note_start_handler(
 async def edit_title_start_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик начала редактирования заголовка"""
     await callback.answer()
+    if callback.message is None or not isinstance(callback.message, Message):
+        return
 
     await state.update_data(active_message_id=callback.message.message_id)
 
@@ -89,6 +106,8 @@ async def process_edit_title_handler(
         await message.reply(Dialog.ReleaseNotes.NOTE_NOT_FOUND)
         return
 
+    if message.text is None:
+        return
     new_title = message.text.strip()
 
     if not new_title or len(new_title) < 3:
@@ -97,10 +116,13 @@ async def process_edit_title_handler(
 
     old_title = data.get("original_title", "неизвестно")
 
-    release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-    success = await release_note_service.update_note_title(note_id, new_title)
-
-    if not success:
+    update_dto = UpdateReleaseNoteTitleDTO(note_id=note_id, new_title=new_title)
+    update_usecase: UpdateReleaseNoteTitleUseCase = container.resolve(
+        UpdateReleaseNoteTitleUseCase
+    )
+    try:
+        await update_usecase.execute(update_dto)
+    except ReleaseNoteNotFoundError:
         await message.reply(Dialog.ReleaseNotes.ERROR_UPDATE_TITLE)
         return
 
@@ -110,10 +132,13 @@ async def process_edit_title_handler(
         old_title=old_title, new_title=new_title
     )
 
-    page = 1
-    notes, total_pages = await get_notes_page_data(
-        release_note_service, user_language, page
+    page_dto = GetReleaseNotesPageDTO(
+        language=user_language, page=1, page_size=RELEASE_NOTES_PAGE_SIZE
     )
+    page_usecase: GetReleaseNotesPageUseCase = container.resolve(
+        GetReleaseNotesPageUseCase
+    )
+    page_result = await page_usecase.execute(page_dto)
 
     active_message_id = data.get("active_message_id")
     if active_message_id:
@@ -123,7 +148,9 @@ async def process_edit_title_handler(
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text=f"{update_message}\n\n{Dialog.ReleaseNotes.RELEASE_NOTES_MENU}",
-                reply_markup=release_notes_menu_ikb(notes, page, total_pages),
+                reply_markup=release_notes_menu_ikb(
+                    page_result.notes, page_result.page, page_result.total_pages
+                ),
             )
             await state.set_state(ReleaseNotesStateManager.menu)
         except Exception as e:
@@ -142,6 +169,8 @@ async def edit_content_start_handler(
 ) -> None:
     """Обработчик начала редактирования содержимого"""
     await callback.answer()
+    if callback.message is None or not isinstance(callback.message, Message):
+        return
 
     await state.update_data(active_message_id=callback.message.message_id)
 
@@ -168,16 +197,21 @@ async def process_edit_content_handler(
         await message.reply(Dialog.ReleaseNotes.NOTE_NOT_FOUND)
         return
 
+    if message.text is None:
+        return
     new_content = message.text.strip()
 
     if not new_content:
         await message.reply("❗Содержимое не может быть пустым.")
         return
 
-    release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-    success = await release_note_service.update_note_content(note_id, new_content)
-
-    if not success:
+    update_dto = UpdateReleaseNoteContentDTO(note_id=note_id, new_content=new_content)
+    update_usecase: UpdateReleaseNoteContentUseCase = container.resolve(
+        UpdateReleaseNoteContentUseCase
+    )
+    try:
+        await update_usecase.execute(update_dto)
+    except ReleaseNoteNotFoundError:
         await message.reply(Dialog.ReleaseNotes.ERROR_UPDATE_CONTENT)
         return
 
@@ -185,10 +219,13 @@ async def process_edit_content_handler(
 
     update_message = Dialog.ReleaseNotes.CONTENT_UPDATED
 
-    page = 1
-    notes, total_pages = await get_notes_page_data(
-        release_note_service, user_language, page
+    page_dto = GetReleaseNotesPageDTO(
+        language=user_language, page=1, page_size=RELEASE_NOTES_PAGE_SIZE
     )
+    page_usecase: GetReleaseNotesPageUseCase = container.resolve(
+        GetReleaseNotesPageUseCase
+    )
+    page_result = await page_usecase.execute(page_dto)
 
     active_message_id = data.get("active_message_id")
     if active_message_id:
@@ -198,7 +235,9 @@ async def process_edit_content_handler(
                 chat_id=message.chat.id,
                 message_id=active_message_id,
                 text=f"{update_message}\n\n{Dialog.ReleaseNotes.RELEASE_NOTES_MENU}",
-                reply_markup=release_notes_menu_ikb(notes, page, total_pages),
+                reply_markup=release_notes_menu_ikb(
+                    page_result.notes, page_result.page, page_result.total_pages
+                ),
             )
             await state.set_state(ReleaseNotesStateManager.menu)
         except Exception as e:
@@ -217,6 +256,8 @@ async def cancel_edit_handler(
 ) -> None:
     """Обработчик отмены редактирования"""
     await callback.answer()
+    if callback.message is None or not isinstance(callback.message, Message):
+        return
 
     data = await state.get_data()
     note_id = data.get("edit_note_id")
@@ -225,23 +266,19 @@ async def cancel_edit_handler(
         await callback.answer(Dialog.ReleaseNotes.NOTE_NOT_FOUND, show_alert=True)
         return
 
-    release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-    note = await release_note_service.get_note_by_id(note_id)
-
-    if not note:
-        await callback.answer(Dialog.ReleaseNotes.NOTE_NOT_FOUND, show_alert=True)
+    dto = GetReleaseNoteByIdDTO(note_id=note_id)
+    usecase: GetReleaseNoteUseCase = container.resolve(GetReleaseNoteUseCase)
+    try:
+        result = await usecase.execute(dto)
+    except ReleaseNoteNotFoundError as e:
+        await callback.answer(e.get_user_message(), show_alert=True)
         return
 
-    # Получаем автора
-    author_name = "Unknown"
-    if note.author:
-        author_name = note.author.username or str(note.author.tg_id)
-
     text = Dialog.ReleaseNotes.NOTE_DETAILS.format(
-        title=note.title,
-        content=note.content,
-        author=author_name,
-        date=note.created_at.strftime("%d.%m.%Y %H:%M"),
+        title=result.title,
+        content=result.content,
+        author=result.author_display_name,
+        date=result.date_str,
     )
 
     await safe_edit_message(
@@ -249,7 +286,7 @@ async def cancel_edit_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=text,
-        reply_markup=release_note_detail_ikb(note_id),
+        reply_markup=release_note_detail_ikb(result.note_id),
     )
 
     await state.set_state(ReleaseNotesStateManager.view_note)
@@ -268,6 +305,8 @@ async def cancel_edit_title_or_content_handler(
 ) -> None:
     """Обработчик отмены редактирования заголовка или содержимого"""
     await callback.answer()
+    if callback.message is None or not isinstance(callback.message, Message):
+        return
 
     data = await state.get_data()
     note_id = data.get("edit_note_id")
@@ -276,19 +315,19 @@ async def cancel_edit_title_or_content_handler(
         await callback.answer(Dialog.ReleaseNotes.NOTE_NOT_FOUND, show_alert=True)
         return
 
-    release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-    note = await release_note_service.get_note_by_id(note_id)
-
-    if not note:
-        await callback.answer(Dialog.ReleaseNotes.NOTE_NOT_FOUND, show_alert=True)
+    dto = GetReleaseNoteByIdDTO(note_id=note_id)
+    usecase: GetReleaseNoteUseCase = container.resolve(GetReleaseNoteUseCase)
+    try:
+        result = await usecase.execute(dto)
+    except ReleaseNoteNotFoundError as e:
+        await callback.answer(e.get_user_message(), show_alert=True)
         return
 
-    # Возвращаемся к окну редактирования заметки
     await safe_edit_message(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
-        text=Dialog.ReleaseNotes.EDIT_NOTE.format(title=note.title),
+        text=Dialog.ReleaseNotes.EDIT_NOTE.format(title=result.title),
         reply_markup=edit_release_note_ikb(),
     )
 
