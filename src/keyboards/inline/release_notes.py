@@ -122,7 +122,7 @@ def release_note_detail_ikb(
     builder.row(
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
-            callback_data=CallbackData.ReleaseNotes.MENU,
+            callback_data=CallbackData.ReleaseNotes.SHOW_MENU,
         )
     )
     return builder.as_markup()

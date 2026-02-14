@@ -17,7 +17,7 @@ router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == CallbackData.ReleaseNotes.MENU)
+@router.callback_query(F.data == CallbackData.ReleaseNotes.SHOW_MENU)
 async def release_notes_menu_callback_handler(
     callback: CallbackQuery, state: FSMContext, container: Container, user_language: str
 ) -> None:

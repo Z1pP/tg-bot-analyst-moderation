@@ -126,7 +126,7 @@ class ReleaseNotesCallbackData:
     """Класс для хранения callback данных релизных заметок"""
 
     # Commands
-    MENU = "release_notes_menu"
+    SHOW_MENU = "release_notes_menu"
     ADD = "add_release_note"
     BACK = "back_to_release_notes"
     PAGE_INFO = "release_notes_page_info"
