@@ -51,6 +51,10 @@ from usecases.admin_actions import (
     ReplyToMessageUseCase,
     SendMessageToChatUseCase,
 )
+from usecases.admin_logs import (
+    GetAdminLogsPageUseCase,
+    GetAdminsWithLogsUseCase,
+)
 from usecases.amnesty import (
     CancelLastWarnUseCase,
     GetChatsWithAnyRestrictionUseCase,
@@ -256,6 +260,7 @@ class ContainerSetup:
         ContainerSetup._register_reaction_usecases(container)
         ContainerSetup._register_moderation_usecases(container)
         ContainerSetup._register_punishment_usecases(container)
+        ContainerSetup._register_admin_logs_usecases(container)
 
     @staticmethod
     def _register_punishment_usecases(container: Container) -> None:
@@ -268,6 +273,12 @@ class ContainerSetup:
 
         for usecase in punishment_usecases:
             container.register(usecase)
+
+    @staticmethod
+    def _register_admin_logs_usecases(container: Container) -> None:
+        """Регистрация use cases для просмотра логов администраторов."""
+        container.register(GetAdminsWithLogsUseCase)
+        container.register(GetAdminLogsPageUseCase)
 
     @staticmethod
     def _register_antibot_usecases(container: Container) -> None:
