@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -7,13 +7,14 @@ from constants import InlineButtons
 from constants.callback import CallbackData
 from constants.enums import AdminActionType
 from constants.pagination import DEFAULT_PAGE_SIZE
+from dto.admin_log import AdminWithLogsDTO
 
 
 def admin_logs_ikb(
     page: int = 1,
     total_count: int = 0,
     page_size: int = DEFAULT_PAGE_SIZE,
-    admin_id: int = None,
+    admin_id: int | None = None,
 ) -> InlineKeyboardMarkup:
     """Клавиатура для списка логов действий администраторов."""
     builder = InlineKeyboardBuilder()
@@ -68,7 +69,7 @@ def admin_logs_ikb(
     return builder.as_markup()
 
 
-def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup:
+def admin_select_ikb(admins: List[AdminWithLogsDTO]) -> InlineKeyboardMarkup:
     """Клавиатура для выбора администратора для просмотра логов."""
     builder = InlineKeyboardBuilder()
 
@@ -81,11 +82,11 @@ def admin_select_ikb(admins: List[Tuple[int, str, str]]) -> InlineKeyboardMarkup
     )
 
     # Кнопки для каждого администратора
-    for admin_id, username, _ in admins:
+    for admin in admins:
         builder.row(
             InlineKeyboardButton(
-                text=f"👤 @{username}",
-                callback_data=f"admin_logs__{admin_id}",
+                text=f"👤 @{admin.username_display}",
+                callback_data=f"admin_logs__{admin.id}",
             )
         )
 
@@ -138,4 +139,4 @@ def format_action_type(action_type: str | AdminActionType) -> str:
         "update_punishment_ladder": "🪜 Обновление лестницы",
         "set_default_punishment_ladder": "🪜 Сброс лестницы (дефолт)",
     }
-    return action_names.get(action_type_str, action_type_str)
+    return str(action_names.get(action_type_str, action_type_str))
