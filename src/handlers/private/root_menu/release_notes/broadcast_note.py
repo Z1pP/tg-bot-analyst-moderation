@@ -26,15 +26,7 @@ async def broadcast_note_start_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик начала рассылки релизной заметки"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
     await callback.answer()
-
-    # Проверка прав доступа
-    user_tg_id = str(callback.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await callback.answer("У вас нет прав для рассылки заметок", show_alert=True)
-        return
 
     note_id = int(callback.data.split("__")[1])
 
@@ -66,15 +58,7 @@ async def confirm_broadcast_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик подтверждения рассылки"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
     await callback.answer()
-
-    # Проверка прав доступа
-    user_tg_id = str(callback.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await callback.answer("У вас нет прав для рассылки заметок", show_alert=True)
-        return
 
     parts = callback.data.split("__")
     answer = parts[1]
@@ -106,9 +90,7 @@ async def confirm_broadcast_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=f"{Dialog.ReleaseNotes.BROADCAST_CANCELLED}\n\n{text}",
-            reply_markup=release_note_detail_ikb(
-                note_id, user_tg_id=str(callback.from_user.id)
-            ),
+            reply_markup=release_note_detail_ikb(note_id),
         )
 
         await state.set_state(ReleaseNotesStateManager.view_note)
@@ -199,9 +181,7 @@ async def confirm_broadcast_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=f"{Dialog.ReleaseNotes.BROADCAST_SUCCESS.format(count=success_count)}\n\n{text}",
-            reply_markup=release_note_detail_ikb(
-                note_id, user_tg_id=str(callback.from_user.id)
-            ),
+            reply_markup=release_note_detail_ikb(note_id),
         )
 
         await state.set_state(ReleaseNotesStateManager.view_note)
