@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 
 @router.callback_query(F.data == CallbackData.ReleaseNotes.SHOW_MENU)
 async def release_notes_menu_callback_handler(
-    callback: CallbackQuery, state: FSMContext, container: Container, user_language: str
+    callback: CallbackQuery,
+    state: FSMContext,
+    container: Container,
+    user_language: str,
 ) -> None:
     """Обработчик меню релизных заметок"""
     from constants import RELEASE_NOTES_ADMIN_IDS
