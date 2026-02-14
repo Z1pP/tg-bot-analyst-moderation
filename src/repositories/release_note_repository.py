@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
@@ -44,7 +44,7 @@ class ReleaseNoteRepository:
         )
         async with self._db.session() as session:
             result = await session.execute(stmt)
-        return result.scalars().all()
+        return cast(Sequence[ReleaseNote], result.scalars().all())
 
     async def get_by_id(self, note_id: int) -> ReleaseNote | None:
         """
@@ -68,7 +68,7 @@ class ReleaseNoteRepository:
         )
         async with self._db.session() as session:
             result = await session.execute(stmt)
-        return result.scalar_one()
+        return cast(int, result.scalar_one())
 
     async def delete(self, note_id: int) -> bool:
         """
