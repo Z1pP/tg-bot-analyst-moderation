@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 
 from constants.callback import CallbackData
 
-from .ui import show_message_management_menu
+from .helpers import show_message_management_menu
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)

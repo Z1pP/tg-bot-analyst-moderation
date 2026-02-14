@@ -10,9 +10,10 @@ from dto.message_action import MessageActionDTO
 from exceptions.moderation import MessageDeleteError
 from states.message_management import MessageManagerState
 from usecases.admin_actions import DeleteMessageUseCase
-from .ui import show_message_actions_menu, show_message_management_menu
 
-router = Router()
+from .helpers import show_message_actions_menu, show_message_management_menu
+
+router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 

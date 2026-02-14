@@ -8,7 +8,7 @@ from .pagination import router as pagination_router
 from .reply import router as reply_router
 from .send import router as send_router
 
-router = Router()
+router = Router(name=__name__)
 
 router.include_router(navigation_router)
 router.include_router(link_router)

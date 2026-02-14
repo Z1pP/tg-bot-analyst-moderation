@@ -5,9 +5,9 @@ from aiogram.fsm.context import FSMContext
 
 from utils.data_parser import MESSAGE_LINK_PATTERN, parse_message_link
 
-from .ui import show_message_actions_menu, show_message_management_menu
+from .helpers import show_message_actions_menu, show_message_management_menu
 
-router = Router()
+router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 

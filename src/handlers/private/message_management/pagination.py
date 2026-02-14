@@ -140,7 +140,7 @@ select_chat_pagination_handler = SelectChatPaginationHandler()
 
 
 @router.callback_query(
-    MessageManagerState.waiting_chat_select,
+    MessageManagerState.waiting_select_chat,
     F.data == CallbackData.Messages.SELECT_CHAT_PAGE_INFO,
 )
 async def select_chat_page_info_handler(callback: types.CallbackQuery) -> None:
@@ -149,7 +149,7 @@ async def select_chat_page_info_handler(callback: types.CallbackQuery) -> None:
 
 
 @router.callback_query(
-    MessageManagerState.waiting_chat_select,
+    MessageManagerState.waiting_select_chat,
     F.data.startswith(CallbackData.Messages.PREFIX_PREV_SELECT_CHAT_PAGE),
 )
 async def prev_select_chat_page_handler(
@@ -162,7 +162,7 @@ async def prev_select_chat_page_handler(
 
 
 @router.callback_query(
-    MessageManagerState.waiting_chat_select,
+    MessageManagerState.waiting_select_chat,
     F.data.startswith(CallbackData.Messages.PREFIX_NEXT_SELECT_CHAT_PAGE),
 )
 async def next_select_chat_page_handler(

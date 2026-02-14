@@ -17,9 +17,9 @@ from usecases.admin_actions import SendMessageToChatUseCase
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from utils.send_message import safe_edit_message
 
-from .ui import show_message_management_menu
+from .helpers import show_message_management_menu
 
-router = Router()
+router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
 
@@ -73,14 +73,14 @@ async def start_send_handler(
         ),
     )
     await state.update_data(active_message_id=callback.message.message_id)
-    await state.set_state(MessageManagerState.waiting_chat_select)
+    await state.set_state(MessageManagerState.waiting_select_chat)
 
 
 @router.callback_query(
-    MessageManagerState.waiting_chat_select,
+    MessageManagerState.waiting_select_chat,
     F.data.startswith(CallbackData.Messages.PREFIX_SELECT_CHAT),
 )
-async def select_chat_handler(
+async def process_select_chat_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
     container: Container,
