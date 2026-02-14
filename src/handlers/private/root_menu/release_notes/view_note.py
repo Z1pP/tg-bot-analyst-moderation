@@ -52,9 +52,7 @@ async def view_note_callback_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=text,
-        reply_markup=release_note_detail_ikb(
-            note_id, user_tg_id=str(callback.from_user.id)
-        ),
+        reply_markup=release_note_detail_ikb(note_id),
     )
 
     await state.set_state(ReleaseNotesStateManager.view_note)
