@@ -1,5 +1,4 @@
 import logging
-import math
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -18,6 +17,8 @@ from services.release_note_service import ReleaseNoteService
 from states.release_notes import ReleaseNotesStateManager
 from utils.send_message import safe_edit_message
 
+from .pagination import get_notes_page_data
+
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
@@ -27,17 +28,7 @@ async def edit_note_start_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик начала редактирования релизной заметки"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
     await callback.answer()
-
-    # Проверка прав доступа
-    user_tg_id = str(callback.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await callback.answer(
-            "У вас нет прав для редактирования заметок", show_alert=True
-        )
-        return
 
     note_id = int(callback.data.split("__")[1])
 
@@ -91,15 +82,6 @@ async def process_edit_title_handler(
     message: Message, state: FSMContext, container: Container, user_language: str
 ) -> None:
     """Обработчик получения нового заголовка"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
-    # Проверка прав доступа
-    user_tg_id = str(message.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await message.reply("У вас нет прав для редактирования заметок")
-        await state.clear()
-        return
-
     data = await state.get_data()
     note_id = data.get("edit_note_id")
 
@@ -129,12 +111,9 @@ async def process_edit_title_handler(
     )
 
     page = 1
-    limit = 10
-    offset = (page - 1) * limit
-
-    notes = await release_note_service.get_notes(user_language, limit, offset)
-    total_count = await release_note_service.count_notes(user_language)
-    total_pages = math.ceil(total_count / limit)
+    notes, total_pages = await get_notes_page_data(
+        release_note_service, user_language, page
+    )
 
     active_message_id = data.get("active_message_id")
     if active_message_id:
@@ -182,15 +161,6 @@ async def process_edit_content_handler(
     message: Message, state: FSMContext, container: Container, user_language: str
 ) -> None:
     """Обработчик получения нового содержимого"""
-    from constants import RELEASE_NOTES_ADMIN_IDS
-
-    # Проверка прав доступа
-    user_tg_id = str(message.from_user.id)
-    if user_tg_id not in RELEASE_NOTES_ADMIN_IDS:
-        await message.reply("У вас нет прав для редактирования заметок")
-        await state.clear()
-        return
-
     data = await state.get_data()
     note_id = data.get("edit_note_id")
 
@@ -216,12 +186,9 @@ async def process_edit_content_handler(
     update_message = Dialog.ReleaseNotes.CONTENT_UPDATED
 
     page = 1
-    limit = 10
-    offset = (page - 1) * limit
-
-    notes = await release_note_service.get_notes(user_language, limit, offset)
-    total_count = await release_note_service.count_notes(user_language)
-    total_pages = math.ceil(total_count / limit)
+    notes, total_pages = await get_notes_page_data(
+        release_note_service, user_language, page
+    )
 
     active_message_id = data.get("active_message_id")
     if active_message_id:
@@ -282,9 +249,7 @@ async def cancel_edit_handler(
         chat_id=callback.message.chat.id,
         message_id=callback.message.message_id,
         text=text,
-        reply_markup=release_note_detail_ikb(
-            note_id, user_tg_id=str(callback.from_user.id)
-        ),
+        reply_markup=release_note_detail_ikb(note_id),
     )
 
     await state.set_state(ReleaseNotesStateManager.view_note)
