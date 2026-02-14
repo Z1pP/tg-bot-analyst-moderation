@@ -5,16 +5,13 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.orm import selectinload
 
 from constants.enums import AdminActionType
-from database.session import DatabaseContextManager
 from models import AdminActionLog
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class AdminActionLogRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class AdminActionLogRepository(BaseRepository):
     async def create_log(
         self, admin_id: int, action_type: AdminActionType, details: str = None
     ) -> AdminActionLog:
