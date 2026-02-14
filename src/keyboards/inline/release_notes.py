@@ -4,11 +4,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from constants import InlineButtons
 from constants.callback import CallbackData
 from constants.i18n import TRANSLATIONS
-from models.release_note import ReleaseNote
+from dto.release_note import ReleaseNoteItemDTO
 
 
 def release_notes_menu_ikb(
-    notes: list[ReleaseNote],
+    notes: list[ReleaseNoteItemDTO],
     page: int,
     total_pages: int,
     show_admin_buttons: bool = True,
@@ -17,7 +17,7 @@ def release_notes_menu_ikb(
     Клавиатура меню релизных заметок.
 
     Args:
-        notes: Список релизных заметок
+        notes: Список элементов заметок (id, title)
         page: Текущая страница
         total_pages: Всего страниц
         show_admin_buttons: Показывать кнопки управления (добавить заметку)
