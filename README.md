@@ -117,6 +117,17 @@ uv sync
 cp env-example .env
 ```
 
+4. **Создайте базу данных** (если ещё не создана):
+```bash
+createdb dev_analytics_bot  # или используйте psql
+```
+
+5. **Примените миграции:**
+```bash
+cd src
+alembic upgrade head
+```
+
 ### Локальная установка (через pip)
 
 1. **Создайте виртуальное окружение:**
@@ -132,35 +143,48 @@ venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
-Отредактируйте `.env`:
+3. **Настройте переменные окружения:**
+Скопируйте `env-example` в `.env` и заполните значения:
+```bash
+cp env-example .env
+```
+Отредактируйте `.env` (полный список переменных — в `env-example`):
 ```env
-# Токен бота Telegram
-BOT_TOKEN=your_bot_token_here
+# Токен бота из BotFather
+BOT_TOKEN=1234567890:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# Режим разработки (True/False)
+# OpenRouter (ИИ-сводка чатов)
+OPEN_ROUTER_TOKEN=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+OPEN_ROUTER_MODEL=mistralai/mistral-small-3.1-24b-instruct:free
+
 IS_DEVELOPMENT=True
 
-# База данных (разработка)
-DEV_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/dev_db_name
-DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:password@localhost:5432/dev_db_name
+# Разработка
+DEV_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/dev_analytics_bot
+DEV_DB_URL_FOR_ALEMBIC=postgresql://postgres:password@localhost:5432/dev_analytics_bot
 
-# База данных (продакшн)
-PROD_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/prod_db_name
-PROD_DB_URL_FOR_ALEMBIC=postgresql://postgres:password@localhost:5432/prod_db_name
+# Тесты
+TEST_DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/test_analytics_bot
+
+# Настройки базы данных (для Docker)
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=password
+POSTGRES_DB=dev_analytics_bot
 
 # Redis
-REDIS_URL=redis://localhost:6379/0
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_DB=0
 
-# Часовой пояс (опционально, по умолчанию Europe/Moscow)
-TIMEZONE=Europe/Moscow
+# Сводка, продакшн, API, JWT — см. env-example
 ```
 
-5. **Создайте базу данных:**
+4. **Создайте базу данных:**
 ```bash
-createdb dev_db_name  # или используйте psql
+createdb dev_analytics_bot  # или используйте psql
 ```
 
-6. **Примените миграции:**
+5. **Примените миграции:**
 ```bash
 cd src
 alembic upgrade head
@@ -237,19 +261,36 @@ docker-compose up -d
 tg-bot-analyst-moderation/
 ├── src/
 │   ├── alembic/              # Миграции БД
-│   ├── commands/              # Команды бота
-│   ├── constants/             # Константы и тексты
+│   ├── api/                  # API (webhook, health, зависимости)
+│   ├── commands/             # Команды бота
+│   ├── constants/            # Константы и тексты
 │   ├── database/             # Настройки БД
 │   ├── dto/                  # Data Transfer Objects
 │   ├── exceptions/           # Кастомные исключения
 │   ├── filters/              # Фильтры для роутеров
 │   ├── handlers/             # Обработчики сообщений
-│   ├── keyboards/             # Клавиатуры бота
+│   │   ├── group/            # Групповые чаты: archive/, moderation/, new_message, reactions и др.
+│   │   └── private/         # Личные чаты (ЛС)
+│   │       ├── analytics/    # Точка входа: navigation.py
+│   │       ├── categories/   # Категории шаблонов
+│   │       ├── chats/        # Точка входа: navigation.py; подразделы: archive/, antibot/, punishments/, welcome_text/, rating/
+│   │       ├── common/       # Старт, главное меню, навигация (navigation.py, menu_handler.py)
+│   │       ├── first_time_setup/
+│   │       ├── message_management/  # Управление сообщениями (navigation.py)
+│   │       ├── moderation/   # Блокировки, амнистия (navigation.py)
+│   │       ├── reports/      # Отчеты: chat/, all_users/, single_user/
+│   │       ├── root_menu/    # Главное меню (navigation.py), admin_logs/, release_notes/, roles_manager/
+│   │       ├── scheduler/    # Настройки рассылки отчетов
+│   │       ├── templates/   # Точка входа: navigation.py; шаблоны ответов
+│   │       └── users/       # Точка входа: navigation.py; управление пользователями
+│   ├── keyboards/            # Клавиатуры бота (inline)
+│   ├── mappers/              # Маппинг данных (модерация, наказания)
 │   ├── middlewares/          # Middleware
 │   ├── models/               # SQLAlchemy модели
 │   ├── presenters/           # Форматирование и презентация отчетов
-│   ├── repositories/         # Репозитории для работы с БД
+│   ├── repositories/        # Репозитории (наследование от BaseRepository)
 │   ├── scheduler/            # Настройка TaskIQ брокера и планировщика
+│   ├── script/               # Вспомогательные скрипты (manage_user, set_default_punishments)
 │   ├── services/             # Бизнес-логика сервисов
 │   ├── states/               # FSM состояния
 │   ├── tasks/                # Фоновые задачи (аналитика, отчеты)
@@ -260,13 +301,14 @@ tg-bot-analyst-moderation/
 │   ├── container.py          # DI контейнер (Punq)
 │   ├── di.py                 # Регистрация зависимостей
 │   ├── main.py               # Основная точка входа (Polling/Webhook)
-│   ├── analytics_scheduler_entrypoint.py # Точка входа для планировщика аналитики
-│   └── taskiq_scheduler_entrypoint.py    # Точка входа для планировщика задач
-├── docker-compose.yml         # Docker Compose конфигурация
-├── dockerfile                # Docker образ
-├── requirements.txt          # Зависимости Python
-├── pyproject.toml           # Конфигурация проекта (uv)
-└── README.md                # Документация
+│   ├── analytics_scheduler_entrypoint.py  # Планировщик аналитики
+│   └── taskiq_scheduler_entrypoint.py    # Планировщик задач
+├── docker-compose.yml
+├── dockerfile
+├── env-example               # Пример переменных окружения
+├── pyproject.toml
+├── requirements.txt
+└── README.md
 ```
 
 ## 🏗 Архитектура
@@ -513,7 +555,7 @@ docker-compose down -v
 
 1. Проверьте доступность Redis: `redis-cli ping`
 2. Убедитесь, что Redis запущен: `docker-compose ps redis`
-3. Проверьте URL Redis в `.env`: `REDIS_URL=redis://localhost:6379/0`
+3. Проверьте настройки Redis в `.env`: `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB` (для локального запуска: host `localhost`, port `6379`)
 
 ### Проблемы с Cloudflare Tunnel (Docker)
 
