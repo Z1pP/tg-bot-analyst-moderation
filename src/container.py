@@ -107,6 +107,15 @@ from usecases.punishment import (
     UpdatePunishmentLadderUseCase,
 )
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
+from usecases.release_notes import (
+    BroadcastReleaseNoteUseCase,
+    CreateReleaseNoteUseCase,
+    DeleteReleaseNoteUseCase,
+    GetReleaseNotesPageUseCase,
+    GetReleaseNoteUseCase,
+    UpdateReleaseNoteContentUseCase,
+    UpdateReleaseNoteTitleUseCase,
+)
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
     GetAllUsersReportUseCase,
@@ -261,6 +270,7 @@ class ContainerSetup:
         ContainerSetup._register_moderation_usecases(container)
         ContainerSetup._register_punishment_usecases(container)
         ContainerSetup._register_admin_logs_usecases(container)
+        ContainerSetup._register_release_notes_usecases(container)
 
     @staticmethod
     def _register_punishment_usecases(container: Container) -> None:
@@ -279,6 +289,17 @@ class ContainerSetup:
         """Регистрация use cases для просмотра логов администраторов."""
         container.register(GetAdminsWithLogsUseCase)
         container.register(GetAdminLogsPageUseCase)
+
+    @staticmethod
+    def _register_release_notes_usecases(container: Container) -> None:
+        """Регистрация use cases для релизных заметок."""
+        container.register(GetReleaseNotesPageUseCase)
+        container.register(GetReleaseNoteUseCase)
+        container.register(CreateReleaseNoteUseCase)
+        container.register(UpdateReleaseNoteTitleUseCase)
+        container.register(UpdateReleaseNoteContentUseCase)
+        container.register(DeleteReleaseNoteUseCase)
+        container.register(BroadcastReleaseNoteUseCase)
 
     @staticmethod
     def _register_antibot_usecases(container: Container) -> None:
