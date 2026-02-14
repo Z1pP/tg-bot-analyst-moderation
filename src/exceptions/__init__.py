@@ -79,6 +79,12 @@ class EmptyTrackingListException(BusinessLogicException):
     default_message = "❌ У вас нет отслеживаемых чатов"
 
 
+class AdminLogsError(BotBaseException):
+    """Ошибка при получении логов администраторов."""
+
+    default_message = "⚠️ Произошла ошибка при получении логов."
+
+
 __all__ = [
     "AmnestyError",
     "BotCannotUnbanError",
@@ -100,4 +106,5 @@ __all__ = [
     "UserNotFoundException",
     "DatabaseException",
     "UserNotFoundError",
+    "AdminLogsError",
 ]
