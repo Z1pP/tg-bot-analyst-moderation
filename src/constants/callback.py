@@ -96,7 +96,6 @@ class UserCallbackData:
     # Prefixes
     PREFIX_USER = "user__"
     PREFIX_REMOVE_USER = "remove_user__"
-    PREFIX_CONFIRM_REMOVE_USER = "conf_remove_user__"
     PREFIX_PREV_USERS_PAGE = "prev_users_page__"
     PREFIX_NEXT_USERS_PAGE = "next_users_page__"
     PREFIX_PREV_REMOVE_USERS_PAGE = "prev_remove_users_page__"
