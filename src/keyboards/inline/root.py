@@ -15,11 +15,11 @@ def root_menu_ikb() -> InlineKeyboardMarkup:
         ),
         InlineKeyboardButton(
             text=InlineButtons.AdminLogs.MENU,
-            callback_data=CallbackData.Root.SHOW_MENU,
+            callback_data=CallbackData.AdminLogs.SHOW_MENU,
         ),
         InlineKeyboardButton(
             text=InlineButtons.ReleaseNotes.MENU,
-            callback_data=CallbackData.ReleaseNotes.MENU,
+            callback_data=CallbackData.ReleaseNotes.SHOW_MENU,
         ),
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
