@@ -39,6 +39,7 @@ files = ["src"]
 plugins = ["pydantic.mypy"]
 strict = true
 ignore_missing_imports = true
+explicit_package_bases = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
