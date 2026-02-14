@@ -6,16 +6,13 @@ import pytz
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from database.session import DatabaseContextManager
 from models import ReportSchedule
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class ReportScheduleRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class ReportScheduleRepository(BaseRepository):
     async def get_due_schedules_and_reschedule(self) -> List[ReportSchedule]:
         """
         Находит расписания, готовые к выполнению, блокирует их,

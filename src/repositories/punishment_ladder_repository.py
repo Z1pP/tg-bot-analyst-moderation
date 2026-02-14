@@ -3,16 +3,13 @@ from typing import Optional
 
 from sqlalchemy import delete, select
 
-from database.session import DatabaseContextManager
 from models.punishment_ladder import PunishmentLadder
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class PunishmentLadderRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class PunishmentLadderRepository(BaseRepository):
     async def get_punishment_by_step(
         self,
         step: int,

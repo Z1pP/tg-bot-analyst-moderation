@@ -3,16 +3,13 @@ from typing import Optional, Sequence
 
 from sqlalchemy import select
 
-from database.session import DatabaseContextManager
 from models import TemplateCategory
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
-class TemplateCategoryRepository:
-    def __init__(self, db_manager: DatabaseContextManager) -> None:
-        self._db = db_manager
-
+class TemplateCategoryRepository(BaseRepository):
     async def get_all_categories(self) -> Sequence[TemplateCategory]:
         """Получает список всех категорий шаблонов быстрых сообщений"""
         async with self._db.session() as session:
