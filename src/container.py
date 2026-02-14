@@ -18,7 +18,6 @@ from repositories import (
     MessageTemplateRepository,
     PunishmentLadderRepository,
     PunishmentRepository,
-    ReleaseNoteRepository,
     ReportScheduleRepository,
     TemplateCategoryRepository,
     TemplateMediaRepository,
@@ -35,7 +34,6 @@ from services import (
     CategoryService,
     ChatService,
     PunishmentService,
-    ReleaseNoteService,
     ReportScheduleService,
     TaskiqSchedulerService,
     TemplateContentService,
@@ -107,15 +105,7 @@ from usecases.punishment import (
     UpdatePunishmentLadderUseCase,
 )
 from usecases.reactions import GetUserReactionsUseCase, SaveMessageReactionUseCase
-from usecases.release_notes import (
-    BroadcastReleaseNoteUseCase,
-    CreateReleaseNoteUseCase,
-    DeleteReleaseNoteUseCase,
-    GetReleaseNotesPageUseCase,
-    GetReleaseNoteUseCase,
-    UpdateReleaseNoteContentUseCase,
-    UpdateReleaseNoteTitleUseCase,
-)
+from usecases.release_notes import BroadcastTextToAdminsUseCase
 from usecases.report import (
     GetAllUsersBreaksDetailReportUseCase,
     GetAllUsersReportUseCase,
@@ -206,7 +196,6 @@ class ContainerSetup:
             PunishmentLadderRepository,
             UserChatStatusRepository,
             AdminActionLogRepository,
-            ReleaseNoteRepository,
             ReportScheduleRepository,
         ]
 
@@ -239,7 +228,6 @@ class ContainerSetup:
         container.register(BotMessageService)
         container.register(PunishmentService)
         container.register(AdminActionLogService)
-        container.register(ReleaseNoteService)
         container.register(ReportScheduleService)
         container.register(TaskiqSchedulerService)
         container.register(
@@ -292,14 +280,8 @@ class ContainerSetup:
 
     @staticmethod
     def _register_release_notes_usecases(container: Container) -> None:
-        """Регистрация use cases для релизных заметок."""
-        container.register(GetReleaseNotesPageUseCase)
-        container.register(GetReleaseNoteUseCase)
-        container.register(CreateReleaseNoteUseCase)
-        container.register(UpdateReleaseNoteTitleUseCase)
-        container.register(UpdateReleaseNoteContentUseCase)
-        container.register(DeleteReleaseNoteUseCase)
-        container.register(BroadcastReleaseNoteUseCase)
+        """Регистрация use cases для релизных заметок (рассылка текста)."""
+        container.register(BroadcastTextToAdminsUseCase)
 
     @staticmethod
     def _register_antibot_usecases(container: Container) -> None:
