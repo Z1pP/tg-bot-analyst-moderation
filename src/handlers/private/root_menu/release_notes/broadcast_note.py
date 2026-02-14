@@ -2,19 +2,19 @@ import logging
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
-from constants.i18n import DEFAULT_LANGUAGE
+from dto.release_note import BroadcastReleaseNoteDTO, GetReleaseNoteByIdDTO
+from exceptions import ReleaseNoteNotFoundError
 from keyboards.inline.release_notes import (
     confirm_broadcast_release_note_ikb,
     release_note_detail_ikb,
 )
-from repositories import UserRepository
-from services.release_note_service import ReleaseNoteService
 from states.release_notes import ReleaseNotesStateManager
+from usecases.release_notes import BroadcastReleaseNoteUseCase, GetReleaseNoteUseCase
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
@@ -25,16 +25,21 @@ logger = logging.getLogger(__name__)
 async def broadcast_note_start_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
-    """Обработчик начала рассылки релизной заметки"""
+    """Обработчик начала рассылки релизной заметки."""
     await callback.answer()
+    if callback.data is None or callback.message is None:
+        return
+    if not isinstance(callback.message, Message):
+        return
 
     note_id = int(callback.data.split("__")[1])
 
-    release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-    note = await release_note_service.get_note_by_id(note_id)
-
-    if not note:
-        await callback.answer(Dialog.ReleaseNotes.NOTE_NOT_FOUND, show_alert=True)
+    dto = GetReleaseNoteByIdDTO(note_id=note_id)
+    usecase: GetReleaseNoteUseCase = container.resolve(GetReleaseNoteUseCase)
+    try:
+        await usecase.execute(dto)
+    except ReleaseNoteNotFoundError as e:
+        await callback.answer(e.get_user_message(), show_alert=True)
         return
 
     await state.update_data(broadcast_note_id=note_id)
@@ -57,32 +62,31 @@ async def broadcast_note_start_handler(
 async def confirm_broadcast_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
-    """Обработчик подтверждения рассылки"""
+    """Обработчик подтверждения рассылки."""
     await callback.answer()
+    if callback.data is None or callback.message is None:
+        return
+    if not isinstance(callback.message, Message):
+        return
 
     parts = callback.data.split("__")
     answer = parts[1]
     note_id = int(parts[2])
 
     if answer != "yes":
-        # Возвращаемся к просмотру заметки
-        release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-        note = await release_note_service.get_note_by_id(note_id)
-
-        if not note:
-            await callback.answer(Dialog.ReleaseNotes.NOTE_NOT_FOUND, show_alert=True)
+        dto = GetReleaseNoteByIdDTO(note_id=note_id)
+        usecase: GetReleaseNoteUseCase = container.resolve(GetReleaseNoteUseCase)
+        try:
+            result = await usecase.execute(dto)
+        except ReleaseNoteNotFoundError as e:
+            await callback.answer(e.get_user_message(), show_alert=True)
             return
 
-        # Получаем автора
-        author_name = "Unknown"
-        if note.author:
-            author_name = note.author.username or str(note.author.tg_id)
-
         text = Dialog.ReleaseNotes.NOTE_DETAILS.format(
-            title=note.title,
-            content=note.content,
-            author=author_name,
-            date=note.created_at.strftime("%d.%m.%Y %H:%M"),
+            title=result.title,
+            content=result.content,
+            author=result.author_display_name,
+            date=result.date_str,
         )
 
         await safe_edit_message(
@@ -90,102 +94,29 @@ async def confirm_broadcast_handler(
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
             text=f"{Dialog.ReleaseNotes.BROADCAST_CANCELLED}\n\n{text}",
-            reply_markup=release_note_detail_ikb(note_id),
+            reply_markup=release_note_detail_ikb(result.note_id),
         )
 
         await state.set_state(ReleaseNotesStateManager.view_note)
         return
 
     try:
-        release_note_service: ReleaseNoteService = container.resolve(ReleaseNoteService)
-        note = await release_note_service.get_note_by_id(note_id)
-
-        if not note:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=Dialog.ReleaseNotes.NOTE_NOT_FOUND,
-            )
-            return
-
-        # Получаем язык заметки и нормализуем его
-        note_language = (
-            note.language.split("-")[0].lower() if note.language else DEFAULT_LANGUAGE
+        broadcast_dto = BroadcastReleaseNoteDTO(
+            note_id=note_id,
+            sender_tg_id=str(callback.from_user.id),
         )
-
-        # Получаем список всех админов
-        user_repository: UserRepository = container.resolve(UserRepository)
-        admins = await user_repository.get_all_admins()
-
-        # Фильтруем админов: исключаем текущего пользователя и фильтруем по языку
-        admins_to_send = []
-        for admin in admins:
-            if admin.tg_id != user_tg_id and admin.tg_id:
-                # Получаем язык админа и нормализуем его
-                admin_language = (
-                    admin.language.split("-")[0].lower()
-                    if admin.language
-                    else DEFAULT_LANGUAGE
-                )
-                # Отправляем только если язык админа совпадает с языком заметки
-                if admin_language == note_language:
-                    admins_to_send.append(admin)
-
-        if not admins_to_send:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=Dialog.ReleaseNotes.BROADCAST_NO_ADMINS,
-            )
-            return
-
-        # Формируем текст сообщения
-        author_name = "Unknown"
-        if note.author:
-            author_name = note.author.username or str(note.author.tg_id)
-
-        broadcast_text = Dialog.ReleaseNotes.NOTE_DETAILS.format(
-            title=note.title,
-            content=note.content,
-            author=author_name,
-            date=note.created_at.strftime("%d.%m.%Y %H:%M"),
+        broadcast_usecase: BroadcastReleaseNoteUseCase = container.resolve(
+            BroadcastReleaseNoteUseCase
         )
-
-        # Отправляем сообщения админам
-        success_count = 0
-        for admin in admins_to_send:
-            try:
-                await callback.bot.send_message(
-                    chat_id=int(admin.tg_id),
-                    text=broadcast_text,
-                )
-                success_count += 1
-            except Exception as e:
-                logger.error(
-                    f"Ошибка при отправке заметки админу {admin.tg_id}: {e}",
-                    exc_info=True,
-                )
-
-        # Возвращаемся к просмотру заметки
-        text = Dialog.ReleaseNotes.NOTE_DETAILS.format(
-            title=note.title,
-            content=note.content,
-            author=author_name,
-            date=note.created_at.strftime("%d.%m.%Y %H:%M"),
-        )
-
+        result = await broadcast_usecase.execute(broadcast_dto)
+    except ReleaseNoteNotFoundError:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=f"{Dialog.ReleaseNotes.BROADCAST_SUCCESS.format(count=success_count)}\n\n{text}",
-            reply_markup=release_note_detail_ikb(note_id),
+            text=Dialog.ReleaseNotes.NOTE_NOT_FOUND,
         )
-
-        await state.set_state(ReleaseNotesStateManager.view_note)
-
+        return
     except Exception as e:
         logger.error("Ошибка при рассылке заметки: %s", e, exc_info=True)
         await safe_edit_message(
@@ -194,3 +125,49 @@ async def confirm_broadcast_handler(
             message_id=callback.message.message_id,
             text=Dialog.ReleaseNotes.BROADCAST_ERROR,
         )
+        return
+
+    if not result.recipients:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.ReleaseNotes.BROADCAST_NO_ADMINS,
+        )
+        return
+
+    if callback.bot is None:
+        return
+    success_count = 0
+    for recipient in result.recipients:
+        try:
+            await callback.bot.send_message(
+                chat_id=recipient.chat_id,
+                text=recipient.text,
+            )
+            success_count += 1
+        except Exception as e:
+            logger.error(
+                "Ошибка при отправке заметки админу %s: %s",
+                recipient.chat_id,
+                e,
+                exc_info=True,
+            )
+
+    d = result.detail_dto
+    view_text = Dialog.ReleaseNotes.NOTE_DETAILS.format(
+        title=d.title,
+        content=d.content,
+        author=d.author_display_name,
+        date=d.date_str,
+    )
+
+    await safe_edit_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        text=f"{Dialog.ReleaseNotes.BROADCAST_SUCCESS.format(count=success_count)}\n\n{view_text}",
+        reply_markup=release_note_detail_ikb(d.note_id),
+    )
+
+    await state.set_state(ReleaseNotesStateManager.view_note)
