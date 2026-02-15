@@ -59,6 +59,21 @@ class SelectChatPaginationHandler(BasePaginationHandler):
             total_count=total_count,
         )
 
+    async def _handle_empty_chats(
+        self,
+        query: CallbackQuery,
+        state: FSMContext,
+    ) -> None:
+        """При пустом списке чатов показывает сообщение и очищает state."""
+        await safe_edit_message(
+            bot=query.bot,
+            chat_id=query.message.chat.id,
+            message_id=query.message.message_id,
+            text=Dialog.Messages.NO_TRACKED_CHATS,
+            reply_markup=send_message_ikb(),
+        )
+        await state.clear()
+
     async def handle_prev_page(
         self,
         query: CallbackQuery,
@@ -76,14 +91,7 @@ class SelectChatPaginationHandler(BasePaginationHandler):
         )
 
         if total_count == 0:
-            await safe_edit_message(
-                bot=query.bot,
-                chat_id=query.message.chat.id,
-                message_id=query.message.message_id,
-                text=Dialog.Messages.NO_TRACKED_CHATS,
-                reply_markup=send_message_ikb(),
-            )
-            await state.clear()
+            await self._handle_empty_chats(query, state)
             return
 
         keyboard = await self.build_keyboard(items, prev_page, total_count)
@@ -111,14 +119,7 @@ class SelectChatPaginationHandler(BasePaginationHandler):
 
         if total_count == 0:
             await query.answer()
-            await safe_edit_message(
-                bot=query.bot,
-                chat_id=query.message.chat.id,
-                message_id=query.message.message_id,
-                text=Dialog.Messages.NO_TRACKED_CHATS,
-                reply_markup=send_message_ikb(),
-            )
-            await state.clear()
+            await self._handle_empty_chats(query, state)
             return
 
         if not items:
