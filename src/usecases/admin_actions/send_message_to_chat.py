@@ -6,6 +6,7 @@ from constants.enums import AdminActionType
 from dto.message_action import SendMessageDTO
 from exceptions.moderation import MessageSendError
 from services import AdminActionLogService, BotMessageService, ChatService
+from services.time_service import TimeZoneService
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +61,13 @@ class SendMessageToChatUseCase:
                 chat_id_str = str(dto.chat_tgid).replace("-100", "")
                 message_link = f"https://t.me/c/{chat_id_str}/{sent_message_id}"
 
+                when_str = TimeZoneService.now().strftime("%d.%m.%Y %H:%M")
                 report_text = (
-                    f"💬 <b>Сообщение от бота</b>\n\n"
+                    f"💬 <b>Отправлено сообщение</b>\n\n"
+                    f"Кто: @{dto.admin_username}\n"
+                    f"Когда: {when_str}\n"
                     f"Чат: {chat.title}\n"
-                    f"Отправил: @{dto.admin_username}\n"
-                    f"<a href='{message_link}'>Ссылка на сообщение</a>"
+                    f"Ссылка на сообщ: <a href='{message_link}'>ссылка</a>"
                 )
 
                 try:
