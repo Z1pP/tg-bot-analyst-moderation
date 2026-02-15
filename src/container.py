@@ -45,6 +45,7 @@ from services.chat.summarize import IAIService
 from services.chat.summarize.open_router_service import OpenRouterService
 from services.client import ApiClient
 from usecases.admin_actions import (
+    BroadcastMessageToTrackedChatsUseCase,
     DeleteMessageUseCase,
     ReplyToMessageUseCase,
     SendMessageToChatUseCase,
@@ -369,6 +370,7 @@ class ContainerSetup:
         container.register(GetChatsWithPunishedUserUseCase)
         container.register(UnbanUserUseCase)
         container.register(UnmuteUserUseCase)
+        container.register(BroadcastMessageToTrackedChatsUseCase)
         container.register(DeleteMessageUseCase)
         container.register(ReplyToMessageUseCase)
         container.register(SendMessageToChatUseCase)
