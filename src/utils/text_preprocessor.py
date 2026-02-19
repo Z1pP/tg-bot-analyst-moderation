@@ -9,16 +9,21 @@ def format_messages_for_llm(messages: list, max_chars: int = 100000) -> tuple[st
     count = 0
 
     # Сообщения приходят от новых к старым (из репозитория reversed)
-    # Чтобы соблюсти хронологию и лимит, идем по списку (там уже reversed, т.е. от новых)
+    # Поддерживаются кортежи (text, username) и объекты с .text / .username
     for msg in messages:
+        if isinstance(msg, tuple) and len(msg) >= 2:
+            text, user_name = msg[0], (msg[1] or "Unknown")
+        else:
+            text = getattr(msg, "text", None)
+            user_name = getattr(msg, "username", None) or "Unknown"
+
         # Фильтрация мусора
-        if not msg.text or len(msg.text) < 3:
+        if not text or len(text) < 3:
             continue
-        if msg.text.startswith("/"):  # Игнорируем команды
+        if text.startswith("/"):  # Игнорируем команды
             continue
 
-        clean_text = msg.text[:500]
-        user_name = msg.username or "Unknown"
+        clean_text = text[:500]
 
         formatted_line = f"[{user_name}]: {clean_text}"
         line_len = len(formatted_line) + 1
