@@ -26,9 +26,7 @@ def _get_message_type(message: Message) -> MessageType:
 
 
 @router.message()
-async def group_message_handler(
-    message: Message, container: Container
-) -> None:
+async def group_message_handler(message: Message, container: Container) -> None:
     """
     Сохраняет все сообщения и ответы от всех пользователей для построения метрик.
     """
@@ -54,9 +52,7 @@ async def process_reply_message(
     """
     Сохраняет reply-сообщения и связь с оригинальным сообщением.
     """
-    convert_uc: ConvertToLocalTimeUseCase = container.resolve(
-        ConvertToLocalTimeUseCase
-    )
+    convert_uc: ConvertToLocalTimeUseCase = container.resolve(ConvertToLocalTimeUseCase)
     message_date = convert_uc.execute(ConvertToLocalTimeDTO(dt=message.date))
     reply_to_message_date = convert_uc.execute(
         ConvertToLocalTimeDTO(dt=message.reply_to_message.date)
@@ -95,9 +91,8 @@ async def process_reply_message(
             response_time_seconds=int(
                 (message_date - reply_to_message_date).total_seconds()
             ),
+            reply_message_id_str=str(message.message_id),
         )
-        # Сохраняем message_id для использования в воркере
-        reply_dto.reply_message_id_str = str(message.message_id)
 
         # Сохраняем связь в MessageReply
         reply_usecase: SaveReplyMessageUseCase = container.resolve(
@@ -115,9 +110,7 @@ async def process_message(
     """
     Сохраняет обычные сообщения от всех пользователей.
     """
-    convert_uc: ConvertToLocalTimeUseCase = container.resolve(
-        ConvertToLocalTimeUseCase
-    )
+    convert_uc: ConvertToLocalTimeUseCase = container.resolve(ConvertToLocalTimeUseCase)
     message_date = convert_uc.execute(ConvertToLocalTimeDTO(dt=message.date))
 
     msg_dto = CreateMessageDTO(
