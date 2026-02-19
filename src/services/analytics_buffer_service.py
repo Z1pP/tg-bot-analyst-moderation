@@ -1,8 +1,10 @@
 import logging
-from typing import List, Type, TypeVar
+from typing import List, Optional, Type, TypeVar
 
 import redis.asyncio as redis
 from pydantic import BaseModel
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from config import settings
 from dto.buffer import BufferedMessageDTO, BufferedMessageReplyDTO, BufferedReactionDTO
@@ -10,6 +12,12 @@ from dto.buffer import BufferedMessageDTO, BufferedMessageReplyDTO, BufferedReac
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
+
+_REDIS_ERRORS = (
+    RedisConnectionError,
+    RedisTimeoutError,
+    OSError,
+)
 
 
 class AnalyticsBufferService:
@@ -19,7 +27,7 @@ class AnalyticsBufferService:
     REDIS_KEY_REACTIONS = "buffer:reactions"
     REDIS_KEY_REPLIES = "buffer:replies"
 
-    def __init__(self, redis_url: str = None):
+    def __init__(self, redis_url: Optional[str] = None) -> None:
         self.redis_url = (
             redis_url
             or f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
@@ -36,8 +44,8 @@ class AnalyticsBufferService:
                 self._connected = True
                 logger.debug("Подключение к Redis установлено")
                 return True
-            except Exception as e:
-                logger.error(f"Ошибка подключения к Redis: {e}")
+            except _REDIS_ERRORS as e:
+                logger.error("Ошибка подключения к Redis: %s", e)
                 self._connected = False
                 return False
         elif not self._connected:
@@ -45,8 +53,8 @@ class AnalyticsBufferService:
                 await self._redis.ping()
                 self._connected = True
                 return True
-            except Exception as e:
-                logger.error(f"Ошибка проверки соединения Redis: {e}")
+            except _REDIS_ERRORS as e:
+                logger.error("Ошибка проверки соединения Redis: %s", e)
                 self._connected = False
                 return False
         return True
@@ -54,16 +62,28 @@ class AnalyticsBufferService:
     async def _add_to_buffer(self, key: str, dto: BaseModel, entity_name: str) -> None:
         """Общий метод для добавления DTO в буфер Redis"""
         if not await self._ensure_connection():
-            logger.error(f"Redis недоступен, {entity_name} не добавлено в буфер")
+            logger.error(
+                "Redis недоступен, %s не добавлено в буфер", entity_name
+            )
             return
 
         try:
             json_data = dto.model_dump_json()
             await self._redis.rpush(key, json_data.encode("utf-8"))
-            logger.debug(f"{entity_name.capitalize()} добавлено в буфер")
-        except Exception as e:
+            logger.debug("%s добавлено в буфер", entity_name.capitalize())
+        except _REDIS_ERRORS as e:
             logger.error(
-                f"Ошибка при добавлении {entity_name} в буфер: {e}", exc_info=True
+                "Ошибка при добавлении %s в буфер: %s",
+                entity_name,
+                e,
+                exc_info=True,
+            )
+        except (UnicodeEncodeError, TypeError) as e:
+            logger.error(
+                "Ошибка сериализации %s в буфер: %s",
+                entity_name,
+                e,
+                exc_info=True,
             )
 
     async def _pop_from_buffer(
@@ -81,15 +101,22 @@ class AnalyticsBufferService:
                     json_str = item.decode("utf-8") if isinstance(item, bytes) else item
                     dto = dto_class.model_validate_json(json_str)
                     items.append(dto)
-                except Exception as e:
-                    logger.error(f"Ошибка десериализации {entity_name}: {e}")
+                except (ValueError, UnicodeDecodeError, TypeError) as e:
+                    logger.error(
+                        "Ошибка десериализации %s: %s", entity_name, e
+                    )
                     continue
 
-            logger.debug(f"Прочитано {len(items)} {entity_name} из буфера")
+            logger.debug(
+                "Прочитано %s %s из буфера", len(items), entity_name
+            )
             return items
-        except Exception as e:
+        except _REDIS_ERRORS as e:
             logger.error(
-                f"Ошибка при чтении {entity_name} из буфера: {e}", exc_info=True
+                "Ошибка при чтении %s из буфера: %s",
+                entity_name,
+                e,
+                exc_info=True,
             )
             return []
 
@@ -100,10 +127,13 @@ class AnalyticsBufferService:
 
         try:
             await self._redis.ltrim(key, count, -1)
-            logger.debug(f"Удалено {count} {entity_name} из буфера")
-        except Exception as e:
+            logger.debug("Удалено %s %s из буфера", count, entity_name)
+        except _REDIS_ERRORS as e:
             logger.error(
-                f"Ошибка при удалении {entity_name} из буфера: {e}", exc_info=True
+                "Ошибка при удалении %s из буфера: %s",
+                entity_name,
+                e,
+                exc_info=True,
             )
 
     async def add_message(self, dto: BufferedMessageDTO) -> None:

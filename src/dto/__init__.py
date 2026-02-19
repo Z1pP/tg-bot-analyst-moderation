@@ -4,8 +4,20 @@ from .admin_log import (
     GetAdminLogsPageDTO,
 )
 from .amnesty import AmnestyUserDTO, CancelWarnResultDTO
-from .category_dto import CategoryDTO, CreateCategoryDTO, UpdateCategoryDTO
-from .chat_dto import ChatDTO, DbChatDTO, UserChatsDTO
+from .category_dto import (
+    CategoryDTO,
+    CreateCategoryDTO,
+    GetCategoriesPaginatedDTO,
+    UpdateCategoryDTO,
+)
+from .chat_dto import (
+    BindArchiveChatDTO,
+    ChatDTO,
+    DbChatDTO,
+    GenerateArchiveBindHashDTO,
+    GetChatWithArchiveDTO,
+    UserChatsDTO,
+)
 from .daily_activity import (
     ChatDailyStatsDTO,
     PopularReactionDTO,
@@ -39,11 +51,15 @@ __all__ = [
     # Category
     "CategoryDTO",
     "CreateCategoryDTO",
+    "GetCategoriesPaginatedDTO",
     "UpdateCategoryDTO",
     # Chat
     "ChatDTO",
     "UserChatsDTO",
     "DbChatDTO",
+    "GetChatWithArchiveDTO",
+    "GenerateArchiveBindHashDTO",
+    "BindArchiveChatDTO",
     # Daily Activity
     "ChatDailyStatsDTO",
     "PopularReactionDTO",

@@ -1,4 +1,7 @@
+from typing import List
+
 from exceptions.user import UserNotFoundException
+from models import ChatSession
 from repositories import ChatTrackingRepository
 from services.user import UserService
 
@@ -8,18 +11,17 @@ class GetAllChatsUseCase:
         self,
         chat_tracking_repository: ChatTrackingRepository,
         user_service: UserService,
-    ):
+    ) -> None:
         self._chat_tracking_repository = chat_tracking_repository
         self._user_service = user_service
 
-    async def execute(self, tg_id: str):
-        user = await self._user_service.get_user(tg_id)
+    async def execute(self, tg_id: str) -> List[ChatSession]:
+        user = await self._user_service.get_user(tg_id=tg_id)
 
         if not user:
-            raise UserNotFoundException()
+            raise UserNotFoundException(identifier=tg_id)
 
         chats = await self._chat_tracking_repository.get_all_tracked_chats(
             admin_id=user.id
         )
-
-        return chats
+        return list(chats)

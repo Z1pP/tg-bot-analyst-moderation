@@ -8,7 +8,8 @@ from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import DEFAULT_PAGE_SIZE
 from dto.admin_log import GetAdminLogsPageDTO
-from exceptions import AdminLogsError
+from exceptions import BusinessLogicException
+from exceptions.base import BotBaseException
 from keyboards.inline.admin_logs import admin_logs_ikb, admin_select_ikb
 from keyboards.inline.menu import main_menu_ikb
 from usecases.admin_logs import GetAdminLogsPageUseCase, GetAdminsWithLogsUseCase
@@ -47,7 +48,7 @@ async def admin_logs_handler(
             reply_markup=admin_select_ikb(admins),
         )
 
-    except AdminLogsError as e:
+    except BotBaseException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
@@ -59,20 +60,11 @@ async def admin_logs_handler(
             ),
         )
     except Exception as e:
-        logger.error(
-            "Ошибка при получении списка администраторов: %s", e, exc_info=True
-        )
-
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.AdminLogs.ERROR_GET_ADMINS,
-            reply_markup=main_menu_ikb(
-                user=None,
-                user_language=user_language,
-            ),
-        )
+        logger.exception("Ошибка при получении списка администраторов: %s", e)
+        raise BusinessLogicException(
+            message=Dialog.AdminLogs.ERROR_GET_ADMINS,
+            details={"original": str(e)},
+        ) from e
 
 
 @router.callback_query(lambda c: c.data.startswith("admin_logs__"))
@@ -123,8 +115,11 @@ async def admin_logs_select_handler(
             ),
         )
 
-    except AdminLogsError as e:
+    except BotBaseException as e:
         await callback.answer(e.get_user_message(), show_alert=True)
     except Exception as e:
-        logger.error("Ошибка при получении логов администратора: %s", e, exc_info=True)
-        await callback.answer(Dialog.AdminLogs.ERROR_GET_LOGS, show_alert=True)
+        logger.exception("Ошибка при получении логов администратора: %s", e)
+        raise BusinessLogicException(
+            message=Dialog.AdminLogs.ERROR_GET_LOGS,
+            details={"original": str(e)},
+        ) from e

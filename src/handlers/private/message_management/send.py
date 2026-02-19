@@ -15,7 +15,6 @@ from keyboards.inline.message_actions import (
     confirm_send_message_ikb,
     send_message_ikb,
 )
-from services.chat.chat_service import ChatService
 from states.message_management import (
     ACTIVE_MESSAGE_ID,
     ADMIN_MESSAGE_ID,
@@ -27,10 +26,12 @@ from states.message_management import (
     MessageManagerState,
     get_send_confirm_state,
 )
+from dto.chat_dto import GetChatWithArchiveDTO
 from usecases.admin_actions import (
     BroadcastMessageToTrackedChatsUseCase,
     SendMessageToChatUseCase,
 )
+from usecases.chat import GetChatWithArchiveUseCase
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from utils.send_message import safe_delete_message, safe_edit_message
 
@@ -134,8 +135,12 @@ async def process_select_chat_handler(
         # Выбор конкретного чата
         chat_id = int(suffix)
 
-        chat_service: ChatService = container.resolve(ChatService)
-        selected_chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
+        get_chat_uc: GetChatWithArchiveUseCase = container.resolve(
+            GetChatWithArchiveUseCase
+        )
+        selected_chat = await get_chat_uc.execute(
+            GetChatWithArchiveDTO(chat_id=chat_id)
+        )
 
         if not selected_chat:
             logger.error("Чат с id %s не найден", chat_id)

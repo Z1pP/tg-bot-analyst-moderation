@@ -10,7 +10,7 @@ router = Router(name=__name__)
 
 
 @router.callback_query(F.data == CallbackData.Analytics.SHOW_MENU)
-async def analytics_menu_handler(callback: CallbackQuery):
+async def analytics_menu_handler(callback: CallbackQuery) -> None:
     await callback.answer()
     await safe_edit_message(
         bot=callback.bot,

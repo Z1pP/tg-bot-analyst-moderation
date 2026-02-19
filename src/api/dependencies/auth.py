@@ -1,7 +1,7 @@
 import time
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -21,7 +21,7 @@ def _load_pub_key() -> str:
 
 def verify_service_jwt(
     creds: Annotated[HTTPAuthorizationCredentials | None, Depends(AUTH_SCHEME)],
-):
+) -> dict[str, Any]:
     if not creds:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="missing token"

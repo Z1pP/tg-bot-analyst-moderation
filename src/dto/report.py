@@ -11,12 +11,16 @@ class SingleUserReportDTO(BaseModel):
     end_date: datetime
     selected_period: Optional[str] = None
 
+    model_config = ConfigDict(frozen=True)
+
 
 class AllUsersReportDTO(BaseModel):
     user_tg_id: str
     start_date: datetime
     end_date: datetime
     selected_period: Optional[str] = None
+
+    model_config = ConfigDict(frozen=True)
 
 
 class ChatReportDTO(BaseModel):
@@ -27,12 +31,14 @@ class ChatReportDTO(BaseModel):
     end_date: Optional[datetime] = None  # Для кастомных дат из календаря
     chat_tgid: Optional[str] = None  # Telegram id чата
 
+    model_config = ConfigDict(frozen=True)
+
 
 class UserDayStats(BaseModel):
     """Статистика пользователя за один день"""
 
-    first_message_time: Optional[datetime]
-    first_reaction_time: Optional[datetime]
+    first_message_time: Optional[datetime] = None
+    first_reaction_time: Optional[datetime] = None
     last_message_time: Optional[datetime] = None
     avg_messages_per_hour: float
     total_messages: int
@@ -45,8 +51,8 @@ class UserDayStats(BaseModel):
 class UserMultiDayStats(BaseModel):
     """Статистика пользователя за несколько дней"""
 
-    avg_first_message_time: Optional[str]  # "HH:MM"
-    avg_first_reaction_time: Optional[str]
+    avg_first_message_time: Optional[str] = None  # "HH:MM"
+    avg_first_reaction_time: Optional[str] = None
     avg_last_message_time: Optional[str] = None
     avg_messages_per_hour: float
     avg_messages_per_day: float
@@ -61,10 +67,10 @@ class RepliesStats(BaseModel):
     """Статистика ответов пользователя"""
 
     total_count: int
-    min_time_seconds: Optional[int]
-    max_time_seconds: Optional[int]
-    avg_time_seconds: Optional[int]
-    median_time_seconds: Optional[int]
+    min_time_seconds: Optional[int] = None
+    max_time_seconds: Optional[int] = None
+    avg_time_seconds: Optional[int] = None
+    median_time_seconds: Optional[int] = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -114,8 +120,8 @@ class UserStatsDTO(BaseModel):
 
     user_id: int
     username: str
-    day_stats: Optional[UserDayStats]  # для однодневного отчета
-    multi_day_stats: Optional[UserMultiDayStats]  # для многодневного
+    day_stats: Optional[UserDayStats] = None  # для однодневного отчета
+    multi_day_stats: Optional[UserMultiDayStats] = None  # для многодневного
     replies_stats: RepliesStats
     breaks: List[str]  # уже отформатированные строки из BreakAnalysisService
     total_break_time: Optional[str] = None
@@ -126,8 +132,8 @@ class UserStatsDTO(BaseModel):
 class SingleUserDayStats(BaseModel):
     """Статистика пользователя за один день"""
 
-    first_message_time: Optional[datetime]
-    first_reaction_time: Optional[datetime]
+    first_message_time: Optional[datetime] = None
+    first_reaction_time: Optional[datetime] = None
     last_message_time: Optional[datetime] = None
     avg_messages_per_hour: float
     total_messages: int
@@ -140,8 +146,8 @@ class SingleUserDayStats(BaseModel):
 class SingleUserMultiDayStats(BaseModel):
     """Статистика пользователя за несколько дней"""
 
-    avg_first_message_time: Optional[str]  # "HH:MM"
-    avg_first_reaction_time: Optional[str]
+    avg_first_message_time: Optional[str] = None  # "HH:MM"
+    avg_first_reaction_time: Optional[str] = None
     avg_last_message_time: Optional[str] = None
     avg_messages_per_hour: float
     avg_messages_per_day: float
@@ -160,8 +166,8 @@ class SingleUserReportResultDTO(BaseModel):
     start_date: datetime
     end_date: datetime
     is_single_day: bool
-    day_stats: Optional[SingleUserDayStats]
-    multi_day_stats: Optional[SingleUserMultiDayStats]
+    day_stats: Optional[SingleUserDayStats] = None
+    multi_day_stats: Optional[SingleUserMultiDayStats] = None
     replies_stats: RepliesStats
     breaks: List[str]  # уже отформатированные из BreakAnalysisService
     error_message: Optional[str] = None
@@ -174,8 +180,8 @@ class AllUsersUserStatsResult(BaseModel):
 
     user_id: int
     username: str
-    day_stats: Optional[SingleUserDayStats]  # переиспользуем существующий
-    multi_day_stats: Optional[SingleUserMultiDayStats]  # переиспользуем существующий
+    day_stats: Optional[SingleUserDayStats] = None  # переиспользуем существующий
+    multi_day_stats: Optional[SingleUserMultiDayStats] = None  # переиспользуем существующий
     replies_stats: RepliesStats
     breaks: List[str]  # уже отформатированные из BreakAnalysisService
 

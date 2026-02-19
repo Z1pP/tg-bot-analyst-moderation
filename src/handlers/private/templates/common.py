@@ -45,7 +45,9 @@ async def common_process_template_title_handler(
 
 
 @router.callback_query(F.data == "cancel_template")
-async def cancel_template_handler(callback: types.CallbackQuery, state: FSMContext):
+async def cancel_template_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
     await callback.answer()
     await safe_edit_message(
         bot=callback.bot,

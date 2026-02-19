@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-from models.reaction import ReactionAction
+from constants.enums import ReactionAction
 
 
 class MessageReactionDTO(BaseModel):
@@ -15,3 +15,5 @@ class MessageReactionDTO(BaseModel):
     emoji: str
     message_url: str
     created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(frozen=True)

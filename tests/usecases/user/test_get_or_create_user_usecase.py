@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from exceptions import ValidationException
 from models import User
 from services.user.user_service import UserService
 from usecases.user.get_or_create_user import (
@@ -63,5 +64,5 @@ async def test_get_or_create_validation_error(
     use_case: GetOrCreateUserIfNotExistUserCase,
 ) -> None:
     # Act & Assert
-    with pytest.raises(ValueError, match="Either tg_id or username must be provided"):
+    with pytest.raises(ValidationException, match="Необходимо указать tg_id или username"):
         await use_case.execute(tg_id=None, username=None)

@@ -20,25 +20,25 @@ class ChatSettings(BaseModel):
         doc="ID of the chat in the database.",
     )
 
-    start_time: Mapped[time] = mapped_column(
+    start_time: Mapped[Optional[time]] = mapped_column(
         Time,
         nullable=True,
         doc="Start work time for report filtering. Default is None.",
     )
 
-    end_time: Mapped[time] = mapped_column(
+    end_time: Mapped[Optional[time]] = mapped_column(
         Time,
         nullable=True,
         doc="End work time for report filtering. Default is None.",
     )
 
-    tolerance: Mapped[int] = mapped_column(
+    tolerance: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         doc="Tolerance for report filtering. Default is None.",
     )
 
-    breaks_time: Mapped[int] = mapped_column(
+    breaks_time: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
         doc="Breaks time for report filtering. Default is None.",

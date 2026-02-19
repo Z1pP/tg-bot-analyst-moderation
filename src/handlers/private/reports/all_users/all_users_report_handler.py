@@ -15,10 +15,11 @@ from keyboards.inline import CalendarKeyboard, all_users_actions_ikb
 from keyboards.inline.report import order_details_kb_all_users
 from keyboards.inline.time_period import time_period_ikb_all_users
 from presenters import AllUsersReportPresenter
-from services.time_service import TimeZoneService
+from dto.time_dto import GetAppNowDTO
 from states import AllUsersReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.report import GetAllUsersReportUseCase
+from usecases.time import GetAppNowUseCase
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
@@ -108,8 +109,8 @@ async def process_period_selection_callback(
 
         await state.set_state(AllUsersReportStates.selecting_custom_period)
 
-        # Показываем календарь
-        now = TimeZoneService.now()
+        get_now_uc: GetAppNowUseCase = container.resolve(GetAppNowUseCase)
+        now = get_now_uc.execute(GetAppNowDTO())
         await state.update_data(cal_start_date=None, cal_end_date=None)
 
         calendar_kb = CalendarKeyboard.create_calendar_all_users(

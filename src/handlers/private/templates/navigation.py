@@ -9,7 +9,9 @@ router = Router(name=__name__)
 
 
 @router.callback_query(F.data == "templates_menu")
-async def templates_menu_handler(callback: types.CallbackQuery, state: FSMContext):
+async def templates_menu_handler(
+    callback: types.CallbackQuery, state: FSMContext
+) -> None:
     """Обработчик меню шаблонов"""
     await callback.answer()
     await state.clear()

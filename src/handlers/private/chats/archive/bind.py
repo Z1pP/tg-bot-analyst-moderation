@@ -10,8 +10,11 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
+from dto.chat_dto import GenerateArchiveBindHashDTO
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from keyboards.inline.chats import archive_bind_instruction_ikb, chats_menu_ikb
-from services.chat import ArchiveBindService
+from usecases.archive import GenerateArchiveBindHashUseCase
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
@@ -39,10 +42,14 @@ async def archive_bind_instruction_handler(
         return
 
     try:
-        archive_bind_service: ArchiveBindService = container.resolve(ArchiveBindService)
-        bind_hash = archive_bind_service.generate_bind_hash(
-            chat_id=chat_id,
-            admin_tg_id=callback.from_user.id,
+        usecase: GenerateArchiveBindHashUseCase = container.resolve(
+            GenerateArchiveBindHashUseCase
+        )
+        bind_hash = await usecase.execute(
+            GenerateArchiveBindHashDTO(
+                chat_id=chat_id,
+                admin_tg_id=callback.from_user.id,
+            )
         )
 
         instruction_text = Dialog.Chat.ARCHIVE_BIND_WITH_CODE.format(
@@ -57,12 +64,18 @@ async def archive_bind_instruction_handler(
             text=instruction_text,
             reply_markup=archive_bind_instruction_ikb(),
         )
-    except Exception as exc:
-        logger.error("Ошибка при генерации hash для привязки: %s", exc)
+    except BotBaseException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.Chat.ARCHIVE_BIND_INSTRUCTION,
+            text=e.get_user_message(),
             reply_markup=archive_bind_instruction_ikb(),
+        )
+    except Exception as exc:
+        raise_business_logic(
+            "Ошибка при генерации hash для привязки.",
+            "Произошла ошибка при генерации кода привязки.",
+            exc,
+            logger,
         )

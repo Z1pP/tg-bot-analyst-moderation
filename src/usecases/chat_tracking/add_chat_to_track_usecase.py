@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from constants.enums import AdminActionType
+from exceptions import BotBaseException
 from models import AdminChatAccess, ChatSession, User
 from repositories import ChatTrackingRepository
 from services import (
@@ -157,7 +158,7 @@ class AddChatToTrackUseCase:
             )
             return result
 
-        except Exception as e:
+        except BotBaseException as e:
             logger.error(
                 "Ошибка при выполнении UseCase AddChatToTrackUseCase: %s",
                 e,

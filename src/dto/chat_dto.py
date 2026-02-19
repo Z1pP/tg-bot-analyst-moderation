@@ -6,6 +6,34 @@ from pydantic import BaseModel, ConfigDict
 from models import ChatSession
 
 
+class GetChatWithArchiveDTO(BaseModel):
+    """DTO для получения чата с архивным каналом по id или tgid."""
+
+    chat_id: Optional[int] = None
+    chat_tgid: Optional[str] = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class GenerateArchiveBindHashDTO(BaseModel):
+    """DTO для генерации hash привязки архивного чата."""
+
+    chat_id: int
+    admin_tg_id: int
+
+    model_config = ConfigDict(frozen=True)
+
+
+class BindArchiveChatDTO(BaseModel):
+    """DTO для привязки архивного чата к рабочему по hash."""
+
+    bind_hash: str
+    archive_chat_tgid: str
+    archive_chat_title: str
+
+    model_config = ConfigDict(frozen=True)
+
+
 class ChatDTO(BaseModel):
     id: int
     tg_id: str
@@ -28,7 +56,7 @@ class ChatDTO(BaseModel):
         return cls(
             id=chat.id,
             tg_id=chat.chat_id,
-            title=chat.title,
+            title=chat.title or "",
             is_antibot_enabled=is_antibot_enabled,
             welcome_text=welcome_text,
         )
@@ -50,12 +78,14 @@ class DbChatDTO(BaseModel):
     title: str
     created_at: datetime
 
+    model_config = ConfigDict(frozen=True)
+
     @classmethod
     def from_model(cls, chat: ChatSession) -> "DbChatDTO":
         """Создает DTO из доменной модели"""
         return cls(
             id=chat.id,
             chat_id=chat.chat_id,
-            title=chat.title,
+            title=chat.title or "",
             created_at=chat.created_at,
         )

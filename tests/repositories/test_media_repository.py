@@ -1,8 +1,8 @@
 from typing import Any
 
 import pytest
-from sqlalchemy.exc import IntegrityError
 
+from exceptions import DatabaseException
 from models import MessageTemplate, User
 from repositories.media_repository import TemplateMediaRepository
 
@@ -50,8 +50,8 @@ async def test_create_media_invalid_template(db_manager: Any) -> None:
     # Arrange
     repo = TemplateMediaRepository(db_manager)
 
-    # Act & Assert
-    with pytest.raises(IntegrityError):
+    # Act & Assert — репозиторий оборачивает SQLAlchemyError в DatabaseException
+    with pytest.raises(DatabaseException):
         await repo.create_media(
             template_id=99999,  # Несуществующий ID
             media_type="photo",

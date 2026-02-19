@@ -8,6 +8,7 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
+from dto import GetChatWithArchiveDTO
 from keyboards.inline.chats import chats_menu_ikb
 from usecases.archive import GetArchiveSettingsUseCase
 from utils.send_message import safe_edit_message
@@ -35,7 +36,7 @@ async def archive_channel_setting_handler(
         return
 
     usecase: GetArchiveSettingsUseCase = container.resolve(GetArchiveSettingsUseCase)
-    result = await usecase.execute(chat_id=chat_id)
+    result = await usecase.execute(GetChatWithArchiveDTO(chat_id=chat_id))
 
     await safe_edit_message(
         bot=callback.bot,

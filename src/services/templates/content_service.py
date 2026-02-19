@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from aiogram.types import Message
+from sqlalchemy.exc import SQLAlchemyError
 
 from constants.enums import AdminActionType
 from models import MessageTemplate
@@ -12,6 +13,7 @@ from repositories import (
 )
 from services.admin_action_log_service import AdminActionLogService
 from services.caching import ICache
+from services.templates.cache_helpers import invalidate_category_pages
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +27,8 @@ class TemplateContentService:
         template_repository: MessageTemplateRepository,
         media_repository: TemplateMediaRepository,
         cache: ICache,
-        admin_action_log_service: AdminActionLogService = None,
-    ):
+        admin_action_log_service: Optional[AdminActionLogService] = None,
+    ) -> None:
         self._user_repository = user_repository
         self._template_repository = template_repository
         self._media_repository = media_repository
@@ -98,15 +100,13 @@ class TemplateContentService:
                     action_type=AdminActionType.ADD_TEMPLATE,
                 )
 
-            # Инвалидируем кеш категории
             category_id = content.get("category_id")
             if category_id:
-                for page in range(1, 11):
-                    await self._cache.delete(f"tpl:cat:{category_id}:page:{page}")
+                await invalidate_category_pages(self._cache, category_id)
 
             return new_template
-        except Exception as e:
-            logger.error(f"Ошибка сохранения шаблона: {e}", exc_info=True)
+        except (SQLAlchemyError, ValueError) as e:
+            logger.error("Ошибка сохранения шаблона: %s", e, exc_info=True)
             raise
 
     async def save_media_files(
@@ -133,8 +133,10 @@ class TemplateContentService:
                     file_unique_id=file_unique_id,
                     position=position,
                 )
-            except Exception as e:
-                logger.error(f"Ошибка сохранения медиа {file_id}: {e}", exc_info=True)
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Ошибка сохранения медиа %s: %s", file_id, e, exc_info=True
+                )
 
     async def update_template_content(
         self,
@@ -171,13 +173,14 @@ class TemplateContentService:
                     template_id
                 )
                 if template and template.category_id:
-                    for page in range(1, 11):
-                        await self._cache.delete(
-                            f"tpl:cat:{template.category_id}:page:{page}"
-                        )
+                    await invalidate_category_pages(
+                        self._cache, template.category_id
+                    )
 
             return result
 
-        except Exception as e:
-            logger.error(f"Ошибка обновления содержимого шаблона: {e}", exc_info=True)
+        except (SQLAlchemyError, ValueError, TypeError) as e:
+            logger.error(
+                "Ошибка обновления содержимого шаблона: %s", e, exc_info=True
+            )
             return False

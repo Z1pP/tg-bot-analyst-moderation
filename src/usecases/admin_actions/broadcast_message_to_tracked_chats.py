@@ -2,7 +2,10 @@
 
 import logging
 
+from aiogram.exceptions import TelegramAPIError
+
 from dto.message_action import BroadcastResultDTO, SendMessageDTO
+from exceptions import BotBaseException
 from exceptions.moderation import MessageSendError
 from usecases.admin_actions.send_message_to_chat import SendMessageToChatUseCase
 from usecases.chat_tracking.get_user_tracked_chats import GetUserTrackedChatsUseCase
@@ -57,19 +60,11 @@ class BroadcastMessageToTrackedChatsUseCase:
             try:
                 await self._send_message_to_chat.execute(dto)
                 success_count += 1
-            except MessageSendError as e:
+            except (MessageSendError, TelegramAPIError, BotBaseException) as e:
                 logger.warning(
                     "Не удалось отправить сообщение в чат %s: %s",
                     chat.tg_id,
                     e,
-                )
-                failed_count += 1
-            except Exception as e:
-                logger.error(
-                    "Ошибка отправки сообщения в чат %s: %s",
-                    chat.tg_id,
-                    e,
-                    exc_info=True,
                 )
                 failed_count += 1
 

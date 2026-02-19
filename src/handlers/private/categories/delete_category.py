@@ -6,11 +6,14 @@ from aiogram.types import CallbackQuery
 from punq import Container
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
+from exceptions import BusinessLogicException
+from exceptions.base import BotBaseException
 from exceptions.category import CategoryNotFoundError
+from handlers._handler_errors import raise_business_logic
 from keyboards.inline.categories import categories_inline_ikb, conf_remove_category_kb
 from keyboards.inline.templates import templates_menu_ikb
-from services.categories import CategoryService
 from states import CategoryStateManager, TemplateStateManager
+from usecases.categories import GetCategoriesUseCase
 from usecases.categories import DeleteCategoryUseCase, GetCategoryByIdUseCase
 from utils.send_message import safe_edit_message
 
@@ -96,8 +99,10 @@ async def confirm_removing_category_handler(
         logger.info("Категория ID=%d успешно удалена", category_id)
 
         # Получаем список категорий для отображения
-        category_service: CategoryService = container.resolve(CategoryService)
-        categories = await category_service.get_categories()
+        get_categories_uc: GetCategoriesUseCase = container.resolve(
+            GetCategoriesUseCase
+        )
+        categories = await get_categories_uc.execute()
 
         if not categories:
             # Если категорий не осталось, возвращаемся в меню
@@ -139,17 +144,23 @@ async def confirm_removing_category_handler(
         )
         await state.set_state(TemplateStateManager.templates_menu)
 
-    except Exception:
-        logger.exception("Ошибка при удалении категории ID=%d", category_id)
-        text = "⚠️ Произошла ошибка при удалении категории."
+    except BusinessLogicException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=text,
+            text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )
         await state.set_state(TemplateStateManager.templates_menu)
+
+    except Exception as e:
+        raise_business_logic(
+            "Ошибка при удалении категории.",
+            "⚠️ Произошла ошибка при удалении категории.",
+            e,
+            logger,
+        )
 
 
 @router.callback_query(
@@ -196,8 +207,10 @@ async def cancel_removing_category_handler(
         )
 
         # Получаем список категорий для отображения
-        category_service: CategoryService = container.resolve(CategoryService)
-        categories = await category_service.get_categories()
+        get_categories_uc: GetCategoriesUseCase = container.resolve(
+            GetCategoriesUseCase
+        )
+        categories = await get_categories_uc.execute()
 
         if not categories:
             await safe_edit_message(
@@ -226,13 +239,19 @@ async def cancel_removing_category_handler(
 
         await state.set_state(TemplateStateManager.listing_categories)
 
-    except Exception as e:
-        logger.exception("Ошибка при отмене удаления категории: %s", e)
+    except BotBaseException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="❌ Удаление категории отменено.",
+            text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )
         await state.set_state(TemplateStateManager.templates_menu)
+    except Exception as e:
+        raise_business_logic(
+            "Ошибка при отмене удаления категории.",
+            "❌ Произошла ошибка. Попробуйте снова.",
+            e,
+            logger,
+        )

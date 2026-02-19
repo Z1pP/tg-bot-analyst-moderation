@@ -11,12 +11,12 @@ class SaveReplyMessageUseCase:
         buffer_service: AnalyticsBufferService,
         user_service: UserService,
         chat_service: ChatService,
-    ):
+    ) -> None:
         self.buffer_service = buffer_service
         self.user_service = user_service
         self.chat_service = chat_service
 
-    async def execute(self, reply_message_dto: CreateMessageReplyDTO):
+    async def execute(self, reply_message_dto: CreateMessageReplyDTO) -> None:
         """
         Сохраняет связь между reply-сообщением и оригинальным сообщением в буфер Redis,
         если сообщения созданы в один день и в рабочее время.

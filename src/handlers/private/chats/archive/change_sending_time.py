@@ -9,13 +9,14 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from punq import Container
-from sqlalchemy.exc import SQLAlchemyError
 
 from constants import Dialog
 from constants.callback import CallbackData
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from keyboards.inline.chats import cancel_archive_time_setting_ikb
-from services.report_schedule_service import ReportScheduleService
 from states import ChatArchiveState
+from usecases.archive import SetArchiveSendingTimeUseCase
 from utils.data_parser import parse_time
 from utils.send_message import safe_edit_message
 
@@ -114,24 +115,23 @@ async def time_input_handler(
         return
 
     try:
-        schedule_service: ReportScheduleService = container.resolve(
-            ReportScheduleService
+        usecase: SetArchiveSendingTimeUseCase = container.resolve(
+            SetArchiveSendingTimeUseCase
         )
+        result = await usecase.execute(chat_id=chat_id, new_time=parsed_time)
 
-        schedule = await schedule_service.get_schedule(chat_id=chat_id)
-
-        if schedule:
-            # Обновляем существующее расписание
-            await schedule_service.update_sending_time(
-                chat_id=chat_id, new_time=parsed_time
-            )
-        else:
-            # Создаем новое расписание
-            await schedule_service.get_or_create_schedule(
-                chat_id=chat_id,
-                sent_time=parsed_time,
-                enabled=True,
-            )
+        if not result.success:
+            text = Dialog.Chat.ARCHIVE_TIME_SAVE_ERROR
+            if active_message_id:
+                await safe_edit_message(
+                    bot=message.bot,
+                    chat_id=message.chat.id,
+                    message_id=active_message_id,
+                    text=text,
+                    reply_markup=cancel_archive_time_setting_ikb(),
+                )
+            await _safe_delete_message(message)
+            return
 
         await safe_edit_message(
             bot=message.bot,
@@ -144,9 +144,8 @@ async def time_input_handler(
         await _safe_delete_message(message)
         await state.set_state(None)
 
-    except SQLAlchemyError as exc:
-        logger.error("Ошибка при сохранении времени отправки: %s", exc, exc_info=True)
-        text = Dialog.Chat.ARCHIVE_TIME_SAVE_ERROR
+    except BotBaseException as e:
+        text = e.get_user_message()
         if active_message_id:
             await safe_edit_message(
                 bot=message.bot,
@@ -156,6 +155,13 @@ async def time_input_handler(
                 reply_markup=cancel_archive_time_setting_ikb(),
             )
         await _safe_delete_message(message)
+    except Exception as exc:
+        raise_business_logic(
+            "Ошибка при сохранении времени отправки.",
+            Dialog.Chat.ARCHIVE_TIME_SAVE_ERROR,
+            exc,
+            logger,
+        )
 
 
 async def _handle_invalid_time(

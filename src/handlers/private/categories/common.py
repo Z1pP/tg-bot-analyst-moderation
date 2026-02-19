@@ -138,7 +138,9 @@ async def process_category_name_handler(
 
 
 @router.callback_query(F.data == "cancel_category")
-async def cancel_category_handler(callback: CallbackQuery, state: FSMContext):
+async def cancel_category_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     await callback.answer()
     await safe_edit_message(
         bot=callback.bot,

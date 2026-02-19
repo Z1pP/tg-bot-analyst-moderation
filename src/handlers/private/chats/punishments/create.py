@@ -45,7 +45,9 @@ def _step_to_emoji(step: int) -> str:
 
 
 @router.callback_query(F.data == CallbackData.Chat.PUNISHMENT_CREATE_NEW)
-async def start_create_ladder_handler(callback: CallbackQuery, state: FSMContext):
+async def start_create_ladder_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     """Начало создания новой лестницы"""
     await callback.answer()
 
@@ -107,7 +109,9 @@ async def process_action_type_handler(
 
 
 @router.message(PunishmentState.waiting_for_duration)
-async def process_mute_duration_handler(message: Message, state: FSMContext):
+async def process_mute_duration_handler(
+    message: Message, state: FSMContext
+) -> None:
     """Обработка ввода длительности мута"""
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
@@ -186,7 +190,9 @@ async def add_step_to_temp_ladder(
     PunishmentState.confirm_save,
     F.data == CallbackData.Chat.PUNISH_STEP_NEXT,
 )
-async def next_step_handler(callback: CallbackQuery, state: FSMContext):
+async def next_step_handler(
+    callback: CallbackQuery, state: FSMContext
+) -> None:
     """Переход к следующей ступени"""
     await callback.answer()
     data = await state.get_data()

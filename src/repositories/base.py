@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import logging
 from typing import Any, List, Type, TypeVar
 
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import SQLAlchemyError
 
 from database.session import DatabaseContextManager
+from exceptions import DatabaseException
+from models.base import Base
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Base)
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +41,7 @@ class BaseRepository:
         async with self._db.session() as session:
             try:
                 # Используем PostgreSQL INSERT ... ON CONFLICT DO NOTHING
-                stmt = insert(model.__table__).values(mappings).on_conflict_do_nothing()
+                stmt = insert(model.__table__).values(mappings).on_conflict_do_nothing()  # type: ignore[arg-type]
 
                 result = await session.execute(stmt)
                 await session.commit()
@@ -54,9 +59,11 @@ class BaseRepository:
                     len(mappings),
                 )
                 return inserted_count
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при массовом добавлении %s: %s", label, e, exc_info=True
                 )
                 await session.rollback()
-                return 0
+                raise DatabaseException(
+                    details={"context": f"bulk_upsert_{label}", "original": str(e)}
+                ) from e

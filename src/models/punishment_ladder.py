@@ -2,8 +2,9 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from constants.punishment import PunishmentType
+
 from .base import BaseModel
-from .punishment import PunishmentType
 
 
 class PunishmentLadder(BaseModel):

@@ -68,7 +68,11 @@ class UserService:
             await self._cache_user(user)
         return user
 
-    async def get_user(self, tg_id: str = None, username: str = None) -> Optional[User]:
+    async def get_user(
+        self,
+        tg_id: Optional[str] = None,
+        username: Optional[str] = None,
+    ) -> Optional[User]:
         """
         Получает пользователя по Telegram ID или username с проверкой кеша.
 
@@ -188,7 +192,8 @@ class UserService:
                 # Race condition: пользователь создан параллельно
                 if "tg_id" in str(e) and "duplicate key" in str(e):
                     logger.warning(
-                        f"Race condition: пользователь с tg_id={tg_id} создан параллельно"
+                        "Race condition: пользователь с tg_id=%s создан параллельно",
+                        tg_id,
                     )
                     # Получаем созданного пользователя
                     user = await self.get_user(tg_id=tg_id)
@@ -219,7 +224,7 @@ class UserService:
         )
         if admins is not None:
             await self._cache.set(cache_key, admins, ttl=300)  # Кешируем на 5 минут
-        return admins
+        return admins if admins is not None else []
 
     async def update_user_role(self, user_id: int, new_role: str) -> Optional[User]:
         """

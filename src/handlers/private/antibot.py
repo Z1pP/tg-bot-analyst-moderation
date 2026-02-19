@@ -6,7 +6,8 @@ from aiogram.types import Message
 from punq import Container
 
 from constants import Dialog
-from services import ChatService
+from dto.chat_dto import GetChatWithArchiveDTO
+from usecases.chat import GetChatWithArchiveUseCase
 from usecases.moderation import VerifyMemberUseCase
 
 router = Router(name=__name__)
@@ -28,8 +29,12 @@ async def antibot_start_handler(
         )
 
         if success:
-            chat_service: ChatService = container.resolve(ChatService)
-            chat_db = await chat_service.get_chat(chat_tgid)
+            get_chat_uc: GetChatWithArchiveUseCase = container.resolve(
+                GetChatWithArchiveUseCase
+            )
+            chat_db = await get_chat_uc.execute(
+                GetChatWithArchiveDTO(chat_tgid=chat_tgid)
+            )
             chat_title = chat_db.title if chat_db else "чате"
             await message.answer(
                 Dialog.Antibot.VERIFIED_SUCCESS.format(chat_title=chat_title),

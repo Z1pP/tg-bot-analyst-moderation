@@ -3,6 +3,7 @@ from fastapi.exceptions import HTTPException
 
 from api.dependencies.message import get_save_message_usecase
 from dto.message import CreateMessageDTO as CreateMessageSchema
+from exceptions.base import BotBaseException
 from usecases.message import SaveMessageUseCase
 
 router = APIRouter()
@@ -16,9 +17,9 @@ async def create_message(
     try:
         await usecase.execute(message)
         return Response(status_code=status.HTTP_202_ACCEPTED)
-    except Exception as e:
+    except BotBaseException as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-            headers={"X-Error": "Internal Server Error"},
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=e.get_user_message(),
         )
+    # Остальные исключения пробрасываем — обработает глобальный handler или FastAPI

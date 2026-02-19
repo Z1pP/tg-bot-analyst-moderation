@@ -20,8 +20,8 @@ class GetAdminLogsPageUseCase:
             return await self._execute(dto)
         except AdminLogsError:
             raise
-        except Exception:
-            raise AdminLogsError(message=Dialog.AdminLogs.ERROR_GET_LOGS)
+        except Exception as e:
+            raise AdminLogsError(message=Dialog.AdminLogs.ERROR_GET_LOGS) from e
 
     async def _execute(self, dto: GetAdminLogsPageDTO) -> AdminLogPageResultDTO:
         """Внутренняя реализация без обработки исключений."""

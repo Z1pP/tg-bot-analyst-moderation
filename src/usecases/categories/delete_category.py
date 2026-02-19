@@ -15,13 +15,13 @@ class DeleteCategoryUseCase:
     def __init__(
         self,
         category_service: CategoryService,
-        admin_action_log_service: AdminActionLogService = None,
-    ):
+        admin_action_log_service: Optional[AdminActionLogService] = None,
+    ) -> None:
         self._category_service = category_service
         self._admin_action_log_service = admin_action_log_service
 
     async def execute(
-        self, category_id: int, admin_tg_id: str = None
+        self, category_id: int, admin_tg_id: Optional[str] = None
     ) -> Optional[CategoryDTO]:
         """
         Удаляет категорию и возвращает DTO удалённой категории.

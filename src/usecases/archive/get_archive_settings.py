@@ -8,7 +8,9 @@ from dataclasses import dataclass
 from aiogram.types import InlineKeyboardMarkup
 
 from constants import Dialog
+from exceptions.base import BotBaseException
 from keyboards.inline.chats import archive_channel_setting_ikb, chats_menu_ikb
+from dto import GetChatWithArchiveDTO
 from services import ChatService
 from services.messaging import BotMessageService
 from services.permissions import BotPermissionService
@@ -41,16 +43,21 @@ class GetArchiveSettingsUseCase:
         self._report_schedule_service = report_schedule_service
         self._bot_message_service = bot_message_service
 
-    async def execute(self, chat_id: int) -> ArchiveSettingsResult:
+    async def execute(self, dto: GetChatWithArchiveDTO) -> ArchiveSettingsResult:
         """Build archive settings view for chat."""
         try:
-            chat = await self._chat_service.get_chat_with_archive(chat_id=chat_id)
-        except Exception as exc:
-            logger.error("Ошибка при получении чата: %s", exc, exc_info=True)
-            return ArchiveSettingsResult(
-                text=Dialog.Chat.ERROR_GET_CHAT_WITH_ARCHIVE,
-                reply_markup=chats_menu_ikb(),
+            chat = await self._chat_service.get_chat_with_archive(
+                chat_id=dto.chat_id,
+                chat_tgid=dto.chat_tgid,
             )
+        except BotBaseException:
+            raise
+        except Exception as exc:
+            logger.exception("Ошибка при получении чата: %s", exc)
+            raise BotBaseException(
+                message=Dialog.Chat.ERROR_GET_CHAT_WITH_ARCHIVE,
+                details={"original": str(exc)},
+            ) from exc
 
         if not chat:
             return ArchiveSettingsResult(
@@ -82,7 +89,9 @@ class GetArchiveSettingsUseCase:
                     ),
                 )
 
-            schedule = await self._report_schedule_service.get_schedule(chat_id=chat_id)
+            schedule = await self._report_schedule_service.get_schedule(
+                chat_id=chat.id
+            )
             schedule_info, schedule_enabled = build_schedule_info(schedule)
             text = Dialog.Chat.ARCHIVE_CHANNEL_EXISTS.format(
                 title=chat.title,

@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import List, Tuple
+from datetime import date, datetime
+from typing import Dict, List, Tuple
 
 from constants import BREAK_TIME
 from dto.report import BreakDayDTO, BreakIntervalDTO
@@ -10,6 +10,22 @@ from utils.formatter import format_seconds
 
 class BreakAnalysisService:
     """Сервис для анализа перерывов в сообщениях с учетом реакций."""
+
+    @classmethod
+    def _group_activities_by_date(
+        cls, activities: List[Tuple[datetime, str]]
+    ) -> Dict[date, List[Tuple[datetime, str]]]:
+        """Группирует активность по локальной дате. Каждый список отсортирован по времени."""
+        activities_by_date: Dict[date, List[Tuple[datetime, str]]] = {}
+        for activity_time, activity_type in activities:
+            local_time = TimeZoneService.convert_to_local_time(activity_time)
+            date_key = local_time.date()
+            if date_key not in activities_by_date:
+                activities_by_date[date_key] = []
+            activities_by_date[date_key].append((local_time, activity_type))
+        for day_activities in activities_by_date.values():
+            day_activities.sort(key=lambda x: x[0])
+        return activities_by_date
 
     @classmethod
     def calculate_breaks(
@@ -30,25 +46,14 @@ class BreakAnalysisService:
         Returns:
             Список строк с информацией о перерывах
         """
-        # Объединяем сообщения и реакции в единый список активности
         activities = cls._merge_activities(messages, reactions)
-
         if len(activities) < 2:
             return []
 
         result = []
-        # Группируем активность по дате
-        activities_by_date = {}
+        activities_by_date = cls._group_activities_by_date(activities)
 
-        for activity_time, activity_type in activities:
-            local_time = TimeZoneService.convert_to_local_time(activity_time)
-            date_key = local_time.date()
-            if date_key not in activities_by_date:
-                activities_by_date[date_key] = []
-            activities_by_date[date_key].append((local_time, activity_type))
-
-        # Обрабатываем каждый день отдельно
-        for date, day_activities in sorted(activities_by_date.items()):
+        for date_key, day_activities in sorted(activities_by_date.items()):
             day_activities.sort(key=lambda x: x[0])
             day_breaks = []
             total_break_time = 0
@@ -70,7 +75,7 @@ class BreakAnalysisService:
 
             # Добавляем информацию о дне, если есть перерывы
             if day_breaks:
-                date_str = date.strftime("%d.%m.%Y")
+                date_str = date_key.strftime("%d.%m.%Y")
                 total_formatted = cls._format_break_time(total_break_time)
 
                 if not is_single_day:
@@ -94,21 +99,12 @@ class BreakAnalysisService:
         Возвращает структурированные перерывы по дням без форматирования строк.
         """
         activities = cls._merge_activities(messages, reactions)
-
         if len(activities) < 2:
             return []
 
-        activities_by_date = {}
-        for activity_time, activity_type in activities:
-            local_time = TimeZoneService.convert_to_local_time(activity_time)
-            date_key = local_time.date()
-            if date_key not in activities_by_date:
-                activities_by_date[date_key] = []
-            activities_by_date[date_key].append((local_time, activity_type))
-
+        activities_by_date = cls._group_activities_by_date(activities)
         result: List[BreakDayDTO] = []
-        for date, day_activities in sorted(activities_by_date.items()):
-            day_activities.sort(key=lambda x: x[0])
+        for date_key, day_activities in sorted(activities_by_date.items()):
             intervals: List[BreakIntervalDTO] = []
             total_break_minutes = 0
 
@@ -130,7 +126,7 @@ class BreakAnalysisService:
             if intervals:
                 result.append(
                     BreakDayDTO(
-                        date=datetime.combine(date, datetime.min.time()),
+                        date=datetime.combine(date_key, datetime.min.time()),
                         total_break_seconds=int(total_break_minutes * 60),
                         intervals=intervals,
                     )
@@ -147,24 +143,18 @@ class BreakAnalysisService:
     ) -> List[float]:
         """Возвращает список общего времени перерывов за каждый день в минутах."""
         activities = cls._merge_activities(messages, reactions)
-
         if len(activities) < 2:
             return []
 
-        activities_by_date = {}
-        for activity_time, _ in activities:
-            local_time = TimeZoneService.convert_to_local_time(activity_time)
-            date_key = local_time.date()
-            if date_key not in activities_by_date:
-                activities_by_date[date_key] = []
-            activities_by_date[date_key].append(local_time)
+        # Группируем по дате (нужны только времена, тип активности не важен)
+        activities_by_date = cls._group_activities_by_date(activities)
 
         daily_totals = []
-        for _, day_activities in sorted(activities_by_date.items()):
-            day_activities.sort()
+        for day_activities in activities_by_date.values():
+            times_only = [t for t, _ in day_activities]
             day_total = 0
-            for i in range(1, len(day_activities)):
-                diff = (day_activities[i] - day_activities[i - 1]).total_seconds() / 60
+            for i in range(1, len(times_only)):
+                diff = (times_only[i] - times_only[i - 1]).total_seconds() / 60
                 if diff >= min_break_minutes:
                     day_total += diff
             if day_total > 0:

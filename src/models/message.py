@@ -1,5 +1,5 @@
 import enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from aiogram.enums import ContentType
 from sqlalchemy import ForeignKey, Index, Integer, String, Text
@@ -47,7 +47,7 @@ class ChatMessage(BaseModel):
         default=MessageType.MESSAGE.value,
     )
     # Текст сообщения
-    text: Mapped[str] = mapped_column(
+    text: Mapped[Optional[str]] = mapped_column(
         Text,
         nullable=True,
     )

@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from dto import AmnestyUserDTO, ChatDTO
+from models.chat_session import ChatSession
 from repositories import (
     ChatTrackingRepository,
     PunishmentRepository,
@@ -9,6 +10,7 @@ from repositories import (
 from services import BotPermissionService, UserService
 
 from .base_get_chats import BaseGetChatsUseCase
+from .helpers import safe_telegram_check
 
 
 class GetChatsWithAnyRestrictionUseCase(BaseGetChatsUseCase):
@@ -21,14 +23,14 @@ class GetChatsWithAnyRestrictionUseCase(BaseGetChatsUseCase):
         user_chat_status_repository: UserChatStatusRepository,
         punishment_repository: PunishmentRepository,
         bot_permission_service: BotPermissionService,
-    ):
+    ) -> None:
         super().__init__(user_service, chat_tracking_repository)
         self.user_chat_status_repository = user_chat_status_repository
         self.punishment_repository = punishment_repository
         self.bot_permission_service = bot_permission_service
 
     async def execute(self, dto: AmnestyUserDTO) -> Optional[List[ChatDTO]]:
-        async def has_any_restriction(chat):
+        async def has_any_restriction(chat: ChatSession) -> bool:
             # 1. Проверяем наличие предупреждений в БД
             count = await self.punishment_repository.count_punishments(
                 user_id=dto.violator_id,
@@ -46,18 +48,21 @@ class GetChatsWithAnyRestrictionUseCase(BaseGetChatsUseCase):
                 return True
 
             # 3. Проверяем фактический статус в Telegram
-            try:
-                member_status = (
-                    await self.bot_permission_service.get_chat_member_status(
-                        user_tgid=int(dto.violator_tgid),
-                        chat_tgid=chat.chat_id,
-                    )
-                )
-                if member_status.is_banned or member_status.is_muted:
-                    return True
-            except Exception:
-                pass
+            member_status = await safe_telegram_check(
+                self.bot_permission_service.get_chat_member_status(
+                    user_tgid=int(dto.violator_tgid),
+                    chat_tgid=chat.chat_id,
+                ),
+                None,
+                "Не удалось получить статус в чате %s для %s: %s",
+                chat.chat_id,
+                dto.violator_tgid,
+            )
+            if member_status is not None and (
+                member_status.is_banned or member_status.is_muted
+            ):
+                return True
 
             return False
 
-        return await super().execute(dto, has_any_restriction)
+        return await self._get_chats_with_predicate(dto, has_any_restriction)

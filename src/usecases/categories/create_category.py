@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from constants.enums import AdminActionType
 from dto import CategoryDTO, CreateCategoryDTO
@@ -12,13 +13,13 @@ class CreateCategoryUseCase:
     def __init__(
         self,
         category_service: CategoryService,
-        admin_action_log_service: AdminActionLogService = None,
-    ):
+        admin_action_log_service: Optional[AdminActionLogService] = None,
+    ) -> None:
         self._category_service = category_service
         self._admin_action_log_service = admin_action_log_service
 
     async def execute(
-        self, dto: CreateCategoryDTO, admin_tg_id: str = None
+        self, dto: CreateCategoryDTO, admin_tg_id: Optional[str] = None
     ) -> CategoryDTO:
         """
         Создает новую категорию шаблонов.
@@ -38,6 +39,8 @@ class CreateCategoryUseCase:
             raise CategoryAlreadyExists(name=dto.name)
 
         category = await self._category_service.create_category(name=dto.name)
+        if category is None:
+            raise CategoryAlreadyExists(name=dto.name)
 
         logger.info(f"Создана новая категория: '{category.name}'")
 

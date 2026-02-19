@@ -15,9 +15,12 @@ from keyboards.inline.chats import analytics_chat_actions_ikb, chat_actions_ikb
 from keyboards.inline.report import order_details_kb_chat
 from keyboards.inline.time_period import time_period_ikb_chat
 from presenters import ChatReportPresenter
-from services.time_service import TimeZoneService
+from dto.time_dto import GetAppNowDTO
 from states import ChatStateManager, RatingStateManager
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from usecases.report import GetChatReportUseCase
+from usecases.time import GetAppNowUseCase
 from utils.send_message import (
     safe_edit_message,
 )
@@ -161,8 +164,8 @@ async def process_period_selection_callback(
     if period_text == TimePeriod.CUSTOM.value:
         await state.set_state(ChatStateManager.selecting_custom_period)
 
-        # Показываем календарь
-        now = TimeZoneService.now()
+        get_now_uc: GetAppNowUseCase = container.resolve(GetAppNowUseCase)
+        now = get_now_uc.execute(GetAppNowDTO())
         await state.update_data(cal_start_date=None, cal_end_date=None)
 
         calendar_kb = CalendarKeyboard.create_calendar_chat(
@@ -224,21 +227,22 @@ async def _render_report_view(
     try:
         usecase: GetChatReportUseCase = container.resolve(GetChatReportUseCase)
         result = await usecase.execute(dto=report_dto)
-    except Exception as e:
-        logger.error(
-            "Ошибка при генерации отчета по чату %s: %s",
-            chat_id,
-            e,
-            exc_info=True,
-        )
+    except BotBaseException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.Report.ERROR_GENERATING_REPORT,
+            text=e.get_user_message(),
             reply_markup=chat_actions_ikb(),
         )
         return
+    except Exception as e:
+        raise_business_logic(
+            "Ошибка при генерации отчета по чату.",
+            Dialog.Report.ERROR_GENERATING_REPORT,
+            e,
+            logger,
+        )
 
     # Форматируем результат через Presenter
     presenter = ChatReportPresenter()

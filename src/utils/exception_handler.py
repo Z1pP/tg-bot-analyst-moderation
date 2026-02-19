@@ -88,6 +88,22 @@ class AsyncErrorHandler(BaseMiddleware):
                     text=user_message,
                 )
             return None
+        except BotBaseException as e:
+            logger.warning("Обработано BotBaseException: %s", e)
+            user_message = e.get_user_message()
+            chat_id = self._get_chat_id(event)
+            user_id = self._get_user_id(event)
+            if chat_id:
+                await self.bot_message_service.send_chat_message(
+                    chat_tgid=chat_id,
+                    text=user_message,
+                )
+            elif user_id:
+                await self.bot_message_service.send_private_message(
+                    user_tgid=user_id,
+                    text=user_message,
+                )
+            return None
         except Exception as e:
             logger.error("Необработанное исключение: %s", e, exc_info=True)
             raise

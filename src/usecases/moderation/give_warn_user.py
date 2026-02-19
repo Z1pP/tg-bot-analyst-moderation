@@ -2,6 +2,7 @@ import logging
 
 from constants.enums import AdminActionType
 from dto import ModerationActionDTO
+from exceptions import BotBaseException
 from exceptions.moderation import ModerationError
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services import (
@@ -114,7 +115,7 @@ class GiveUserWarnUseCase(ModerationUseCase):
                 admin_id=context.admin.id,
                 chat_id=context.chat.id,
             )
-        except Exception as e:
+        except BotBaseException as e:
             logger.error(
                 "Ошибка при сохранении наказания для пользователя %s: %s",
                 context.violator.id,

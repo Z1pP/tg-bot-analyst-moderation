@@ -74,7 +74,7 @@ async def test_save_reply_message_success(
         await use_case.execute(reply_dto)
 
     # Assert
-    mock_user_service.get_or_create.assert_called_once_with(tg_id="456")
+    mock_user_service.get_or_create.assert_called_once_with(tg_id="456", username=None)
     mock_chat_service.get_or_create.assert_called_once_with(chat_tgid="123")
     mock_buffer_service.add_reply.assert_called_once()
     called_dto: BufferedMessageReplyDTO = mock_buffer_service.add_reply.call_args[0][0]

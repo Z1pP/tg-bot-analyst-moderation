@@ -9,14 +9,18 @@ from punq import Container
 from constants import Dialog
 from constants.callback import CallbackData
 from constants.pagination import CATEGORIES_PAGE_SIZE
+from dto import GetCategoriesPaginatedDTO
+from dto.template_dto import CreateTemplateFromContentDTO
 from keyboards.inline.categories import categories_select_only_ikb
 from keyboards.inline.templates import cancel_template_ikb, templates_menu_ikb
 from middlewares import AlbumMiddleware
-from services.categories import CategoryService
-from services.templates import TemplateContentService
 from states import TemplateStateManager
-from usecases.categories import GetCategoriesPaginatedUseCase
+from usecases.categories import GetCategoriesPaginatedUseCase, GetCategoriesUseCase
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
+from usecases.templates import CreateTemplateFromContentUseCase
 from utils.send_message import safe_edit_message
+from utils.template_content import extract_media_content_from_messages
 
 from .common import common_process_template_title_handler
 
@@ -36,8 +40,10 @@ async def add_template_handler(
     await callback.answer()
 
     try:
-        category_service: CategoryService = container.resolve(CategoryService)
-        categories = await category_service.get_categories()
+        get_categories_uc: GetCategoriesUseCase = container.resolve(
+            GetCategoriesUseCase
+        )
+        categories = await get_categories_uc.execute()
 
         if not categories:
             msg_text = Dialog.Template.CREATE_CATEGORY_FIRST
@@ -143,24 +149,23 @@ async def process_template_content_handler(
     active_message_id = state_data.get("active_message_id")
 
     try:
-        content_service: TemplateContentService = container.resolve(
-            TemplateContentService
-        )
-
-        content_data: Dict[str, Any] = dict()
-
         if album_messages:
-            content_data = content_service.extract_media_content(
-                messages=album_messages
+            content_data: Dict[str, Any] = extract_media_content_from_messages(
+                album_messages
             )
         else:
-            content_data = content_service.extract_media_content(messages=[message])
+            content_data = extract_media_content_from_messages([message])
 
         content_data.update(state_data)  # Объединяем со state_data
 
-        await content_service.save_template(
-            author_username=message.from_user.username,
-            content=content_data,
+        usecase: CreateTemplateFromContentUseCase = container.resolve(
+            CreateTemplateFromContentUseCase
+        )
+        await usecase.execute(
+            CreateTemplateFromContentDTO(
+                author_username=message.from_user.username,
+                content=content_data,
+            )
         )
 
         if active_message_id:
@@ -172,14 +177,21 @@ async def process_template_content_handler(
                 reply_markup=templates_menu_ikb(),
             )
 
+    except BotBaseException as e:
+        if active_message_id:
+            await safe_edit_message(
+                bot=bot,
+                chat_id=message.chat.id,
+                message_id=active_message_id,
+                text=e.get_user_message(),
+                reply_markup=templates_menu_ikb(),
+            )
     except Exception as e:
-        logger.error(f"Ошибка при создании шаблона: {e}", exc_info=True)
-        await safe_edit_message(
-            bot=bot,
-            chat_id=message.chat.id,
-            message_id=active_message_id,
-            text=Dialog.Template.ERROR_CREATE_TEMPLATE_FAILED,
-            reply_markup=templates_menu_ikb(),
+        raise_business_logic(
+            "Ошибка при создании шаблона.",
+            Dialog.Template.ERROR_CREATE_TEMPLATE_FAILED,
+            e,
+            logger,
         )
 
     await state.set_state(TemplateStateManager.templates_menu)
@@ -203,9 +215,10 @@ async def prev_categories_page_for_template_handler(
             GetCategoriesPaginatedUseCase
         )
         offset = (prev_page - 1) * CATEGORIES_PAGE_SIZE
-        categories, total_count = await usecase.execute(
+        dto = GetCategoriesPaginatedDTO(
             limit=CATEGORIES_PAGE_SIZE, offset=offset
         )
+        categories, total_count = await usecase.execute(dto)
 
         keyboard = categories_select_only_ikb(
             categories=categories,
@@ -215,9 +228,15 @@ async def prev_categories_page_for_template_handler(
 
         await callback.message.edit_reply_markup(reply_markup=keyboard)
 
+    except BotBaseException as e:
+        await callback.answer(e.get_user_message(), show_alert=True)
     except Exception as e:
-        logger.error(f"Ошибка при переходе на предыдущую страницу категорий: {e}")
-        await callback.answer(Dialog.Template.ERROR_PREV_PAGE)
+        raise_business_logic(
+            "Ошибка при переходе на предыдущую страницу категорий.",
+            Dialog.Template.ERROR_PREV_PAGE,
+            e,
+            logger,
+        )
 
 
 @router.callback_query(
@@ -238,9 +257,10 @@ async def next_categories_page_for_template_handler(
             GetCategoriesPaginatedUseCase
         )
         offset = (next_page - 1) * CATEGORIES_PAGE_SIZE
-        categories, total_count = await usecase.execute(
+        dto = GetCategoriesPaginatedDTO(
             limit=CATEGORIES_PAGE_SIZE, offset=offset
         )
+        categories, total_count = await usecase.execute(dto)
 
         if not categories:
             await callback.answer(Dialog.Template.NO_MORE_CATEGORIES)
@@ -254,9 +274,15 @@ async def next_categories_page_for_template_handler(
 
         await callback.message.edit_reply_markup(reply_markup=keyboard)
 
+    except BotBaseException as e:
+        await callback.answer(e.get_user_message(), show_alert=True)
     except Exception as e:
-        logger.error(f"Ошибка при переходе на следующую страницу категорий: {e}")
-        await callback.answer(Dialog.Template.ERROR_NEXT_PAGE)
+        raise_business_logic(
+            "Ошибка при переходе на следующую страницу категорий.",
+            Dialog.Template.ERROR_NEXT_PAGE,
+            e,
+            logger,
+        )
 
 
 @router.callback_query(

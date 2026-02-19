@@ -8,7 +8,9 @@ router = Router(name=__name__)
 
 
 @router.message(F.text.startswith("report"))
-async def send_daily_chat_reports(message: types.Message, container: Container):
+async def send_daily_chat_reports(
+    message: types.Message, container: Container
+) -> None:
     try:
         usecase: SendDailyChatReportsUseCase = container.resolve(
             SendDailyChatReportsUseCase

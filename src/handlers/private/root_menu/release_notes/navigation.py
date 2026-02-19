@@ -10,6 +10,8 @@ from punq import Container
 from constants import Dialog
 from constants.callback import CallbackData
 from dto.release_note import BroadcastTextDTO
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from keyboards.inline.release_notes import (
     broadcast_confirm_ikb,
     broadcast_error_ikb,
@@ -172,16 +174,22 @@ async def broadcast_confirm_yes_handler(
     dto = BroadcastTextDTO(text=text, language=language)
     try:
         recipients = await usecase.execute(dto)
-    except Exception as e:
-        logger.error("Ошибка при подготовке рассылки: %s", e, exc_info=True)
+    except BotBaseException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.ReleaseNotes.BROADCAST_ERROR_RETRY,
+            text=e.get_user_message(),
             reply_markup=broadcast_error_ikb(),
         )
         return
+    except Exception as e:
+        raise_business_logic(
+            "Ошибка при подготовке рассылки: %s",
+            Dialog.ReleaseNotes.BROADCAST_ERROR_RETRY,
+            e,
+            logger,
+        )
 
     success_count = 0
     for recipient in recipients:
@@ -192,11 +200,10 @@ async def broadcast_confirm_yes_handler(
             )
             success_count += 1
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Ошибка при отправке заметки получателю %s: %s",
                 recipient.chat_id,
                 e,
-                exc_info=True,
             )
 
     if success_count < len(recipients) or (recipients and success_count == 0):

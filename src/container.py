@@ -65,18 +65,24 @@ from usecases.amnesty import (
 )
 from usecases.antibot import GetAntibotSettingsUseCase
 from usecases.archive import (
+    BindArchiveChatUseCase,
+    GenerateArchiveBindHashUseCase,
     GetArchiveSettingsUseCase,
     NotifyArchiveChatNewMemberUseCase,
+    SetArchiveSendingTimeUseCase,
+    ToggleArchiveScheduleUseCase,
 )
 from usecases.categories import (
     CreateCategoryUseCase,
     DeleteCategoryUseCase,
+    GetCategoriesUseCase,
     GetCategoriesPaginatedUseCase,
     GetCategoryByIdUseCase,
     UpdateCategoryNameUseCase,
 )
 from usecases.chat import (
     GetAllChatsUseCase,
+    GetChatWithArchiveUseCase,
     GetChatsForUserActionUseCase,
     GetTrackedChatsUseCase,
     ToggleAntibotUseCase,
@@ -118,11 +124,19 @@ from usecases.report import (
 )
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from usecases.settings import ResetAllTrackingUseCase
+from usecases.time import ConvertToLocalTimeUseCase, GetAppNowUseCase
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
+from usecases.permissions import GetBotPermissionsInChatUseCase
 from usecases.templates import (
+    CreateTemplateFromContentUseCase,
     DeleteTemplateUseCase,
     GetTemplateAndIncreaseUsageUseCase,
+    GetTemplatesByCategoryUseCase,
+    GetTemplatesByScopeUseCase,
     GetTemplatesByQueryUseCase,
+    GetTemplatesPaginatedUseCase,
+    GetTemplateByIdUseCase,
+    UpdateTemplateContentUseCase,
     UpdateTemplateTitleUseCase,
 )
 from usecases.user import (
@@ -132,6 +146,7 @@ from usecases.user import (
     GetOrCreateUserIfNotExistUserCase,
     GetUserByIdUseCase,
     GetUserByTgIdUseCase,
+    GetUserByUsernameUseCase,
     UpdateUserRoleUseCase,
 )
 from usecases.user_tracking import (
@@ -260,6 +275,9 @@ class ContainerSetup:
         ContainerSetup._register_punishment_usecases(container)
         ContainerSetup._register_admin_logs_usecases(container)
         ContainerSetup._register_release_notes_usecases(container)
+        ContainerSetup._register_permissions_usecases(container)
+        ContainerSetup._register_archive_toggle_usecases(container)
+        ContainerSetup._register_time_usecases(container)
 
     @staticmethod
     def _register_punishment_usecases(container: Container) -> None:
@@ -292,6 +310,8 @@ class ContainerSetup:
     @staticmethod
     def _register_archive_usecases(container: Container) -> None:
         """Регистрация use cases для архива."""
+        container.register(BindArchiveChatUseCase)
+        container.register(GenerateArchiveBindHashUseCase)
         container.register(GetArchiveSettingsUseCase)
         container.register(NotifyArchiveChatNewMemberUseCase)
 
@@ -319,6 +339,7 @@ class ContainerSetup:
             CreateNewUserUserCase,
             DeleteUserUseCase,
             GetUserByTgIdUseCase,
+            GetUserByUsernameUseCase,
             GetAllUsersUseCase,
             GetUserByIdUseCase,
             UpdateUserRoleUseCase,
@@ -333,6 +354,7 @@ class ContainerSetup:
         """Регистрация use cases для чатов."""
         chat_usecases = [
             GetAllChatsUseCase,
+            GetChatWithArchiveUseCase,
             GetTrackedChatsUseCase,
             GetChatsForUserActionUseCase,
             UpdateChatWorkHoursUseCase,
@@ -413,15 +435,39 @@ class ContainerSetup:
         """Регистрация use cases для шаблонов."""
         template_usecases = [
             CreateCategoryUseCase,
+            CreateTemplateFromContentUseCase,
             DeleteCategoryUseCase,
             DeleteTemplateUseCase,
+            GetCategoriesUseCase,
             GetCategoriesPaginatedUseCase,
             GetCategoryByIdUseCase,
             GetTemplateAndIncreaseUsageUseCase,
+            GetTemplateByIdUseCase,
+            GetTemplatesByCategoryUseCase,
             GetTemplatesByQueryUseCase,
+            GetTemplatesByScopeUseCase,
+            GetTemplatesPaginatedUseCase,
             UpdateCategoryNameUseCase,
+            UpdateTemplateContentUseCase,
             UpdateTemplateTitleUseCase,
         ]
 
         for usecase in template_usecases:
             container.register(usecase)
+
+    @staticmethod
+    def _register_permissions_usecases(container: Container) -> None:
+        """Регистрация use cases для проверки прав бота."""
+        container.register(GetBotPermissionsInChatUseCase)
+
+    @staticmethod
+    def _register_archive_toggle_usecases(container: Container) -> None:
+        """Регистрация use cases для переключения/настройки архива."""
+        container.register(ToggleArchiveScheduleUseCase)
+        container.register(SetArchiveSendingTimeUseCase)
+
+    @staticmethod
+    def _register_time_usecases(container: Container) -> None:
+        """Регистрация use cases для времени (текущее время, конвертация в локальную зону)."""
+        container.register(GetAppNowUseCase)
+        container.register(ConvertToLocalTimeUseCase)

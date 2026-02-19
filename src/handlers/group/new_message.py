@@ -6,12 +6,13 @@ from punq import Container
 
 from dto.message import CreateMessageDTO
 from dto.message_reply import CreateMessageReplyDTO
+from dto.time_dto import ConvertToLocalTimeDTO
 from models.message import MessageType
-from services.time_service import TimeZoneService
 from usecases.message import (
     SaveMessageUseCase,
     SaveReplyMessageUseCase,
 )
+from usecases.time import ConvertToLocalTimeUseCase
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -25,7 +26,9 @@ def _get_message_type(message: Message) -> MessageType:
 
 
 @router.message()
-async def group_message_handler(message: Message, container: Container):
+async def group_message_handler(
+    message: Message, container: Container
+) -> None:
     """
     Сохраняет все сообщения и ответы от всех пользователей для построения метрик.
     """
@@ -51,12 +54,12 @@ async def process_reply_message(
     """
     Сохраняет reply-сообщения и связь с оригинальным сообщением.
     """
-    # Преобразуем время сообщения в локальное время
-    message_date = TimeZoneService.convert_to_local_time(
-        dt=message.date,
+    convert_uc: ConvertToLocalTimeUseCase = container.resolve(
+        ConvertToLocalTimeUseCase
     )
-    reply_to_message_date = TimeZoneService.convert_to_local_time(
-        dt=message.reply_to_message.date,
+    message_date = convert_uc.execute(ConvertToLocalTimeDTO(dt=message.date))
+    reply_to_message_date = convert_uc.execute(
+        ConvertToLocalTimeDTO(dt=message.reply_to_message.date)
     )
 
     # Создаем DTO для сохранения сообщения
@@ -112,10 +115,10 @@ async def process_message(
     """
     Сохраняет обычные сообщения от всех пользователей.
     """
-    # Преобразуем время сообщения в локальное время
-    message_date = TimeZoneService.convert_to_local_time(
-        dt=message.date,
+    convert_uc: ConvertToLocalTimeUseCase = container.resolve(
+        ConvertToLocalTimeUseCase
     )
+    message_date = convert_uc.execute(ConvertToLocalTimeDTO(dt=message.date))
 
     msg_dto = CreateMessageDTO(
         chat_tgid=str(message.chat.id),

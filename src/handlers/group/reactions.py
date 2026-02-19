@@ -5,8 +5,9 @@ from punq import Container
 
 from constants.enums import ReactionAction
 from dto import MessageReactionDTO
-from services.time_service import TimeZoneService
+from dto.time_dto import GetAppNowDTO
 from usecases.reactions import SaveMessageReactionUseCase
+from usecases.time import GetAppNowUseCase
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -33,9 +34,9 @@ async def process_reaction(
     """
     Сохраняет реакцию для построения метрик.
     """
-    # Преобразуем время реакции в локальное время
-    # В MessageReactionUpdated нет поля date, используем текущее время
-    reaction_date = TimeZoneService.now()
+    # В MessageReactionUpdated нет поля date, используем текущее время приложения
+    get_now_uc: GetAppNowUseCase = container.resolve(GetAppNowUseCase)
+    reaction_date = get_now_uc.execute(GetAppNowDTO())
 
     # Получаем идентификатор пользователя (или чата для анонимных реакций)
     user = event.user or event.actor_chat

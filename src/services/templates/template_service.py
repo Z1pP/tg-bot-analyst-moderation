@@ -3,12 +3,17 @@ from typing import List, Optional
 from models import MessageTemplate
 from repositories import MessageTemplateRepository
 from services.caching import ICache
+from services.templates.cache_helpers import invalidate_category_pages
 
 
 class TemplateService:
-    """Сервис для работы с шаблона сообщений"""
+    """Сервис для работы с шаблонами сообщений."""
 
-    def __init__(self, template_repository: MessageTemplateRepository, cache: ICache):
+    def __init__(
+        self,
+        template_repository: MessageTemplateRepository,
+        cache: ICache,
+    ) -> None:
         self._template_repository = template_repository
         self._cache = cache
 
@@ -36,11 +41,8 @@ class TemplateService:
         return templates
 
     async def invalidate_category_cache(self, category_id: int) -> None:
-        """Инвалидирует весь кеш для конкретной категории"""
-        # Так как мы не знаем точно сколько страниц, можем либо очистить по шаблону
-        # либо (проще для начала) очистить первые N страниц
-        for page in range(1, 11):  # Инвалидируем первые 10 страниц
-            await self._cache.delete(f"tpl:cat:{category_id}:page:{page}")
+        """Инвалидирует кеш страниц шаблонов для конкретной категории."""
+        await invalidate_category_pages(self._cache, category_id)
 
     async def get_count(self) -> int:
         """Получает общее количество шаблонов"""

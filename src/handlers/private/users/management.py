@@ -10,7 +10,7 @@ router = Router(name=__name__)
 
 
 @router.callback_query(F.data == CallbackData.User.MANAGEMENT)
-async def management_handler(callback: CallbackQuery):
+async def management_handler(callback: CallbackQuery) -> None:
     """Обработчик меню управления пользователями"""
     await callback.answer()
 

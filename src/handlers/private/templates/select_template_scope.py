@@ -6,10 +6,12 @@ from aiogram.types import CallbackQuery
 from punq import Container
 
 from constants.pagination import TEMPLATES_PAGE_SIZE
+from dto.template_dto import GetTemplatesByScopeDTO
 from keyboards.inline.templates import templates_inline_kb, templates_menu_ikb
-from services.templates import TemplateService
 from states import TemplateStateManager
-from utils.exception_handler import handle_exception
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
+from usecases.templates import GetTemplatesByScopeUseCase
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
@@ -29,12 +31,12 @@ async def select_global_templates_handler(
     await callback.answer()
 
     try:
-        template_service: TemplateService = container.resolve(TemplateService)
-        templates = await template_service.get_global_templates_paginated(
-            page=1,
-            page_size=TEMPLATES_PAGE_SIZE,
+        usecase: GetTemplatesByScopeUseCase = container.resolve(
+            GetTemplatesByScopeUseCase
         )
-        total_count = await template_service.get_global_templates_count()
+        templates, total_count = await usecase.execute(
+            GetTemplatesByScopeDTO(scope="global", page=1, page_size=TEMPLATES_PAGE_SIZE)
+        )
 
         if not templates:
             await safe_edit_message(
@@ -63,8 +65,21 @@ async def select_global_templates_handler(
 
         await state.set_state(TemplateStateManager.listing_templates)
 
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+            reply_markup=templates_menu_ikb(),
+        )
     except Exception as e:
-        await handle_exception(callback.message, e, "select_global_templates_handler")
+        raise_business_logic(
+            "Ошибка в select_global_templates_handler.",
+            "❌ Произошла ошибка при получении глобальных шаблонов.",
+            e,
+            logger,
+        )
 
 
 @router.callback_query(
@@ -82,13 +97,14 @@ async def select_chat_templates_handler(
     chat_id = int(callback.data.split("__")[1])
 
     try:
-        template_service: TemplateService = container.resolve(TemplateService)
-        templates = await template_service.get_chat_templates_paginated(
-            chat_id=chat_id,
-            page=1,
-            page_size=TEMPLATES_PAGE_SIZE,
+        usecase: GetTemplatesByScopeUseCase = container.resolve(
+            GetTemplatesByScopeUseCase
         )
-        total_count = await template_service.get_chat_templates_count(chat_id=chat_id)
+        templates, total_count = await usecase.execute(
+            GetTemplatesByScopeDTO(
+                scope="chat", chat_id=chat_id, page=1, page_size=TEMPLATES_PAGE_SIZE
+            )
+        )
 
         if not templates:
             await safe_edit_message(
@@ -117,5 +133,18 @@ async def select_chat_templates_handler(
 
         await state.set_state(TemplateStateManager.listing_templates)
 
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+            reply_markup=templates_menu_ikb(),
+        )
     except Exception as e:
-        await handle_exception(callback.message, e, "select_chat_templates_handler")
+        raise_business_logic(
+            "Ошибка в select_chat_templates_handler.",
+            "❌ Произошла ошибка при получении шаблонов чата.",
+            e,
+            logger,
+        )

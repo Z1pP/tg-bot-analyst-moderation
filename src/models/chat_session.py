@@ -26,7 +26,7 @@ class ChatSession(BaseModel):
         doc="ID of the chat in Telegram.",
     )
 
-    title: Mapped[str] = mapped_column(
+    title: Mapped[Optional[str]] = mapped_column(
         String(),
         nullable=True,
         doc="Title of the chat.",

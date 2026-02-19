@@ -23,8 +23,8 @@ from keyboards.inline.moderation import (
     moderation_menu_ikb,
     try_again_ikb,
 )
-from services import UserService
 from usecases.chat import GetChatsForUserActionUseCase
+from usecases.user import GetUserByTgIdUseCase, GetUserByUsernameUseCase
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
 from utils.send_message import safe_edit_message
 from utils.user_data_parser import parse_data_from_text
@@ -34,6 +34,66 @@ from .errors import handle_moderation_error
 ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
 
 logger = logging.getLogger(__name__)
+
+
+def _format_moderation_response(
+    success_chats_titles: list[str],
+    failed_chats_titles: list[str],
+    username: str,
+    success_text: str,
+    partial_text: str,
+    fail_text: str,
+) -> str:
+    """Формирует текст ответа по результатам модерации (успех/частичный/неудача)."""
+    if success_chats_titles and not failed_chats_titles:
+        if len(success_chats_titles) > 1:
+            titles_block = "\n".join(
+                f"{i}. {title}" for i, title in enumerate(success_chats_titles, 1)
+            )
+        else:
+            titles_block = success_chats_titles[0]
+        return success_text.format(username=username, chats_titles=titles_block)
+    if success_chats_titles and failed_chats_titles:
+        return partial_text.format(
+            username=username,
+            ok=", ".join(success_chats_titles),
+            fail=", ".join(failed_chats_titles),
+        )
+    return fail_text.format(username=username)
+
+
+def _get_retry_callback_for_moderation_state(next_state: State) -> str:
+    """Возвращает callback данных для кнопки «Повторить» в зависимости от состояния модерации."""
+    if next_state.state.startswith("BanUserStates"):
+        return InlineButtons.Moderation.BLOCK_USER
+    if next_state.state.startswith("WarnUserStates"):
+        return InlineButtons.Moderation.WARN_USER
+    return InlineButtons.Moderation.AMNESTY
+
+
+def _is_protected_user(user: object, message_from_user_id: int) -> bool:
+    """Проверяет, является ли пользователь защищённым (себя, админ, модератор)."""
+    if not hasattr(user, "tg_id") or not hasattr(user, "role"):
+        return False
+    if str(getattr(user, "tg_id")) == str(message_from_user_id):
+        return True
+    role = getattr(user, "role", None)
+    return role in (UserRole.ADMIN, UserRole.MODERATOR)
+
+
+def _get_protected_error_text_for_moderation_state(next_state: State) -> str:
+    """Возвращает текст ошибки для защищённого пользователя по типу действия."""
+    from constants.dialogs import (
+        AmnestyUserDialogs,
+        BanUserDialogs,
+        WarnUserDialogs,
+    )
+
+    if next_state.state.startswith("BanUserStates"):
+        return BanUserDialogs.PUNISHMENT_ERROR
+    if next_state.state.startswith("WarnUserStates"):
+        return WarnUserDialogs.PUNISHMENT_ERROR
+    return AmnestyUserDialogs.AMNESTY_ERROR
 
 
 async def setup_user_input_view(
@@ -154,28 +214,14 @@ async def execute_moderation_logic(
                 exc_info=True,
             )
 
-    # Формирование ответа
-    if success_chats_titles and not failed_chats_titles:
-        if len(success_chats_titles) > 1:
-            # Формируем блок с перечнем названий чатов
-            titles_block = "\n".join(
-                f"{i}. {title}" for i, title in enumerate(success_chats_titles, 1)
-            )
-        else:
-            titles_block = success_chats_titles[0]
-
-        response_text = success_text.format(
-            username=username, chats_titles=titles_block
-        )
-
-    elif success_chats_titles and failed_chats_titles:
-        response_text = partial_text.format(
-            username=username,
-            ok=", ".join(success_chats_titles),
-            fail=", ".join(failed_chats_titles),
-        )
-    else:
-        response_text = fail_text.format(username=username)
+    response_text = _format_moderation_response(
+        success_chats_titles=success_chats_titles,
+        failed_chats_titles=failed_chats_titles,
+        username=username,
+        success_text=success_text,
+        partial_text=partial_text,
+        fail_text=fail_text,
+    )
 
     await safe_edit_message(
         bot=callback.bot,
@@ -218,14 +264,7 @@ async def handle_user_search_logic(
 
     data = await state.get_data()
     message_to_edit_id = data.get("message_to_edit_id")
-
-    # Определяем callback для кнопки повтора на основе текущего состояния
-    if next_state.state.startswith("BanUserStates"):
-        retry_callback = InlineButtons.Moderation.BLOCK_USER
-    elif next_state.state.startswith("WarnUserStates"):
-        retry_callback = InlineButtons.Moderation.WARN_USER
-    else:
-        retry_callback = InlineButtons.Moderation.AMNESTY
+    retry_callback = _get_retry_callback_for_moderation_state(next_state)
 
     # --- Если данные пользователя не введены или введены некорректно
     if user_data is None:
@@ -238,13 +277,17 @@ async def handle_user_search_logic(
         )
         return
 
-    user_service: UserService = container.resolve(UserService)
-
     user = None
-
-    user = await user_service.get_user(
-        tg_id=user_data.tg_id, username=user_data.username
-    )
+    if user_data.tg_id:
+        get_by_tgid: GetUserByTgIdUseCase = container.resolve(
+            GetUserByTgIdUseCase
+        )
+        user = await get_by_tgid.execute(tg_id=user_data.tg_id)
+    elif user_data.username:
+        get_by_username: GetUserByUsernameUseCase = container.resolve(
+            GetUserByUsernameUseCase
+        )
+        user = await get_by_username.execute(username=user_data.username)
 
     # --- Если пользователь не найден
     if user is None:
@@ -261,40 +304,16 @@ async def handle_user_search_logic(
     # --- Проверка защищенных пользователей (для бана, варна или амнистии)
     if next_state.state.startswith(
         ("BanUserStates", "WarnUserStates", "AmnestyStates")
-    ):
-        is_protected = False
-        # Проверка на самого себя
-        if str(user.tg_id) == str(message.from_user.id):
-            is_protected = True
-        # Проверка на администратора бота
-        elif user.role == UserRole.ADMIN:
-            is_protected = True
-        # Проверка на модератора (отслеживаемого пользователя)
-        elif user.role == UserRole.MODERATOR:
-            is_protected = True
-
-        if is_protected:
-            from constants.dialogs import (
-                AmnestyUserDialogs,
-                BanUserDialogs,
-                WarnUserDialogs,
-            )
-
-            if next_state.state.startswith("BanUserStates"):
-                error_text = BanUserDialogs.PUNISHMENT_ERROR
-            elif next_state.state.startswith("WarnUserStates"):
-                error_text = WarnUserDialogs.PUNISHMENT_ERROR
-            else:
-                error_text = AmnestyUserDialogs.AMNESTY_ERROR
-
-            await handle_moderation_error(
-                event=message,
-                state=state,
-                text=error_text,
-                message_to_edit_id=message_to_edit_id,
-                reply_markup=try_again_ikb(retry_callback),
-            )
-            return
+    ) and _is_protected_user(user, message.from_user.id):
+        error_text = _get_protected_error_text_for_moderation_state(next_state)
+        await handle_moderation_error(
+            event=message,
+            state=state,
+            text=error_text,
+            message_to_edit_id=message_to_edit_id,
+            reply_markup=try_again_ikb(retry_callback),
+        )
+        return
 
     await state.update_data(
         username=user.username,

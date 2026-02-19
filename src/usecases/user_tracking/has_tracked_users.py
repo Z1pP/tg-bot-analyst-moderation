@@ -4,7 +4,7 @@ from repositories import UserTrackingRepository
 class HasTrackedUsersUseCase:
     """Узекейс для проверки наличия отслеживаемых пользователей у админа."""
 
-    def __init__(self, user_tracking_repository: UserTrackingRepository):
+    def __init__(self, user_tracking_repository: UserTrackingRepository) -> None:
         self._user_tracking_repository = user_tracking_repository
 
     async def execute(self, admin_tgid: str) -> bool:
@@ -17,4 +17,7 @@ class HasTrackedUsersUseCase:
         Returns:
             True, если есть хотя бы один отслеживаемый пользователь, иначе False
         """
-        return await self._user_tracking_repository.has_tracked_users(admin_tgid)
+        result: bool = await self._user_tracking_repository.has_tracked_users(
+            admin_tgid
+        )
+        return result

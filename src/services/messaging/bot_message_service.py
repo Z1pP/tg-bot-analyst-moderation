@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -31,9 +32,24 @@ class BotMessageService:
         self,
         bot: Bot,
         permission_service: BotPermissionService,
-    ):
+    ) -> None:
         self.bot = bot
         self.permission_service = permission_service
+
+    async def _ensure_can_moderate(self, chat_tg_id: ChatIdUnion) -> bool:
+        """Проверяет право бота на модерацию в чате. Возвращает True, если можно применять действия."""
+        return await self.permission_service.can_moderate(chat_tgid=chat_tg_id)
+
+    def _log_moderation_skip(
+        self, action: str, chat_tg_id: ChatIdUnion, user_tg_id: int
+    ) -> None:
+        """Логирует пропуск действия модерации из-за отсутствия прав."""
+        logger.warning(
+            "Бот не может модерировать в чате %s. Пропуск %s для пользователя %s.",
+            chat_tg_id,
+            action,
+            user_tg_id,
+        )
 
     async def send_private_message(
         self,
@@ -62,10 +78,11 @@ class BotMessageService:
                 user_tgid,
                 e,
             )
-        except Exception:
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
             logger.exception(
-                "Неожиданная ошибка при отправке сообщения пользователю %s",
+                "Сетевая ошибка при отправке сообщения пользователю %s: %s",
                 user_tgid,
+                e,
             )
 
     async def send_chat_message(self, chat_tgid: ChatIdUnion, text: str) -> None:
@@ -98,10 +115,11 @@ class BotMessageService:
                 chat_tgid,
                 e,
             )
-        except Exception:
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
             logger.exception(
-                "Неожиданная ошибка при отправке сообщения в чат %s",
+                "Сетевая ошибка при отправке сообщения в чат %s: %s",
                 chat_tgid,
+                e,
             )
 
     async def copy_message(
@@ -128,9 +146,16 @@ class BotMessageService:
                 message_id=message_id,
             )
             return result.message_id
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
                 "Не удалось скопировать сообщение в чат %s: %s",
+                chat_tgid,
+                e,
+            )
+            return None
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error(
+                "Сетевая ошибка при копировании сообщения в чат %s: %s",
                 chat_tgid,
                 e,
             )
@@ -163,11 +188,18 @@ class BotMessageService:
                 reply_to_message_id=reply_to_message_id,
             )
             return result.message_id
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
                 "Не удалось скопировать сообщение %s из чата %s в чат %s: %s",
                 message_id,
                 from_chat_tgid,
+                chat_tgid,
+                e,
+            )
+            return None
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error(
+                "Сетевая ошибка при копировании сообщения в чат %s: %s",
                 chat_tgid,
                 e,
             )
@@ -193,8 +225,11 @@ class BotMessageService:
                 from_chat_id=from_chat_tgid,
                 message_id=message_tgid,
             )
-        except Exception as e:
-            logger.error("Не удалось скопировать сообщение в чат %s: %s", chat_tgid, e)
+        except TelegramAPIError as e:
+            logger.error("Не удалось переслать сообщение в чат %s: %s", chat_tgid, e)
+            return None
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error("Сетевая ошибка при пересылке в чат %s: %s", chat_tgid, e)
             return None
 
     async def delete_message_from_chat(
@@ -241,8 +276,11 @@ class BotMessageService:
                 chat_id=chat_id,
                 message_id=message_id,
             )
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error("Не удалось удалить сообщение в чате %s: %s", chat_id, e)
+            return False
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error("Сетевая ошибка при удалении сообщения в чате %s: %s", chat_id, e)
             return False
 
     async def apply_punishment(
@@ -297,11 +335,18 @@ class BotMessageService:
                 return True
             else:
                 raise ValueError(f"Неизвестное действие: {action}")
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
                 "Не удалось применить наказание %s к пользователю %s в чате %s: %s",
                 action,
                 user_tg_id,
+                chat_tg_id,
+                e,
+            )
+            return False
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error(
+                "Сетевая ошибка при применении наказания в чате %s: %s",
                 chat_tg_id,
                 e,
             )
@@ -352,9 +397,17 @@ class BotMessageService:
                 permissions=permissions,
                 until_date=timedelta(seconds=duration_seconds),
             )
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
                 "Не удалось замьютить пользователя %s в чате %s: %s",
+                user_tg_id,
+                chat_tg_id,
+                e,
+            )
+            return False
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error(
+                "Сетевая ошибка при муте пользователя %s в чате %s: %s",
                 user_tg_id,
                 chat_tg_id,
                 e,
@@ -392,9 +445,17 @@ class BotMessageService:
                 chat_id=chat_tg_id,
                 user_id=user_tg_id,
             )
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
                 "Не удалось забанить пользователя %s в чате %s: %s",
+                user_tg_id,
+                chat_tg_id,
+                e,
+            )
+            return False
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error(
+                "Сетевая ошибка при бане пользователя %s в чате %s: %s",
                 user_tg_id,
                 chat_tg_id,
                 e,
@@ -433,9 +494,17 @@ class BotMessageService:
                 user_id=user_tg_id,
                 only_if_banned=True,
             )
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
                 "Не удалось разбанить пользователя %s в чате %s: %s",
+                user_tg_id,
+                chat_tg_id,
+                e,
+            )
+            return False
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error(
+                "Сетевая ошибка при разбане пользователя %s в чате %s: %s",
                 user_tg_id,
                 chat_tg_id,
                 e,
@@ -484,9 +553,17 @@ class BotMessageService:
                 user_id=user_tg_id,
                 permissions=permissions,
             )
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
                 "Не удалось размьютить пользователя %s в чате %s: %s",
+                user_tg_id,
+                chat_tg_id,
+                e,
+            )
+            return False
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error(
+                "Сетевая ошибка при размуте пользователя %s в чате %s: %s",
                 user_tg_id,
                 chat_tg_id,
                 e,
@@ -526,9 +603,16 @@ class BotMessageService:
                 return result
             # Fallback: пытаемся получить из атрибута
             return getattr(result, "invite_link", None)
-        except Exception as e:
+        except TelegramAPIError as e:
             logger.error(
                 "Не удалось получить invite ссылку для чата %s: %s",
+                chat_tgid,
+                e,
+            )
+            return None
+        except (OSError, asyncio.TimeoutError, ConnectionError) as e:
+            logger.error(
+                "Сетевая ошибка при получении invite ссылки для чата %s: %s",
                 chat_tgid,
                 e,
             )

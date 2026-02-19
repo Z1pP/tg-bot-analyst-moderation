@@ -5,10 +5,12 @@ from aiogram.fsm.context import FSMContext
 from punq import Container
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from keyboards.inline.categories import categories_inline_ikb
 from keyboards.inline.templates import templates_menu_ikb
-from services.categories import CategoryService
 from states import TemplateStateManager
+from usecases.categories import GetCategoriesUseCase
 from utils.send_message import safe_edit_message
 
 logger = logging.getLogger(__name__)
@@ -28,8 +30,8 @@ async def select_category_handler(
     await callback.answer()
 
     try:
-        category_service: CategoryService = container.resolve(CategoryService)
-        categories = await category_service.get_categories()
+        usecase: GetCategoriesUseCase = container.resolve(GetCategoriesUseCase)
+        categories = await usecase.execute()
 
         if not categories:
             await safe_edit_message(
@@ -56,13 +58,18 @@ async def select_category_handler(
         )
 
         await state.set_state(TemplateStateManager.listing_categories)
-    except Exception as e:
-        logger.error("Ошибка при получении категорий: %s", e, exc_info=True)
+    except BotBaseException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="Произошла ошибка при получении категорий.",
+            text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )
-        return
+    except Exception as e:
+        raise_business_logic(
+            "Ошибка при получении категорий.",
+            "Произошла ошибка при получении категорий.",
+            e,
+            logger,
+        )

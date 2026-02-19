@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class UserTrackingDTO(BaseModel):
-    admin_username: Optional[str]
+    admin_username: Optional[str] = None
     admin_tgid: str
     user_username: Optional[str] = None
     user_tgid: Optional[str] = None
@@ -13,7 +13,7 @@ class UserTrackingDTO(BaseModel):
 
 
 class RemoveUserTrackingDTO(BaseModel):
-    admin_username: Optional[str]
+    admin_username: Optional[str] = None
     admin_tgid: str
     user_tgid: Optional[str] = None
     user_username: Optional[str] = None
