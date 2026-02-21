@@ -74,8 +74,13 @@ async def handle_chats_error(
         logger.error("Ошибка получения чатов: %s", error, exc_info=True)
         text = "❌️ Произошла ошибка при получении списка чатов. Попробуйте еще раз."
     else:
+        violator_display = (
+            f"@{violator_username}"
+            if (violator_username and violator_username != "hidden")
+            else (violator_username or "—")
+        )
         text = (
-            f"❌️ Мы не нашли чатов, где @{violator_username} получил ограничение. "
+            f"❌️ Мы не нашли чатов, где {violator_display} получил ограничение. "
             "Перепроверьте введённые данные, либо попробуйте снять ограничение вручную."
         )
 
