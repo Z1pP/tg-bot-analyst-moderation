@@ -15,6 +15,7 @@ from services import (
 )
 from services.time_service import TimeZoneService
 from utils.formatter import format_duration
+from utils.moderation import format_violator_display
 
 from .base import ModerationUseCase
 
@@ -152,8 +153,11 @@ class GiveUserWarnUseCase(ModerationUseCase):
         if punishment_ladder.duration_seconds:
             duration_text = format_duration(punishment_ladder.duration_seconds)
 
+        violator_display = format_violator_display(
+            context.violator.username, context.violator.tg_id
+        )
         details = (
-            f"Нарушитель: @{context.violator.username} ({context.violator.tg_id}), "
+            f"Нарушитель: {violator_display} ({context.violator.tg_id}), "
             f"Чат: {context.chat.title} ({context.chat.chat_id}), "
             f"Наказание: {punishment_ladder.punishment_type.value}, "
             f"Период: {duration_text}"
