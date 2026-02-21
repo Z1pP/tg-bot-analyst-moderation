@@ -12,7 +12,7 @@ class DeleteTemplateUseCase:
     def __init__(
         self,
         template_service: TemplateService,
-        admin_action_log_service: Optional[AdminActionLogService] = None,
+        admin_action_log_service: AdminActionLogService,
     ) -> None:
         self._template_service = template_service
         self._admin_action_log_service = admin_action_log_service

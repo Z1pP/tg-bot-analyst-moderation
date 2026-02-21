@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 from aiogram.exceptions import (
     TelegramAPIError,
@@ -24,7 +23,7 @@ class ReplyToMessageUseCase:
         self,
         bot_message_service: BotMessageService,
         chat_service: ChatService,
-        admin_action_log_service: Optional[AdminActionLogService] = None,
+        admin_action_log_service: AdminActionLogService,
     ) -> None:
         self.bot_message_service = bot_message_service
         self.chat_service = chat_service

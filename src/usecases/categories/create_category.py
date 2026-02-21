@@ -13,7 +13,7 @@ class CreateCategoryUseCase:
     def __init__(
         self,
         category_service: CategoryService,
-        admin_action_log_service: Optional[AdminActionLogService] = None,
+        admin_action_log_service: AdminActionLogService,
     ) -> None:
         self._category_service = category_service
         self._admin_action_log_service = admin_action_log_service
