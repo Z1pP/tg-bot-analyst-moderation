@@ -127,9 +127,14 @@ class ModerationUseCase:
                 message_id=dto.original_message_id,
             )
 
+        violator_username = (
+            ""
+            if (not dto.violator_username or dto.violator_username == "hidden")
+            else dto.violator_username
+        )
         violator = await self.user_service.get_or_create(
             tg_id=dto.violator_tgid,
-            username=dto.violator_username,
+            username=violator_username,
         )
         admin = await self.user_service.get_or_create(
             tg_id=dto.admin_tgid,
