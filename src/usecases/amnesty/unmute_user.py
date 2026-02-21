@@ -8,6 +8,7 @@ from services import (
     ChatService,
 )
 from services.time_service import TimeZoneService
+from utils.moderation import format_violator_display
 
 from .base_amnesty import BaseAmnestyUseCase
 
@@ -64,12 +65,15 @@ class UnmuteUserUseCase(BaseAmnestyUseCase):
             now = TimeZoneService.now()
             date_time_str = now.strftime("%d.%m.%Y %H:%M")
             chat_name = "Все чаты" if len(dto.chat_dtos) > 1 else chat.title
+            violator_display = format_violator_display(
+                dto.violator_username, dto.violator_tgid
+            )
 
             report_text = (
                 "🔊 Размут\n"
                 f"Кто: @{dto.admin_username}\n"
                 f"Когда: {date_time_str}\n"
-                f"Кого: @{dto.violator_username} ({dto.violator_tgid})\n"
+                f"Кого: {violator_display} ({dto.violator_tgid})\n"
                 f"Чат: {chat_name}"
             )
 
@@ -77,7 +81,7 @@ class UnmuteUserUseCase(BaseAmnestyUseCase):
 
             # Логируем действие администратора
             details = (
-                f"Нарушитель: @{dto.violator_username} ({dto.violator_tgid}), "
+                f"Нарушитель: {violator_display} ({dto.violator_tgid}), "
                 f"Чат: {chat.title} ({chat.tg_id})"
             )
             await self.admin_action_log_service.log_action(
