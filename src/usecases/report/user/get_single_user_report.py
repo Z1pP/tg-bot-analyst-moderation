@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from typing import Optional
 
 from constants.enums import AdminActionType
 from constants.work_time import END_TIME, START_TIME, TOLERANCE
@@ -36,7 +35,7 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         reaction_repository: MessageReactionRepository,
         chat_repository: ChatRepository,
         punishment_repository: PunishmentRepository,
-        admin_action_log_service: Optional[AdminActionLogService] = None,
+        admin_action_log_service: AdminActionLogService,
     ) -> None:
         super().__init__(
             msg_reply_repository,
