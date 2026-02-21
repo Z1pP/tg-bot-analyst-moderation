@@ -3,6 +3,7 @@
 import logging
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from punq import Container
@@ -199,6 +200,11 @@ async def broadcast_confirm_yes_handler(
                 text=recipient.text,
             )
             success_count += 1
+        except TelegramForbiddenError:
+            logger.warning(
+                "Пропуск получателя %s: пользователь не начинал диалог с ботом",
+                recipient.chat_id,
+            )
         except Exception as e:
             logger.exception(
                 "Ошибка при отправке заметки получателю %s: %s",
