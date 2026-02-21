@@ -11,6 +11,7 @@ from repositories import PunishmentLadderRepository, PunishmentRepository
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services.time_service import TimeZoneService
 from utils.formatter import format_duration
+from utils.moderation import format_violator_display
 
 logger = logging.getLogger(__name__)
 
@@ -55,11 +56,7 @@ class PunishmentService:
         Returns:
             Форматированный текст уведомления
         """
-        user_mention = (
-            f"@{violator_username}"
-            if violator_username and violator_username != "hidden"
-            else f"ID:{violator_tg_id}"
-        )
+        user_mention = format_violator_display(violator_username, violator_tg_id)
 
         punishment_text_template = PunishmentText[punishment_type.name].value
 
@@ -202,11 +199,14 @@ class PunishmentService:
         reason = dto.reason or Dialog.ModerationReport.NO_REASON
         date_str = date.strftime("%d.%m.%Y %H:%M")
         period_display = period or Dialog.ModerationReport.NO_PERIOD
+        violator_display = format_violator_display(
+            dto.violator_username, dto.violator_tgid
+        )
         return Dialog.ModerationReport.REPORT_BODY.format(
             header=header,
             admin_username=dto.admin_username,
             date_str=date_str,
-            violator_username=dto.violator_username,
+            violator_display=violator_display,
             violator_tgid=dto.violator_tgid,
             reason=reason,
             chat_title=dto.chat_title,
