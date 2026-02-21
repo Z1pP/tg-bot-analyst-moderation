@@ -31,8 +31,8 @@ class GetBreaksDetailReportUseCase(BaseReportUseCase):
         """Получает пользователя по user_id."""
         user = await self._user_repository.get_user_by_id(user_id=user_id)
         if not user:
-            logger.error(f"Пользователь с ID={user_id} не найден")
-            raise UserNotFoundException()
+            logger.error("Пользователь с ID=%s не найден", user_id)
+            raise UserNotFoundException(identifier=str(user_id))
         return user
 
     async def _get_user_data(self, user: User, dto: SingleUserReportDTO) -> dict:

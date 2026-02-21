@@ -8,7 +8,8 @@ from punq import Container
 from constants import Dialog
 from constants.pagination import DEFAULT_PAGE_SIZE
 from dto.admin_log import GetAdminLogsPageDTO
-from exceptions import AdminLogsError
+from exceptions import BusinessLogicException
+from exceptions.base import BotBaseException
 from keyboards.inline.admin_logs import admin_logs_ikb
 from usecases.admin_logs import GetAdminLogsPageUseCase
 from utils.send_message import safe_edit_message
@@ -69,13 +70,16 @@ async def prev_admin_logs_page_handler(
                 admin_id=admin_id,
             ),
         )
-    except AdminLogsError as e:
+    except BotBaseException as e:
         await callback.answer(e.get_user_message(), show_alert=True)
     except Exception as e:
-        logger.error(
-            "Ошибка при переходе на предыдущую страницу логов: %s", e, exc_info=True
+        logger.exception(
+            "Ошибка при переходе на предыдущую страницу логов: %s", e
         )
-        await callback.answer(Dialog.AdminLogs.ERROR_LOAD_PAGE, show_alert=True)
+        raise BusinessLogicException(
+            message=Dialog.AdminLogs.ERROR_LOAD_PAGE,
+            details={"original": str(e)},
+        ) from e
 
 
 @router.callback_query(F.data.startswith("next_admin_logs_page__"))
@@ -121,13 +125,16 @@ async def next_admin_logs_page_handler(
                 admin_id=admin_id,
             ),
         )
-    except AdminLogsError as e:
+    except BotBaseException as e:
         await callback.answer(e.get_user_message(), show_alert=True)
     except Exception as e:
-        logger.error(
-            "Ошибка при переходе на следующую страницу логов: %s", e, exc_info=True
+        logger.exception(
+            "Ошибка при переходе на следующую страницу логов: %s", e
         )
-        await callback.answer(Dialog.AdminLogs.ERROR_LOAD_PAGE, show_alert=True)
+        raise BusinessLogicException(
+            message=Dialog.AdminLogs.ERROR_LOAD_PAGE,
+            details={"original": str(e)},
+        ) from e
 
 
 @router.callback_query(F.data == "admin_logs_page_info")

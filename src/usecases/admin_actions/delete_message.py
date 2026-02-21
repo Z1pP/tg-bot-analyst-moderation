@@ -1,6 +1,11 @@
 import logging
 
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramBadRequest,
+    TelegramForbiddenError,
+)
+from exceptions import BotBaseException
 
 from constants.enums import AdminActionType
 from dto.message_action import MessageActionDTO
@@ -17,8 +22,8 @@ class DeleteMessageUseCase:
         self,
         bot_message_service: BotMessageService,
         chat_service: ChatService,
-        admin_action_log_service: AdminActionLogService = None,
-    ):
+        admin_action_log_service: AdminActionLogService,
+    ) -> None:
         self.bot_message_service = bot_message_service
         self.chat_service = chat_service
         self._admin_action_log_service = admin_action_log_service
@@ -49,7 +54,7 @@ class DeleteMessageUseCase:
                     dto.message_id,
                     archive_chat_id,
                 )
-            except Exception as e:
+            except TelegramAPIError as e:
                 logger.warning(
                     "Не удалось переслать сообщение в архивный чат %s: %s",
                     archive_chat_id,
@@ -80,9 +85,10 @@ class DeleteMessageUseCase:
         if archive_chat_id:
             try:
                 chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
+                chat_title = chat.title if chat else str(dto.chat_tgid)
                 report_text = (
                     f"🗑 <b>Удалено сообщение ботом</b>\n\n"
-                    f"Чат: {chat.title}\n"
+                    f"Чат: {chat_title}\n"
                     f"Кто удалил: @{dto.admin_username}"
                 )
 
@@ -97,7 +103,7 @@ class DeleteMessageUseCase:
                         archive_chat_id,
                         e,
                     )
-            except Exception as e:
+            except (BotBaseException, TelegramAPIError) as e:
                 logger.debug("Ошибка отправки отчета: %s", e)
 
         # Логируем действие после успешного удаления сообщения

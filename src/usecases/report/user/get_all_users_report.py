@@ -1,19 +1,13 @@
 import logging
-from collections import defaultdict
 from datetime import datetime
-from statistics import mean, median
-from typing import List, Optional
+from typing import List
 
 from constants.enums import AdminActionType
-from constants.period import TimePeriod
 from constants.work_time import END_TIME, START_TIME, TOLERANCE
 from dto.report import (
     AllUsersReportDTO,
     AllUsersReportResultDTO,
     AllUsersUserStatsResult,
-    RepliesStats,
-    SingleUserDayStats,
-    SingleUserMultiDayStats,
 )
 from models import ChatMessage, MessageReaction, MessageReply, User
 from repositories import (
@@ -25,7 +19,6 @@ from repositories import (
     UserRepository,
 )
 from services import AdminActionLogService
-from services.break_analysis_service import BreakAnalysisService
 from services.work_time_service import WorkTimeService
 from utils.collection_utils import group_by
 
@@ -43,8 +36,8 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
         reaction_repository: MessageReactionRepository,
         chat_repository: ChatRepository,
         punishment_repository: PunishmentRepository,
-        admin_action_log_service: AdminActionLogService = None,
-    ):
+        admin_action_log_service: AdminActionLogService,
+    ) -> None:
         super().__init__(
             msg_reply_repository,
             message_repository,
@@ -88,12 +81,6 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
                 error_message="⚠️ Список пользователей пуст, добавьте пользователя!",
             )
 
-        # TODO: Оптимизация N+1 проблемы
-        # В текущей реализации для каждого пользователя делаются отдельные запросы:
-        # - get_replies_by_period_date
-        # - get_messages_by_period_date
-        # - get_reactions_by_user_and_period
-        # Необходимо оптимизировать через batch-запросы для всех пользователей сразу
         users_stats = []
 
         # Получаем статистику наказаний для всех пользователей за период
@@ -245,166 +232,3 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
             replies_stats=replies_stats,
             breaks=breaks,
         )
-
-    def _calculate_day_stats(
-        self,
-        messages: List[ChatMessage],
-        reactions: List[MessageReaction],
-        start_date: datetime,
-        end_date: datetime,
-        warns_count: int = 0,
-        bans_count: int = 0,
-    ) -> Optional[SingleUserDayStats]:
-        """Рассчитывает статистику за один день."""
-        if not messages and not reactions and warns_count == 0 and bans_count == 0:
-            return None
-
-        first_message_time = None
-        last_message_time = None
-        if messages:
-            first_message = min(messages, key=lambda m: m.created_at)
-            first_message_time = first_message.created_at
-            last_message = max(messages, key=lambda m: m.created_at)
-            last_message_time = last_message.created_at
-
-        first_reaction_time = None
-        if reactions:
-            first_reaction = min(reactions, key=lambda r: r.created_at)
-            first_reaction_time = first_reaction.created_at
-
-        msg_count = len(messages)
-        avg_messages_per_hour = self._avg_messages_per_hour(
-            msg_count, start_date, end_date
-        )
-
-        return SingleUserDayStats(
-            first_message_time=first_message_time,
-            first_reaction_time=first_reaction_time,
-            last_message_time=last_message_time,
-            avg_messages_per_hour=avg_messages_per_hour,
-            total_messages=msg_count,
-            warns_count=warns_count,
-            bans_count=bans_count,
-        )
-
-    def _calculate_multi_day_stats(
-        self,
-        messages: List[ChatMessage],
-        reactions: List[MessageReaction],
-        start_date: datetime,
-        end_date: datetime,
-        warns_count: int = 0,
-        bans_count: int = 0,
-    ) -> Optional[SingleUserMultiDayStats]:
-        """Рассчитывает статистику за несколько дней."""
-        if not messages and not reactions and warns_count == 0 and bans_count == 0:
-            return None
-
-        avg_first_message_time = self.get_avg_time_first_messages(messages)
-        avg_first_reaction_time = self.get_avg_time_first_reaction(reactions)
-        avg_last_message_time = self._calculate_avg_daily_end_time(messages)
-
-        msg_count = len(messages)
-        avg_messages_per_hour = self._avg_messages_per_hour(
-            msg_count, start_date, end_date
-        )
-        avg_messages_per_day = self._avg_message_per_day(
-            msg_count, start_date, end_date
-        )
-
-        return SingleUserMultiDayStats(
-            avg_first_message_time=avg_first_message_time or None,
-            avg_first_reaction_time=avg_first_reaction_time or None,
-            avg_last_message_time=avg_last_message_time,
-            avg_messages_per_hour=avg_messages_per_hour,
-            avg_messages_per_day=avg_messages_per_day,
-            total_messages=msg_count,
-            warns_count=warns_count,
-            bans_count=bans_count,
-        )
-
-    def _calculate_avg_daily_end_time(
-        self, messages: List[ChatMessage]
-    ) -> Optional[str]:
-        """
-        Возвращает среднее время последнего сообщения за каждый день.
-        """
-        if not messages:
-            return None
-
-        daily_lasts: dict[datetime.date, List[datetime]] = defaultdict(list)
-        for message in messages:
-            local_time = message.created_at
-            daily_lasts[local_time.date()].append(local_time)
-
-        last_times_seconds = []
-        for dates_times in daily_lasts.values():
-            max_time = max(dates_times).time()
-            seconds = max_time.hour * 3600 + max_time.minute * 60 + max_time.second
-            last_times_seconds.append(seconds)
-
-        if not last_times_seconds:
-            return None
-
-        avg_seconds = int(mean(last_times_seconds))
-        hours = avg_seconds // 3600
-        minutes = (avg_seconds % 3600) // 60
-        return f"{hours:02d}:{minutes:02d}"
-
-    def _calculate_replies_stats(self, replies: List[MessageReply]) -> RepliesStats:
-        """Рассчитывает статистику по ответам."""
-        if not replies:
-            return RepliesStats(
-                total_count=0,
-                min_time_seconds=None,
-                max_time_seconds=None,
-                avg_time_seconds=None,
-                median_time_seconds=None,
-            )
-
-        times = [reply.response_time_seconds for reply in replies]
-        return RepliesStats(
-            total_count=len(replies),
-            min_time_seconds=int(min(times)),
-            max_time_seconds=int(max(times)),
-            avg_time_seconds=int(mean(times)),
-            median_time_seconds=int(median(times)),
-        )
-
-    def _calculate_breaks(
-        self,
-        messages: List[ChatMessage],
-        reactions: List[MessageReaction],
-        is_single_day: bool,
-    ) -> List[str]:
-        """Рассчитывает перерывы."""
-        if is_single_day:
-            sorted_messages = sorted(messages, key=lambda m: m.created_at)
-            breaks = BreakAnalysisService.calculate_breaks(
-                sorted_messages, reactions, is_single_day=True
-            )
-            return breaks
-        else:
-            daily_totals = BreakAnalysisService.total_breaks_time_per_day(
-                messages, reactions
-            )
-            if daily_totals:
-                avg_total = mean(daily_totals)
-                formatted_avg = BreakAnalysisService._format_break_time(avg_total)
-                return [f"{formatted_avg} - общее время перерыва за день"]
-            return []
-
-    def _is_single_day_report(
-        self,
-        selected_period: Optional[str],
-        start_date: datetime,
-        end_date: datetime,
-    ) -> bool:
-        """Определяет, является ли отчет за один день."""
-        if selected_period:
-            return selected_period in [
-                TimePeriod.TODAY.value,
-                TimePeriod.YESTERDAY.value,
-            ]
-
-        return (end_date.date() - start_date.date()).days <= 1

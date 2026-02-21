@@ -1,7 +1,11 @@
 from .create_new_user import CreateNewUserUserCase
 from .get_all_users import GetAllUsersUseCase
 from .get_or_create_user import GetOrCreateUserIfNotExistUserCase
-from .get_user import GetUserByIdUseCase, GetUserByTgIdUseCase
+from .get_user import (
+    GetUserByIdUseCase,
+    GetUserByTgIdUseCase,
+    GetUserByUsernameUseCase,
+)
 from .remove_user import DeleteUserUseCase
 from .update_user_role import UpdateUserRoleUseCase
 
@@ -10,6 +14,7 @@ __all__ = [
     "CreateNewUserUserCase",
     "DeleteUserUseCase",
     "GetUserByTgIdUseCase",
+    "GetUserByUsernameUseCase",
     "GetAllUsersUseCase",
     "GetUserByIdUseCase",
     "UpdateUserRoleUseCase",

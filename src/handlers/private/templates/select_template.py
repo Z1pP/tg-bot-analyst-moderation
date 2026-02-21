@@ -15,8 +15,8 @@ from punq import Container
 from constants import Dialog
 from keyboards.inline.message_actions import hide_album_ikb, hide_template_ikb
 from models import MessageTemplate, TemplateMedia
-from repositories import MessageTemplateRepository
 from states import TemplateStateManager
+from usecases.templates import GetTemplateByIdUseCase
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
@@ -62,10 +62,10 @@ async def send_template_handler(
     container: Container,
 ) -> None:
     """Отправляет шаблон быстрого ответа пользователю"""
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
+    get_template_uc: GetTemplateByIdUseCase = container.resolve(
+        GetTemplateByIdUseCase
     )
-    template = await template_repo.get_template_by_id(template_id=template_id)
+    template = await get_template_uc.execute(template_id)
 
     if not template:
         await message.reply(Dialog.Template.TEMPLATE_NOT_FOUND)

@@ -1,13 +1,18 @@
 import logging
 import re
-from typing import Optional
+from typing import Any, Optional
 
 from aiogram import Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.types import Message
 from punq import Container
 
+from dto.chat_dto import BindArchiveChatDTO
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from filters import ArchiveHashFilter
-from services.chat import ArchiveBindService, ChatService
+from models import ChatSession
+from usecases.archive import BindArchiveChatUseCase
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
@@ -16,19 +21,58 @@ router = Router(name=__name__)
 HASH_PATTERN = re.compile(r"ARCHIVE-([A-Za-z0-9_-]+)")
 
 
+def _resolve_notify_user_id(message: Message, admin_tg_id: Optional[int]) -> Optional[int]:
+    """Возвращает ID пользователя для уведомления: приоритет admin_tg_id, иначе отправитель сообщения (не бот)."""
+    if admin_tg_id is not None:
+        return admin_tg_id
+    if message.from_user and not message.from_user.is_bot:
+        return message.from_user.id
+    return None
+
+
+def _extract_bind_hash_from_message(message: Message) -> Optional[str]:
+    """Извлекает bind_hash из текста/подписи сообщения. None если не найден."""
+    text = message.text or message.caption or ""
+    match = HASH_PATTERN.search(text)
+    if not match:
+        return None
+    return f"ARCHIVE-{match.group(1)}"
+
+
+async def _execute_bind(
+    container: Container,
+    bind_hash: str,
+    archive_chat_tgid: str,
+    archive_chat_title: str,
+) -> Optional[tuple[int, Optional[int], Optional[ChatSession]]]:
+    """Выполняет привязку архивного чата. Возвращает (work_chat_id, admin_tg_id, work_chat) или None."""
+    bind_uc: BindArchiveChatUseCase = container.resolve(BindArchiveChatUseCase)
+    return await bind_uc.execute(
+        BindArchiveChatDTO(
+            bind_hash=bind_hash,
+            archive_chat_tgid=archive_chat_tgid,
+            archive_chat_title=archive_chat_title,
+        )
+    )
+
+
+async def _try_delete_message_with_hash(message: Message, archive_chat_tgid: str) -> None:
+    """Удаляет сообщение с hash из чата для безопасности. Ошибки API логируются, не прерывают поток."""
+    try:
+        await message.delete()
+        logger.info("Сообщение с hash удалено из чата %s", archive_chat_tgid)
+    except TelegramAPIError as e:
+        logger.warning("Не удалось удалить сообщение с hash в чате %s: %s", archive_chat_tgid, e)
+
+
 @router.message(ArchiveHashFilter())
 async def archive_bind_message_handler(message: Message, container: Container) -> None:
     """Обработчик сообщений в архивном чате для привязки по hash."""
+    admin_tg_id: Optional[int] = None
 
-    # Получаем текст из сообщения или подписи
-    text = message.text or message.caption or ""
-
-    # Ищем паттерн hash (уже проверено фильтром, но для извлечения группы)
-    match = HASH_PATTERN.search(text)
-    if not match:
+    bind_hash = _extract_bind_hash_from_message(message)
+    if not bind_hash:
         return
-
-    bind_hash = f"ARCHIVE-{match.group(1)}"
 
     logger.info(
         "Найден hash для привязки архивного чата: %s в чате %s от пользователя %s",
@@ -37,82 +81,57 @@ async def archive_bind_message_handler(message: Message, container: Container) -
         message.from_user.id if message.from_user else "unknown",
     )
 
+    archive_chat_tgid = str(message.chat.id)
+    archive_chat_title = message.chat.title or f"Архивный чат {archive_chat_tgid}"
+
     try:
-        # Извлекаем данные из hash (work_chat_id, admin_tg_id)
-        archive_bind_service: ArchiveBindService = container.resolve(ArchiveBindService)
-        bind_data = archive_bind_service.extract_bind_data(bind_hash)
-
-        if not bind_data:
-            logger.warning("Невалидный hash: %s", bind_hash)
-            admin_tg_id = (
-                message.from_user.id
-                if message.from_user and not message.from_user.is_bot
-                else None
-            )
-            await _send_error_notification(
-                bot=message.bot,
-                user_id=admin_tg_id,
-                error_text="❌ Неверный код привязки. Проверьте правильность кода.",
-            )
-            return
-
-        work_chat_id, admin_tg_id = bind_data
-
-        # Получаем информацию о текущем чате (архивном)
-        archive_chat_tgid = str(message.chat.id)
-        archive_chat_title = message.chat.title or f"Архивный чат {archive_chat_tgid}"
-
-        # Привязываем архивный чат к рабочему
-        chat_service: ChatService = container.resolve(ChatService)
-        work_chat = await chat_service.bind_archive_chat(
-            work_chat_id=work_chat_id,
+        result = await _execute_bind(
+            container=container,
+            bind_hash=bind_hash,
             archive_chat_tgid=archive_chat_tgid,
             archive_chat_title=archive_chat_title,
         )
 
-        if not work_chat:
+        if result is None:
+            logger.warning("Невалидный hash: %s", bind_hash)
+            await _send_private_notification(
+                bot=message.bot,
+                user_id=_resolve_notify_user_id(message, None),
+                text="❌ Неверный код привязки. Проверьте правильность кода.",
+                is_success=False,
+            )
+            return
+
+        work_chat_id, admin_tg_id, work_chat = result
+
+        if work_chat is None:
             logger.error(
                 "Не удалось привязать архивный чат: work_chat_id=%s, archive_chat_tgid=%s",
                 work_chat_id,
                 archive_chat_tgid,
             )
-            notify_user_id = admin_tg_id or (
-                message.from_user.id
-                if message.from_user and not message.from_user.is_bot
-                else None
-            )
-            await _send_error_notification(
+            await _send_private_notification(
                 bot=message.bot,
-                user_id=notify_user_id,
-                error_text="❌ Ошибка при привязке архивного чата. Рабочий чат не найден.",
+                user_id=_resolve_notify_user_id(message, admin_tg_id),
+                text="❌ Ошибка при привязке архивного чата. Рабочий чат не найден.",
+                is_success=False,
             )
             return
 
-        # Отправляем уведомление об успехе (user_id из hash — админ, создавший код)
         success_text = (
             "✅ <b>Архивный чат успешно привязан</b>\n\n"
             f"📋 <b>Рабочий чат:</b> {work_chat.title}\n"
             f"📋 <b>Архивный чат:</b> {archive_chat_title}\n"
             f"🆔 <b>ID архивного чата:</b> <code>{archive_chat_tgid}</code>"
         )
-
-        notify_user_id = admin_tg_id or (
-            message.from_user.id
-            if message.from_user and not message.from_user.is_bot
-            else None
-        )
-        await _send_success_notification(
+        await _send_private_notification(
             bot=message.bot,
-            user_id=notify_user_id,
-            success_text=success_text,
+            user_id=_resolve_notify_user_id(message, admin_tg_id),
+            text=success_text,
+            is_success=True,
         )
 
-        # Удаляем сообщение с hash для безопасности
-        try:
-            await message.delete()
-            logger.info("Сообщение с hash удалено из чата %s", archive_chat_tgid)
-        except Exception as e:
-            logger.warning("Не удалось удалить сообщение с hash: %s", e)
+        await _try_delete_message_with_hash(message, archive_chat_tgid)
 
         logger.info(
             "Архивный чат %s успешно привязан к рабочему чату %s",
@@ -120,60 +139,44 @@ async def archive_bind_message_handler(message: Message, container: Container) -
             work_chat_id,
         )
 
+    except BotBaseException as e:
+        notify_user_id = _resolve_notify_user_id(message, admin_tg_id)
+        await _send_private_notification(
+            bot=message.bot,
+            user_id=notify_user_id,
+            text=e.get_user_message(),
+            is_success=False,
+        )
     except Exception as e:
-        logger.error(
-            "Ошибка при обработке hash для привязки архивного чата: %s",
+        raise_business_logic(
+            "Ошибка при обработке hash для привязки архивного чата.",
+            "❌ Произошла ошибка при привязке архивного чата. Попробуйте позже.",
             e,
+            logger,
+        )
+
+
+async def _send_private_notification(
+    bot: Any,
+    user_id: Optional[int],
+    text: str,
+    *,
+    is_success: bool = True,
+) -> None:
+    """Отправляет уведомление в приватный чат пользователя (успех или ошибка)."""
+    if not user_id:
+        logger.warning(
+            "Не удалось отправить уведомление: user_id не указан"
+        )
+        return
+
+    try:
+        await bot.send_message(chat_id=user_id, text=text, parse_mode="HTML")
+        log_template = "Уведомление об успехе отправлено пользователю %s" if is_success else "Уведомление об ошибке отправлено пользователю %s"
+        logger.info(log_template, user_id)
+    except TelegramAPIError as e:
+        logger.error(
+            "Ошибка при отправке уведомления пользователю %s: %s", user_id, e,
             exc_info=True,
         )
-        try:
-            uid = admin_tg_id or (
-                message.from_user.id
-                if message.from_user and not message.from_user.is_bot
-                else None
-            )
-        except NameError:
-            uid = (
-                message.from_user.id
-                if message.from_user and not message.from_user.is_bot
-                else None
-            )
-        await _send_error_notification(
-            bot=message.bot,
-            user_id=uid,
-            error_text="❌ Произошла ошибка при привязке архивного чата. Попробуйте позже.",
-        )
-
-
-async def _send_success_notification(
-    bot, user_id: Optional[int], success_text: str
-) -> None:
-    """Отправляет уведомление об успехе в приватный чат пользователя."""
-    if not user_id:
-        logger.warning("Не удалось отправить уведомление: user_id не указан")
-        return
-
-    try:
-        await bot.send_message(chat_id=user_id, text=success_text, parse_mode="HTML")
-        logger.info("Уведомление об успехе отправлено пользователю %s", user_id)
-    except Exception as e:
-        logger.error(
-            "Ошибка при отправке уведомления об успехе пользователю %s: %s", user_id, e
-        )
-
-
-async def _send_error_notification(
-    bot, user_id: Optional[int], error_text: str
-) -> None:
-    """Отправляет уведомление об ошибке в приватный чат пользователя."""
-    if not user_id:
-        logger.warning("Не удалось отправить уведомление об ошибке: user_id не указан")
-        return
-
-    try:
-        await bot.send_message(chat_id=user_id, text=error_text, parse_mode="HTML")
-        logger.info("Уведомление об ошибке отправлено пользователю %s", user_id)
-    except Exception as e:
-        logger.error(
-            "Ошибка при отправке уведомления об ошибке пользователю %s: %s", user_id, e
-        )
+        raise

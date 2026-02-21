@@ -24,3 +24,12 @@ class SendMessageDTO(BaseModel):
     admin_message_id: int
 
     model_config = ConfigDict(frozen=True)
+
+
+class BroadcastResultDTO(BaseModel):
+    """Результат рассылки сообщения по отслеживаемым чатам."""
+
+    success_count: int
+    failed_count: int
+
+    model_config = ConfigDict(frozen=True)

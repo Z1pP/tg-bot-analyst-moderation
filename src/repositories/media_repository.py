@@ -1,6 +1,9 @@
 import logging
 from typing import Optional
 
+from sqlalchemy.exc import SQLAlchemyError
+
+from exceptions import DatabaseException
 from models import TemplateMedia
 from repositories.base import BaseRepository
 
@@ -36,6 +39,9 @@ class TemplateMediaRepository(BaseRepository):
                 )
 
                 return new_media
-            except Exception as e:
-                logger.error("Ошибка при создании новой медиа для шаблона: %s", e)
-                raise
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при создании новой медиа для шаблона: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "create_media", "original": str(e)}
+                ) from e

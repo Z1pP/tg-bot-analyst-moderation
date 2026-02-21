@@ -64,8 +64,8 @@ async def test_add_reaction(db_manager: Any) -> None:
 
         repo = MessageReactionRepository(db_manager)
         dto = MessageReactionDTO(
-            chat_id=chat.id,
-            user_id=user.id,
+            chat_tgid=str(chat.id),
+            user_tgid=str(user.id),
             message_id="100",
             action=ReactionAction.ADDED,
             emoji="👍",
@@ -139,8 +139,8 @@ async def test_get_reactions_by_chat_and_period(db_manager: Any) -> None:
         # In period
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat.id,
-                user_id=user1.id,
+                chat_tgid=str(chat.id),
+                user_tgid=str(user1.id),
                 message_id="1",
                 action=ReactionAction.ADDED,
                 emoji="👍",
@@ -189,8 +189,8 @@ async def test_get_daily_top_reactors(db_manager: Any) -> None:
         # u1: 2 reactions
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat.id,
-                user_id=u1.id,
+                chat_tgid=str(chat.id),
+                user_tgid=str(u1.id),
                 message_id="1",
                 action=ReactionAction.ADDED,
                 emoji="👍",
@@ -199,8 +199,8 @@ async def test_get_daily_top_reactors(db_manager: Any) -> None:
         )
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat.id,
-                user_id=u1.id,
+                chat_tgid=str(chat.id),
+                user_tgid=str(u1.id),
                 message_id="2",
                 action=ReactionAction.ADDED,
                 emoji="👍",
@@ -210,8 +210,8 @@ async def test_get_daily_top_reactors(db_manager: Any) -> None:
         # u2: 1 reaction
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat.id,
-                user_id=u2.id,
+                chat_tgid=str(chat.id),
+                user_tgid=str(u2.id),
                 message_id="3",
                 action=ReactionAction.ADDED,
                 emoji="🔥",
@@ -241,8 +241,8 @@ async def test_get_daily_popular_reactions(db_manager: Any) -> None:
         # 👍: 2 times
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat.id,
-                user_id=u1.id,
+                chat_tgid=str(chat.id),
+                user_tgid=str(u1.id),
                 message_id="1",
                 action=ReactionAction.ADDED,
                 emoji="👍",
@@ -251,8 +251,8 @@ async def test_get_daily_popular_reactions(db_manager: Any) -> None:
         )
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat.id,
-                user_id=u1.id,
+                chat_tgid=str(chat.id),
+                user_tgid=str(u1.id),
                 message_id="2",
                 action=ReactionAction.ADDED,
                 emoji="👍",
@@ -262,8 +262,8 @@ async def test_get_daily_popular_reactions(db_manager: Any) -> None:
         # 🔥: 1 time
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat.id,
-                user_id=u1.id,
+                chat_tgid=str(chat.id),
+                user_tgid=str(u1.id),
                 message_id="3",
                 action=ReactionAction.ADDED,
                 emoji="🔥",
@@ -294,8 +294,8 @@ async def test_get_reactions_by_user_and_period_and_chats(db_manager: Any) -> No
 
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat1.id,
-                user_id=user.id,
+                chat_tgid=str(chat1.id),
+                user_tgid=str(user.id),
                 message_id="1",
                 action=ReactionAction.ADDED,
                 emoji="👍",
@@ -304,8 +304,8 @@ async def test_get_reactions_by_user_and_period_and_chats(db_manager: Any) -> No
         )
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat2.id,
-                user_id=user.id,
+                chat_tgid=str(chat2.id),
+                user_tgid=str(user.id),
                 message_id="2",
                 action=ReactionAction.ADDED,
                 emoji="🔥",
@@ -314,8 +314,8 @@ async def test_get_reactions_by_user_and_period_and_chats(db_manager: Any) -> No
         )
         await repo.add_reaction(
             MessageReactionDTO(
-                chat_id=chat3.id,
-                user_id=user.id,
+                chat_tgid=str(chat3.id),
+                user_tgid=str(user.id),
                 message_id="3",
                 action=ReactionAction.ADDED,
                 emoji="❤️",

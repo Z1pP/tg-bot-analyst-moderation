@@ -1,11 +1,13 @@
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 from dto.buffer import BufferedReactionDTO
+from exceptions import DatabaseException
 from dto.daily_activity import PopularReactionDTO, UserReactionActivityDTO
 from dto.reaction import MessageReactionDTO
 from models import MessageReaction, User
@@ -20,12 +22,18 @@ class MessageReactionRepository(BaseRepository):
         async with self._db.session() as session:
             try:
                 logger.info(
-                    f"Создание реакции: пользователь {dto.user_id}, сообщение {dto.message_id}, эмодзи {dto.emoji}"
+                    "Создание реакции: пользователь %s, сообщение %s, эмодзи %s",
+                    dto.user_tgid,
+                    dto.message_id,
+                    dto.emoji,
                 )
 
+                # Внутренние id чата и пользователя (FK); при необходимости резолв из dto.chat_tgid/dto.user_tgid
+                chat_id = getattr(dto, "chat_id", int(dto.chat_tgid))
+                user_id = getattr(dto, "user_id", int(dto.user_tgid))
                 reaction = MessageReaction(
-                    chat_id=dto.chat_id,
-                    user_id=dto.user_id,
+                    chat_id=chat_id,
+                    user_id=user_id,
                     message_id=dto.message_id,
                     action=dto.action,
                     emoji=dto.emoji,
@@ -35,22 +43,24 @@ class MessageReactionRepository(BaseRepository):
                 await session.commit()
                 await session.refresh(reaction)
 
-                logger.info(f"Реакция успешно создана с ID: {reaction.id}")
+                logger.info("Реакция успешно создана с ID: %s", reaction.id)
                 return reaction
-            except Exception as e:
-                logger.error(f"Ошибка при создании реакции: {str(e)}")
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при создании реакции: %s", e, exc_info=True)
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "add_reaction", "original": str(e)}
+                ) from e
 
     async def get_reactions_by_chat_and_period(
         self,
         chat_id: int,
         start_date: datetime,
         end_date: datetime,
-        tracked_user_ids: list[int] = None,
+        tracked_user_ids: Optional[list[int]] = None,
     ) -> List[MessageReaction]:
         async with self._db.session() as session:
-            logger.debug(f"Получение реакций для чата с ID={chat_id}")
+            logger.debug("Получение реакций для чата с ID=%s", chat_id)
 
             query = (
                 select(MessageReaction)
@@ -66,15 +76,20 @@ class MessageReactionRepository(BaseRepository):
                 query = query.where(MessageReaction.user_id.in_(tracked_user_ids))
             try:
                 result = await session.execute(query)
-                reactions = result.scalars().all()
+                reactions = list(result.scalars().all())
 
-                logger.info(f"Найдено {len(reactions)} реакций для чата с ID={chat_id}")
-                return reactions
-            except Exception as e:
-                logger.error(
-                    f"Ошибка при получении реакций для чата с ID={chat_id}: {str(e)}"
+                logger.info(
+                    "Найдено %d реакций для чата с ID=%s", len(reactions), chat_id
                 )
-                raise e
+                return reactions
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Ошибка при получении реакций для чата с ID=%s: %s", chat_id, e, exc_info=True
+                )
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_reactions_by_chat_and_period", "original": str(e)}
+                ) from e
 
     async def get_reactions_by_user_and_period_for_users(
         self,
@@ -99,7 +114,7 @@ class MessageReactionRepository(BaseRepository):
                     )
                 )
                 result = await session.execute(query)
-                reactions = result.scalars().all()
+                reactions = list(result.scalars().all())
 
                 logger.info(
                     "Найдено %d реакций для пользователей (%d)",
@@ -107,11 +122,14 @@ class MessageReactionRepository(BaseRepository):
                     len(user_ids),
                 )
                 return reactions
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при получении реакций для пользователей: %s", str(e)
+                    "Ошибка при получении реакций для пользователей: %s", e, exc_info=True
                 )
-                raise e
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_reactions_by_user_and_period_for_users", "original": str(e)}
+                ) from e
 
     async def get_daily_top_reactors(
         self,
@@ -169,15 +187,19 @@ class MessageReactionRepository(BaseRepository):
                 )
                 return top_reactors
 
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении топа по реакциям: chat_id=%s, период=%s-%s, %s",
                     chat_id,
                     start_date.strftime("%Y-%m-%d") if start_date else "None",
                     end_date.strftime("%Y-%m-%d") if end_date else "None",
                     e,
+                    exc_info=True,
                 )
-                return []
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_daily_top_reactors", "original": str(e)}
+                ) from e
 
     async def get_daily_popular_reactions(
         self,
@@ -214,10 +236,11 @@ class MessageReactionRepository(BaseRepository):
                 result = await session.execute(query)
                 rows = result.fetchall()
 
-                popular_reactions = []
+                popular_reactions: List[PopularReactionDTO] = []
                 for rank, row in enumerate(rows, 1):
+                    count_val: int = row._mapping["count"] if hasattr(row, "_mapping") else int(row[1])
                     popular_reactions.append(
-                        PopularReactionDTO(emoji=row.emoji, count=row.count, rank=rank)
+                        PopularReactionDTO(emoji=row.emoji, count=count_val, rank=rank)
                     )
 
                 logger.info(
@@ -229,15 +252,19 @@ class MessageReactionRepository(BaseRepository):
                 )
                 return popular_reactions
 
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении популярных реакций: chat_id=%s, период=%s-%s, %s",
                     chat_id,
                     start_date.strftime("%Y-%m-%d") if start_date else "None",
                     end_date.strftime("%Y-%m-%d") if end_date else "None",
                     e,
+                    exc_info=True,
                 )
-                return []
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_daily_popular_reactions", "original": str(e)}
+                ) from e
 
     async def get_reactions_by_user_and_period_and_chats(
         self,
@@ -259,10 +286,13 @@ class MessageReactionRepository(BaseRepository):
                     )
                 )
                 result = await session.execute(query)
-                return result.scalars().all()
-            except Exception as e:
-                logger.error(f"Error getting reactions by chats: {e}")
-                return []
+                return list(result.scalars().all())
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении реакций по чатам: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_reactions_by_user_and_period_and_chats", "original": str(e)}
+                ) from e
 
     async def bulk_add_reactions(self, dtos: List[BufferedReactionDTO]) -> int:
         """

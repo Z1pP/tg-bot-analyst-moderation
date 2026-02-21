@@ -5,9 +5,44 @@ from functools import wraps
 
 from aiogram import Bot, types
 from aiogram.enums import ParseMode
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 logger = logging.getLogger(__name__)
+
+
+def safe_telegram_delete(func):
+    """Декоратор для безопасного удаления сообщений Telegram"""
+
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        message_id = kwargs.get("message_id")
+        if not message_id and len(args) > 2:
+            message_id = args[2]
+
+        try:
+            return await func(*args, **kwargs)
+        except TelegramBadRequest as e:
+            msg = (e.message or str(e)).lower()
+            if "message is not modified" in msg:
+                logger.debug("Сообщение %s не изменилось", message_id)
+            elif "message to delete not found" in msg:
+                logger.warning("Сообщение %s не найдено для удаления", message_id)
+            elif "message can't be deleted" in msg:
+                logger.warning("Сообщение %s больше нельзя удалить", message_id)
+            else:
+                logger.error(
+                    "Ошибка при выполнении %s: %s", func.__name__, e, exc_info=True
+                )
+            return False
+        except TelegramForbiddenError as e:
+            logger.warning(
+                "Нет доступа к чату при удалении сообщения %s: %s",
+                message_id,
+                e,
+            )
+            return False
+
+    return wrapper
 
 
 def safe_telegram_edit(func):
@@ -37,6 +72,12 @@ def safe_telegram_edit(func):
             return False
 
     return wrapper
+
+
+@safe_telegram_delete
+async def safe_delete_message(bot: Bot, chat_id: int, message_id: int) -> bool:
+    """Безопасное удаление сообщения с обработкой типичных ошибок Telegram"""
+    return await bot.delete_message(chat_id=chat_id, message_id=message_id)
 
 
 async def send_html_message_with_kb(

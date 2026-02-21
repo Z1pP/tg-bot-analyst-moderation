@@ -3,8 +3,12 @@ from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import and_, delete, func, select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
 from constants.enums import UserRole
+from exceptions import DatabaseException
 from models import (
     AdminChatAccess,
     ChatMessage,
@@ -19,6 +23,16 @@ logger = logging.getLogger(__name__)
 
 
 class UserRepository(BaseRepository):
+    async def _fetch_user_one(
+        self,
+        session: AsyncSession,
+        where_clause: ColumnElement[bool],
+    ) -> Optional[User]:
+        """Выполняет запрос одного пользователя по условию. Без логирования и без обработки исключений."""
+        result = await session.execute(select(User).where(where_clause))
+        first: Optional[User] = result.scalars().first()
+        return first
+
     async def total_active_users(
         self,
         chat_id: int,
@@ -48,14 +62,19 @@ class UserRepository(BaseRepository):
                 stmt = select(func.count()).select_from(active_users_union)
 
                 count = await session.scalar(stmt)
-
-                logger.info("Общее количество активных пользователей: %s", count)
-                return count
-            except Exception as e:
+                out = int(count) if count is not None else 0
+                logger.info("Общее количество активных пользователей: %s", out)
+                return out
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении общего количества активных пользователей: %s",
                     e,
+                    exc_info=True,
                 )
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "total_active_users", "original": str(e)}
+                ) from e
 
     async def update_user(
         self, user_id: int, username: str, check_changes: bool = False
@@ -80,24 +99,23 @@ class UserRepository(BaseRepository):
                     username,
                 )
                 return user
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при обновлении username пользователя %s: %s",
                     user_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "update_user", "original": str(e)}
+                ) from e
 
     async def get_user_by_tg_id(self, tg_id: str) -> Optional[User]:
         """Получает пользователя по Telegram ID."""
         async with self._db.session() as session:
             try:
-                result = await session.execute(
-                    select(User).where(User.tg_id == tg_id),
-                )
-                user = result.scalars().first()
-
+                user = await self._fetch_user_one(session, User.tg_id == tg_id)
                 if user:
                     logger.info(
                         "Получен пользователь по tg_id=%s: username=%s, role=%s",
@@ -107,21 +125,21 @@ class UserRepository(BaseRepository):
                     )
                 else:
                     logger.info("Пользователь с tg_id=%s не найден", tg_id)
-
                 return user
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при получении пользователя по tg_id=%s: %s", tg_id, e
+                    "Ошибка при получении пользователя по tg_id=%s: %s", tg_id, e, exc_info=True
                 )
-                return None
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_user_by_tg_id", "original": str(e)}
+                ) from e
 
     async def get_user_by_id(self, user_id: int) -> Optional[User]:
         """Получает пользователя по ID."""
         async with self._db.session() as session:
             try:
-                result = await session.execute(select(User).where(User.id == user_id))
-                user = result.scalars().first()
-
+                user = await self._fetch_user_one(session, User.id == user_id)
                 if user:
                     logger.info(
                         "Получен пользователь по id=%d: username=%s, role=%s",
@@ -131,13 +149,15 @@ class UserRepository(BaseRepository):
                     )
                 else:
                     logger.info("Пользователь с id=%d не найден", user_id)
-
                 return user
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при получении пользователя по id=%d: %s", user_id, e
+                    "Ошибка при получении пользователя по id=%d: %s", user_id, e, exc_info=True
                 )
-                return None
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_user_by_id", "original": str(e)}
+                ) from e
 
     async def get_tracked_users_for_admin(self, admin_tg_id: str) -> List[User]:
         async with self._db.session() as session:
@@ -163,20 +183,24 @@ class UserRepository(BaseRepository):
                 )
                 result = await session.execute(query)
 
-                tracked_users = result.scalars().all()
+                tracked_users = list(result.scalars().all())
                 logger.info(
                     "Получено %d отслеживаемых пользователей для администратора TG_ID:%s",
                     len(tracked_users),
                     admin_tg_id,
                 )
                 return tracked_users
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении отслеживаемых пользователей для администратора с TG_ID:%s: %s",
                     admin_tg_id,
                     e,
+                    exc_info=True,
                 )
-                raise
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_tracked_users_for_admin", "original": str(e)}
+                ) from e
 
     async def get_admins_for_chat(self, chat_tg_id: str) -> Optional[List[User]]:
         async with self._db.session() as session:
@@ -188,7 +212,7 @@ class UserRepository(BaseRepository):
                     .where(ChatSession.chat_id == chat_tg_id)
                 )
                 result = await session.execute(query)
-                admins = result.scalars().all()
+                admins = list(result.scalars().all())
 
                 logger.info(
                     "Получено %d администраторов для чата TG_ID:%s",
@@ -196,13 +220,17 @@ class UserRepository(BaseRepository):
                     chat_tg_id,
                 )
                 return admins
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении администраторов для чата TG_ID:%s: %s",
                     chat_tg_id,
                     e,
+                    exc_info=True,
                 )
-                raise
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_admins_for_chat", "original": str(e)}
+                ) from e
 
     async def get_all_moderators(self) -> List[User]:
         """Получает список всех модераторов."""
@@ -216,12 +244,15 @@ class UserRepository(BaseRepository):
                     .order_by(User.username),
                 )
 
-                users = result.scalars().all()
+                users = list(result.scalars().all())
                 logger.info("Получено %d модераторов", len(users))
                 return users
-            except Exception as e:
-                logger.error("Ошибка при получении списка модераторов: %s", e)
-                return []
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении списка модераторов: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_all_moderators", "original": str(e)}
+                ) from e
 
     async def get_owners_and_admins(self, language: str | None = None) -> List[User]:
         """
@@ -254,21 +285,21 @@ class UserRepository(BaseRepository):
                     language,
                 )
                 return users
-            except Exception as e:
-                logger.error("Ошибка при получении владельцев/админов: %s", e)
-                return []
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении владельцев/админов: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_owners_and_admins", "original": str(e)}
+                ) from e
 
     async def get_user_by_username(self, username: str) -> Optional[User]:
         """Получает пользователя по имени пользователя (регистронезависимо)."""
         async with self._db.session() as session:
             try:
-                result = await session.execute(
-                    select(User).where(
-                        func.lower(User.username) == func.lower(username)
-                    )
+                user = await self._fetch_user_one(
+                    session,
+                    func.lower(User.username) == func.lower(username),
                 )
-                user = result.scalars().first()
-
                 if user:
                     logger.info(
                         "Получен пользователь по username=%s: id=%s, role=%s",
@@ -278,18 +309,20 @@ class UserRepository(BaseRepository):
                     )
                 else:
                     logger.info("Пользователь с username=%s не найден", username)
-
                 return user
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при получении пользователя по username=%s: %s", username, e
+                    "Ошибка при получении пользователя по username=%s: %s", username, e, exc_info=True
                 )
-                return None
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_user_by_username", "original": str(e)}
+                ) from e
 
     async def create_user(
         self,
-        tg_id: str = None,
-        username: str = None,
+        tg_id: Optional[str] = None,
+        username: Optional[str] = None,
         role: Optional[UserRole] = UserRole.USER,
         language: str = "ru",
     ) -> User:
@@ -316,12 +349,14 @@ class UserRepository(BaseRepository):
                     user.role,
                 )
                 return user
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при создании пользователя (username=%s): %s", username, e
+                    "Ошибка при создании пользователя (username=%s): %s", username, e, exc_info=True
                 )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "create_user", "original": str(e)}
+                ) from e
 
     async def update_user_language(self, user_id: int, language: str) -> Optional[User]:
         """Обновляет язык пользователя."""
@@ -341,14 +376,17 @@ class UserRepository(BaseRepository):
                     language,
                 )
                 return user
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при обновлении языка пользователя %s: %s",
                     user_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "update_user_language", "original": str(e)}
+                ) from e
 
     async def update_user_role(
         self, user_id: int, new_role: UserRole
@@ -372,14 +410,17 @@ class UserRepository(BaseRepository):
                     new_role.value,
                 )
                 return user
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при обновлении роли пользователя %s: %s",
                     user_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "update_user_role", "original": str(e)}
+                ) from e
 
     async def delete_user(self, user_id: int) -> bool:
         """Удаляет пользователя по его ID"""
@@ -389,7 +430,7 @@ class UserRepository(BaseRepository):
                 result = await session.execute(query)
                 await session.commit()
 
-                deleted_count = result.rowcount
+                deleted_count: int = getattr(result, "rowcount", 0) or 0
                 if deleted_count > 0:
                     logger.info("Удален пользователь с ID=%s", user_id)
                     return True
@@ -399,7 +440,9 @@ class UserRepository(BaseRepository):
                         user_id,
                     )
                     return False
-            except Exception as e:
-                logger.error("Ошибка при удалении пользователя с ID=%s:%s", user_id, e)
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при удалении пользователя с ID=%s: %s", user_id, e, exc_info=True)
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "delete_user", "original": str(e)}
+                ) from e

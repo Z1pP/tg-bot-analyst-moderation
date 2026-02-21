@@ -6,6 +6,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from punq import Container
 
 from constants.pagination import CATEGORIES_PAGE_SIZE
+from dto import GetCategoriesPaginatedDTO
 from keyboards.inline.categories import categories_inline_ikb
 from models import TemplateCategory
 from usecases.categories import GetCategoriesPaginatedUseCase
@@ -29,7 +30,10 @@ class CategoriesPaginationHandler(BasePaginationHandler):
             GetCategoriesPaginatedUseCase
         )
         offset = (page - 1) * CATEGORIES_PAGE_SIZE
-        return await usecase.execute(limit=CATEGORIES_PAGE_SIZE, offset=offset)
+        dto = GetCategoriesPaginatedDTO(
+            limit=CATEGORIES_PAGE_SIZE, offset=offset
+        )
+        return await usecase.execute(dto)
 
     async def build_keyboard(
         self,

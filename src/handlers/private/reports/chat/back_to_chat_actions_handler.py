@@ -7,9 +7,10 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
+from dto.chat_dto import GetChatWithArchiveDTO
 from keyboards.inline.chats import chat_actions_ikb
-from services.chat import ChatService
 from states import ChatStateManager, RatingStateManager
+from usecases.chat import GetChatWithArchiveUseCase
 from utils.send_message import safe_edit_message
 
 router = Router()
@@ -35,9 +36,20 @@ async def back_to_chat_actions_handler(
     await callback.answer()
 
     chat_id = await state.get_value("chat_id")
+    if not chat_id:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+            reply_markup=chat_actions_ikb(),
+        )
+        return
 
-    chat_service: ChatService = container.resolve(ChatService)
-    chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
+    get_chat_uc: GetChatWithArchiveUseCase = container.resolve(
+        GetChatWithArchiveUseCase
+    )
+    chat = await get_chat_uc.execute(GetChatWithArchiveDTO(chat_id=chat_id))
 
     if not chat:
         await safe_edit_message(

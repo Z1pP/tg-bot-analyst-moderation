@@ -1,71 +1,114 @@
 import logging
 from datetime import time
-from typing import List, Optional
+from typing import Any, Callable, List, Optional, cast
 
 import sqlalchemy as sa
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from exceptions import DatabaseException
 from models import ChatSession, ChatSettings
 from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
 
+def _chat_select_with_relations() -> Any:
+    """Общий запрос чата с загрузкой archive_chat и settings."""
+    return select(ChatSession).options(
+        selectinload(ChatSession.archive_chat),
+        selectinload(ChatSession.settings),
+    )
+
+
 class ChatRepository(BaseRepository):
+    async def _get_chat_by_criteria(
+        self,
+        session: Any,
+        where_clause: Any,
+        not_found_log_value: Any,
+        success_log_attr: str,
+    ) -> Optional[ChatSession]:
+        """Получает чат по критерию с загрузкой archive_chat и settings. Для внутреннего использования."""
+        chat = cast(
+            Optional[ChatSession],
+            await session.scalar(_chat_select_with_relations().where(where_clause)),
+        )
+        if chat:
+            self._expunge_chat_with_archive(session, chat)
+            logger.info(
+                "Получен чат: chat_id=%s, title=%s",
+                getattr(chat, success_log_attr),
+                chat.title,
+            )
+        else:
+            logger.info("Чат не найден: %s", not_found_log_value)
+        return chat
+
     async def get_chat_by_id(self, chat_id: int) -> Optional[ChatSession]:
         """Получает чат по идентификатору."""
         async with self._db.session() as session:
             try:
-                chat = await session.scalar(
-                    select(ChatSession)
-                    .where(ChatSession.id == chat_id)
-                    .options(
-                        selectinload(ChatSession.archive_chat),
-                        selectinload(ChatSession.settings),
-                    )
+                return await self._get_chat_by_criteria(
+                    session,
+                    ChatSession.id == chat_id,
+                    chat_id,
+                    "id",
                 )
-                if chat:
-                    self._expunge_chat_with_archive(session, chat)
-                    logger.info(
-                        "Получен чат: chat_id=%s, title=%s",
-                        chat.id,
-                        chat.title,
-                    )
-                else:
-                    logger.info("Чат не найден: id=%s", chat_id)
-                return chat
-            except Exception as e:
-                logger.error("Произошла ошибка при получении чата: %s, %s", chat_id, e)
-                raise e
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Произошла ошибка при получении чата: %s, %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
+                )
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_chat_by_id", "original": str(e)}
+                ) from e
 
     async def get_chat_by_tgid(self, chat_tgid: str) -> Optional[ChatSession]:
         """Получает чат по Telegram chat_id."""
         async with self._db.session() as session:
             try:
-                chat = await session.scalar(
-                    select(ChatSession)
-                    .where(ChatSession.chat_id == chat_tgid)
-                    .options(
-                        selectinload(ChatSession.archive_chat),
-                        selectinload(ChatSession.settings),
-                    )
+                return await self._get_chat_by_criteria(
+                    session,
+                    ChatSession.chat_id == chat_tgid,
+                    chat_tgid,
+                    "chat_id",
                 )
-                if chat:
-                    self._expunge_chat_with_archive(session, chat)
-                    logger.info(
-                        "Получен чат: chat_id=%s, title=%s",
-                        chat.chat_id,
-                        chat.title,
-                    )
-                else:
-                    logger.info("Чат не найден: chat_id=%s", chat_tgid)
-                return chat
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Произошла ошибка при получении чата: %s, %s", chat_tgid, e
+                    "Произошла ошибка при получении чата: %s, %s",
+                    chat_tgid,
+                    e,
+                    exc_info=True,
                 )
-                raise e
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_chat_by_tgid", "original": str(e)}
+                ) from e
+
+    async def _get_chat_with_settings_for_update(
+        self, session: Any, chat_id: int
+    ) -> Optional[tuple[ChatSession, ChatSettings]]:
+        """
+        Загружает чат с настройками и при отсутствии создаёт ChatSettings.
+        Для использования в методах обновления/переключения настроек чата.
+        """
+        chat = await session.scalar(
+            select(ChatSession)
+            .where(ChatSession.id == chat_id)
+            .options(selectinload(ChatSession.settings))
+        )
+        if not chat:
+            return None
+        if not chat.settings:
+            chat.settings = ChatSettings(chat_id=chat.id)
+            session.add(chat.settings)
+        return (chat, chat.settings)
 
     async def get_all(self) -> List[ChatSession]:
         """Получает список всех чатов."""
@@ -74,7 +117,7 @@ class ChatRepository(BaseRepository):
                 result = await session.execute(
                     select(ChatSession).options(selectinload(ChatSession.settings))
                 )
-                chats = result.scalars().all()
+                chats = list(result.scalars().all())
 
                 # Убеждаемся, что настройки подгружены
                 for chat in chats:
@@ -84,9 +127,16 @@ class ChatRepository(BaseRepository):
 
                 logger.info("Получено %d чатов", len(chats))
                 return chats
-            except Exception as e:
-                logger.error("Произошла ошибка при получении всех чатов: %s", e)
-                raise e
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Произошла ошибка при получении всех чатов: %s",
+                    e,
+                    exc_info=True,
+                )
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_all", "original": str(e)}
+                ) from e
 
     async def create_chat(self, chat_id: str, title: str) -> ChatSession:
         """Создает новый чат."""
@@ -115,10 +165,17 @@ class ChatRepository(BaseRepository):
                     title,
                 )
                 return chat
-            except Exception as e:
-                logger.error("Произошла ошибка при создании чата: %s, %s", chat_id, e)
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Произошла ошибка при создании чата: %s, %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
+                )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "create_chat", "original": str(e)}
+                ) from e
 
     async def update_chat(self, chat_id: int, title: str) -> ChatSession:
         """Обновляет название чата."""
@@ -137,10 +194,17 @@ class ChatRepository(BaseRepository):
                 else:
                     logger.error("Чат не найден для обновления: chat_id=%s", chat_id)
                     raise ValueError(f"Чат с id {chat_id} не найден")
-            except Exception as e:
-                logger.error("Произошла ошибка при обновлении чата: %s, %s", chat_id, e)
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Произошла ошибка при обновлении чата: %s, %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
+                )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "update_chat", "original": str(e)}
+                ) from e
 
     async def get_tracked_chats_for_admin(self, admin_tg_id: int) -> List[ChatSession]:
         """Получает отслеживаемые чаты для администратора"""
@@ -151,7 +215,7 @@ class ChatRepository(BaseRepository):
                 result = await session.execute(
                     select(ChatSession).options(selectinload(ChatSession.settings))
                 )
-                chats = result.scalars().all()
+                chats = list(result.scalars().all())
 
                 for chat in chats:
                     _ = chat.settings
@@ -159,14 +223,25 @@ class ChatRepository(BaseRepository):
                 session.expunge_all()
 
                 logger.info(
-                    f"Получено {len(chats)} отслеживаемых чатов для admin {admin_tg_id}"
+                    "Получено %d отслеживаемых чатов для admin %s",
+                    len(chats),
+                    admin_tg_id,
                 )
                 return chats
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    f"Error getting tracked chats for admin {admin_tg_id}: {e}"
+                    "Ошибка при получении отслеживаемых чатов для admin %s: %s",
+                    admin_tg_id,
+                    e,
+                    exc_info=True,
                 )
-                return []
+                await session.rollback()
+                raise DatabaseException(
+                    details={
+                        "context": "get_tracked_chats_for_admin",
+                        "original": str(e),
+                    }
+                ) from e
 
     async def bind_archive_chat(
         self,
@@ -234,17 +309,20 @@ class ChatRepository(BaseRepository):
                     work_chat_id,
                 )
 
-                return work_chat
+                return cast(ChatSession, work_chat)
 
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при привязке архивного чата: work_chat_id=%s, archive_chat_tgid=%s, error=%s",
                     work_chat_id,
                     archive_chat_tgid,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "bind_archive_chat", "original": str(e)}
+                ) from e
 
     async def update_work_hours(
         self,
@@ -307,14 +385,48 @@ class ChatRepository(BaseRepository):
                     breaks_time,
                 )
                 return chat
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при обновлении рабочих часов чата: chat_id=%s, %s",
                     chat_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "update_work_hours", "original": str(e)}
+                ) from e
+
+    async def _toggle_chat_setting_boolean(
+        self,
+        session: AsyncSession,
+        chat_id: int,
+        settings_attr: str,
+        not_found_log: str,
+        success_log_fmt: str,
+        value_getter: Callable[[ChatSession], Any],
+    ) -> Optional[ChatSession]:
+        """
+        Общая логика переключения булевой настройки чата (получить чат с settings,
+        инвертировать атрибут, commit, refresh, expunge, лог). При ошибке не ловит
+        исключения — вызывающий код должен использовать session в try/except.
+        """
+        pair = await self._get_chat_with_settings_for_update(session, chat_id)
+        if not pair:
+            logger.error(not_found_log, chat_id)
+            return None
+        chat, settings = pair
+        setattr(settings, settings_attr, not getattr(settings, settings_attr))
+        await session.commit()
+        await session.refresh(chat, ["settings"])
+        self._expunge_chat_with_archive(session, chat)
+        logger.info(
+            success_log_fmt,
+            chat.title,
+            chat.chat_id,
+            value_getter(chat),
+        )
+        return chat
 
     async def toggle_antibot(self, chat_id: int) -> Optional[ChatSession]:
         """
@@ -328,41 +440,25 @@ class ChatRepository(BaseRepository):
         """
         async with self._db.session() as session:
             try:
-                chat = await session.scalar(
-                    select(ChatSession)
-                    .where(ChatSession.id == chat_id)
-                    .options(selectinload(ChatSession.settings))
-                )
-                if not chat:
-                    logger.error(
-                        "Чат не найден для переключения антибота: id=%s", chat_id
-                    )
-                    return None
-
-                if not chat.settings:
-                    chat.settings = ChatSettings(chat_id=chat.id)
-                    session.add(chat.settings)
-
-                chat.settings.is_antibot_enabled = not chat.settings.is_antibot_enabled
-
-                await session.commit()
-                await session.refresh(chat, ["settings"])
-
-                logger.info(
+                return await self._toggle_chat_setting_boolean(
+                    session,
+                    chat_id,
+                    "is_antibot_enabled",
+                    "Чат не найден для переключения антибота: id=%s",
                     "Антибот для чата %s (ID: %s) переключен в состояние: %s",
-                    chat.title,
-                    chat.chat_id,
-                    chat.is_antibot_enabled,
+                    lambda c: c.is_antibot_enabled,
                 )
-
-                self._expunge_chat_with_archive(session, chat)
-                return chat
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при переключении антибота для чата %s: %s", chat_id, e
+                    "Ошибка при переключении антибота для чата %s: %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "toggle_antibot", "original": str(e)}
+                ) from e
 
     async def toggle_show_welcome_text(self, chat_id: int) -> Optional[ChatSession]:
         """
@@ -376,44 +472,25 @@ class ChatRepository(BaseRepository):
         """
         async with self._db.session() as session:
             try:
-                chat = await session.scalar(
-                    select(ChatSession)
-                    .where(ChatSession.id == chat_id)
-                    .options(selectinload(ChatSession.settings))
-                )
-                if not chat:
-                    logger.error(
-                        "Чат не найден для переключения приветствия: id=%s",
-                        chat_id,
-                    )
-                    return None
-
-                if not chat.settings:
-                    chat.settings = ChatSettings(chat_id=chat.id)
-                    session.add(chat.settings)
-
-                chat.settings.show_welcome_text = not chat.settings.show_welcome_text
-
-                await session.commit()
-                await session.refresh(chat, ["settings"])
-
-                logger.info(
+                return await self._toggle_chat_setting_boolean(
+                    session,
+                    chat_id,
+                    "show_welcome_text",
+                    "Чат не найден для переключения приветствия: id=%s",
                     "Приветствие для чата %s (ID: %s) переключено в состояние: %s",
-                    chat.title,
-                    chat.chat_id,
-                    chat.settings.show_welcome_text,
+                    lambda c: c.settings.show_welcome_text,
                 )
-
-                self._expunge_chat_with_archive(session, chat)
-                return chat
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при переключении приветствия для чата %s: %s",
                     chat_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "toggle_show_welcome_text", "original": str(e)}
+                ) from e
 
     async def toggle_auto_delete_welcome_text(
         self, chat_id: int
@@ -429,46 +506,28 @@ class ChatRepository(BaseRepository):
         """
         async with self._db.session() as session:
             try:
-                chat = await session.scalar(
-                    select(ChatSession)
-                    .where(ChatSession.id == chat_id)
-                    .options(selectinload(ChatSession.settings))
-                )
-                if not chat:
-                    logger.error(
-                        "Чат не найден для переключения автоудаления: id=%s",
-                        chat_id,
-                    )
-                    return None
-
-                if not chat.settings:
-                    chat.settings = ChatSettings(chat_id=chat.id)
-                    session.add(chat.settings)
-
-                chat.settings.auto_delete_welcome_text = (
-                    not chat.settings.auto_delete_welcome_text
-                )
-
-                await session.commit()
-                await session.refresh(chat, ["settings"])
-
-                logger.info(
+                return await self._toggle_chat_setting_boolean(
+                    session,
+                    chat_id,
+                    "auto_delete_welcome_text",
+                    "Чат не найден для переключения автоудаления: id=%s",
                     "Автоудаление приветствия для чата %s (ID: %s) переключено в состояние: %s",
-                    chat.title,
-                    chat.chat_id,
-                    chat.settings.auto_delete_welcome_text,
+                    lambda c: c.settings.auto_delete_welcome_text,
                 )
-
-                self._expunge_chat_with_archive(session, chat)
-                return chat
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при переключении автоудаления для чата %s: %s",
                     chat_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={
+                        "context": "toggle_auto_delete_welcome_text",
+                        "original": str(e),
+                    }
+                ) from e
 
     async def update_welcome_text(
         self, chat_id: int, welcome_text: str
@@ -512,16 +571,21 @@ class ChatRepository(BaseRepository):
                     chat_id,
                 )
                 return chat
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при обновлении приветственного текста чата: chat_id=%s, %s",
                     chat_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "update_welcome_text", "original": str(e)}
+                ) from e
 
-    def _expunge_chat_with_archive(self, session, chat: ChatSession) -> None:
+    def _expunge_chat_with_archive(
+        self, session: AsyncSession, chat: ChatSession
+    ) -> None:
         """Вспомогательный метод для отсоединения чата и его архива от сессии."""
         if not chat:
             return

@@ -7,8 +7,9 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
+from dto.chat_dto import GetChatWithArchiveDTO
 from keyboards.inline.chats import chats_menu_ikb
-from services.chat import ChatService
+from usecases.chat import GetChatWithArchiveUseCase
 from utils.send_message import safe_edit_message
 
 from .helpers import build_welcome_text_view
@@ -38,8 +39,10 @@ async def welcome_text_settings_handler(
         )
         return
 
-    chat_service: ChatService = container.resolve(ChatService)
-    chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
+    get_chat_uc: GetChatWithArchiveUseCase = container.resolve(
+        GetChatWithArchiveUseCase
+    )
+    chat = await get_chat_uc.execute(GetChatWithArchiveDTO(chat_id=chat_id))
 
     if chat is None:
         await safe_edit_message(

@@ -1,5 +1,6 @@
+from collections.abc import Awaitable, Callable
 from datetime import time
-from typing import Optional
+from typing import Any, Optional
 
 from cachetools import TTLCache
 
@@ -19,10 +20,20 @@ class ChatService:
     - Автоматическую инвалидацию и обновление кеша
     """
 
-    def __init__(self, chat_repository: ChatRepository, cache: ICache):
+    def __init__(
+        self,
+        chat_repository: ChatRepository,
+        cache: ICache,
+    ) -> None:
         self._chat_repository = chat_repository
         self._cache = cache
         self._archive_chat_cache: TTLCache = TTLCache(maxsize=200, ttl=300)
+
+    async def _set_chat_cache(self, chat: ChatSession) -> None:
+        """Записывает чат в кеш по tg_id и archive-ключу."""
+        await self._cache.set(f"chat:tg_id:{chat.chat_id}", chat)
+        await self._cache.set(f"chat:archive:{chat.chat_id}", chat)
+        self._archive_chat_cache[chat.chat_id] = chat
 
     async def get_chat(
         self,
@@ -48,8 +59,7 @@ class ChatService:
                     chat_id=chat.id,
                     title=title,
                 )
-                await self._cache.set(cache_key, chat)
-                await self._cache.set(f"chat:archive:{chat_tgid}", chat)
+                await self._set_chat_cache(chat)
             return chat
 
         chat = await self._chat_repository.get_chat_by_tgid(chat_tgid)
@@ -59,10 +69,7 @@ class ChatService:
                     chat_id=chat.id,
                     title=title,
                 )
-            await self._cache.set(cache_key, chat)
-            await self._cache.set(f"chat:archive:{chat_tgid}", chat)
-            self._archive_chat_cache[chat_tgid] = chat
-
+            await self._set_chat_cache(chat)
         return chat or None
 
     async def create_chat(self, chat_id: str, title: str) -> ChatSession:
@@ -79,10 +86,8 @@ class ChatService:
         chat = await self._chat_repository.create_chat(
             chat_id=str(chat_id), title=title
         )
-
         if chat:
-            await self._cache.set(f"chat:tg_id:{chat_id}", chat)
-            await self._cache.set(f"chat:archive:{chat_id}", chat)
+            await self._set_chat_cache(chat)
         return chat
 
     async def get_or_create(
@@ -107,7 +112,10 @@ class ChatService:
         return new_chat
 
     async def _update_and_sync_cache(
-        self, chat_id: int, update_func, **kwargs
+        self,
+        chat_id: int,
+        update_func: Callable[..., Awaitable[Optional[ChatSession]]],
+        **kwargs: Any,
     ) -> Optional[ChatSession]:
         """
         Вспомогательный метод для обновления данных чата в БД и синхронизации кеша.
@@ -128,9 +136,7 @@ class ChatService:
 
         chat = await update_func(chat_id=chat_id, **kwargs)
         if chat:
-            await self._cache.set(f"chat:tg_id:{chat.chat_id}", chat)
-            await self._cache.set(f"chat:archive:{chat.chat_id}", chat)
-            self._archive_chat_cache[chat.chat_id] = chat
+            await self._set_chat_cache(chat)
         return chat
 
     async def get_chat_with_archive(
@@ -187,22 +193,13 @@ class ChatService:
         )
 
         if work_chat:
-            self._archive_chat_cache[work_chat.chat_id] = work_chat
-            await self._cache.set(f"chat:tg_id:{work_chat.chat_id}", work_chat)
-            await self._cache.set(f"chat:archive:{work_chat.chat_id}", work_chat)
-            # Обновляем кеш для архивного чата если он был создан
+            await self._set_chat_cache(work_chat)
             if work_chat.archive_chat_id:
                 archive_chat = await self._chat_repository.get_chat_by_tgid(
                     work_chat.archive_chat_id
                 )
                 if archive_chat:
-                    await self._cache.set(
-                        f"chat:tg_id:{archive_chat.chat_id}", archive_chat
-                    )
-                    await self._cache.set(
-                        f"chat:archive:{archive_chat.chat_id}", archive_chat
-                    )
-
+                    await self._set_chat_cache(archive_chat)
         return work_chat
 
     async def toggle_antibot(self, chat_id: int) -> Optional[bool]:

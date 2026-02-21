@@ -8,7 +8,11 @@ from services.caching import ICache
 class CategoryService:
     """Сервис для работы с категориями шаблонов"""
 
-    def __init__(self, category_repository: TemplateCategoryRepository, cache: ICache):
+    def __init__(
+        self,
+        category_repository: TemplateCategoryRepository,
+        cache: ICache,
+    ) -> None:
         self._category_repository = category_repository
         self._cache = cache
 
@@ -38,7 +42,7 @@ class CategoryService:
 
     async def update_category_name(
         self, category_id: int, new_name: str
-    ) -> TemplateCategory:
+    ) -> Optional[TemplateCategory]:
         """Обновляет название категории и инвалидирует кеш."""
         category = await self._category_repository.update_category_name(
             category_id=category_id, new_name=new_name

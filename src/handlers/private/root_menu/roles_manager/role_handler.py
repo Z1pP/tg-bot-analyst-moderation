@@ -7,12 +7,17 @@ from punq import Container
 
 from constants import PROTECTED_USER_TG_ID, Dialog
 from constants.callback import CallbackData
+from exceptions import BusinessLogicException
+from exceptions.base import BotBaseException
 from constants.enums import UserRole
 from keyboards.inline.roles import cancel_role_select_ikb, role_select_ikb
-from repositories import UserRepository
-from services.user import UserService
 from states import RoleState
-from usecases.user import UpdateUserRoleUseCase
+from usecases.user import (
+    GetUserByIdUseCase,
+    GetUserByTgIdUseCase,
+    GetUserByUsernameUseCase,
+    UpdateUserRoleUseCase,
+)
 from utils.send_message import safe_edit_message
 from utils.user_data_parser import parse_data_from_text
 
@@ -63,13 +68,16 @@ async def process_user_data_input(
             )
         return
 
-    user_service: UserService = container.resolve(UserService)
+    get_by_tgid: GetUserByTgIdUseCase = container.resolve(GetUserByTgIdUseCase)
+    get_by_username: GetUserByUsernameUseCase = container.resolve(
+        GetUserByUsernameUseCase
+    )
     user = None
 
     if user_data.tg_id:
-        user = await user_service.get_user(tg_id=user_data.tg_id)
+        user = await get_by_tgid.execute(tg_id=user_data.tg_id)
     elif user_data.username:
-        user = await user_service.get_by_username(username=user_data.username)
+        user = await get_by_username.execute(username=user_data.username)
 
     if not user:
         if active_message_id:
@@ -140,8 +148,8 @@ async def role_select_callback_handler(
     try:
         # Проверяем права администратора
         admin_tg_id = str(callback.from_user.id)
-        user_service: UserService = container.resolve(UserService)
-        admin_user = await user_service.get_user(tg_id=admin_tg_id)
+        get_by_tgid: GetUserByTgIdUseCase = container.resolve(GetUserByTgIdUseCase)
+        admin_user = await get_by_tgid.execute(tg_id=admin_tg_id)
 
         if not admin_user or admin_user.role != UserRole.ADMIN:
             await callback.answer(
@@ -179,8 +187,8 @@ async def role_select_callback_handler(
             return
 
         # Получаем пользователя
-        user_repo: UserRepository = container.resolve(UserRepository)
-        user = await user_repo.get_user_by_id(user_id=user_id)
+        get_by_id: GetUserByIdUseCase = container.resolve(GetUserByIdUseCase)
+        user = await get_by_id.execute(user_id=user_id)
 
         if not user:
             await safe_edit_message(
@@ -283,8 +291,17 @@ async def role_select_callback_handler(
             f"@{target_username} ({updated_user.id}) с {old_role.value} на {new_role.value}"
         )
 
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+        )
     except ValueError as e:
-        logger.error(f"Ошибка парсинга данных в role_select_callback_handler: {e}")
+        logger.warning(
+            "Ошибка парсинга данных в role_select_callback_handler: %s", e
+        )
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
@@ -292,10 +309,8 @@ async def role_select_callback_handler(
             text="❌ Ошибка: неверный формат данных",
         )
     except Exception as e:
-        logger.error(f"Ошибка при изменении роли: {e}", exc_info=True)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text="❌ Произошла ошибка при изменении роли",
-        )
+        logger.exception("Ошибка при изменении роли: %s", e)
+        raise BusinessLogicException(
+            message="❌ Произошла ошибка при изменении роли",
+            details={"original": str(e)},
+        ) from e

@@ -3,6 +3,7 @@ import logging
 from constants.enums import AdminActionType
 from constants.punishment import PunishmentType
 from dto import ModerationActionDTO
+from exceptions import BotBaseException
 from exceptions.moderation import ModerationError
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services import (
@@ -94,7 +95,7 @@ class GiveUserBanUseCase(ModerationUseCase):
                 chat_id=context.chat.id,
                 is_banned=True,
             )
-        except Exception as e:
+        except BotBaseException as e:
             logger.error(
                 "Ошибка при обновлении статуса для пользователя %s: %s",
                 context.violator.id,

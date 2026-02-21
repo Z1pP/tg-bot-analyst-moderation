@@ -10,7 +10,7 @@ from config import settings
 class ArchiveBindService:
     """Сервис для генерации и валидации hash для привязки архивных чатов."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.secret_key = settings.BOT_TOKEN
 
     def generate_bind_hash(self, chat_id: int, admin_tg_id: int) -> str:

@@ -65,6 +65,22 @@ def send_message_ikb() -> types.InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def confirm_send_message_ikb() -> types.InlineKeyboardMarkup:
+    """Клавиатура подтверждения отправки: Да / Нет."""
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        types.InlineKeyboardButton(
+            text=InlineButtons.Common.YES,
+            callback_data=CallbackData.Messages.CONFIRM_SEND_YES,
+        ),
+        types.InlineKeyboardButton(
+            text=InlineButtons.Common.NO,
+            callback_data=CallbackData.Messages.CONFIRM_SEND_NO,
+        ),
+    )
+    return builder.as_markup()
+
+
 def cancel_send_message_ikb() -> types.InlineKeyboardMarkup:
     """Клавиатура с кнопкой отмены отправки сообщения."""
     builder = InlineKeyboardBuilder()

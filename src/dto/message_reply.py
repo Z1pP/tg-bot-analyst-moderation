@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from models import MessageReply
 
@@ -19,6 +19,8 @@ class CreateMessageReplyDTO(BaseModel):
     response_time_seconds: int
     reply_message_id_str: str = ""  # Telegram message_id (строка) для буферизации
 
+    model_config = ConfigDict(frozen=True)
+
 
 class ResultMessageReplyDTO(BaseModel):
     """DTO для связи сообщений reply"""
@@ -31,8 +33,10 @@ class ResultMessageReplyDTO(BaseModel):
     response_time_seconds: int
     created_at: datetime
 
+    model_config = ConfigDict(frozen=True)
+
     @classmethod
-    def from_model(cls, model: "MessageReply") -> "ResultMessageReplyDTO":
+    def from_model(cls, model: MessageReply) -> "ResultMessageReplyDTO":
         """
         Создает DTO из модели MessageReply
 
@@ -42,11 +46,14 @@ class ResultMessageReplyDTO(BaseModel):
         Returns:
             ResultMessageReplyDTO: DTO связи сообщений
         """
+        # original_message_id / original_user_id могут быть в расширенной модели или join
+        original_message_id = getattr(model, "original_message_id", 0)
+        original_user_id = getattr(model, "original_user_id", 0)
         return cls(
             id=model.id,
-            original_message_id=model.original_message_id,
+            original_message_id=original_message_id,
             reply_message_id=model.reply_message_id,
-            original_user_id=model.original_user_id,
+            original_user_id=original_user_id,
             reply_user_id=model.reply_user_id,
             response_time_seconds=model.response_time_seconds,
             created_at=model.created_at,

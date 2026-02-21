@@ -5,10 +5,12 @@ from aiogram.types import CallbackQuery
 from punq import Container
 
 from constants import Dialog
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from keyboards.inline.chats import chats_menu_ikb
 from keyboards.inline.menu import main_menu_ikb
 from keyboards.inline.users import hide_notification_ikb
-from services.user import UserService
+from usecases.user import GetUserByTgIdUseCase
 from utils.send_message import safe_edit_message
 
 logger = logging.getLogger(__name__)
@@ -20,14 +22,30 @@ async def show_main_menu(
     user_language: str,
     container: Container,
 ) -> None:
-    """Helper to show the main menu and clear state."""
+    """Показывает главное меню и очищает состояние FSM."""
     await state.clear()
 
     try:
-        user_service: UserService = container.resolve(UserService)
-        user = await user_service.get_user(tg_id=str(callback.from_user.id))
+        usecase: GetUserByTgIdUseCase = container.resolve(GetUserByTgIdUseCase)
+        user = await usecase.execute(tg_id=str(callback.from_user.id))
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+            reply_markup=hide_notification_ikb(),
+        )
+        return
     except Exception as e:
-        logger.error("Error getting user: %s", e)
+        raise_business_logic(
+            "Ошибка при получении пользователя.",
+            "Произошла ошибка при получении пользователя.",
+            e,
+            logger,
+        )
+
+    if not user:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
@@ -35,6 +53,7 @@ async def show_main_menu(
             text=Dialog.User.ERROR_GET_USER,
             reply_markup=hide_notification_ikb(),
         )
+        return
 
     await safe_edit_message(
         bot=callback.bot,
@@ -49,7 +68,7 @@ async def show_main_menu(
 
 
 async def show_chats_menu(callback: CallbackQuery, state: FSMContext) -> None:
-    """Helper to show the chats management menu and clear state."""
+    """Показывает меню управления чатами и очищает состояние FSM."""
     await state.clear()
 
     await safe_edit_message(

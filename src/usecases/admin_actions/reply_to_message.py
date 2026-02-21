@@ -1,11 +1,17 @@
 import logging
 
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramBadRequest,
+    TelegramForbiddenError,
+)
+from exceptions import BotBaseException
 
 from constants.enums import AdminActionType
 from dto.message_action import MessageActionDTO
 from exceptions.moderation import MessageSendError
 from services import AdminActionLogService, BotMessageService, ChatService
+from services.time_service import TimeZoneService
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +23,8 @@ class ReplyToMessageUseCase:
         self,
         bot_message_service: BotMessageService,
         chat_service: ChatService,
-        admin_action_log_service: AdminActionLogService = None,
-    ):
+        admin_action_log_service: AdminActionLogService,
+    ) -> None:
         self.bot_message_service = bot_message_service
         self.chat_service = chat_service
         self._admin_action_log_service = admin_action_log_service
@@ -74,15 +80,18 @@ class ReplyToMessageUseCase:
             archive_chat_id = work_chat.archive_chat_id if work_chat else None
             if archive_chat_id:
                 chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
+                chat_title = chat.title if chat else str(dto.chat_tgid)
 
                 chat_id_str = str(dto.chat_tgid).replace("-100", "")
                 message_link = f"https://t.me/c/{chat_id_str}/{sent_message_id}"
 
+                when_str = TimeZoneService.now().strftime("%d.%m.%Y %H:%M")
                 report_text = (
-                    f"💬 <b>Ответ от бота</b>\n\n"
-                    f"Чат: {chat.title}\n"
-                    f"Отправил: @{dto.admin_username}\n"
-                    f"<a href='{message_link}'>Ссылка на сообщение</a>"
+                    f"💬 <b>Ответ на сообщение</b>\n\n"
+                    f"Кто: @{dto.admin_username}\n"
+                    f"Когда: {when_str}\n"
+                    f"Чат: {chat_title}\n"
+                    f"Ссылка на сообщ: <a href='{message_link}'>ссылка</a>"
                 )
 
                 try:
@@ -96,7 +105,7 @@ class ReplyToMessageUseCase:
                         archive_chat_id,
                         e,
                     )
-        except Exception as e:
+        except (BotBaseException, TelegramAPIError) as e:
             logger.debug("Архивные чаты не найдены или ошибка: %s", e)
 
         # Логируем действие после успешной отправки ответа

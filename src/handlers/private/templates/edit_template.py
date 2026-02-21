@@ -7,6 +7,8 @@ from punq import Container
 
 from constants import Dialog
 from dto import UpdateTemplateTitleDTO
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from handlers.private.templates.pagination import (
     extract_state_data,
     get_templates_and_count,
@@ -18,12 +20,14 @@ from keyboards.inline.templates import (
     templates_menu_ikb,
 )
 from middlewares import AlbumMiddleware
-from repositories import MessageTemplateRepository
-from services.templates import TemplateContentService
 from states import TemplateStateManager
-from usecases.templates import UpdateTemplateTitleUseCase
-from utils.exception_handler import handle_exception
+from usecases.templates import (
+    GetTemplateByIdUseCase,
+    UpdateTemplateContentUseCase,
+    UpdateTemplateTitleUseCase,
+)
 from utils.send_message import safe_edit_message
+from utils.template_content import extract_media_content_from_messages
 
 from .common import validate_template_title
 
@@ -40,11 +44,10 @@ async def edit_template_handler(
     try:
         template_id = int(callback.data.split("__")[1])
 
-        # Получаем шаблон из БД
-        template_repo: MessageTemplateRepository = container.resolve(
-            MessageTemplateRepository
+        get_template_uc: GetTemplateByIdUseCase = container.resolve(
+            GetTemplateByIdUseCase
         )
-        template = await template_repo.get_template_by_id(template_id)
+        template = await get_template_uc.execute(template_id)
 
         if not template:
             await callback.answer(
@@ -77,8 +80,22 @@ async def edit_template_handler(
             f"Начато редактирование шаблона {template_id} пользователем {callback.from_user.username}"
         )
 
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+            reply_markup=templates_menu_ikb(),
+            parse_mode="HTML",
+        )
     except Exception as e:
-        await handle_exception(callback.message, e, "edit_template_callback")
+        raise_business_logic(
+            "Ошибка в edit_template_callback.",
+            Dialog.Template.ERROR_EDIT_TEMPLATE,
+            e,
+            logger,
+        )
     finally:
         await callback.answer()
 
@@ -101,8 +118,22 @@ async def edit_title_handler(callback: CallbackQuery, state: FSMContext) -> None
 
         await state.set_state(TemplateStateManager.editing_title)
 
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+            reply_markup=cancel_edit_ikb(),
+            parse_mode="HTML",
+        )
     except Exception as e:
-        await handle_exception(callback.message, e, "edit_title_callback")
+        raise_business_logic(
+            "Ошибка в edit_title_callback.",
+            Dialog.Template.ERROR_EDIT_TEMPLATE,
+            e,
+            logger,
+        )
     finally:
         await callback.answer()
 
@@ -225,20 +256,22 @@ async def process_edit_title_handler(
                 )
                 await state.set_state(TemplateStateManager.templates_menu)
         except Exception as e:
-            logger.error("Ошибка при возврате к списку шаблонов: %s", e, exc_info=True)
-            await safe_edit_message(
-                bot=bot,
-                chat_id=message.chat.id,
-                message_id=active_message_id,
-                text=update_message,
-                reply_markup=templates_menu_ikb(),
-                parse_mode="HTML",
+            raise_business_logic(
+                "Ошибка при возврате к списку шаблонов (edit title).",
+                Dialog.Template.ERROR_EDIT_TEMPLATE,
+                e,
+                logger,
             )
-            await state.set_state(TemplateStateManager.templates_menu)
 
+    except BotBaseException as e:
+        await message.reply(e.get_user_message())
     except Exception as e:
-        logger.error("Ошибка при обновлении названия шаблона: %s", e, exc_info=True)
-        await message.reply(Dialog.Template.ERROR_UPDATE_TITLE)
+        raise_business_logic(
+            "Ошибка при обновлении названия шаблона.",
+            Dialog.Template.ERROR_UPDATE_TITLE,
+            e,
+            logger,
+        )
 
 
 @router.callback_query(F.data == "edit_content", TemplateStateManager.editing_template)
@@ -259,8 +292,22 @@ async def edit_content_handler(callback: CallbackQuery, state: FSMContext) -> No
 
         await state.set_state(TemplateStateManager.editing_content)
 
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+            reply_markup=cancel_edit_ikb(),
+            parse_mode="HTML",
+        )
     except Exception as e:
-        await handle_exception(callback.message, e, "edit_content_callback")
+        raise_business_logic(
+            "Ошибка в edit_content_callback.",
+            Dialog.Template.ERROR_EDIT_TEMPLATE,
+            e,
+            logger,
+        )
     finally:
         await callback.answer()
 
@@ -282,20 +329,15 @@ async def process_edit_content_handler(
             await message.reply(Dialog.Template.ERROR_TEMPLATE_NOT_FOUND)
             return
 
-        # Извлекаем контент из сообщения(ий)
-        content_service: TemplateContentService = container.resolve(
-            TemplateContentService
-        )
-
         if album_messages:
-            content_data = content_service.extract_media_content(
-                messages=album_messages
-            )
+            content_data = extract_media_content_from_messages(album_messages)
         else:
-            content_data = content_service.extract_media_content(messages=[message])
+            content_data = extract_media_content_from_messages([message])
 
-        # Обновляем контент в БД
-        success = await content_service.update_template_content(
+        update_content_uc: UpdateTemplateContentUseCase = container.resolve(
+            UpdateTemplateContentUseCase
+        )
+        success = await update_content_uc.execute(
             template_id=template_id,
             content=content_data,
         )
@@ -389,19 +431,22 @@ async def process_edit_content_handler(
                 )
                 await state.set_state(TemplateStateManager.templates_menu)
         except Exception as e:
-            logger.error("Ошибка при возврате к списку шаблонов: %s", e, exc_info=True)
-            await safe_edit_message(
-                bot=bot,
-                chat_id=message.chat.id,
-                message_id=active_message_id,
-                text=update_message,
-                reply_markup=templates_menu_ikb(),
+            raise_business_logic(
+                "Ошибка при возврате к списку шаблонов (edit content).",
+                Dialog.Template.ERROR_EDIT_TEMPLATE,
+                e,
+                logger,
             )
-            await state.set_state(TemplateStateManager.templates_menu)
 
+    except BotBaseException as e:
+        await message.reply(e.get_user_message())
     except Exception as e:
-        logger.error("Ошибка при обновлении содержимого шаблона: %s", e, exc_info=True)
-        await message.reply(Dialog.Template.ERROR_UPDATE_CONTENT)
+        raise_business_logic(
+            "Ошибка при обновлении содержимого шаблона.",
+            Dialog.Template.ERROR_UPDATE_CONTENT,
+            e,
+            logger,
+        )
 
 
 @router.callback_query(F.data == "cancel_edit", TemplateStateManager.editing_template)
@@ -484,18 +529,28 @@ async def cancel_edit_handler(
                 )
                 await state.set_state(TemplateStateManager.templates_menu)
         except Exception as e:
-            logger.error("Ошибка при возврате к списку шаблонов: %s", e, exc_info=True)
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=Dialog.Template.ERROR_EDIT_TEMPLATE,
-                reply_markup=templates_menu_ikb(),
+            raise_business_logic(
+                "Ошибка при возврате к списку шаблонов (cancel_edit).",
+                Dialog.Template.ERROR_EDIT_TEMPLATE,
+                e,
+                logger,
             )
-            await state.set_state(TemplateStateManager.templates_menu)
 
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+            reply_markup=templates_menu_ikb(),
+        )
     except Exception as e:
-        await handle_exception(callback.message, e, "cancel_edit_callback")
+        raise_business_logic(
+            "Ошибка в cancel_edit_callback.",
+            Dialog.Template.ERROR_EDIT_TEMPLATE,
+            e,
+            logger,
+        )
     finally:
         await callback.answer()
 
@@ -511,11 +566,10 @@ async def _cancel_edit_title_or_content(
         await callback.answer(Dialog.Template.ERROR_TEMPLATE_NOT_FOUND, show_alert=True)
         return
 
-    # Получаем шаблон из БД
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
+    get_template_uc: GetTemplateByIdUseCase = container.resolve(
+        GetTemplateByIdUseCase
     )
-    template = await template_repo.get_template_by_id(template_id)
+    template = await get_template_uc.execute(template_id)
 
     if not template:
         await callback.answer(Dialog.Template.TEMPLATE_NOT_FOUND, show_alert=True)
@@ -549,8 +603,21 @@ async def cancel_edit_title_handler(
     """Обработчик отмены редактирования названия шаблона"""
     try:
         await _cancel_edit_title_or_content(callback, state, container)
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+            reply_markup=templates_menu_ikb(),
+        )
     except Exception as e:
-        await handle_exception(callback.message, e, "cancel_edit_title_callback")
+        raise_business_logic(
+            "Ошибка в cancel_edit_title_callback.",
+            Dialog.Template.ERROR_EDIT_TEMPLATE,
+            e,
+            logger,
+        )
     finally:
         await callback.answer()
 
@@ -565,7 +632,20 @@ async def cancel_edit_content_handler(
     """Обработчик отмены редактирования содержимого шаблона"""
     try:
         await _cancel_edit_title_or_content(callback, state, container)
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+            reply_markup=templates_menu_ikb(),
+        )
     except Exception as e:
-        await handle_exception(callback.message, e, "cancel_edit_content_callback")
+        raise_business_logic(
+            "Ошибка в cancel_edit_content_callback.",
+            Dialog.Template.ERROR_EDIT_TEMPLATE,
+            e,
+            logger,
+        )
     finally:
         await callback.answer()

@@ -1,8 +1,10 @@
 import logging
 from typing import Optional, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 
+from exceptions import DatabaseException
 from models import TemplateCategory
 from repositories.base import BaseRepository
 
@@ -22,9 +24,12 @@ class TemplateCategoryRepository(BaseRepository):
                 logger.info("Получено %d категорий", len(categories))
 
                 return categories
-            except Exception as e:
-                logger.error("Ошибка при получении списка категорий: %s", e)
-                return []
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении списка категорий: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_all_categories", "original": str(e)}
+                ) from e
 
     async def get_last_category(self) -> Optional[TemplateCategory]:
         """Получаем последнюю созданную категорию"""
@@ -40,35 +45,45 @@ class TemplateCategoryRepository(BaseRepository):
                 logger.info("Получена последняя категория: %s", last_category)
 
                 return last_category
-            except Exception as e:
-                logger.error("Ошибка при получении последней категории: %s", str(e))
-                return None
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении последней категории: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_last_category", "original": str(e)}
+                ) from e
 
-    async def get_category_by_id(self, id: int) -> Optional[TemplateCategory]:
-        """Получаем категорию по имени"""
+    async def get_category_by_id(self, category_id: int) -> Optional[TemplateCategory]:
+        """Получает категорию по идентификатору."""
         async with self._db.session() as session:
             try:
                 result = await session.execute(
-                    select(TemplateCategory).where(TemplateCategory.id == id)
+                    select(TemplateCategory).where(TemplateCategory.id == category_id)
                 )
 
                 category = result.scalars().first()
                 if category:
-                    logger.info("Получена категория по имени: %s", category.name)
+                    logger.info("Получена категория по id: %s", category.name)
 
                 return category
-            except Exception as e:
-                logger.error("Ошибка при получении категории c id: %s", str(e))
-                return None
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении категории по id: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_category_by_id", "original": str(e)}
+                ) from e
 
     async def create_category(self, name: str) -> Optional[TemplateCategory]:
         """Создаем новую категорию"""
         async with self._db.session() as session:
             try:
-                last_category = await self.get_last_category()
+                last_result = await session.execute(
+                    select(TemplateCategory).order_by(
+                        TemplateCategory.sort_order.desc()
+                    ).limit(1)
+                )
+                last_category = last_result.scalars().first()
                 sort_order = last_category.sort_order + 1 if last_category else 1
 
-                # Создаем новую категорию
                 new_category = TemplateCategory(
                     name=name,
                     sort_order=sort_order,
@@ -81,26 +96,33 @@ class TemplateCategoryRepository(BaseRepository):
                 logger.info('Была создана новая категория "%s"', new_category.name)
 
                 return new_category
-            except Exception as e:
-                logger.error("Ошибка при создании новой категории: %s", str(e))
-                raise Exception("Ошибка при создании репозитория")
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при создании новой категории: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "create_category", "original": str(e)},
+                ) from e
 
     async def delete_category(self, category_id: int) -> None:
         """Удаляем категорию"""
         async with self._db.session() as session:
             try:
-                category = await self.get_category_by_id(category_id)
+                result = await session.execute(
+                    select(TemplateCategory).where(TemplateCategory.id == category_id)
+                )
+                category = result.scalar_one_or_none()
                 if category:
                     await session.delete(category)
                     await session.commit()
                     logger.info('Категория "%s" удалена', category.name)
                 else:
                     logger.warning("Категория с id %d не найдена", category_id)
-            except Exception as e:
-                logger.error("Ошибка при удалении категории: %s", str(e))
-                raise Exception("Ошибка при удалении категории")
-            finally:
-                await session.close()
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при удалении категории: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "delete_category", "original": str(e)},
+                ) from e
 
     async def get_categories_paginated(
         self, limit: int = 5, offset: int = 0
@@ -116,49 +138,62 @@ class TemplateCategoryRepository(BaseRepository):
                 )
                 categories = result.scalars().all()
                 logger.info(
-                    f"Получено {len(categories)} категорий (страница {offset // limit + 1})"
+                    "Получено %d категорий (страница %d)",
+                    len(categories),
+                    offset // limit + 1,
                 )
                 return categories
-            except Exception as e:
-                logger.error(f"Ошибка при получении категорий с пагинацией: {e}")
-                return []
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении категорий с пагинацией: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_categories_paginated", "original": str(e)}
+                ) from e
 
     async def get_categories_count(self) -> int:
         """Получает общее количество категорий."""
         async with self._db.session() as session:
             try:
-                from sqlalchemy import func
-
                 result = await session.execute(select(func.count(TemplateCategory.id)))
                 count = result.scalar()
-                logger.info(f"Общее количество категорий: {count}")
+                logger.info("Общее количество категорий: %s", count)
                 return count or 0
-            except Exception as e:
-                logger.error(f"Ошибка при подсчете категорий: {e}")
-                return 0
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при подсчете категорий: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_categories_count", "original": str(e)}
+                ) from e
 
     async def update_category_name(
         self, category_id: int, new_name: str
-    ) -> TemplateCategory:
-        """Обновляет название категории"""
+    ) -> Optional[TemplateCategory]:
+        """Обновляет название категории."""
         async with self._db.session() as session:
             try:
-                query = select(TemplateCategory).where(
-                    TemplateCategory.id == category_id
+                result = await session.execute(
+                    select(TemplateCategory).where(
+                        TemplateCategory.id == category_id
+                    )
                 )
-                result = await session.execute(query)
                 category = result.scalar_one_or_none()
+                if not category:
+                    logger.warning("Категория с id %d не найдена", category_id)
+                    return None
 
                 category.name = new_name
                 await session.commit()
                 await session.refresh(category)
 
                 logger.info(
-                    f"Название категории {category_id} обновлено на '{new_name}'"
+                    "Название категории %d обновлено на '%s'",
+                    category_id,
+                    new_name,
                 )
-
                 return category
-            except Exception as e:
-                logger.error(f"Ошибка при обновлении названия категории: {e}")
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при обновлении названия категории: %s", e, exc_info=True)
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "update_category_name", "original": str(e)}
+                ) from e

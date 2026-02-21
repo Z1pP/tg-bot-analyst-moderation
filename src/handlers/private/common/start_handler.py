@@ -5,7 +5,7 @@ from punq import Container
 
 from constants import Dialog
 from keyboards.inline.menu import main_menu_ikb
-from services.user import UserService
+from usecases.user import GetUserByTgIdUseCase
 
 router = Router(name=__name__)
 
@@ -17,8 +17,11 @@ async def start_handler(
     """
     Выводит приветственное сообщение
     """
-    user_service: UserService = container.resolve(UserService)
-    user = await user_service.get_user(tg_id=str(message.from_user.id))
+    usecase: GetUserByTgIdUseCase = container.resolve(GetUserByTgIdUseCase)
+    user = await usecase.execute(tg_id=str(message.from_user.id))
+    if not user:
+        await message.answer(text=Dialog.User.ERROR_GET_USER)
+        return
 
     await message.answer(
         text=Dialog.Menu.MENU_TEXT.format(username=user.username),

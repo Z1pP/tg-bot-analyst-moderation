@@ -6,10 +6,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from punq import Container
 
+from constants.pagination import TEMPLATES_PAGE_SIZE
+from dto.template_dto import GetTemplatesPaginatedDTO
 from keyboards.inline.templates import templates_inline_kb
 from models import MessageTemplate
-from repositories import MessageTemplateRepository
 from states import TemplateStateManager
+from usecases.templates import GetTemplatesPaginatedUseCase
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
@@ -109,108 +111,18 @@ async def get_templates_and_count(
     container: Container,
     page: int = 1,
 ) -> Tuple[List[MessageTemplate], int]:
-    if data.chat_id:
-        templates = await get_templates_by_chat_page(
-            container=container,
-            page=page,
-            chat_id=data.chat_id,
-        )
-        total_count = await get_templates_count_by_chat(
-            container=container, chat_id=data.chat_id
-        )
-    elif data.category_id:
-        templates = await get_templates_by_category_page(
-            container=container,
-            page=page,
+    """Получает шаблоны и общее количество через use case."""
+    usecase: GetTemplatesPaginatedUseCase = container.resolve(
+        GetTemplatesPaginatedUseCase
+    )
+    return await usecase.execute(
+        GetTemplatesPaginatedDTO(
             category_id=data.category_id,
+            chat_id=data.chat_id,
+            page=page,
+            page_size=TEMPLATES_PAGE_SIZE,
         )
-        total_count = await get_templates_count_by_category(
-            container=container, category_id=data.category_id
-        )
-    else:
-        templates = await get_global_templates(container=container, page=page)
-        total_count = await get_global_templates_count(container=container)
-
-    return templates, total_count
-
-
-async def get_templates_by_category_page(
-    container: Container,
-    page: int = 1,
-    category_id: Optional[int] = None,
-) -> List[MessageTemplate]:
-    """Получает шаблоны для указанной страницы и категории"""
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
     )
-
-    offset = (page - 1) * 5
-    templates = await template_repo.get_templates_paginated(
-        category_id=category_id,
-        limit=5,
-        offset=offset,
-    )
-    return templates
-
-
-async def get_templates_count_by_category(
-    container: Container, category_id: int
-) -> int:
-    """Получает общее количество шаблонов по категории"""
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
-    )
-    return await template_repo.get_templates_count(category_id=category_id)
-
-
-async def get_templates_by_chat_page(
-    container: Container,
-    page: int = 1,
-    chat_id: Optional[int] = None,
-) -> List[MessageTemplate]:
-    """Получает шаблоны для указанной страницы и чата"""
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
-    )
-    offset = (page - 1) * 5
-    templates = await template_repo.get_templates_paginated(
-        chat_id=chat_id,
-        limit=5,
-        offset=offset,
-    )
-    return templates
-
-
-async def get_templates_count_by_chat(container: Container, chat_id: int) -> int:
-    """Получает общее количество шаблонов по чату"""
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
-    )
-    return await template_repo.get_templates_count(chat_id=chat_id)
-
-
-async def get_global_templates(
-    container: Container, page: int = 1
-) -> List[MessageTemplate]:
-    """Получает глобальные шаблоны для указанной страницы"""
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
-    )
-    offset = (page - 1) * 5
-    templates = await template_repo.get_templates_paginated(
-        limit=5,
-        offset=offset,
-        global_only=True,
-    )
-    return templates
-
-
-async def get_global_templates_count(container: Container) -> int:
-    """Получает общее количество глобальных шаблонов"""
-    template_repo: MessageTemplateRepository = container.resolve(
-        MessageTemplateRepository
-    )
-    return await template_repo.get_templates_count(global_only=True)
 
 
 async def extract_state_data(state: FSMContext) -> StateDataExtractor:

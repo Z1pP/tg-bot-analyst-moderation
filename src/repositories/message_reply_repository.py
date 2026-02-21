@@ -1,11 +1,13 @@
 import logging
 from datetime import datetime
-from typing import List
+from typing import Any, List, Optional
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 from dto.buffer import BufferedMessageReplyDTO
+from exceptions import DatabaseException
 from models import ChatMessage, MessageReply
 from repositories.base import BaseRepository
 
@@ -36,7 +38,7 @@ class MessageReplyRepository(BaseRepository):
             )
             try:
                 result = await session.execute(query)
-                replies = result.scalars().all()
+                replies = list(result.scalars().all())
                 logger.info(
                     "Получено %d ответов для пользователей (%d) за период %s - %s",
                     len(replies),
@@ -45,22 +47,26 @@ class MessageReplyRepository(BaseRepository):
                     end_date,
                 )
                 return replies
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении ответов по периоду для пользователей: users=%s, период=%s-%s, %s",
                     user_ids,
                     start_date,
                     end_date,
                     e,
+                    exc_info=True,
                 )
-                return []
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_replies_by_period_date_for_users", "original": str(e)}
+                ) from e
 
     async def get_replies_by_chat_id_and_period(
         self,
         chat_id: int,
         start_date: datetime,
         end_date: datetime,
-        tracked_user_ids: list[int] = None,
+        tracked_user_ids: Optional[list[int]] = None,
     ) -> list[MessageReply]:
         async with self._db.session() as session:
             query = (
@@ -76,7 +82,7 @@ class MessageReplyRepository(BaseRepository):
                 query = query.where(MessageReply.reply_user_id.in_(tracked_user_ids))
             try:
                 result = await session.execute(query)
-                replies = result.scalars().all()
+                replies = list(result.scalars().all())
                 logger.info(
                     "Получено %d ответов для chat_id=%s за период %s - %s",
                     len(replies),
@@ -85,15 +91,19 @@ class MessageReplyRepository(BaseRepository):
                     end_date,
                 )
                 return replies
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении ответов по chat_id: chat_id=%s, период=%s-%s, %s",
                     chat_id,
                     start_date,
                     end_date,
                     e,
+                    exc_info=True,
                 )
-                return []
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_replies_by_chat_id_and_period", "original": str(e)}
+                ) from e
 
     async def get_replies_by_period_date_and_chats(
         self,
@@ -115,10 +125,13 @@ class MessageReplyRepository(BaseRepository):
             )
             try:
                 result = await session.execute(query)
-                return result.scalars().all()
-            except Exception as e:
-                logger.error(f"Error getting replies by chats: {e}")
-                return []
+                return list(result.scalars().all())
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении ответов по чатам: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_replies_by_period_date_and_chats", "original": str(e)}
+                ) from e
 
     async def bulk_create_replies(self, dtos: List[BufferedMessageReplyDTO]) -> int:
         """
@@ -136,7 +149,7 @@ class MessageReplyRepository(BaseRepository):
         async with self._db.session() as session:
             try:
                 # Собираем уникальные пары (chat_id, message_id_str) для поиска
-                message_lookup = {}
+                message_lookup: dict[tuple[int, str], list[Any] | int | None] = {}
                 for dto in dtos:
                     key = (dto.chat_id, dto.reply_message_id_str)
                     if key not in message_lookup:
@@ -190,9 +203,11 @@ class MessageReplyRepository(BaseRepository):
                 return await self._bulk_upsert_on_conflict_nothing(
                     MessageReply, mappings, "reply сообщений"
                 )
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при массовом создании reply сообщений: %s", e, exc_info=True
                 )
                 await session.rollback()
-                return 0
+                raise DatabaseException(
+                    details={"context": "bulk_create_replies", "original": str(e)}
+                ) from e

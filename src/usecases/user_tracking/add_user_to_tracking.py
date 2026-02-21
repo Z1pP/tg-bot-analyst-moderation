@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from constants import Dialog
+from exceptions import BotBaseException
 from constants.enums import AdminActionType
 from dto import UserTrackingDTO
 from repositories import UserTrackingRepository
@@ -25,15 +26,15 @@ class AddUserToTrackingUseCase:
         user_service: UserService,
         user_tracking_repository: UserTrackingRepository,
         admin_action_log_service: AdminActionLogService,
-    ):
+    ) -> None:
         self._user_tracking_repository = user_tracking_repository
         self._user_service = user_service
         self._admin_action_log_service = admin_action_log_service
 
     async def execute(self, dto: UserTrackingDTO) -> AddUserToTrackingResult:
         user = await self._user_service.get_user(
-            tg_id=dto.user_tgid,
-            username=dto.user_username,
+            tg_id=dto.user_tgid or "",
+            username=dto.user_username or "",
         )
 
         if user is None:
@@ -44,8 +45,13 @@ class AddUserToTrackingUseCase:
 
         admin = await self._user_service.get_user(
             tg_id=dto.admin_tgid,
-            username=dto.admin_username,
+            username=dto.admin_username or "",
         )
+        if admin is None:
+            return AddUserToTrackingResult(
+                success=False,
+                message=Dialog.UserTracking.USER_NOT_FOUND,
+            )
 
         tracked_users = await self._user_tracking_repository.get_tracked_users_by_admin(
             admin_tgid=admin.tg_id,
@@ -86,7 +92,7 @@ class AddUserToTrackingUseCase:
                 message=Dialog.UserTracking.SUCCESS_ADD_USER_TO_TRACKING,
                 user_id=user.id,
             )
-        except Exception as e:
+        except BotBaseException as e:
             logger.error(
                 "Ошибка добавления в отслеживание: %s",
                 e,

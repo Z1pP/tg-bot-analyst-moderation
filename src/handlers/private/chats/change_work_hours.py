@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
@@ -8,20 +8,61 @@ from punq import Container
 
 from constants import Dialog
 from constants.callback import CallbackData
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from keyboards.inline.chats import (
     cancel_work_hours_setting_ikb,
     chat_actions_ikb,
     time_report_settings_ikb,
 )
 from models import ChatSession
-from services import ChatService
+from dto.chat_dto import GetChatWithArchiveDTO
 from states import ChatStateManager, WorkHoursState
-from usecases.chat import UpdateChatWorkHoursUseCase
+from usecases.chat import GetChatWithArchiveUseCase, UpdateChatWorkHoursUseCase
 from utils.data_parser import parse_breaks_time, parse_time, parse_tolerance
 from utils.send_message import safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
+
+
+async def _resolve_chat_for_work_hours(
+    callback: CallbackQuery,
+    state: FSMContext,
+    container: Container,
+) -> Optional[ChatSession]:
+    """
+    Достаёт chat_id из state, загружает чат через GetChatWithArchiveUseCase.
+    При отсутствии chat_id или чата редактирует сообщение с ошибкой и возвращает None.
+    """
+    chat_id = await state.get_value("chat_id")
+    if not chat_id:
+        logger.error("chat_id не найден в state")
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_SELECTED,
+            reply_markup=chat_actions_ikb(),
+        )
+        return None
+
+    get_chat_uc: GetChatWithArchiveUseCase = container.resolve(
+        GetChatWithArchiveUseCase
+    )
+    chat = await get_chat_uc.execute(GetChatWithArchiveDTO(chat_id=chat_id))
+
+    if not chat:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
+            reply_markup=chat_actions_ikb(),
+        )
+        return None
+
+    return chat
 
 
 @router.callback_query(F.data == CallbackData.Chat.REPORT_TIME_SETTING)
@@ -33,30 +74,9 @@ async def work_hours_menu_handler(
     """Обработчик открытия меню настройки времени сбора данных"""
     await callback.answer()
 
-    chat_id = await state.get_value("chat_id")
-    if not chat_id:
-        logger.error("chat_id не найден в state")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.Chat.CHAT_NOT_SELECTED,
-            reply_markup=chat_actions_ikb(),
-        )
-        return
-
     try:
-        chat_service: ChatService = container.resolve(ChatService)
-        chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
-
-        if not chat:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-                reply_markup=chat_actions_ikb(),
-            )
+        chat = await _resolve_chat_for_work_hours(callback, state, container)
+        if chat is None:
             return
 
         msg_text = _build_work_hours_view(chat)
@@ -71,14 +91,20 @@ async def work_hours_menu_handler(
 
         await state.update_data(active_message_id=callback.message.message_id)
 
-    except Exception as e:
-        logger.error("Ошибка при открытии меню настройки времени: %s", e, exc_info=True)
+    except BotBaseException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="❌ Произошла ошибка. Попробуйте позже.",
+            text=e.get_user_message(),
             reply_markup=chat_actions_ikb(),
+        )
+    except Exception as e:
+        raise_business_logic(
+            "Ошибка при открытии меню настройки времени.",
+            "Произошла ошибка. Попробуйте позже.",
+            e,
+            logger,
         )
 
 
@@ -241,30 +267,9 @@ async def cancel_work_hours_handler(
     """Обработчик отмены настройки времени"""
     await callback.answer()
 
-    chat_id = await state.get_value("chat_id")
-    if not chat_id:
-        logger.error("chat_id не найден в state")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
-            text=Dialog.Chat.CHAT_NOT_SELECTED,
-            reply_markup=chat_actions_ikb(),
-        )
-        return
-
     try:
-        chat_service: ChatService = container.resolve(ChatService)
-        chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
-
-        if not chat:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
-                reply_markup=chat_actions_ikb(),
-            )
+        chat = await _resolve_chat_for_work_hours(callback, state, container)
+        if chat is None:
             return
 
         await safe_edit_message(
@@ -277,14 +282,20 @@ async def cancel_work_hours_handler(
 
         await state.set_state(ChatStateManager.selecting_chat)
 
-    except Exception as e:
-        logger.error("Ошибка при отмене настройки времени: %s", e, exc_info=True)
+    except BotBaseException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text="❌ Произошла ошибка. Попробуйте позже.",
+            text=e.get_user_message(),
             reply_markup=chat_actions_ikb(),
+        )
+    except Exception as e:
+        raise_business_logic(
+            "Ошибка при отмене настройки времени.",
+            "Произошла ошибка. Попробуйте позже.",
+            e,
+            logger,
         )
 
 
@@ -370,17 +381,23 @@ async def _process_work_hours_input(
             container=container,
         )
 
-    except Exception as e:
-        logger.error("Ошибка при сохранении %s: %s", field_name, e, exc_info=True)
+    except BotBaseException as e:
         if active_message_id:
             await safe_edit_message(
                 bot=message.bot,
                 chat_id=message.chat.id,
                 message_id=active_message_id,
-                text="❌ Произошла ошибка при сохранении. Попробуйте позже.",
+                text=e.get_user_message(),
                 reply_markup=cancel_work_hours_setting_ikb(),
             )
         await message.delete()
+    except Exception as e:
+        raise_business_logic(
+            "Ошибка при сохранении настройки времени.",
+            "Произошла ошибка при сохранении. Попробуйте позже.",
+            e,
+            logger,
+        )
 
 
 async def _return_to_work_hours_menu(
@@ -393,8 +410,10 @@ async def _return_to_work_hours_menu(
     """Вспомогательная функция для возврата в меню настройки времени"""
     try:
         db_chat_id = await state.get_value("chat_id")
-        chat_service: ChatService = container.resolve(ChatService)
-        chat = await chat_service.get_chat_with_archive(chat_id=db_chat_id)
+        get_chat_uc: GetChatWithArchiveUseCase = container.resolve(
+            GetChatWithArchiveUseCase
+        )
+        chat = await get_chat_uc.execute(GetChatWithArchiveDTO(chat_id=db_chat_id))
 
         if not chat:
             await safe_edit_message(
@@ -417,9 +436,20 @@ async def _return_to_work_hours_menu(
         )
 
         await state.set_state(None)
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=bot,
+            chat_id=chat_id,
+            message_id=message_id,
+            text=e.get_user_message(),
+            reply_markup=chat_actions_ikb(),
+        )
     except Exception as e:
-        logger.error(
-            "Ошибка при возврате в меню настройки времени: %s", e, exc_info=True
+        raise_business_logic(
+            "Ошибка при возврате в меню настройки времени.",
+            "Произошла ошибка. Попробуйте позже.",
+            e,
+            logger,
         )
 
 

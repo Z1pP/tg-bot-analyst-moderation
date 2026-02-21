@@ -1,9 +1,11 @@
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import and_, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from exceptions import DatabaseException
 from models.user_chat_status import UserChatStatus
 from repositories.base import BaseRepository
 
@@ -46,20 +48,24 @@ class UserChatStatusRepository(BaseRepository):
                         "Статус для user_id=%s, chat_id=%s не найден", user_id, chat_id
                     )
                 return status
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении статуса для user_id=%s, chat_id=%s: %s",
                     user_id,
                     chat_id,
                     e,
+                    exc_info=True,
                 )
-                raise
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_status", "original": str(e)}
+                ) from e
 
     async def get_or_create(
         self,
         user_id: int,
         chat_id: int,
-        defaults: dict = None,
+        defaults: Optional[dict[str, Any]] = None,
     ) -> tuple[UserChatStatus, bool]:
         """Получает или создает запись о статусе пользователя в чате."""
         async with self._db.session() as session:
@@ -87,21 +93,24 @@ class UserChatStatusRepository(BaseRepository):
                     chat_id,
                 )
                 return status, True
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении или создании UserChatStatus для user_id=%s, chat_id=%s: %s",
                     user_id,
                     chat_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "get_or_create", "original": str(e)}
+                ) from e
 
     async def update_status(
         self,
         user_id: int,
         chat_id: int,
-        **kwargs,
+        **kwargs: Any,
     ) -> Optional[UserChatStatus]:
         """Обновляет статус пользователя в чате."""
         async with self._db.session() as session:
@@ -125,12 +134,15 @@ class UserChatStatusRepository(BaseRepository):
                     "Статус для user_id=%s, chat_id=%s обновлен", user_id, chat_id
                 )
                 return status
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при обновлении статуса для user_id=%s, chat_id=%s: %s",
                     user_id,
                     chat_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "update_status", "original": str(e)}
+                ) from e

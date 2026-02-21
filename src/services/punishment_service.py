@@ -31,7 +31,7 @@ class PunishmentService:
         punishment_repository: PunishmentRepository,
         punishment_ladder_repository: PunishmentLadderRepository,
         user_chat_status_repository: UserChatStatusRepository,
-    ):
+    ) -> None:
         self.punishment_repository = punishment_repository
         self.punishment_ladder_repository = punishment_ladder_repository
         self.user_chat_status_repository = user_chat_status_repository
@@ -177,18 +177,42 @@ class PunishmentService:
         return ""
 
     @classmethod
-    def _build_report_header(cls, date: datetime, message_deleted: bool) -> str:
+    def _build_report_header(cls, _date: datetime, _message_deleted: bool) -> str:
         """
         Генерирует заголовок отчета.
 
         Args:
-            date: Дата события
-            message_deleted: Флаг удаления сообщения
+            _date: Дата события (резерв для будущего использования)
+            _message_deleted: Флаг удаления сообщения (резерв для будущего использования)
 
         Returns:
             Строка заголовка
         """
         return Dialog.ModerationReport.REPORT_HEADER
+
+    def _format_report_body(
+        self,
+        dto: ModerationActionDTO,
+        date: datetime,
+        punishment_name: str,
+        period: str,
+    ) -> str:
+        """Собирает тело отчёта модерации по общему шаблону."""
+        header = self._build_report_header(date, True)
+        reason = dto.reason or Dialog.ModerationReport.NO_REASON
+        date_str = date.strftime("%d.%m.%Y %H:%M")
+        period_display = period or Dialog.ModerationReport.NO_PERIOD
+        return Dialog.ModerationReport.REPORT_BODY.format(
+            header=header,
+            admin_username=dto.admin_username,
+            date_str=date_str,
+            violator_username=dto.violator_username,
+            violator_tgid=dto.violator_tgid,
+            reason=reason,
+            chat_title=dto.chat_title,
+            punishment_name=punishment_name,
+            period=period_display,
+        )
 
     def generate_ban_report(
         self,
@@ -207,22 +231,9 @@ class PunishmentService:
         Returns:
             Форматированный отчет
         """
-        header = self._build_report_header(date, message_deleted)
-        reason = dto.reason or Dialog.ModerationReport.NO_REASON
         period = self._format_punishment_period(PunishmentType.BAN, None)
-        date_str = date.strftime("%d.%m.%Y %H:%M")
-
-        return Dialog.ModerationReport.REPORT_BODY.format(
-            header=header,
-            admin_username=dto.admin_username,
-            date_str=date_str,
-            violator_username=dto.violator_username,
-            violator_tgid=dto.violator_tgid,
-            reason=reason,
-            chat_title=dto.chat_title,
-            punishment_name=Dialog.ModerationReport.PUNISHMENT_NAMES["BAN"],
-            period=period,
-        )
+        punishment_name = Dialog.ModerationReport.PUNISHMENT_NAMES["BAN"]
+        return self._format_report_body(dto, date, punishment_name, period)
 
     def generate_report(
         self,
@@ -243,29 +254,14 @@ class PunishmentService:
         Returns:
             Форматированный отчет
         """
-        header = self._build_report_header(date, message_deleted)
-        reason = dto.reason or Dialog.ModerationReport.NO_REASON
         period = self._format_punishment_period(
             punishment_ladder.punishment_type, punishment_ladder.duration_seconds
         )
-        date_str = date.strftime("%d.%m.%Y %H:%M")
-
         punishment_name = Dialog.ModerationReport.PUNISHMENT_NAMES.get(
             punishment_ladder.punishment_type.name,
             punishment_ladder.punishment_type.value,
         )
-
-        return Dialog.ModerationReport.REPORT_BODY.format(
-            header=header,
-            admin_username=dto.admin_username,
-            date_str=date_str,
-            violator_username=dto.violator_username,
-            violator_tgid=dto.violator_tgid,
-            reason=reason,
-            chat_title=dto.chat_title,
-            punishment_name=punishment_name,
-            period=period or Dialog.ModerationReport.NO_PERIOD,
-        )
+        return self._format_report_body(dto, date, punishment_name, period)
 
     async def create_punishment(
         self,

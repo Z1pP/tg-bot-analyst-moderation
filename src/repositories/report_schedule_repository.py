@@ -1,11 +1,12 @@
 import logging
 from datetime import datetime, time, timedelta, timezone
-from typing import List, Optional
+from typing import List, Optional, cast
 
-import pytz
+import pytz  # type: ignore[import-untyped]
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 
+from exceptions import DatabaseException
 from models import ReportSchedule
 from repositories.base import BaseRepository
 
@@ -39,7 +40,7 @@ class ReportScheduleRepository(BaseRepository):
                 if not schedules:
                     return []
 
-                logger.info(f"Найдено {len(schedules)} расписаний для обработки.")
+                logger.info("Найдено %d расписаний для обработки.", len(schedules))
 
                 # 2. Обновляем каждое расписание внутри той же транзакции
                 results_to_return = []
@@ -66,10 +67,12 @@ class ReportScheduleRepository(BaseRepository):
 
                 return results_to_return
 
-            except Exception as e:
-                logger.error(f"Ошибка в шедулере: {e}", exc_info=True)
+            except SQLAlchemyError as e:
+                logger.error("Ошибка в шедулере: %s", e, exc_info=True)
                 await session.rollback()
-                return []
+                raise DatabaseException(
+                    details={"context": "get_due_schedules_and_reschedule", "original": str(e)}
+                ) from e
 
     def _calculate_next_run(
         self, schedule: ReportSchedule, now_utc: datetime
@@ -110,15 +113,19 @@ class ReportScheduleRepository(BaseRepository):
 
             # Гарантируем, что next_run_at будет минимум на 2 минуты в будущем
             # чтобы избежать повторной отправки в следующем тике scheduler (60 сек)
-            min_next_run = now_utc + timedelta(minutes=2)
+            min_next_run: datetime = now_utc + timedelta(minutes=2)
             if next_run_utc <= min_next_run:
                 # Если рассчитанное время слишком близко, используем минимальное
                 return min_next_run
 
-            return next_run_utc
+            return cast(datetime, next_run_utc)
 
-        except Exception as e:
-            logger.error(f"Ошибка расчета времени для {schedule.id}: {e}")
+        except (
+            ValueError,
+            pytz.exceptions.UnknownTimeZoneError,
+            pytz.exceptions.AmbiguousTimeError,
+        ) as e:
+            logger.error("Ошибка расчета времени для %s: %s", schedule.id, e)
             # Fallback: попробовать через час, чтобы не зациклить
             return now_utc + timedelta(hours=1)
 
@@ -135,13 +142,17 @@ class ReportScheduleRepository(BaseRepository):
                 if schedule:
                     logger.info("Получено расписание: chat_id=%s", chat_id)
                 return schedule
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении расписания chat_id=%s: %s",
                     chat_id,
                     e,
+                    exc_info=True,
                 )
-                return None
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_schedule", "original": str(e)}
+                ) from e
 
     async def create_schedule(
         self,
@@ -192,20 +203,17 @@ class ReportScheduleRepository(BaseRepository):
                     sent_time,
                 )
                 return schedule
-            except IntegrityError as e:
-                logger.error(
-                    "Ошибка при создании расписания (возможно, уже существует): %s", e
-                )
-                await session.rollback()
-                raise
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при создании расписания chat_id=%s: %s",
                     chat_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "create_schedule", "original": str(e)}
+                ) from e
 
     async def update_schedule(
         self,
@@ -225,7 +233,7 @@ class ReportScheduleRepository(BaseRepository):
                 if sent_time is not None:
                     schedule.sent_time = sent_time
                 if enabled is not None:
-                    schedule.enabled = enabled
+                    schedule.enabled = enabled  # type: ignore[assignment]
                 if tz_name is not None:
                     schedule.timezone = tz_name
 
@@ -237,7 +245,7 @@ class ReportScheduleRepository(BaseRepository):
                             schedule, now_utc
                         )
                     else:
-                        schedule.next_run_at = None
+                        schedule.next_run_at = None  # type: ignore[assignment]
 
                 await session.commit()
                 await session.refresh(schedule)
@@ -249,9 +257,11 @@ class ReportScheduleRepository(BaseRepository):
                     enabled,
                 )
                 return schedule
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при обновлении расписания id=%s: %s", schedule_id, e
+                    "Ошибка при обновлении расписания id=%s: %s", schedule_id, e, exc_info=True
                 )
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "update_schedule", "original": str(e)}
+                ) from e

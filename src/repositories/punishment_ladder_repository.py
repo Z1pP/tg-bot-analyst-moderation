@@ -2,7 +2,9 @@ import logging
 from typing import Optional
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import SQLAlchemyError
 
+from exceptions import DatabaseException
 from models.punishment_ladder import PunishmentLadder
 from repositories.base import BaseRepository
 
@@ -24,7 +26,7 @@ class PunishmentLadderRepository(BaseRepository):
         chat_id = str(chat_id)
         async with self._db.session() as session:
             try:
-                logger.info("Getting punishment for step %s in chat %s", step, chat_id)
+                logger.info("Получение наказания для шага %s в чате %s", step, chat_id)
                 # Сначала ищем специфичную для чата настройку
                 stmt_chat_specific = select(PunishmentLadder).where(
                     PunishmentLadder.step == step, PunishmentLadder.chat_id == chat_id
@@ -33,12 +35,12 @@ class PunishmentLadderRepository(BaseRepository):
                 punishment = result_chat_specific.scalar_one_or_none()
 
                 if punishment:
-                    logger.info("Found chat-specific punishment for step %s.", step)
+                    logger.info("Найдено наказание для чата по шагу %s.", step)
                     return punishment
 
                 # Если не нашли, ищем глобальную настройку
                 logger.info(
-                    "No chat-specific punishment found for step %s, looking for global.",
+                    "Настройка для чата по шагу %s не найдена, ищем глобальную.",
                     step,
                 )
                 stmt_global = select(PunishmentLadder).where(
@@ -47,26 +49,30 @@ class PunishmentLadderRepository(BaseRepository):
                 result_global = await session.execute(stmt_global)
                 punishment = result_global.scalar_one_or_none()
                 logger.info(
-                    "Found global punishment for step %s: %s",
+                    "Глобальное наказание для шага %s: найдено=%s",
                     step,
                     punishment is not None,
                 )
                 return punishment
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Error getting punishment by step %s for chat %s: %s",
+                    "Ошибка при получении наказания по шагу %s для чата %s: %s",
                     step,
                     chat_id,
                     e,
+                    exc_info=True,
                 )
-                raise
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_punishment_by_step", "original": str(e)}
+                ) from e
 
     async def get_ladder_by_chat_id(self, chat_id: str) -> list[PunishmentLadder]:
         """Возвращает всю лестницу наказаний для конкретного чата."""
         chat_id = str(chat_id)
         async with self._db.session() as session:
             try:
-                logger.info("Getting punishment ladder for chat %s", chat_id)
+                logger.info("Получение лестницы наказаний для чата %s", chat_id)
                 stmt = (
                     select(PunishmentLadder)
                     .where(PunishmentLadder.chat_id == chat_id)
@@ -75,18 +81,21 @@ class PunishmentLadderRepository(BaseRepository):
                 result = await session.execute(stmt)
                 ladder = list(result.scalars().all())
                 logger.info(
-                    "Found %d steps in ladder for chat %s", len(ladder), chat_id
+                    "Найдено %d ступеней в лестнице для чата %s", len(ladder), chat_id
                 )
                 return ladder
-            except Exception as e:
-                logger.error("Error getting ladder for chat %s: %s", chat_id, e)
-                raise
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении лестницы для чата %s: %s", chat_id, e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_ladder_by_chat_id", "original": str(e)}
+                ) from e
 
     async def get_global_ladder(self) -> list[PunishmentLadder]:
         """Возвращает глобальную лестницу наказаний."""
         async with self._db.session() as session:
             try:
-                logger.info("Getting global punishment ladder.")
+                logger.info("Получение глобальной лестницы наказаний.")
                 stmt = (
                     select(PunishmentLadder)
                     .where(PunishmentLadder.chat_id.is_(None))
@@ -94,38 +103,45 @@ class PunishmentLadderRepository(BaseRepository):
                 )
                 result = await session.execute(stmt)
                 ladder = list(result.scalars().all())
-                logger.info("Found %d steps in global ladder.", len(ladder))
+                logger.info("Найдено %d ступеней в глобальной лестнице.", len(ladder))
                 return ladder
-            except Exception as e:
-                logger.error("Error getting global ladder: %s", e)
-                raise
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении глобальной лестницы: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_global_ladder", "original": str(e)}
+                ) from e
 
     async def delete_ladder_by_chat_id(self, chat_id: str) -> None:
         """Удаляет всю лестницу наказаний для конкретного чата."""
         chat_id = str(chat_id)
         async with self._db.session() as session:
             try:
-                logger.info("Deleting punishment ladder for chat %s", chat_id)
+                logger.info("Удаление лестницы наказаний для чата %s", chat_id)
                 stmt = delete(PunishmentLadder).where(
                     PunishmentLadder.chat_id == chat_id
                 )
                 await session.execute(stmt)
                 await session.commit()
-                logger.info("Punishment ladder for chat %s deleted.", chat_id)
-            except Exception as e:
-                logger.error("Error deleting ladder for chat %s: %s", chat_id, e)
+                logger.info("Лестница наказаний для чата %s удалена.", chat_id)
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при удалении лестницы для чата %s: %s", chat_id, e, exc_info=True)
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "delete_ladder_by_chat_id", "original": str(e)}
+                ) from e
 
     async def create_ladder(self, steps: list[PunishmentLadder]) -> None:
         """Сохраняет новую лестницу наказаний."""
         async with self._db.session() as session:
             try:
-                logger.info("Creating new punishment ladder.")
+                logger.info("Создание новой лестницы наказаний.")
                 session.add_all(steps)
                 await session.commit()
-                logger.info("New punishment ladder created with %d steps.", len(steps))
-            except Exception as e:
-                logger.error("Error creating ladder: %s", e)
+                logger.info("Создана лестница наказаний с %d ступенями.", len(steps))
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при создании лестницы: %s", e, exc_info=True)
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "create_ladder", "original": str(e)}
+                ) from e

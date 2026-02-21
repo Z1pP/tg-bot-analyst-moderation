@@ -34,7 +34,7 @@ class TTLEntityCache(ICache):
         """
         try:
             return self._cache.get(key)
-        except Exception:
+        except (TypeError, KeyError):
             return None
 
     def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
@@ -48,7 +48,7 @@ class TTLEntityCache(ICache):
         """
         try:
             self._cache[key] = value
-        except Exception:
+        except TypeError:
             pass
 
     def delete(self, key: str) -> bool:
@@ -65,7 +65,7 @@ class TTLEntityCache(ICache):
             if key in self._cache:
                 del self._cache[key]
                 return True
-        except Exception:
+        except (TypeError, KeyError):
             pass
         return False
 
@@ -75,5 +75,5 @@ class TTLEntityCache(ICache):
         """
         try:
             self._cache.clear()
-        except Exception:
+        except (TypeError, RuntimeError):
             pass

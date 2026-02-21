@@ -11,7 +11,7 @@ class RemoveUserFromTrackingUseCase:
         user_tracking_repository: UserTrackingRepository,
         user_service: UserService,
         admin_action_log_service: AdminActionLogService,
-    ):
+    ) -> None:
         self.user_tracking_repository = user_tracking_repository
         self.user_service = user_service
         self.admin_action_log_service = admin_action_log_service
@@ -20,7 +20,7 @@ class RemoveUserFromTrackingUseCase:
         """Удаляет пользователя из списка отслеживания админа."""
         admin = await self.user_service.get_user(
             tg_id=dto.admin_tgid,
-            username=dto.admin_username,
+            username=dto.admin_username or "",
         )
 
         if not admin:
@@ -28,8 +28,8 @@ class RemoveUserFromTrackingUseCase:
 
         # Получаем информацию о пользователе до удаления для логирования
         target_user = await self.user_service.get_user(
-            tg_id=dto.user_tgid,
-            username=dto.user_username,
+            tg_id=dto.user_tgid or "",
+            username=dto.user_username or "",
         )
 
         if not target_user:
@@ -56,7 +56,7 @@ class RemoveUserFromTrackingUseCase:
                 f"Кого: {target_who}"
             )
             await self.admin_action_log_service.log_action(
-                admin_tg_id=admin.tg_id,
+                admin_tg_id=admin.tg_id or dto.admin_tgid,
                 action_type=AdminActionType.REMOVE_USER,
                 details=details,
             )

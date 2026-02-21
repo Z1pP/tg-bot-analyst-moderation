@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+from aiogram.exceptions import TelegramAPIError
+
 from dto import ChatDTO
 from repositories import ChatTrackingRepository
 from services import BotPermissionService, UserService
@@ -51,8 +53,8 @@ class GetChatsForUserActionUseCase:
                 # Проверяем что пользователь член группы и не забанен
                 if member.status not in ["kicked", "left"]:
                     result_chats.append(ChatDTO.from_model(chat))
-            except Exception:
-                # Пользователь не найден в чате или ошибка API
+            except TelegramAPIError:
+                # Пользователь не найден в чате или ошибка API — пропускаем чат
                 continue
 
         return result_chats

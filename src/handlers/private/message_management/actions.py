@@ -9,7 +9,10 @@ from keyboards.inline.message_actions import (
     cancel_reply_ikb,
     confirm_delete_ikb,
 )
-from states.message_management import MessageManagerState
+from states.message_management import (
+    MessageManagerState,
+    get_message_action_state,
+)
 from utils.send_message import safe_edit_message
 
 from .helpers import show_message_actions_menu, show_message_management_menu
@@ -80,13 +83,13 @@ async def cancel_reply_handler(
     """Обработчик отмены ответа на сообщение."""
     await callback.answer()
 
-    data = await state.get_data()
-    chat_tgid = data.get("chat_tgid")
-    tg_message_id = data.get("message_id")
-    active_message_id = data.get("active_message_id") or callback.message.message_id
+    action_state = await get_message_action_state(state)
+    active_message_id = (
+        action_state.active_message_id if action_state else callback.message.message_id
+    )
 
-    if not chat_tgid or not tg_message_id:
-        logger.warning("Некорректные данные в state при отмене ответа: %s", data)
+    if not action_state:
+        logger.warning("Некорректные данные в state при отмене ответа")
         await show_message_management_menu(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
@@ -98,10 +101,10 @@ async def cancel_reply_handler(
     await show_message_actions_menu(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
-        message_id=active_message_id,
+        message_id=action_state.active_message_id,
         state=state,
-        chat_tgid=chat_tgid,
-        tg_message_id=tg_message_id,
+        chat_tgid=action_state.chat_tgid,
+        tg_message_id=action_state.message_id,
     )
 
     logger.info(

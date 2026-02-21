@@ -3,6 +3,14 @@ import logging
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
 
+from constants import Dialog
+from keyboards.inline.message_actions import message_action_ikb
+from states.message_management import (
+    ACTIVE_MESSAGE_ID,
+    CHAT_TGID,
+    MESSAGE_ID,
+    MessageManagerState,
+)
 from utils.data_parser import MESSAGE_LINK_PATTERN, parse_message_link
 
 from .helpers import show_message_actions_menu, show_message_management_menu
@@ -22,7 +30,7 @@ async def process_link_handler(
     result = parse_message_link(message.text)
 
     data = await state.get_data()
-    active_message_id = data.get("active_message_id")
+    active_message_id = data.get(ACTIVE_MESSAGE_ID)
 
     # Удаляем сообщение пользователя для чистоты чата
     try:
@@ -33,8 +41,6 @@ async def process_link_handler(
     if not result:
         # Если ссылка неверная, показываем ошибку в активном сообщении
         if active_message_id:
-            from constants import Dialog
-
             await show_message_management_menu(
                 bot=bot,
                 chat_id=message.chat.id,
@@ -66,10 +72,6 @@ async def process_link_handler(
     else:
         # Если почему-то нет active_message_id, создаем новое меню
         # Но сначала нам нужно отправить сообщение, чтобы получить его ID
-        from constants import Dialog
-        from keyboards.inline.message_actions import message_action_ikb
-        from states.message_management import MessageManagerState
-
         text = Dialog.Messages.MESSAGE_ACTIONS.format(
             message_id=tg_message_id,
             chat_tgid=chat_tgid,
@@ -79,8 +81,10 @@ async def process_link_handler(
             reply_markup=message_action_ikb(),
         )
         await state.update_data(
-            active_message_id=sent_msg.message_id,
-            chat_tgid=chat_tgid,
-            message_id=tg_message_id,
+            {
+                ACTIVE_MESSAGE_ID: sent_msg.message_id,
+                CHAT_TGID: chat_tgid,
+                MESSAGE_ID: tg_message_id,
+            }
         )
         await state.set_state(MessageManagerState.waiting_action_select)

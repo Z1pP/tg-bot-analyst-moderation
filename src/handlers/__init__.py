@@ -11,7 +11,19 @@ from .private import router as private_router
 from .private.antibot import router as antibot_router
 
 
-def registry_admin_routers(dispatcher: Dispatcher, container: Container):
+def _make_inject_container_middleware(container: Container):
+    """Фабрика middleware: подставляет container в data для handler."""
+
+    async def middleware(handler, event, data):
+        data["container"] = container
+        return await handler(event, data)
+
+    return middleware
+
+
+def registry_admin_routers(
+    dispatcher: Dispatcher, container: Container
+) -> None:
     # Создаем роутер для админов
     only_admin_router = Router(name="admin_router")
 
@@ -30,21 +42,10 @@ def registry_admin_routers(dispatcher: Dispatcher, container: Container):
     only_admin_router.message.middleware(AdminAntispamMiddleware(cache))
 
     # Передаем контейнер в контекст через middleware для всех дочерних роутеров
-    async def inject_container_to_message(handler, event, data):
-        data["container"] = container
-        return await handler(event, data)
-
-    async def inject_container_to_callback(handler, event, data):
-        data["container"] = container
-        return await handler(event, data)
-
-    async def inject_container_to_inline(handler, event, data):
-        data["container"] = container
-        return await handler(event, data)
-
-    only_admin_router.message.outer_middleware(inject_container_to_message)
-    only_admin_router.callback_query.outer_middleware(inject_container_to_callback)
-    only_admin_router.inline_query.outer_middleware(inject_container_to_inline)
+    inject_container = _make_inject_container_middleware(container)
+    only_admin_router.message.outer_middleware(inject_container)
+    only_admin_router.callback_query.outer_middleware(inject_container)
+    only_admin_router.inline_query.outer_middleware(inject_container)
 
     # Регистрируем приватный роутер
     only_admin_router.include_router(private_router)
@@ -53,55 +54,47 @@ def registry_admin_routers(dispatcher: Dispatcher, container: Container):
     dispatcher.include_router(only_admin_router)
 
 
-def registry_public_private_routers(dispatcher: Dispatcher, container: Container):
+def registry_public_private_routers(
+    dispatcher: Dispatcher, container: Container
+) -> None:
     # Роутеры для приватных чатов, доступные всем (не только админам)
     public_private_router = Router(name="public_private_router")
     public_private_router.message.filter(ChatTypeFilter(chat_type=[ChatType.PRIVATE]))
 
     # Передаем контейнер в контекст через middleware
-    async def inject_container_to_message(handler, event, data):
-        data["container"] = container
-        return await handler(event, data)
-
-    async def inject_container_to_callback(handler, event, data):
-        data["container"] = container
-        return await handler(event, data)
-
-    async def inject_container_to_inline(handler, event, data):
-        data["container"] = container
-        return await handler(event, data)
-
-    public_private_router.message.outer_middleware(inject_container_to_message)
-    public_private_router.callback_query.outer_middleware(inject_container_to_callback)
-    public_private_router.inline_query.outer_middleware(inject_container_to_inline)
+    inject_container = _make_inject_container_middleware(container)
+    public_private_router.message.outer_middleware(inject_container)
+    public_private_router.callback_query.outer_middleware(inject_container)
+    public_private_router.inline_query.outer_middleware(inject_container)
 
     public_private_router.include_router(antibot_router)
 
     dispatcher.include_router(public_private_router)
 
 
-def registry_group_routers(dispatcher: Dispatcher, container: Container):
+def registry_group_routers(
+    dispatcher: Dispatcher, container: Container
+) -> None:
     # Регистриуем групповой роутер
     public_router = Router(name="public_router")
     public_router.message.filter(GroupTypeFilter())
 
     # Передаем контейнер в контекст через middleware для всех групповых обновлений
-    async def inject_container_to_event(handler, event, data):
-        data["container"] = container
-        return await handler(event, data)
-
-    public_router.message.outer_middleware(inject_container_to_event)
-    public_router.callback_query.outer_middleware(inject_container_to_event)
-    public_router.message_reaction.outer_middleware(inject_container_to_event)
-    public_router.chat_member.outer_middleware(inject_container_to_event)
-    public_router.inline_query.outer_middleware(inject_container_to_event)
+    inject_container = _make_inject_container_middleware(container)
+    public_router.message.outer_middleware(inject_container)
+    public_router.callback_query.outer_middleware(inject_container)
+    public_router.message_reaction.outer_middleware(inject_container)
+    public_router.chat_member.outer_middleware(inject_container)
+    public_router.inline_query.outer_middleware(inject_container)
 
     public_router.include_router(group_router)
 
     dispatcher.include_router(public_router)
 
 
-def registry_routers(dispatcher: Dispatcher, container: Container):
+def registry_routers(
+    dispatcher: Dispatcher, container: Container
+) -> None:
     registry_public_private_routers(dispatcher, container)
     registry_admin_routers(dispatcher, container)
     registry_group_routers(dispatcher, container)

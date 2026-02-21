@@ -14,9 +14,12 @@ from keyboards.inline.chats import (
     chat_actions_ikb,
     summary_type_ikb,
 )
+from dto.chat_dto import GetChatWithArchiveDTO
 from keyboards.inline.report import hide_details_ikb
-from services.chat import ChatService
 from states import ChatStateManager
+from usecases.chat import GetChatWithArchiveUseCase
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
 from utils.send_message import (
     safe_edit_message,
@@ -98,8 +101,10 @@ async def process_summary_type_selection_handler(
         return
 
     # Получаем информацию о чате для возврата к dashboard
-    chat_service: ChatService = container.resolve(ChatService)
-    chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
+    get_chat_uc: GetChatWithArchiveUseCase = container.resolve(
+        GetChatWithArchiveUseCase
+    )
+    chat = await get_chat_uc.execute(GetChatWithArchiveDTO(chat_id=chat_id))
 
     # 1. Показываем статус выполнения в текущем сообщении
     await safe_edit_message(
@@ -163,14 +168,18 @@ async def process_summary_type_selection_handler(
                 reply_markup=finish_keyboard,
             )
 
-    except Exception as e:
-        logger.error(
-            f"Ошибка при генерации сводки для чата {chat_id}: {e}", exc_info=True
-        )
+    except BotBaseException as e:
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,
             message_id=callback.message.message_id,
-            text=Dialog.Summary.ERROR,
+            text=e.get_user_message(),
             reply_markup=finish_keyboard,
+        )
+    except Exception as e:
+        raise_business_logic(
+            "Ошибка при генерации сводки для чата.",
+            Dialog.Summary.ERROR,
+            e,
+            logger,
         )

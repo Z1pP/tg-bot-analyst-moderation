@@ -1,5 +1,4 @@
-from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, Index, String
 from sqlalchemy import Enum as SQLAlchemyEnum
@@ -24,16 +23,16 @@ if TYPE_CHECKING:
 class User(BaseModel):
     __tablename__ = "users"
 
-    tg_id: Mapped[str] = mapped_column(
+    tg_id: Mapped[Optional[str]] = mapped_column(
         String(length=32),
         nullable=True,
         unique=True,
     )
-    username: Mapped[str] = mapped_column(
+    username: Mapped[Optional[str]] = mapped_column(
         String(length=64),
         nullable=True,
     )
-    role: Mapped[Enum] = mapped_column(
+    role: Mapped[UserRole] = mapped_column(
         SQLAlchemyEnum(UserRole),
         nullable=False,
         default=UserRole.MODERATOR,

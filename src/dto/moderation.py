@@ -20,7 +20,7 @@ class ModerationActionDTO(BaseModel):
     action: Actions
     # ID и username нарушителя
     violator_tgid: str
-    violator_username: Optional[str] = "hidden"
+    violator_username: str = "hidden"
     # ID и username администратора
     admin_username: str
     admin_tgid: str

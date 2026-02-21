@@ -2,7 +2,10 @@ import logging
 from datetime import datetime
 
 from sqlalchemy import delete, func, select
+from sqlalchemy.exc import SQLAlchemyError
 
+from constants.punishment import PunishmentType
+from exceptions import DatabaseException
 from models import Punishment
 from repositories.base import BaseRepository
 
@@ -23,14 +26,18 @@ class PunishmentRepository(BaseRepository):
                 result = await session.execute(query)
                 count = result.scalar() or 0
                 return count
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка подсчета наказаний для user_id=%s (chat_id=%s): %s",
                     user_id,
                     chat_id,
                     e,
+                    exc_info=True,
                 )
-                raise
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "count_punishments", "original": str(e)}
+                ) from e
 
     async def create_punishment(self, punishment: Punishment) -> Punishment:
         async with self._db.session() as session:
@@ -39,13 +46,15 @@ class PunishmentRepository(BaseRepository):
                 session.add(punishment)
                 await session.commit()
                 await session.refresh(punishment)
-                logger.info(f"Создано новое наказание с ID {punishment.id}")
+                logger.info("Создано новое наказание с ID %s", punishment.id)
 
                 return punishment
-            except Exception as e:
-                logger.error(f"Ошибка при создании наказания: {e}")
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при создании наказания: %s", e, exc_info=True)
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "create_punishment", "original": str(e)}
+                ) from e
 
     async def delete_user_punishments(self, user_id: int, chat_id: int) -> int:
         """Удаляет все наказания пользователя в указанном чате."""
@@ -57,7 +66,7 @@ class PunishmentRepository(BaseRepository):
                 result = await session.execute(query)
                 await session.commit()
 
-                deleted_count = result.rowcount
+                deleted_count: int = getattr(result, "rowcount", 0) or 0
                 logger.info(
                     "Удалено %d наказаний для user_id=%s в chat_id=%s",
                     deleted_count,
@@ -65,15 +74,18 @@ class PunishmentRepository(BaseRepository):
                     chat_id,
                 )
                 return deleted_count
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка удаления наказаний для user_id=%s в chat_id=%s: %s",
                     user_id,
                     chat_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "delete_user_punishments", "original": str(e)}
+                ) from e
 
     async def delete_last_punishment(self, user_id: int, chat_id: int) -> bool:
         """Удаляет последнее наказание пользователя в чате."""
@@ -97,15 +109,18 @@ class PunishmentRepository(BaseRepository):
                     )
                     return True
                 return False
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка удаления последнего наказания для user_id=%s в chat_id=%s: %s",
                     user_id,
                     chat_id,
                     e,
+                    exc_info=True,
                 )
                 await session.rollback()
-                raise
+                raise DatabaseException(
+                    details={"context": "delete_last_punishment", "original": str(e)}
+                ) from e
 
     async def get_punishment_counts_by_moderator(
         self,
@@ -117,8 +132,6 @@ class PunishmentRepository(BaseRepository):
         """
         Возвращает количество варнов и банов, выданных модератором за период.
         """
-        from constants.punishment import PunishmentType
-
         async with self._db.session() as session:
             try:
                 query = select(
@@ -140,11 +153,14 @@ class PunishmentRepository(BaseRepository):
                     "warns": counts.get(PunishmentType.WARNING, 0),
                     "bans": counts.get(PunishmentType.BAN, 0),
                 }
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    f"Ошибка при получении статистики наказаний модератора: {e}"
+                    "Ошибка при получении статистики наказаний модератора: %s", e, exc_info=True
                 )
-                return {"warns": 0, "bans": 0}
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_punishment_counts_by_moderator", "original": str(e)}
+                ) from e
 
     async def get_punishment_counts_by_moderators(
         self,
@@ -155,8 +171,6 @@ class PunishmentRepository(BaseRepository):
         """
         Возвращает количество варнов и банов для списка модераторов за период (batch query).
         """
-        from constants.punishment import PunishmentType
-
         async with self._db.session() as session:
             try:
                 query = (
@@ -185,8 +199,11 @@ class PunishmentRepository(BaseRepository):
                         stats[mod_id]["bans"] = count
 
                 return stats
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
-                    f"Ошибка при получении групповой статистики наказаний модераторов: {e}"
+                    "Ошибка при получении групповой статистики наказаний модераторов: %s", e, exc_info=True
                 )
-                return {mod_id: {"warns": 0, "bans": 0} for mod_id in moderator_ids}
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_punishment_counts_by_moderators", "original": str(e)}
+                ) from e

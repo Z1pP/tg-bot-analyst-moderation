@@ -1,4 +1,7 @@
 import logging
+from typing import Optional
+
+from sqlalchemy.exc import SQLAlchemyError
 
 from constants.enums import AdminActionType
 from repositories import AdminActionLogRepository, UserRepository
@@ -13,12 +16,15 @@ class AdminActionLogService:
         self,
         log_repository: AdminActionLogRepository,
         user_repository: UserRepository,
-    ):
+    ) -> None:
         self._log_repository = log_repository
         self._user_repository = user_repository
 
     async def log_action(
-        self, admin_tg_id: str, action_type: AdminActionType, details: str = None
+        self,
+        admin_tg_id: str,
+        action_type: AdminActionType,
+        details: Optional[str] = None,
     ) -> None:
         """
         Логирует действие администратора.
@@ -48,6 +54,6 @@ class AdminActionLogService:
                 action_type.value,
                 details,
             )
-        except Exception as e:
+        except SQLAlchemyError as e:
             # Не прерываем выполнение основного кода при ошибке логирования
             logger.error("Ошибка при логировании действия: %s", e, exc_info=True)

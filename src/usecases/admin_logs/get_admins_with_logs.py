@@ -26,5 +26,5 @@ class GetAdminsWithLogsUseCase:
             ]
         except AdminLogsError:
             raise
-        except Exception:
-            raise AdminLogsError(message=Dialog.AdminLogs.ERROR_GET_ADMINS)
+        except Exception as e:
+            raise AdminLogsError(message=Dialog.AdminLogs.ERROR_GET_ADMINS) from e

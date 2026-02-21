@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from constants.enums import UserRole
+from exceptions import ValidationException
 from models import User
 from services import UserService
 
@@ -37,18 +38,24 @@ class GetOrCreateUserIfNotExistUserCase:
             GetOrCreateUserResult с пользователем и флагом создания
 
         Raises:
-            ValueError: Если не предоставлен ни tg_id, ни username
+            ValidationException: Если не предоставлен ни tg_id, ни username
         """
         if not tg_id and not username:
-            raise ValueError("Either tg_id or username must be provided")
+            raise ValidationException(
+                message="Необходимо указать tg_id или username"
+            )
 
-        user = await self._user_service.get_user(tg_id=tg_id, username=username)
+        tg_id_str = tg_id or ""
+        username_str = username or ""
+        user = await self._user_service.get_user(
+            tg_id=tg_id_str, username=username_str
+        )
 
         if user:
             return UserResult(user=user, is_existed=True)
 
         new_user = await self._user_service.create_user(
-            tg_id=tg_id, username=username, role=role
+            tg_id=tg_id_str, username=username_str, role=role
         )
         return UserResult(
             user=new_user,

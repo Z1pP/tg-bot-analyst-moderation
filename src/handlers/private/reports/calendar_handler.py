@@ -15,14 +15,16 @@ from keyboards.inline.time_period import (
     time_period_ikb_chat,
     time_period_ikb_single_user,
 )
-from services.time_service import TimeZoneService
+from dto.time_dto import GetAppNowDTO
+from usecases.time import GetAppNowUseCase
 from states import (
     AllUsersReportStates,
     ChatStateManager,
     RatingStateManager,
     SingleUserReportStates,
 )
-from utils.exception_handler import handle_exception
+from exceptions.base import BotBaseException
+from handlers._handler_errors import raise_business_logic
 from utils.send_message import safe_edit_message
 
 router = Router()
@@ -161,9 +163,12 @@ async def handle_day_selection(
     )
 
 
-async def handle_reset(callback: CallbackQuery, state: FSMContext) -> None:
+async def handle_reset(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
     """Сброс выбранных дат."""
-    now = TimeZoneService.now()
+    get_now_uc: GetAppNowUseCase = container.resolve(GetAppNowUseCase)
+    now = get_now_uc.execute(GetAppNowDTO())
     await state.update_data(cal_start_date=None, cal_end_date=None)
 
     current_state = await state.get_state()
@@ -377,7 +382,7 @@ async def calendar_handler(
             )
 
         elif action == "reset":
-            await handle_reset(callback, state)
+            await handle_reset(callback, state, container)
 
         elif action == "cancel":
             await handle_cancel(callback, state)
@@ -387,5 +392,17 @@ async def calendar_handler(
                 callback, state, cal_start, cal_end, user_data, container
             )
 
+    except BotBaseException as e:
+        await safe_edit_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=e.get_user_message(),
+        )
     except Exception as e:
-        await handle_exception(callback.message, e, "calendar_callback_handler")
+        raise_business_logic(
+            "Ошибка в calendar_callback_handler.",
+            "❌ Произошла ошибка. Попробуйте позже.",
+            e,
+            logger,
+        )

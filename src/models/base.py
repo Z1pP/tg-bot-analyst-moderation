@@ -1,16 +1,19 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, Integer
-from sqlalchemy.orm import Mapped, declarative_base, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
-def get_current_time():
+def get_current_time() -> datetime:
     from services.time_service import TimeZoneService
 
     return TimeZoneService.now()
 
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """Базовый класс для всех моделей SQLAlchemy."""
+
+    pass
 
 
 class BaseModel(Base):

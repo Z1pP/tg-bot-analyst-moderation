@@ -2,8 +2,10 @@ import logging
 from typing import Optional
 
 from sqlalchemy import delete, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload, selectinload
 
+from exceptions import DatabaseException
 from models import AdminChatAccess, ChatSession
 from repositories.base import BaseRepository
 
@@ -36,10 +38,12 @@ class ChatTrackingRepository(BaseRepository):
                     chat_id,
                 )
                 return chat_access
-            except Exception as e:
-                logger.error("Произошла ошибка при добавлении доступа к чату: %s", e)
+            except SQLAlchemyError as e:
+                logger.error("Произошла ошибка при добавлении доступа к чату: %s", e, exc_info=True)
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "add_chat_to_tracking", "original": str(e)}
+                ) from e
 
     async def remove_chat_from_tracking(
         self,
@@ -56,10 +60,11 @@ class ChatTrackingRepository(BaseRepository):
                 result = await session.execute(query)
                 await session.commit()
 
-                if result.rowcount > 0:
+                rowcount: int = getattr(result, "rowcount", 0) or 0
+                if rowcount > 0:
                     logger.info(
                         "Удалено %d записей доступа к чату для администратора: admin_id=%s, chat_id=%s",
-                        result.rowcount,
+                        rowcount,
                         admin_id,
                         chat_id,
                     )
@@ -71,10 +76,12 @@ class ChatTrackingRepository(BaseRepository):
                         chat_id,
                     )
                     return False
-            except Exception as e:
-                logger.error("Произошла ошибка при удалении доступа к чату: %s", e)
+            except SQLAlchemyError as e:
+                logger.error("Произошла ошибка при удалении доступа к чату: %s", e, exc_info=True)
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "remove_chat_from_tracking", "original": str(e)}
+                ) from e
 
     async def get_access(
         self,
@@ -105,9 +112,12 @@ class ChatTrackingRepository(BaseRepository):
                     )
 
                 return access
-            except Exception as e:
-                logger.error("Произошла ошибка при проверке доступа к чату: %s", e)
-                return None
+            except SQLAlchemyError as e:
+                logger.error("Произошла ошибка при проверке доступа к чату: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_access", "original": str(e)}
+                ) from e
 
     async def get_all_tracked_chats(self, admin_id: int) -> list[ChatSession]:
         """Получает все чаты администратора (и источники, и получатели)."""
@@ -138,12 +148,15 @@ class ChatTrackingRepository(BaseRepository):
                 logger.info(
                     "Получено %d чатов для администратора: %s", len(chats), admin_id
                 )
-                return chats
-            except Exception as e:
+                return list(chats)
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Произошла ошибка при получении всех чатов администратора: %s", e
+                    "Произошла ошибка при получении всех чатов администратора: %s", e, exc_info=True
                 )
-                return []
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_all_tracked_chats", "original": str(e)}
+                ) from e
 
     async def delete_all_tracked_chats_for_admin(self, admin_id: int) -> int:
         """Удаляет все отслеживаемые чаты для админа."""
@@ -154,15 +167,18 @@ class ChatTrackingRepository(BaseRepository):
                 )
                 result = await session.execute(query)
                 await session.commit()
+                rowcount: int = getattr(result, "rowcount", 0) or 0
                 logger.info(
                     "Удалено %d отслеживаемых чатов для администратора: admin_id=%s",
-                    result.rowcount,
+                    rowcount,
                     admin_id,
                 )
-                return result.rowcount
-            except Exception as e:
+                return rowcount
+            except SQLAlchemyError as e:
                 logger.error(
-                    "Произошла ошибка при удалении всех отслеживаемых чатов: %s", e
+                    "Произошла ошибка при удалении всех отслеживаемых чатов: %s", e, exc_info=True
                 )
                 await session.rollback()
-                raise e
+                raise DatabaseException(
+                    details={"context": "delete_all_tracked_chats_for_admin", "original": str(e)}
+                ) from e

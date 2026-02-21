@@ -109,8 +109,6 @@ class GetChatReportUseCase:
                 error_message=ReportDialogs.CHAT_REPORT_SETTINGS_REQUIRED,
             )
 
-        dto.chat_tgid = chat.chat_id
-
         tracked_users_ids = await self._get_tracked_users_ids(
             admin_tg_id=dto.admin_tg_id
         )
@@ -119,7 +117,7 @@ class GetChatReportUseCase:
         # Если даты уже заданы (из календаря), используем их, иначе вычисляем из периода
         if dto.start_date and dto.end_date:
             # Даты из календаря - корректируем по рабочим часам
-            dto.start_date, dto.end_date = WorkTimeService.adjust_dates_to_work_hours(
+            start_date, end_date = WorkTimeService.adjust_dates_to_work_hours(
                 start_date=dto.start_date,
                 end_date=dto.end_date,
                 work_start=chat.start_time,
@@ -128,7 +126,7 @@ class GetChatReportUseCase:
             )
         else:
             # Вычисляем из периода
-            dto.start_date, dto.end_date = await self._get_currect_dates(
+            start_date, end_date = await self._get_currect_dates(
                 period=dto.selected_period,
                 chat=chat,
             )
@@ -137,8 +135,8 @@ class GetChatReportUseCase:
             return ReportResultDTO(
                 users_stats=[],
                 chat_title=chat.title or "",
-                start_date=dto.start_date,
-                end_date=dto.end_date,
+                start_date=start_date,
+                end_date=end_date,
                 is_single_day=False,
                 working_hours=0.0,
                 error_message=ReportDialogs.NO_TRACKED_USERS,
@@ -148,38 +146,40 @@ class GetChatReportUseCase:
             chat_id=chat.id,
             dto=dto,
             tracked_user_ids=tracked_users_ids,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         is_single_day = self._is_single_day_report(
             selected_period=dto.selected_period,
-            start_date=dto.start_date,
-            end_date=dto.end_date,
+            start_date=start_date,
+            end_date=end_date,
         )
 
         working_hours = WorkTimeService.calculate_work_hours(
-            start_date=dto.start_date,
-            end_date=dto.end_date,
+            start_date=start_date,
+            end_date=end_date,
             work_start=chat.start_time,
             work_end=chat.end_time,
         )
 
         users_stats = await self._calculate_users_stats(
             data=chat_data,
-            start_date=dto.start_date,
-            end_date=dto.end_date,
+            start_date=start_date,
+            end_date=end_date,
             is_single_day=is_single_day,
             working_hours=working_hours,
             breaks_time=chat.breaks_time,
         )
 
         # Логирование действия администратора
-        await self._log_admin_action(dto, chat)
+        await self._log_admin_action(dto, chat, start_date, end_date)
 
         return ReportResultDTO(
             users_stats=users_stats,
             chat_title=chat.title or "",
-            start_date=dto.start_date,
-            end_date=dto.end_date,
+            start_date=start_date,
+            end_date=end_date,
             is_single_day=is_single_day,
             working_hours=working_hours,
         )
@@ -195,6 +195,8 @@ class GetChatReportUseCase:
         chat_id: int,
         dto: ChatReportDTO,
         tracked_user_ids: list[int],
+        start_date: datetime,
+        end_date: datetime,
     ) -> ChatData:
         """
         Получает все данные чата параллельно.
@@ -204,22 +206,22 @@ class GetChatReportUseCase:
             self._get_processed_items_with_users(
                 self._message_repository.get_messages_by_chat_id_and_period,
                 chat_id,
-                dto.start_date,
-                dto.end_date,
+                start_date,
+                end_date,
                 tracked_user_ids,
             ),
             self._get_processed_items_with_users(
                 self._reaction_repository.get_reactions_by_chat_and_period,
                 chat_id,
-                dto.start_date,
-                dto.end_date,
+                start_date,
+                end_date,
                 tracked_user_ids,
             ),
             self._get_processed_items_with_users(
                 self._msg_reply_repository.get_replies_by_chat_id_and_period,
                 chat_id,
-                dto.start_date,
-                dto.end_date,
+                start_date,
+                end_date,
                 tracked_user_ids,
             ),
         ]
@@ -604,10 +606,14 @@ class GetChatReportUseCase:
             return True
         return (end_date.date() - start_date.date()).days < 1
 
-    async def _log_admin_action(self, dto: ChatReportDTO, chat: ChatSession):
-        period = format_selected_period(
-            start_date=dto.start_date, end_date=dto.end_date
-        )
+    async def _log_admin_action(
+        self,
+        dto: ChatReportDTO,
+        chat: ChatSession,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> None:
+        period = format_selected_period(start_date=start_date, end_date=end_date)
         details = f"Чат: {chat.title}, Период: {period}"
         await self._admin_action_log_service.log_action(
             admin_tg_id=dto.admin_tg_id,

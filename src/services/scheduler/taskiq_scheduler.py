@@ -10,12 +10,12 @@ class TaskiqSchedulerService:
     def __init__(self, schedule_repo: ReportScheduleRepository) -> None:
         self._schedule_repo = schedule_repo
 
-    async def tick(self):
+    async def tick(self) -> None:
         logger.debug("Идем в бд за задачами")
         due_schedules = await self._schedule_repo.get_due_schedules_and_reschedule()
 
         if due_schedules:
-            logger.info(f"Отправляем {len(due_schedules)} задач в очередь")
+            logger.info("Отправляем %s задач в очередь", len(due_schedules))
 
         from tasks.report_tasks import send_chat_report_task
 

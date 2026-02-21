@@ -10,12 +10,30 @@ from constants.pagination import CHATS_PAGE_SIZE
 from dto.message_action import SendMessageDTO
 from exceptions.moderation import MessageSendError
 from keyboards.inline.chats import select_chat_ikb
-from keyboards.inline.message_actions import cancel_send_message_ikb, send_message_ikb
-from services.chat.chat_service import ChatService
-from states.message_management import MessageManagerState
-from usecases.admin_actions import SendMessageToChatUseCase
+from keyboards.inline.message_actions import (
+    cancel_send_message_ikb,
+    confirm_send_message_ikb,
+    send_message_ikb,
+)
+from states.message_management import (
+    ACTIVE_MESSAGE_ID,
+    ADMIN_MESSAGE_ID,
+    ADMIN_TGID,
+    ADMIN_USERNAME,
+    BROADCAST_ALL,
+    CHAT_TGID,
+    CHATNAME,
+    MessageManagerState,
+    get_send_confirm_state,
+)
+from dto.chat_dto import GetChatWithArchiveDTO
+from usecases.admin_actions import (
+    BroadcastMessageToTrackedChatsUseCase,
+    SendMessageToChatUseCase,
+)
+from usecases.chat import GetChatWithArchiveUseCase
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_delete_message, safe_edit_message
 
 from .helpers import show_message_management_menu
 
@@ -72,7 +90,7 @@ async def start_send_handler(
             total_count=total_count,
         ),
     )
-    await state.update_data(active_message_id=callback.message.message_id)
+
     await state.set_state(MessageManagerState.waiting_select_chat)
 
 
@@ -93,9 +111,12 @@ async def process_select_chat_handler(
     if suffix == "all":
         # Рассылка во все чаты
         await state.update_data(
-            broadcast_all=True,
-            chat_tgid=None,
-            active_message_id=callback.message.message_id,
+            {
+                BROADCAST_ALL: True,
+                CHAT_TGID: None,
+                CHATNAME: "все отслеживаемые чаты",
+                ACTIVE_MESSAGE_ID: callback.message.message_id,
+            }
         )
 
         await safe_edit_message(
@@ -114,8 +135,12 @@ async def process_select_chat_handler(
         # Выбор конкретного чата
         chat_id = int(suffix)
 
-        chat_service: ChatService = container.resolve(ChatService)
-        selected_chat = await chat_service.get_chat_with_archive(chat_id=chat_id)
+        get_chat_uc: GetChatWithArchiveUseCase = container.resolve(
+            GetChatWithArchiveUseCase
+        )
+        selected_chat = await get_chat_uc.execute(
+            GetChatWithArchiveDTO(chat_id=chat_id)
+        )
 
         if not selected_chat:
             logger.error("Чат с id %s не найден", chat_id)
@@ -130,9 +155,12 @@ async def process_select_chat_handler(
             return
 
         await state.update_data(
-            broadcast_all=False,
-            chat_tgid=selected_chat.chat_id,
-            active_message_id=callback.message.message_id,
+            {
+                BROADCAST_ALL: False,
+                CHAT_TGID: selected_chat.chat_id,
+                CHATNAME: selected_chat.title,
+                ACTIVE_MESSAGE_ID: callback.message.message_id,
+            }
         )
 
         await safe_edit_message(
@@ -146,12 +174,13 @@ async def process_select_chat_handler(
         )
 
         logger.info(
-            "Администратор %s выбрал чат %s для отправки сообщения",
+            "Администратор %s (id=%s) выбрал чат %s для отправки сообщения",
             callback.from_user.username,
             callback.from_user.id,
             selected_chat.chat_id,
         )
 
+    await state.update_data({ACTIVE_MESSAGE_ID: callback.message.message_id})
     await state.set_state(MessageManagerState.waiting_content)
 
 
@@ -161,11 +190,12 @@ async def process_content_handler(
     state: FSMContext,
     container: Container,
 ) -> None:
-    """Обработчик получения контента для отправки в чат."""
+    """Обработчик получения контента для отправки в чат. Сохраняет данные и показывает подтверждение."""
     data = await state.get_data()
-    active_message_id = data.get("active_message_id")
-    broadcast_all = data.get("broadcast_all", False)
-    chat_tgid = data.get("chat_tgid")
+    active_message_id = data.get(ACTIVE_MESSAGE_ID)
+    broadcast_all = data.get(BROADCAST_ALL, False)
+    chat_tgid = data.get(CHAT_TGID)
+    chatname = data.get(CHATNAME, "")
 
     if not active_message_id:
         logger.error("Некорректные данные в state: %s", data)
@@ -174,10 +204,11 @@ async def process_content_handler(
             reply_markup=send_message_ikb(),
         )
         await state.clear()
-        try:
-            await message.delete()
-        except Exception as e:
-            logger.warning("Не удалось удалить сообщение пользователя: %s", e)
+        await safe_delete_message(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+        )
         return
 
     if not broadcast_all and not chat_tgid:
@@ -189,124 +220,188 @@ async def process_content_handler(
             state=state,
             text_prefix=Dialog.Messages.INVALID_STATE_DATA,
         )
-        try:
-            await message.delete()
-        except Exception as e:
-            logger.warning("Не удалось удалить сообщение пользователя: %s", e)
+        await safe_delete_message(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+        )
         return
 
     admin_tgid = str(message.from_user.id)
     admin_username = message.from_user.username or "unknown"
     admin_message_id = message.message_id
 
-    try:
-        if broadcast_all:
-            # Рассылка во все чаты
-            usecase_chats: GetUserTrackedChatsUseCase = container.resolve(
-                GetUserTrackedChatsUseCase
-            )
-            user_chats_dto = await usecase_chats.execute(tg_id=admin_tgid)
-
-            if not user_chats_dto.chats:
-                await show_message_management_menu(
-                    bot=message.bot,
-                    chat_id=message.chat.id,
-                    message_id=active_message_id,
-                    state=state,
-                    text_prefix=Dialog.Messages.NO_TRACKED_CHATS,
-                )
-                try:
-                    await message.delete()
-                except Exception as e:
-                    logger.warning("Не удалось удалить сообщение пользователя: %s", e)
-                return
-
-            usecase_send: SendMessageToChatUseCase = container.resolve(
-                SendMessageToChatUseCase
-            )
-            success_count = 0
-            failed_count = 0
-
-            for chat in user_chats_dto.chats:
-                dto = SendMessageDTO(
-                    chat_tgid=chat.tg_id,
-                    admin_tgid=admin_tgid,
-                    admin_username=admin_username,
-                    admin_message_id=admin_message_id,
-                )
-                try:
-                    await usecase_send.execute(dto)
-                    success_count += 1
-                except MessageSendError as e:
-                    logger.warning(
-                        "Не удалось отправить сообщение в чат %s: %s",
-                        chat.tg_id,
-                        e,
-                    )
-                    failed_count += 1
-                except Exception as e:
-                    logger.error(
-                        "Ошибка отправки сообщения в чат %s: %s",
-                        chat.tg_id,
-                        e,
-                        exc_info=True,
-                    )
-                    failed_count += 1
-
-            if failed_count == 0:
-                text_prefix = Dialog.Messages.SEND_SUCCESS_ALL.format(
-                    count=success_count
-                )
-            else:
-                text_prefix = Dialog.Messages.SEND_PARTIAL_SUCCESS.format(
-                    success_count=success_count,
-                    failed_count=failed_count,
-                )
-
+    if broadcast_all:
+        usecase_chats: GetUserTrackedChatsUseCase = container.resolve(
+            GetUserTrackedChatsUseCase
+        )
+        user_chats_dto = await usecase_chats.execute(tg_id=admin_tgid)
+        if not user_chats_dto.chats:
             await show_message_management_menu(
                 bot=message.bot,
                 chat_id=message.chat.id,
+                message_id=active_message_id,
+                state=state,
+                text_prefix=Dialog.Messages.NO_TRACKED_CHATS,
+            )
+            await safe_delete_message(
+                bot=message.bot,
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+            )
+            return
+
+    await state.update_data(
+        {
+            ADMIN_TGID: admin_tgid,
+            ADMIN_USERNAME: admin_username,
+            ADMIN_MESSAGE_ID: admin_message_id,
+        }
+    )
+
+    await safe_edit_message(
+        bot=message.bot,
+        chat_id=message.chat.id,
+        message_id=active_message_id,
+        text=Dialog.Messages.SEND_CONFIRM.format(chatname=chatname),
+        reply_markup=confirm_send_message_ikb(),
+    )
+    await state.set_state(MessageManagerState.waiting_confirm_send)
+
+
+@router.callback_query(
+    MessageManagerState.waiting_confirm_send,
+    F.data == CallbackData.Messages.CONFIRM_SEND_NO,
+)
+async def process_confirm_send_no_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+) -> None:
+    """Обработчик кнопки «Нет»: удаляет контент и показывает меню управления сообщениями."""
+    await callback.answer()
+    data = await state.get_data()
+    active_message_id = data.get(ACTIVE_MESSAGE_ID)
+    admin_message_id = data.get(ADMIN_MESSAGE_ID)
+    await state.clear()
+    if callback.bot and admin_message_id is not None:
+        chat_id = (
+            callback.message.chat.id if callback.message else callback.from_user.id
+        )
+        await safe_delete_message(
+            bot=callback.bot,
+            chat_id=chat_id,
+            message_id=admin_message_id,
+        )
+    if callback.bot and callback.message and active_message_id is not None:
+        await show_message_management_menu(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=active_message_id,
+            state=state,
+        )
+
+
+@router.callback_query(
+    MessageManagerState.waiting_confirm_send,
+    F.data == CallbackData.Messages.CONFIRM_SEND_YES,
+)
+async def process_confirm_broadcast_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext,
+    container: Container,
+) -> None:
+    """Обработчик подтверждения рассылки (отправки) сообщения в чаты (один чат)."""
+    await callback.answer()
+
+    confirm_state = await get_send_confirm_state(state)
+    if not confirm_state:
+        logger.error("Некорректные данные в state при подтверждении отправки")
+        await show_message_management_menu(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            state=state,
+            text_prefix=Dialog.Messages.INVALID_STATE_DATA,
+        )
+        await state.clear()
+        return
+
+    chat_id = callback.message.chat.id
+    active_message_id = confirm_state.active_message_id
+    admin_message_id = confirm_state.admin_message_id
+
+    try:
+        if confirm_state.broadcast_all:
+            usecase_broadcast: BroadcastMessageToTrackedChatsUseCase = (
+                container.resolve(BroadcastMessageToTrackedChatsUseCase)
+            )
+            result = await usecase_broadcast.execute(
+                admin_tgid=confirm_state.admin_tgid,
+                admin_username=confirm_state.admin_username,
+                admin_message_id=confirm_state.admin_message_id,
+            )
+            if result.success_count == 0 and result.failed_count == 0:
+                text_prefix = Dialog.Messages.NO_TRACKED_CHATS
+            elif result.failed_count == 0:
+                text_prefix = Dialog.Messages.SEND_SUCCESS_ALL.format(
+                    count=result.success_count
+                )
+            else:
+                text_prefix = Dialog.Messages.SEND_PARTIAL_SUCCESS.format(
+                    success_count=result.success_count,
+                    failed_count=result.failed_count,
+                )
+            await show_message_management_menu(
+                bot=callback.bot,
+                chat_id=chat_id,
                 message_id=active_message_id,
                 state=state,
                 text_prefix=text_prefix,
             )
             logger.info(
                 "Админ %s разослал сообщение в %s чатов (%s с ошибками)",
-                message.from_user.id,
-                success_count,
-                failed_count,
+                callback.from_user.id,
+                result.success_count,
+                result.failed_count,
             )
         else:
-            # Отправка в один чат
+            if not confirm_state.chat_tgid:
+                await show_message_management_menu(
+                    bot=callback.bot,
+                    chat_id=chat_id,
+                    message_id=active_message_id,
+                    state=state,
+                    text_prefix=Dialog.Messages.INVALID_STATE_DATA,
+                )
+                await state.clear()
+                return
             dto = SendMessageDTO(
-                chat_tgid=chat_tgid,
-                admin_tgid=admin_tgid,
-                admin_username=admin_username,
-                admin_message_id=admin_message_id,
+                chat_tgid=confirm_state.chat_tgid,
+                admin_tgid=confirm_state.admin_tgid,
+                admin_username=confirm_state.admin_username,
+                admin_message_id=confirm_state.admin_message_id,
             )
-
             try:
                 usecase: SendMessageToChatUseCase = container.resolve(
                     SendMessageToChatUseCase
                 )
                 await usecase.execute(dto)
-
                 await show_message_management_menu(
-                    bot=message.bot,
-                    chat_id=message.chat.id,
+                    bot=callback.bot,
+                    chat_id=chat_id,
                     message_id=active_message_id,
                     state=state,
                     text_prefix=Dialog.Messages.SEND_SUCCESS,
                 )
                 logger.info(
                     "Админ %s отправил сообщение в чат %s",
-                    message.from_user.id,
-                    chat_tgid,
+                    callback.from_user.id,
+                    confirm_state.chat_tgid,
                 )
             except MessageSendError as e:
                 await show_message_management_menu(
-                    bot=message.bot,
-                    chat_id=message.chat.id,
+                    bot=callback.bot,
+                    chat_id=chat_id,
                     message_id=active_message_id,
                     state=state,
                     text_prefix=e.get_user_message(),
@@ -314,19 +409,22 @@ async def process_content_handler(
             except Exception as e:
                 logger.error(
                     "Ошибка отправки сообщения в чат %s: %s",
-                    chat_tgid,
+                    confirm_state.chat_tgid,
                     e,
                     exc_info=True,
                 )
                 await show_message_management_menu(
-                    bot=message.bot,
-                    chat_id=message.chat.id,
+                    bot=callback.bot,
+                    chat_id=chat_id,
                     message_id=active_message_id,
                     state=state,
                     text_prefix=Dialog.Messages.REPLY_ERROR,
                 )
     finally:
-        try:
-            await message.delete()
-        except Exception as e:
-            logger.warning("Не удалось удалить сообщение пользователя: %s", e)
+        await state.clear()
+        if callback.bot and admin_message_id is not None:
+            await safe_delete_message(
+                bot=callback.bot,
+                chat_id=chat_id,
+                message_id=admin_message_id,
+            )

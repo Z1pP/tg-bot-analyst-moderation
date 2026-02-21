@@ -29,3 +29,12 @@ class UpdateCategoryDTO(BaseModel):
     name: str
 
     model_config = ConfigDict(frozen=True)
+
+
+class GetCategoriesPaginatedDTO(BaseModel):
+    """DTO для пагинированного запроса списка категорий."""
+
+    limit: int
+    offset: int
+
+    model_config = ConfigDict(frozen=True)

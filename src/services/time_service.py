@@ -11,8 +11,10 @@ class TimeZoneService:
 
     @classmethod
     def convert_to_local_time(
-        cls, dt: datetime, source_tz: Optional[pytz.BaseTzInfo] = None
-    ) -> datetime:
+        cls,
+        dt: Optional[datetime],
+        source_tz: Optional[pytz.BaseTzInfo] = None,
+    ) -> Optional[datetime]:
         if dt is None:
             return None
         if dt.tzinfo is None:

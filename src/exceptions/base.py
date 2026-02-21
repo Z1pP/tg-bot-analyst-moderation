@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 
 class BotBaseException(Exception):
@@ -7,8 +7,8 @@ class BotBaseException(Exception):
     def __init__(
         self,
         message: Optional[str] = None,
-        details: Optional[Dict] = None,
-    ):
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self.message = message or self.default_message
         self.details = details
         super().__init__(self.message)

@@ -5,8 +5,11 @@ from datetime import datetime
 from statistics import mean, median
 from typing import Any, Awaitable, Callable, Dict, List, Set, TypeVar
 
+from aiogram.exceptions import TelegramAPIError
+
 from constants.dialogs import ReportDialogs
 from constants.period import TimePeriod
+from exceptions import BotBaseException
 from models import ChatMessage, ChatSession, MessageReaction, MessageReply
 from models.user import User
 from repositories import ChatRepository, MessageRepository, UserRepository
@@ -97,7 +100,7 @@ class SendDailyChatReportsUseCase:
                 start_date=adjusted_start,
                 end_date=adjusted_end,
             )
-        except Exception as e:
+        except BotBaseException as e:
             logger.error(
                 "Ошибка при обработке чата %s: %s", chat.title, e, exc_info=True
             )
@@ -117,7 +120,7 @@ class SendDailyChatReportsUseCase:
                     chat_tgid=chat.archive_chat_id,
                     text=report,
                 )
-            except Exception as e:
+            except TelegramAPIError as e:
                 logger.error(
                     "Ошибка при отправке отчета в архивный чат %s: %s",
                     chat.title,

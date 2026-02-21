@@ -61,7 +61,12 @@ class CancelLastWarnUseCase(BaseAmnestyUseCase):
         )
         if not is_deleted:
             logger.warning("Не найдено наказаний для отмены в чате %s", chat.id)
-            return CancelWarnResultDTO(success=False)
+            return CancelWarnResultDTO(
+                success=False,
+                current_warns_count=0,
+                next_punishment_type=None,
+                next_punishment_duration=None,
+            )
 
         logger.info(
             "Удалено последнее предупреждение для пользователя %s в чате %s",
@@ -79,7 +84,7 @@ class CancelLastWarnUseCase(BaseAmnestyUseCase):
                 dto.violator_username,
             )
             is_unbanned = await self.bot_message_service.unban_chat_member(
-                chat_tgid=chat.tg_id, user_tg_id=int(dto.violator_tgid)
+                chat_tg_id=chat.tg_id, user_tg_id=int(dto.violator_tgid)
             )
             if is_unbanned:
                 # Обновляем локальный статус, чтобы отчет был корректным

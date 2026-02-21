@@ -1,11 +1,13 @@
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 from dto.buffer import BufferedMessageDTO
+from exceptions import DatabaseException
 from dto.daily_activity import UserDailyActivityDTO
 from models import ChatMessage, User
 from repositories.base import BaseRepository
@@ -19,37 +21,49 @@ class MessageRepository(BaseRepository):
         self,
         chat_id: int,
         limit: int,
-        start_date: datetime | None = None,
-        end_date: datetime | None = None,
-    ):
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> list[tuple[str | None, str | None]]:
         """
         Выбирает только текст и имя пользователя.
         Игнорирует системные сообщения и медиа.
         """
         async with self._db.session() as session:
-            query = (
-                select(
-                    ChatMessage.text,
-                    User.username,
-                )
-                .join(User, ChatMessage.user_id == User.id)
-                .where(
-                    ChatMessage.chat_id == chat_id,
-                    ChatMessage.content_type == "text",
-                    ChatMessage.text.is_not(None),
-                )
-            )
-
-            if start_date and end_date:
-                query = query.where(
-                    ChatMessage.created_at.between(start_date, end_date)
+            try:
+                query = (
+                    select(
+                        ChatMessage.text,
+                        User.username,
+                    )
+                    .join(User, ChatMessage.user_id == User.id)
+                    .where(
+                        ChatMessage.chat_id == chat_id,
+                        ChatMessage.content_type == "text",
+                        ChatMessage.text.is_not(None),
+                    )
                 )
 
-            query = query.order_by(ChatMessage.created_at.desc()).limit(limit)
+                if start_date and end_date:
+                    query = query.where(
+                        ChatMessage.created_at.between(start_date, end_date)
+                    )
 
-            result = await session.execute(query)
-            # Возвращаем список кортежей (text, username) в хронологическом порядке
-            return list(reversed(result.all()))
+                query = query.order_by(ChatMessage.created_at.desc()).limit(limit)
+
+                result = await session.execute(query)
+                rows = result.all()
+                return [tuple(r) for r in reversed(rows)]
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Ошибка при получении сообщений для саммари: chat_id=%s, %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
+                )
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_messages_for_summary", "original": str(e)}
+                ) from e
 
     async def get_messages_by_period_date_for_users(
         self,
@@ -72,7 +86,7 @@ class MessageRepository(BaseRepository):
             )
             try:
                 result = await session.execute(query)
-                messages = result.scalars().all()
+                messages = list(result.scalars().all())
                 logger.info(
                     "Получено %d сообщений для пользователей (%d) за период %s - %s",
                     len(messages),
@@ -81,22 +95,26 @@ class MessageRepository(BaseRepository):
                     end_date,
                 )
                 return messages
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении сообщений по периоду для пользователей: users=%s, период=%s-%s, %s",
                     user_ids,
                     start_date,
                     end_date,
                     e,
+                    exc_info=True,
                 )
-                return []
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_messages_by_period_date_for_users", "original": str(e)}
+                ) from e
 
     async def get_messages_by_chat_id_and_period(
         self,
         chat_id: int,
         start_date: datetime,
         end_date: datetime,
-        tracked_user_ids: list[int] = None,
+        tracked_user_ids: Optional[list[int]] = None,
     ) -> list[ChatMessage]:
         """
         Получает сообщения из чата за период времени для отслеживаемых пользователей.
@@ -118,7 +136,7 @@ class MessageRepository(BaseRepository):
                 query = query.where(ChatMessage.user_id.in_(tracked_user_ids))
             try:
                 result = await session.execute(query)
-                messages = result.scalars().all()
+                messages = list(result.scalars().all())
                 logger.info(
                     "Получено %d сообщений для chat_id=%s за период %s - %s",
                     len(messages),
@@ -127,15 +145,19 @@ class MessageRepository(BaseRepository):
                     end_date,
                 )
                 return messages
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении сообщений по chat_id: chat_id=%s, период=%s-%s, %s",
                     chat_id,
                     start_date,
                     end_date,
                     e,
+                    exc_info=True,
                 )
-                return []
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_messages_by_chat_id_and_period", "original": str(e)}
+                ) from e
 
     async def get_daily_top_users(
         self,
@@ -193,15 +215,19 @@ class MessageRepository(BaseRepository):
                 )
                 return top_users
 
-            except Exception as e:
+            except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при получении топа пользователей: chat_id=%s, период=%s-%s, %s",
                     chat_id,
                     start_date.strftime("%Y-%m-%d") if start_date else "None",
                     end_date.strftime("%Y-%m-%d") if end_date else "None",
                     e,
+                    exc_info=True,
                 )
-                return []
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_daily_top_users", "original": str(e)}
+                ) from e
 
     async def get_messages_by_period_date_and_chats(
         self,
@@ -223,10 +249,13 @@ class MessageRepository(BaseRepository):
             )
             try:
                 result = await session.execute(query)
-                return result.scalars().all()
-            except Exception as e:
-                logger.error(f"Error getting messages by chats: {e}")
-                return []
+                return list(result.scalars().all())
+            except SQLAlchemyError as e:
+                logger.error("Ошибка при получении сообщений по чатам: %s", e, exc_info=True)
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_messages_by_period_date_and_chats", "original": str(e)}
+                ) from e
 
     async def bulk_create_messages(self, dtos: List[BufferedMessageDTO]) -> int:
         """
@@ -261,20 +290,45 @@ class MessageRepository(BaseRepository):
     async def get_max_message_id(self, chat_id: int) -> int | None:
         """Возвращает максимальный ID сообщения в чате."""
         async with self._db.session() as session:
-            query = select(func.max(ChatMessage.id)).where(
-                ChatMessage.chat_id == chat_id
-            )
-            result = await session.execute(query)
-            return result.scalar()
+            try:
+                query = select(func.max(ChatMessage.id)).where(
+                    ChatMessage.chat_id == chat_id
+                )
+                result = await session.execute(query)
+                return result.scalar()
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Ошибка при получении max message_id для chat_id=%s: %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
+                )
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "get_max_message_id", "original": str(e)}
+                ) from e
 
     async def count_messages_since(self, chat_id: int, last_id: int) -> int:
         """Считает количество новых текстовых сообщений после указанного ID."""
         async with self._db.session() as session:
-            query = select(func.count(ChatMessage.id)).where(
-                ChatMessage.chat_id == chat_id,
-                ChatMessage.id > last_id,
-                ChatMessage.content_type == "text",
-                ChatMessage.text.is_not(None),
-            )
-            result = await session.execute(query)
-            return result.scalar() or 0
+            try:
+                query = select(func.count(ChatMessage.id)).where(
+                    ChatMessage.chat_id == chat_id,
+                    ChatMessage.id > last_id,
+                    ChatMessage.content_type == "text",
+                    ChatMessage.text.is_not(None),
+                )
+                result = await session.execute(query)
+                return result.scalar() or 0
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Ошибка при подсчёте сообщений с chat_id=%s, last_id=%s: %s",
+                    chat_id,
+                    last_id,
+                    e,
+                    exc_info=True,
+                )
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "count_messages_since", "original": str(e)}
+                ) from e
