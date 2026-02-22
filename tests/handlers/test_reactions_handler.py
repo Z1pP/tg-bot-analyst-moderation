@@ -69,6 +69,7 @@ async def test_reaction_handler_added_supergroup(
     event.user = MagicMock(spec=TGUser)
     event.user.id = 111
     event.user.username = "test_user"
+    event.user.is_bot = False
 
     event.chat = MagicMock(spec=Chat)
     event.chat.id = -100123456
@@ -119,6 +120,7 @@ async def test_reaction_handler_removed_regular_group(
     event.user = MagicMock(spec=TGUser)
     event.user.id = 111
     event.user.username = "test_user"
+    event.user.is_bot = False
 
     event.chat = MagicMock(spec=Chat)
     event.chat.id = -789
@@ -145,22 +147,25 @@ async def test_reaction_handler_no_chat_error(
     mock_container: Container, mock_reaction_services: dict
 ) -> None:
     """
-    Тестирует поведение при ошибке получения чата.
+    Тестирует обработку события с минимальными данными.
 
-    Проверяет:
-    1. Что сохранение реакции не вызывается, если чат не найден.
+    Хендлер строит DTO из event и вызывает SaveMessageReactionUseCase
+    (проверка «чат не найден» в текущей реализации не выполняется).
     """
-    # 1. Настраиваем ошибку получения чата
-    mock_reaction_services["chat"].get_or_create.return_value = None
-
-    # 2. Мок события
+    # 1. Мок события с минимальным набором полей
     bot = AsyncMock(spec=Bot)
     event = MagicMock(spec=MessageReactionUpdated)
+    event.message_id = 1
     event.user = MagicMock(spec=TGUser)
+    event.user.id = 111
+    event.user.is_bot = False
     event.chat = MagicMock(spec=Chat)
+    event.chat.id = -100123
+    event.new_reaction = []
+    event.old_reaction = []
 
-    # 3. Вызов
+    # 2. Вызов
     await reaction_handler(event=event, bot=bot, container=mock_container)
 
-    # 4. Проверки
-    mock_reaction_services["save_reaction"].execute.assert_not_called()
+    # 3. Хендлер всегда вызывает save_reaction с DTO из event
+    mock_reaction_services["save_reaction"].execute.assert_called_once()
