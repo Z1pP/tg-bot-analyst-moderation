@@ -37,6 +37,7 @@ class AdminOnlyFilter(BaseUserFilter):
             return True
 
         await event.answer("⛔ У Вас нет доступа к сервисам Analyst AI")
+        return False
 
 
 class StaffOnlyFilter(BaseUserFilter):
