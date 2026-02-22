@@ -31,9 +31,9 @@ async def test_get_all_categories(db_manager: Any) -> None:
     """Тестирует получение всех категорий и их сортировку."""
     # Arrange
     repo = TemplateCategoryRepository(db_manager)
-    c1 = await repo.create_category(name="Cat B")
-    c2 = await repo.create_category(name="Cat A")
-    c3 = await repo.create_category(name="Cat C")
+    await repo.create_category(name="Cat B")
+    await repo.create_category(name="Cat A")
+    await repo.create_category(name="Cat C")
 
     # Act
     categories = await repo.get_all_categories()
@@ -127,7 +127,7 @@ async def test_pagination(db_manager: Any) -> None:
     # Act
     total_count = await repo.get_categories_count()
     # Получаем все категории, чтобы знать смещение
-    all_cats = await repo.get_all_categories()
+    await repo.get_all_categories()
 
     # Первая страница (limit 5)
     page1 = await repo.get_categories_paginated(limit=5, offset=0)
