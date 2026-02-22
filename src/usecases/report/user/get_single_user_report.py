@@ -137,7 +137,8 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         # Логируем действие после успешной генерации отчета
         if self._admin_action_log_service:
             period = self._format_selected_period(adjusted_start, adjusted_end)
-            details = f"Пользователь: @{user.username}, Период: {period}"
+            user_display = f"@{user.username}" if user.username else f"ID:{user.tg_id}"
+            details = f"Пользователь: {user_display}, Период: {period}"
             await self._admin_action_log_service.log_action(
                 admin_tg_id=report_dto.admin_tg_id,
                 action_type=AdminActionType.REPORT_USER,
