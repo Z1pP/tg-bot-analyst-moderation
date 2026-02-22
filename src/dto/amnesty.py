@@ -8,11 +8,11 @@ from .chat_dto import ChatDTO
 
 
 class AmnestyUserDTO(BaseModel):
-    violator_username: str
+    violator_username: str = ""
     violator_tgid: str
     violator_id: int
     admin_tgid: str
-    admin_username: str
+    admin_username: str = ""
     chat_dtos: List[ChatDTO] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
