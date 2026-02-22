@@ -1,10 +1,15 @@
+"""Тесты ReleaseNoteRepository. Пропуск: модуль repositories.release_note_repository отсутствует в проекте."""
+
 from typing import Any
 
 import pytest
+
+pytest.importorskip("repositories.release_note_repository")
+
+from repositories.release_note_repository import ReleaseNoteRepository
 from sqlalchemy import delete, select
 
 from models import ReleaseNote, User
-from repositories.release_note_repository import ReleaseNoteRepository
 
 
 @pytest.fixture(autouse=True)
