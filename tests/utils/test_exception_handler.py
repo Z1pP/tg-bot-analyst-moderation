@@ -265,7 +265,7 @@ def test_telegram_message_max_length_constant() -> None:
 
 
 def test_get_event_info_message() -> None:
-    """_get_event_info для Message возвращает описание с chat_id и from_user."""
+    """_get_event_context для Message возвращает описание с chat_id и from_user."""
     err_handler = AsyncErrorHandler(
         bot_message_service=AsyncMock(),
         user_repository=AsyncMock(),
@@ -274,14 +274,14 @@ def test_get_event_info_message() -> None:
         chat=Chat.model_construct(id=-100),
         from_user=User.model_construct(id=123),
     )
-    info = err_handler._get_event_info(msg)
+    info = err_handler._get_event_context(msg)
     assert "Message" in info
     assert "-100" in info
     assert "123" in info
 
 
 def test_get_event_info_callback_query() -> None:
-    """_get_event_info для CallbackQuery возвращает data и from_user."""
+    """_get_event_context для CallbackQuery возвращает data и from_user."""
     err_handler = AsyncErrorHandler(
         bot_message_service=AsyncMock(),
         user_repository=AsyncMock(),
@@ -290,7 +290,7 @@ def test_get_event_info_callback_query() -> None:
         data="pag__2",
         from_user=User.model_construct(id=456),
     )
-    info = err_handler._get_event_info(cb)
+    info = err_handler._get_event_context(cb)
     assert "CallbackQuery" in info
     assert "pag__2" in info
     assert "456" in info
