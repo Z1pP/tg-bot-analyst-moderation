@@ -299,6 +299,28 @@ async def test_get_all_moderators(db_manager: Any) -> None:
     assert "user1_all" not in usernames
 
 
+@pytest.mark.asyncio
+async def test_get_users_with_role(db_manager: Any) -> None:
+    """get_users_with_role возвращает только пользователей с данной ролью и непустым tg_id."""
+    repo = UserRepository(db_manager)
+    async with db_manager.session() as session:
+        dev1 = User(tg_id="dev1_tg", username="dev1", role=UserRole.DEV)
+        dev2 = User(tg_id="dev2_tg", username="dev2", role=UserRole.DEV)
+        dev_no_tg = User(tg_id="", username="dev_empty", role=UserRole.DEV)
+        admin1 = User(tg_id="adm_tg", username="admin1", role=UserRole.ADMIN)
+        session.add_all([dev1, dev2, dev_no_tg, admin1])
+        await session.commit()
+
+    dev_users = await repo.get_users_with_role(UserRole.DEV)
+
+    assert len(dev_users) >= 2
+    tg_ids = [u.tg_id for u in dev_users]
+    assert "dev1_tg" in tg_ids
+    assert "dev2_tg" in tg_ids
+    assert "" not in tg_ids
+    assert "adm_tg" not in tg_ids
+
+
 @pytest.mark.skip(reason="UserRepository.get_all_admins удалён или не реализован")
 @pytest.mark.asyncio
 async def test_get_all_admins(db_manager: Any) -> None:
