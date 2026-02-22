@@ -5,10 +5,10 @@ from aiogram.exceptions import (
     TelegramBadRequest,
     TelegramForbiddenError,
 )
-from exceptions import BotBaseException
 
 from constants.enums import AdminActionType
 from dto.message_action import MessageActionDTO
+from exceptions import BotBaseException
 from exceptions.moderation import MessageDeleteError, MessageSendError
 from services import AdminActionLogService, BotMessageService, ChatService
 
@@ -86,10 +86,15 @@ class DeleteMessageUseCase:
             try:
                 chat = await self.chat_service.get_chat(chat_tgid=dto.chat_tgid)
                 chat_title = chat.title if chat else str(dto.chat_tgid)
+                admin_display = (
+                    f"@{dto.admin_username}"
+                    if dto.admin_username
+                    else f"ID:{dto.admin_tgid}"
+                )
                 report_text = (
                     f"🗑 <b>Удалено сообщение ботом</b>\n\n"
                     f"Чат: {chat_title}\n"
-                    f"Кто удалил: @{dto.admin_username}"
+                    f"Кто удалил: {admin_display}"
                 )
 
                 try:
