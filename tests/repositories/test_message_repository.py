@@ -53,6 +53,38 @@ async def test_get_messages_for_summary_with_messages(db_manager: Any) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_messages_for_summary_with_dates(db_manager: Any) -> None:
+    """get_messages_for_summary с start_date и end_date фильтрует по периоду."""
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(hours=2)
+    end = now - timedelta(hours=1)
+    async with db_manager.session() as session:
+        chat = ChatSession(chat_id="-100_msg_dt", title="Msg Dt")
+        user = User(tg_id="msg_d", username="msg_d")
+        session.add_all([chat, user])
+        await session.flush()
+        m = ChatMessage(
+            chat_id=chat.id,
+            user_id=user.id,
+            message_id="m_dt",
+            message_type="text",
+            content_type="text",
+            text="In range",
+            created_at=now - timedelta(hours=1, minutes=30),
+        )
+        session.add(m)
+        await session.commit()
+        chat_id = chat.id
+
+    repo = MessageRepository(db_manager)
+    result = await repo.get_messages_for_summary(
+        chat_id=chat_id, limit=10, start_date=start, end_date=end
+    )
+    assert len(result) >= 1
+    assert result[0][0] == "In range"
+
+
+@pytest.mark.asyncio
 async def test_get_messages_by_period_date_for_users_empty(db_manager: Any) -> None:
     """Пустой список при пустом user_ids."""
     repo = MessageRepository(db_manager)
@@ -234,3 +266,47 @@ async def test_get_daily_top_users(db_manager: Any) -> None:
     )
     assert len(top) >= 1
     assert top[0].message_count >= 2
+
+
+@pytest.mark.asyncio
+async def test_get_messages_by_period_date_and_chats(db_manager: Any) -> None:
+    """Сообщения пользователя в указанных чатах за период."""
+    now = datetime.now(timezone.utc)
+    start = now - timedelta(hours=2)
+    end = now + timedelta(hours=2)
+    async with db_manager.session() as session:
+        user = User(tg_id="msg_pdc", username="msg_pdc")
+        chat1 = ChatSession(chat_id="-100_pdc1", title="PDC 1")
+        chat2 = ChatSession(chat_id="-100_pdc2", title="PDC 2")
+        session.add_all([user, chat1, chat2])
+        await session.flush()
+        m1 = ChatMessage(
+            chat_id=chat1.id,
+            user_id=user.id,
+            message_id="pdc1",
+            message_type="text",
+            content_type="text",
+            created_at=now,
+        )
+        m2 = ChatMessage(
+            chat_id=chat2.id,
+            user_id=user.id,
+            message_id="pdc2",
+            message_type="text",
+            content_type="text",
+            created_at=now,
+        )
+        session.add_all([m1, m2])
+        await session.commit()
+        user_id = user.id
+        chat_ids = [chat1.id, chat2.id]
+
+    repo = MessageRepository(db_manager)
+    result = await repo.get_messages_by_period_date_and_chats(
+        user_id=user_id,
+        start_date=start,
+        end_date=end,
+        chat_ids=chat_ids,
+    )
+    assert len(result) == 2
+    assert {m.chat_id for m in result} == {chat1.id, chat2.id}
