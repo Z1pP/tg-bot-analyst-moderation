@@ -1,8 +1,12 @@
+from contextlib import asynccontextmanager
 from datetime import time
 from typing import Any, Optional
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
+from exceptions import DatabaseException
 from models import ChatSession
 from repositories.chat_repository import ChatRepository
 
@@ -33,6 +37,32 @@ async def test_create_chat(db_manager: Any) -> None:
     # Проверяем, что настройки создались
     found_chat = await repo.get_chat_by_id(chat.id)
     assert found_chat.settings is not None
+
+
+@pytest.mark.asyncio
+async def test_get_chat_by_id_not_found(db_manager: Any) -> None:
+    """get_chat_by_id для несуществующего id возвращает None."""
+    repo = ChatRepository(db_manager)
+    result = await repo.get_chat_by_id(99999)
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_chat_by_id_raises_database_exception_on_session_error() -> None:
+    """При SQLAlchemyError в сессии get_chat_by_id пробрасывает DatabaseException."""
+    mock_session = MagicMock()
+    mock_session.scalar = AsyncMock(side_effect=SQLAlchemyError("db error"))
+    mock_session.rollback = AsyncMock()
+
+    class MockDB:
+        @asynccontextmanager
+        async def session(self):
+            yield mock_session
+
+    repo = ChatRepository(MockDB())
+    with pytest.raises(DatabaseException) as exc_info:
+        await repo.get_chat_by_id(chat_id=1)
+    assert "get_chat_by_id" in str(exc_info.value.details or "")
 
 
 @pytest.mark.asyncio
@@ -199,3 +229,11 @@ async def test_get_tracked_chats_for_admin(db_manager: Any) -> None:
     # Assert
     assert len(chats) >= 1
     assert any(c.chat_id == "-track-1" for c in chats)
+
+
+@pytest.mark.asyncio
+async def test_update_chat_not_found_raises(db_manager: Any) -> None:
+    """update_chat для несуществующего chat_id поднимает ValueError."""
+    repo = ChatRepository(db_manager)
+    with pytest.raises(ValueError, match="не найден"):
+        await repo.update_chat(chat_id=99999, title="Any")
