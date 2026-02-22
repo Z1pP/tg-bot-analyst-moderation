@@ -15,6 +15,7 @@ from services import (
     UserService,
 )
 from services.time_service import TimeZoneService
+from utils.moderation import format_violator_display
 
 from .base import ModerationUseCase
 
@@ -106,9 +107,9 @@ class GiveUserBanUseCase(ModerationUseCase):
 
         correct_date = TimeZoneService.now()
 
-        violator_display = self._get_violator_display_name(
-            username=context.dto.violator_username,
-            tg_id=context.violator.tg_id,
+        violator_display = format_violator_display(
+            context.dto.violator_username,
+            context.violator.tg_id,
         )
 
         report_text = self.punishment_service.generate_ban_report(
@@ -142,9 +143,3 @@ class GiveUserBanUseCase(ModerationUseCase):
             action_type=AdminActionType.BAN_USER,
             details=details,
         )
-
-    @staticmethod
-    def _get_violator_display_name(username: str | None, tg_id: str) -> str:
-        if username and username != "hidden":
-            return f"@{username}"
-        return f"ID:{tg_id}"

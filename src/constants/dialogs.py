@@ -913,7 +913,7 @@ class ModerationReportDialogs:
         "{header}\n"
         "Кто: @{admin_username}\n"
         "Когда: {date_str}\n"
-        "Нарушитель: @{violator_username} ({violator_tgid})\n"
+        "Нарушитель: {violator_display} ({violator_tgid})\n"
         "Причина: {reason}\n"
         "Чат: {chat_title}\n"
         "Наказание: {punishment_name}\n"

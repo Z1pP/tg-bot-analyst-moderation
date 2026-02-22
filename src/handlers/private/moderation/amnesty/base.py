@@ -23,7 +23,11 @@ from usecases.amnesty import (
     GetChatsWithMutedUserUseCase,
     GetChatsWithPunishedUserUseCase,
 )
-from utils.moderation import ViolatorData, extract_violator_data_from_state
+from utils.moderation import (
+    ViolatorData,
+    extract_violator_data_from_state,
+    format_violator_mention_suffix,
+)
 from utils.send_message import safe_edit_message
 
 from ..errors import handle_chats_error
@@ -145,8 +149,11 @@ async def amnesty_action_select_handler(
     violator = await extract_violator_data_from_state(state=state)
     await state.update_data(action=action)
 
+    username_display = format_violator_mention_suffix(
+        violator.username, str(violator.tg_id)
+    )
     await callback.message.edit_text(
-        text=ACTION_MAP[action].format(username=violator.username),
+        text=ACTION_MAP[action].format(username=username_display),
         reply_markup=confirm_action_ikb(),
     )
 
@@ -209,7 +216,10 @@ async def amnesty_confirm_handler(
         await handle_chats_error(callback, state, violator.username)
         return
 
-    text = config["text"].format(username=amnesty_dto.violator_username)
+    username_display = format_violator_mention_suffix(
+        amnesty_dto.violator_username, amnesty_dto.violator_tgid
+    )
+    text = config["text"].format(username=username_display)
     await state.update_data(
         chat_dtos=[chat.model_dump(mode="json") for chat in chat_dtos]
     )
