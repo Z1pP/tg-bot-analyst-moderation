@@ -84,9 +84,10 @@ class UnbanUserUseCase(BaseAmnestyUseCase):
                 dto.violator_username, dto.violator_tgid
             )
 
+            admin_display = format_violator_display(dto.admin_username, dto.admin_tgid)
             report_text = (
                 "🕊️ Полная амнистия\n"
-                f"Кто: @{dto.admin_username}\n"
+                f"Кто: {admin_display}\n"
                 f"Когда: {date_time_str}\n"
                 f"Кого: {violator_display} ({dto.violator_tgid})\n"
                 f"Чат: {chat.title}"
