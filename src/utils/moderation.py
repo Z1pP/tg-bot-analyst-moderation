@@ -31,7 +31,7 @@ class ViolatorData:
     """Данные о нарушителе, извлеченные из состояния."""
 
     id: int
-    username: str
+    username: Optional[str]
     tg_id: int
 
 
