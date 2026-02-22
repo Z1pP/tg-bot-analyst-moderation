@@ -10,6 +10,7 @@ from constants.enums import UserRole
 from constants.punishment import PunishmentActions as Actions
 from dto import ModerationActionDTO
 from mappers.moderation_mapper import map_message_to_moderation_dto
+from models import User
 from services import BotMessageService, BotPermissionService, ChatService, UserService
 from usecases.moderation.base import ModerationUseCase
 
@@ -65,13 +66,67 @@ async def test_prepare_context_uses_get_or_create() -> None:
     assert context is not None
     assert context.violator == violator
     assert context.admin == admin
-    user_service.get_or_create.assert_any_call(tg_id="10", username="hidden")
+    # violator_username "hidden" в DTO превращается в "" при вызове get_or_create
+    user_service.get_or_create.assert_any_call(tg_id="10", username="")
     user_service.get_or_create.assert_any_call(tg_id="20", username="admin")
 
 
-def test_mapper_falls_back_to_hidden_username() -> None:
-    now = datetime.utcnow()
-    reply_user = SimpleNamespace(id=123, username=None)
+def test_is_different_sender_true() -> None:
+    """is_different_sender возвращает True при разных отправителях."""
+    usecase = ModerationUseCase(
+        user_service=AsyncMock(spec=UserService),
+        bot_message_service=AsyncMock(spec=BotMessageService),
+        chat_service=AsyncMock(spec=ChatService),
+        user_chat_status_repository=AsyncMock(),
+        permission_service=AsyncMock(spec=BotPermissionService),
+    )
+    assert usecase.is_different_sender(reply_user_tg_id="10", owner_tg_id="20") is True
+
+
+def test_is_different_sender_false() -> None:
+    """is_different_sender возвращает False при одном и том же отправителе."""
+    usecase = ModerationUseCase(
+        user_service=AsyncMock(spec=UserService),
+        bot_message_service=AsyncMock(spec=BotMessageService),
+        chat_service=AsyncMock(spec=ChatService),
+        user_chat_status_repository=AsyncMock(),
+        permission_service=AsyncMock(spec=BotPermissionService),
+    )
+    assert usecase.is_different_sender(reply_user_tg_id="10", owner_tg_id="10") is False
+
+
+def test_is_bot_administrator_user() -> None:
+    """is_bot_administrator возвращает False для USER."""
+    usecase = ModerationUseCase(
+        user_service=AsyncMock(spec=UserService),
+        bot_message_service=AsyncMock(spec=BotMessageService),
+        chat_service=AsyncMock(spec=ChatService),
+        user_chat_status_repository=AsyncMock(),
+        permission_service=AsyncMock(spec=BotPermissionService),
+    )
+    user = User(id=1, tg_id="1", username="u", role=UserRole.USER)
+    assert usecase.is_bot_administrator(user) is False
+
+
+def test_is_bot_administrator_admin() -> None:
+    """is_bot_administrator возвращает True для ADMIN."""
+    usecase = ModerationUseCase(
+        user_service=AsyncMock(spec=UserService),
+        bot_message_service=AsyncMock(spec=BotMessageService),
+        chat_service=AsyncMock(spec=ChatService),
+        user_chat_status_repository=AsyncMock(),
+        permission_service=AsyncMock(spec=BotPermissionService),
+    )
+    user = User(id=1, tg_id="1", username="a", role=UserRole.ADMIN)
+    assert usecase.is_bot_administrator(user) is True
+
+
+def test_mapper_violator_username_from_reply() -> None:
+    """Маппер берёт violator_username из reply_to_message.from_user (или пустую строку)."""
+    from datetime import timezone
+
+    now = datetime.now(timezone.utc)
+    reply_user = SimpleNamespace(id=123, username="violator")
     reply_message = SimpleNamespace(
         from_user=reply_user,
         message_id=10,
@@ -88,4 +143,4 @@ def test_mapper_falls_back_to_hidden_username() -> None:
 
     dto = map_message_to_moderation_dto(message=message)
 
-    assert dto.violator_username == "hidden"
+    assert dto.violator_username == "violator"
