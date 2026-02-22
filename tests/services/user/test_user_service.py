@@ -236,3 +236,90 @@ async def test_get_or_create_race_condition(
         # Assert
         assert result == sample_user
         assert user_service.get_user.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_get_user_cache_miss_tg_id_db_hit(
+    user_service: UserService,
+    mock_cache: AsyncMock,
+    mock_repo: AsyncMock,
+    sample_user: User,
+) -> None:
+    """get_user по tg_id при cache miss идёт в БД и кеширует результат."""
+    mock_cache.get.return_value = None
+    mock_repo.get_user_by_tg_id.return_value = sample_user
+
+    result = await user_service.get_user(tg_id="12345")
+
+    assert result == sample_user
+    mock_repo.get_user_by_tg_id.assert_called_once_with(tg_id="12345")
+    assert mock_cache.set.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_get_admins_for_chat_cache_hit(
+    user_service: UserService,
+    mock_cache: AsyncMock,
+    mock_repo: AsyncMock,
+) -> None:
+    """get_admins_for_chat при cache hit не вызывает репозиторий."""
+    admins = [User(id=1, tg_id="a1", username="admin", role=UserRole.ADMIN)]
+    mock_cache.get.return_value = admins
+
+    result = await user_service.get_admins_for_chat(chat_tg_id="-100")
+
+    assert result == admins
+    mock_repo.get_admins_for_chat.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_admins_for_chat_cache_miss(
+    user_service: UserService,
+    mock_cache: AsyncMock,
+    mock_repo: AsyncMock,
+) -> None:
+    """get_admins_for_chat при cache miss идёт в репозиторий и кеширует."""
+    admins = [User(id=1, tg_id="a1", username="admin", role=UserRole.ADMIN)]
+    mock_cache.get.return_value = None
+    mock_repo.get_admins_for_chat.return_value = admins
+
+    result = await user_service.get_admins_for_chat(chat_tg_id="-100")
+
+    assert result == admins
+    mock_repo.get_admins_for_chat.assert_called_once_with(chat_tg_id="-100")
+    mock_cache.set.assert_called_once()
+    call_kw = mock_cache.set.call_args.kwargs
+    assert call_kw.get("ttl") == 300
+
+
+@pytest.mark.asyncio
+async def test_delete_user_success(
+    user_service: UserService,
+    mock_cache: AsyncMock,
+    mock_repo: AsyncMock,
+    sample_user: User,
+) -> None:
+    """delete_user при найденном пользователе удаляет в репо и инвалидирует кеш."""
+    user_service.get_user_by_id = AsyncMock(return_value=sample_user)
+    mock_repo.delete_user.return_value = True
+
+    result = await user_service.delete_user(user_id=1)
+
+    assert result is True
+    mock_repo.delete_user.assert_called_once_with(user_id=1)
+    assert mock_cache.delete.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_delete_user_not_found(
+    user_service: UserService,
+    mock_cache: AsyncMock,
+    mock_repo: AsyncMock,
+) -> None:
+    """delete_user при отсутствии пользователя возвращает False."""
+    user_service.get_user_by_id = AsyncMock(return_value=None)
+
+    result = await user_service.delete_user(user_id=999)
+
+    assert result is False
+    mock_repo.delete_user.assert_not_called()
