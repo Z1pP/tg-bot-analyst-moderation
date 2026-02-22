@@ -5,7 +5,7 @@ from punq import Container
 from constants import Dialog
 from dto import AmnestyUserDTO
 from usecases.amnesty import CancelLastWarnUseCase
-from utils.moderation import format_violator_mention_suffix
+from utils.moderation import format_violator_display
 
 
 async def execute_cancel_warn(
@@ -26,7 +26,7 @@ async def execute_cancel_warn(
     """
     usecase = container.resolve(CancelLastWarnUseCase)
     await usecase.execute(dto=amnesty_dto)
-    username_display = format_violator_mention_suffix(
+    user_display = format_violator_display(
         amnesty_dto.violator_username, amnesty_dto.violator_tgid
     )
-    return Dialog.AmnestyUser.CANCEL_WARN_SUCCESS.format(username=username_display)
+    return Dialog.AmnestyUser.CANCEL_WARN_SUCCESS.format(user_display=user_display)
