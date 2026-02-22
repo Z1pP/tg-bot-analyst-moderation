@@ -1,9 +1,12 @@
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from constants.enums import UserRole
+from exceptions import DatabaseException
 from models import ChatMessage, MessageReaction, User
 from repositories.user_repository import UserRepository
 
@@ -278,6 +281,48 @@ async def test_create_user_validation(db_manager: Any) -> None:
 
 
 @pytest.mark.asyncio
+async def test_create_user_raises_database_exception_on_session_error() -> None:
+    """При SQLAlchemyError в сессии create_user пробрасывает DatabaseException."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock_session = MagicMock()
+    mock_session.add = MagicMock()
+    mock_session.commit = AsyncMock(side_effect=SQLAlchemyError("db error"))
+    mock_session.rollback = AsyncMock()
+    mock_session.refresh = AsyncMock()
+
+    class MockDB:
+        @asynccontextmanager
+        async def session(self):
+            yield mock_session
+
+    repo = UserRepository(MockDB())
+    with pytest.raises(DatabaseException) as exc_info:
+        await repo.create_user(tg_id="123", username="u")
+    assert "create_user" in str(exc_info.value.details or "")
+
+
+@pytest.mark.asyncio
+async def test_get_users_with_role_raises_database_exception_on_session_error() -> None:
+    """При SQLAlchemyError в сессии get_users_with_role пробрасывает DatabaseException."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock_session = MagicMock()
+    mock_session.execute = AsyncMock(side_effect=SQLAlchemyError("db error"))
+    mock_session.rollback = AsyncMock()
+
+    class MockDB:
+        @asynccontextmanager
+        async def session(self):
+            yield mock_session
+
+    repo = UserRepository(MockDB())
+    with pytest.raises(DatabaseException) as exc_info:
+        await repo.get_users_with_role(UserRole.ADMIN)
+    assert "get_users_with_role" in str(exc_info.value.details or "")
+
+
+@pytest.mark.asyncio
 async def test_get_all_moderators(db_manager: Any) -> None:
     # Arrange
     repo = UserRepository(db_manager)
@@ -431,3 +476,123 @@ async def test_get_admins_for_chat(db_manager: Any) -> None:
     assert "admin1_chat" in usernames
     assert "admin2_chat" in usernames
     assert "user1_chat" not in usernames
+
+
+@pytest.mark.asyncio
+async def test_update_user_check_changes_unchanged(db_manager: Any) -> None:
+    """update_user с check_changes=True при том же username возвращает user без коммита."""
+    repo = UserRepository(db_manager)
+    async with db_manager.session() as session:
+        user = User(tg_id="check_ch", username="same_name")
+        session.add(user)
+        await session.commit()
+        user_id = user.id
+
+    updated = await repo.update_user(user_id, "same_name", check_changes=True)
+    assert updated is not None
+    assert updated.username == "same_name"
+
+
+@pytest.mark.asyncio
+async def test_update_user_user_not_found(db_manager: Any) -> None:
+    """update_user для несуществующего user_id возвращает None."""
+    repo = UserRepository(db_manager)
+    result = await repo.update_user(99999, "new_name")
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_user_by_id_not_found(db_manager: Any) -> None:
+    """get_user_by_id для несуществующего id возвращает None."""
+    repo = UserRepository(db_manager)
+    assert await repo.get_user_by_id(99999) is None
+
+
+@pytest.mark.asyncio
+async def test_get_user_by_username_not_found(db_manager: Any) -> None:
+    """get_user_by_username для несуществующего username возвращает None."""
+    repo = UserRepository(db_manager)
+    assert await repo.get_user_by_username("nonexistent_user_xyz") is None
+
+
+@pytest.mark.asyncio
+async def test_get_user_by_username_case_insensitive(db_manager: Any) -> None:
+    """get_user_by_username ищет регистронезависимо."""
+    repo = UserRepository(db_manager)
+    async with db_manager.session() as session:
+        user = User(tg_id="case_tg", username="CaseUser")
+        session.add(user)
+        await session.commit()
+
+    found = await repo.get_user_by_username("caseuser")
+    assert found is not None
+    assert found.username == "CaseUser"
+
+
+@pytest.mark.asyncio
+async def test_get_tracked_users_for_admin_admin_not_found(db_manager: Any) -> None:
+    """get_tracked_users_for_admin для несуществующего админа возвращает []."""
+    repo = UserRepository(db_manager)
+    result = await repo.get_tracked_users_for_admin("nonexistent_admin_tg")
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_get_owners_and_admins_without_language(db_manager: Any) -> None:
+    """get_owners_and_admins без language возвращает всех активных OWNER и ADMIN."""
+    repo = UserRepository(db_manager)
+    async with db_manager.session() as session:
+        a1 = User(tg_id="oa1", username="owner1", role=UserRole.OWNER, is_active=True)
+        a2 = User(tg_id="oa2", username="admin_oa", role=UserRole.ADMIN, is_active=True)
+        a3 = User(
+            tg_id="oa3", username="inactive_oa", role=UserRole.ADMIN, is_active=False
+        )
+        session.add_all([a1, a2, a3])
+        await session.commit()
+
+    users = await repo.get_owners_and_admins(language=None)
+    assert len(users) >= 2
+    usernames = [u.username for u in users]
+    assert "owner1" in usernames
+    assert "admin_oa" in usernames
+    assert "inactive_oa" not in usernames
+
+
+@pytest.mark.asyncio
+async def test_get_owners_and_admins_with_language(db_manager: Any) -> None:
+    """get_owners_and_admins с language фильтрует по языку (ru/en)."""
+    repo = UserRepository(db_manager)
+    async with db_manager.session() as session:
+        a1 = User(
+            tg_id="lang_ru",
+            username="adm_ru",
+            role=UserRole.ADMIN,
+            is_active=True,
+            language="ru",
+        )
+        a2 = User(
+            tg_id="lang_en",
+            username="adm_en",
+            role=UserRole.ADMIN,
+            is_active=True,
+            language="en",
+        )
+        session.add_all([a1, a2])
+        await session.commit()
+
+    users_ru = await repo.get_owners_and_admins(language="ru")
+    users_en = await repo.get_owners_and_admins(language="en")
+    assert any(u.username == "adm_ru" for u in users_ru)
+    assert not any(u.username == "adm_en" for u in users_ru)
+    assert any(u.username == "adm_en" for u in users_en)
+    assert not any(u.username == "adm_ru" for u in users_en)
+
+
+@pytest.mark.asyncio
+async def test_create_user_username_only(db_manager: Any) -> None:
+    """create_user можно вызвать только с username (tg_id=None)."""
+    repo = UserRepository(db_manager)
+    user = await repo.create_user(username="only_username_user", role=UserRole.USER)
+    assert user.id is not None
+    assert user.username == "only_username_user"
+    assert user.tg_id is None
