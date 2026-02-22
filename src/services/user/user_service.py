@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy.exc import IntegrityError
 
@@ -9,6 +9,8 @@ from repositories import UserRepository
 from services.caching import ICache
 
 logger = logging.getLogger(__name__)
+
+_UNSET: Any = object()  # sentinel — «username не передавался»
 
 
 class UserService:
@@ -71,33 +73,35 @@ class UserService:
     async def get_user(
         self,
         tg_id: Optional[str] = None,
-        username: Optional[str] = None,
+        username: Any = _UNSET,
     ) -> Optional[User]:
         """
         Получает пользователя по Telegram ID или username с проверкой кеша.
 
         Args:
             tg_id: Telegram ID пользователя
-            username: Telegram username пользователя
+            username: Telegram username пользователя.
+                      Не передавайте аргумент, если username неизвестен.
+                      Передайте None явно, чтобы синхронизировать удаление username в Telegram.
+                      Передайте "" как нейтральное значение из DTO (обновления не будет).
 
         Returns:
             Объект User или None
         """
+        username_provided = username is not _UNSET
+        username_value: Optional[str] = None if not username_provided else username
+
         # Проверяем кеш по tg_id
         if tg_id:
             user = await self._cache.get(f"user:tg_id:{tg_id}")
             if user:
-                if username and user.username != username:
-                    user = await self._user_repository.update_user(
-                        user_id=user.id,
-                        username=username,
-                    )
-                    await self._cache_user(user)
+                if username_provided:
+                    user = await self._sync_username(user, username_value)
                 return user
 
-        # Проверяем кеш по username
-        if username:
-            user = await self._cache.get(f"user:username:{username}")
+        # Проверяем кеш по username (только для непустых значений)
+        if username_provided and username_value:
+            user = await self._cache.get(f"user:username:{username_value}")
             if user:
                 return user
 
@@ -106,23 +110,52 @@ class UserService:
         if tg_id:
             user = await self._user_repository.get_user_by_tg_id(tg_id=tg_id)
 
-        if not user and username:
-            user = await self._user_repository.get_user_by_username(username=username)
+        if not user and username_provided and username_value:
+            user = await self._user_repository.get_user_by_username(
+                username=username_value
+            )
 
         if user:
-            if username and user.username != username:
-                # Если нашли по tg_id, но username не совпадает или None - обновляем
-                user = await self._user_repository.update_user(
-                    user_id=user.id,
-                    username=username,
-                )
-            if tg_id and user.tg_id != tg_id:
-                # Если нашли по username, но tg_id не совпадает или None - обновляем
-                # (Хотя tg_id обычно не меняется, но может быть None если юзер создан по username)
-                # Но в нашей модели tg_id уникален, так что тут надо быть осторожным
-                pass
-            await self._cache_user(user)
+            if username_provided:
+                user = await self._sync_username(user, username_value)
+            else:
+                await self._cache_user(user)
 
+        return user
+
+    async def _sync_username(self, user: User, new_username: Optional[str]) -> User:
+        """
+        Синхронизирует username пользователя с актуальным значением из Telegram.
+
+        Обновляет БД если:
+        - новый username отличается от текущего (смена никнейма)
+        - новый username = None, а в БД хранится старый (пользователь удалил никнейм)
+
+        Пустая строка («») считается нейтральным значением — обновления не происходит.
+        """
+        if new_username == "":
+            await self._cache_user(user)
+            return user
+
+        username_changed = new_username != user.username
+        if not username_changed:
+            await self._cache_user(user)
+            return user
+
+        old_username = user.username
+        logger.info(
+            "Синхронизация username пользователя id=%s: %r → %r",
+            user.id,
+            old_username,
+            new_username,
+        )
+        user = await self._user_repository.update_user(
+            user_id=user.id,
+            username=new_username,
+        )
+        if old_username:
+            await self._cache.delete(f"user:username:{old_username}")
+        await self._cache_user(user)
         return user
 
     async def _cache_user(self, user: User) -> None:
