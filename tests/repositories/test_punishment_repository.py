@@ -120,6 +120,18 @@ async def test_count_punishments(db_manager: Any) -> None:
 
 
 @pytest.mark.asyncio
+async def test_delete_user_punishments_none_returns_zero(db_manager: Any) -> None:
+    """delete_user_punishments при отсутствии наказаний возвращает 0."""
+    async with db_manager.session() as session:
+        user = await create_test_user(session, "del_zero", "user_del_zero")
+        chat = await create_test_chat(session, "-del_zero", "chat_del_zero")
+        repo = PunishmentRepository(db_manager)
+
+    deleted = await repo.delete_user_punishments(user.id, chat.id)
+    assert deleted == 0
+
+
+@pytest.mark.asyncio
 async def test_delete_user_punishments(db_manager: Any) -> None:
     """Тестирует удаление всех наказаний пользователя в чате."""
     async with db_manager.session() as session:
