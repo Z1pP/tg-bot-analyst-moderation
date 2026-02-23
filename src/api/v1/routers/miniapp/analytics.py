@@ -7,7 +7,6 @@ POST /api/v1/miniapp/analytics/tracking        — добавить пользо
 DELETE /api/v1/miniapp/analytics/tracking/{user_tgid} — удалить из отслеживания
 """
 
-import json
 import logging
 from typing import Optional, cast
 
@@ -15,9 +14,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from punq import Container
 from pydantic import BaseModel
 
-from api.dependencies.miniapp import TelegramInitData
+from api.dependencies.container import get_container
+from api.dependencies.miniapp import (
+    TelegramInitData,
+    tg_id_from_init_data,
+    username_from_init_data,
+)
 from constants.period import TimePeriod
-from container import container as app_container
 from dto.report import AllUsersReportDTO, SingleUserReportDTO
 from dto.user_tracking import RemoveUserTrackingDTO, UserTrackingDTO
 from usecases.report import GetAllUsersReportUseCase, GetSingleUserReportUseCase
@@ -30,28 +33,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 VALID_PERIODS = [p.value for p in TimePeriod if p != TimePeriod.CUSTOM]
-
-
-def get_container() -> Container:
-    return app_container
-
-
-def _tg_id_from_init_data(init_data: dict) -> str:
-    user_raw = init_data.get("user", "{}")
-    try:
-        user = json.loads(user_raw) if isinstance(user_raw, str) else user_raw
-        return str(user.get("id", "0"))
-    except Exception:
-        return "0"
-
-
-def _username_from_init_data(init_data: dict) -> str:
-    user_raw = init_data.get("user", "{}")
-    try:
-        user = json.loads(user_raw) if isinstance(user_raw, str) else user_raw
-        return user.get("username", "")
-    except Exception:
-        return ""
 
 
 def _serialize_day_stats(s) -> Optional[dict]:
@@ -93,11 +74,15 @@ def _serialize_replies_stats(s) -> dict:
     def fmt(sec):
         if sec is None:
             return None
-        m, sec = divmod(sec, 60)
-        return f"{m}м {sec}с" if m else f"{sec}с"
+        m, remainder = divmod(int(sec), 60)
+        return f"{m}м {remainder}с" if m else f"{remainder}с"
 
     return {
         "total_count": s.total_count,
+        "min_seconds": s.min_time_seconds,
+        "max_seconds": s.max_time_seconds,
+        "avg_seconds": s.avg_time_seconds,
+        "median_seconds": s.median_time_seconds,
         "min": fmt(s.min_time_seconds),
         "max": fmt(s.max_time_seconds),
         "avg": fmt(s.avg_time_seconds),
@@ -112,7 +97,7 @@ async def get_all_users_report(
     dc: Container = Depends(get_container),
 ):
     """Отчёт по всем отслеживаемым пользователям за период."""
-    tg_id = _tg_id_from_init_data(init_data)
+    tg_id = tg_id_from_init_data(init_data)
 
     if period not in VALID_PERIODS:
         raise HTTPException(
@@ -173,7 +158,7 @@ async def get_single_user_report(
     dc: Container = Depends(get_container),
 ):
     """Отчёт по одному пользователю за период."""
-    tg_id = _tg_id_from_init_data(init_data)
+    tg_id = tg_id_from_init_data(init_data)
 
     if period not in VALID_PERIODS:
         raise HTTPException(
@@ -224,8 +209,8 @@ async def add_user_to_tracking(
     dc: Container = Depends(get_container),
 ):
     """Добавить пользователя в отслеживание."""
-    tg_id = _tg_id_from_init_data(init_data)
-    username = _username_from_init_data(init_data)
+    tg_id = tg_id_from_init_data(init_data)
+    username = username_from_init_data(init_data)
 
     if not body.user_tgid and not body.user_username:
         raise HTTPException(
@@ -259,8 +244,8 @@ async def remove_user_from_tracking(
     dc: Container = Depends(get_container),
 ):
     """Удалить пользователя из отслеживания."""
-    tg_id = _tg_id_from_init_data(init_data)
-    username = _username_from_init_data(init_data)
+    tg_id = tg_id_from_init_data(init_data)
+    username = username_from_init_data(init_data)
 
     uc = cast(RemoveUserFromTrackingUseCase, dc.resolve(RemoveUserFromTrackingUseCase))
     ok = await uc.execute(
