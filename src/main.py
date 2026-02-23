@@ -13,6 +13,7 @@ from commands.start_commands import set_bot_commands
 from config import settings
 from container import ContainerSetup
 from database.session import engine
+from scheduler import broker
 from utils.logger_config import setup_logger
 
 setup_logger(log_level=logging.INFO)
@@ -48,6 +49,8 @@ async def init_bot() -> None:
 
 async def on_startup(app: web.Application) -> None:
     """Устанавливает webhook и команды при старте сервера."""
+    await broker.startup()
+    logger.info("TaskIQ broker запущен")
     if args.webhook_url:
         url = f"{args.webhook_url}/webhook"
         logger.info("🚀 Устанавливаем webhook: %s", url)
@@ -149,6 +152,8 @@ async def run_polling():
     """Запускает бота в режиме long polling."""
 
     await init_bot()
+    await broker.startup()
+    logger.info("TaskIQ broker запущен")
 
     logger.info("Удаляем webhook...")
     await bot.delete_webhook(drop_pending_updates=True)
@@ -177,6 +182,9 @@ async def shutdown(bot, dp) -> None:
 
     logger.info("Закрытие соединений с БД...")
     await engine.dispose()
+
+    logger.info("Остановка TaskIQ broker...")
+    await broker.shutdown()
 
     if dp and dp.storage:
         logger.info("Закрытие хранилища FSM...")
