@@ -53,7 +53,7 @@ async def test_get_user_report_handler_no_user_id_shows_error(
         with patch(
             "handlers.private.reports.single_user.single_user_report_handler.user_actions_ikb",
             return_value=MagicMock(),
-        ) as mock_edit:
+        ):
             await get_user_report_handler(
                 callback=callback, state=state, container=MagicMock()
             )
@@ -82,11 +82,11 @@ async def test_get_user_report_handler_no_tracked_chats_shows_instructions(
         with patch(
             "handlers.private.reports.single_user.single_user_report_handler.user_actions_ikb",
             return_value=MagicMock(),
-        ) as mock_edit:
+        ):
             with patch(
                 "handlers.private.reports.single_user.single_user_report_handler.time_period_ikb_single_user",
                 return_value=MagicMock(),
-            ) as mock_edit:
+            ):
                 await get_user_report_handler(
                     callback=callback, state=state, container=container
                 )
@@ -118,7 +118,7 @@ async def test_get_user_report_handler_success_shows_period_select(
         with patch(
             "handlers.private.reports.single_user.single_user_report_handler.time_period_ikb_single_user",
             return_value=MagicMock(),
-        ) as mock_edit:
+        ):
             await get_user_report_handler(
                 callback=callback, state=state, container=container
             )
