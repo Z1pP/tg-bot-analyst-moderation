@@ -11,7 +11,9 @@ data_check_string — все поля initData (кроме hash), отсорти
 
 import hashlib
 import hmac
+import json
 import logging
+import time
 from typing import Annotated
 from urllib.parse import parse_qsl, unquote
 
@@ -34,7 +36,7 @@ def _compute_secret_key(bot_token: str) -> bytes:
 def _verify_init_data(raw: str) -> dict:
     """
     Проверяет подпись initData и возвращает распарсенные поля.
-    Raises HTTPException при невалидных данных.
+    Raises HTTPException при невалидных или устаревших данных.
     """
     params = dict(parse_qsl(raw, keep_blank_values=True))
     received_hash = params.pop("hash", None)
@@ -56,6 +58,13 @@ def _verify_init_data(raw: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid initData signature",
+        )
+
+    auth_date = int(params.get("auth_date", 0))
+    if not settings.IS_DEVELOPMENT and time.time() - auth_date > MAX_AGE_SECONDS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="initData expired",
         )
 
     return params
@@ -81,3 +90,23 @@ def verify_telegram_init_data(
 
 
 TelegramInitData = Annotated[dict, Depends(verify_telegram_init_data)]
+
+
+def tg_id_from_init_data(init_data: dict) -> str:
+    """Извлекает tg_id пользователя из распарсенных полей initData."""
+    user_raw = init_data.get("user", "{}")
+    try:
+        user = json.loads(user_raw) if isinstance(user_raw, str) else user_raw
+        return str(user.get("id", "0"))
+    except Exception:
+        return "0"
+
+
+def username_from_init_data(init_data: dict) -> str:
+    """Извлекает username пользователя из распарсенных полей initData."""
+    user_raw = init_data.get("user", "{}")
+    try:
+        user = json.loads(user_raw) if isinstance(user_raw, str) else user_raw
+        return user.get("username", "")
+    except Exception:
+        return ""
