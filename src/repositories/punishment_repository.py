@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import Date, delete, func, select
+from sqlalchemy import cast as sa_cast
 from sqlalchemy.exc import SQLAlchemyError
 
 from constants.punishment import PunishmentType
@@ -155,11 +156,16 @@ class PunishmentRepository(BaseRepository):
                 }
             except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при получении статистики наказаний модератора: %s", e, exc_info=True
+                    "Ошибка при получении статистики наказаний модератора: %s",
+                    e,
+                    exc_info=True,
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_punishment_counts_by_moderator", "original": str(e)}
+                    details={
+                        "context": "get_punishment_counts_by_moderator",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def get_punishment_counts_by_moderators(
@@ -201,9 +207,64 @@ class PunishmentRepository(BaseRepository):
                 return stats
             except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при получении групповой статистики наказаний модераторов: %s", e, exc_info=True
+                    "Ошибка при получении групповой статистики наказаний модераторов: %s",
+                    e,
+                    exc_info=True,
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_punishment_counts_by_moderators", "original": str(e)}
+                    details={
+                        "context": "get_punishment_counts_by_moderators",
+                        "original": str(e),
+                    }
+                ) from e
+
+    async def get_daily_punishment_counts(
+        self, start: datetime, end: datetime
+    ) -> dict[str, dict[str, int]]:
+        """
+        Возвращает количество варнов и банов, сгруппированных по дате за указанный период.
+        Результат: {date_str: {"warns": N, "bans": N}}, где date_str = "YYYY-MM-DD".
+        """
+        async with self._db.session() as session:
+            try:
+                query = (
+                    select(
+                        sa_cast(Punishment.created_at, Date).label("day"),
+                        Punishment.punishment_type,
+                        func.count(Punishment.id).label("cnt"),
+                    )
+                    .where(Punishment.created_at.between(start, end))
+                    .group_by(
+                        sa_cast(Punishment.created_at, Date), Punishment.punishment_type
+                    )
+                )
+                result = await session.execute(query)
+                rows = result.all()
+
+                counts: dict[str, dict[str, int]] = {}
+                for day, p_type, cnt in rows:
+                    date_str = str(day)
+                    if date_str not in counts:
+                        counts[date_str] = {"warns": 0, "bans": 0}
+                    if p_type == PunishmentType.WARNING:
+                        counts[date_str]["warns"] = cnt
+                    elif p_type == PunishmentType.BAN:
+                        counts[date_str]["bans"] = cnt
+
+                return counts
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Ошибка при получении статистики наказаний по дням за %s — %s: %s",
+                    start,
+                    end,
+                    e,
+                    exc_info=True,
+                )
+                await session.rollback()
+                raise DatabaseException(
+                    details={
+                        "context": "get_daily_punishment_counts",
+                        "original": str(e),
+                    }
                 ) from e
