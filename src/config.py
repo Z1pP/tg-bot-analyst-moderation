@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     SERVICE_BOT_PUBLIC_KEY_PATH: str
     SERVICE_BOT_PRIVATE_KEY_PATH: str
 
+    # Публичный URL (Cloudflare Tunnel / домен) — используется фронтендом Mini App
+    PUBLIC_URL: str = ""
+
     @computed_field
     @property
     def API_BASE_URL(self) -> str:
