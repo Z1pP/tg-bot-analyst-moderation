@@ -4,7 +4,6 @@ from typing import Optional
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.types import ChatIdUnion
 
-from constants import PUNISHMENT_NOTIFICATION_TTL
 from constants.enums import UserRole
 from dto import ModerationActionDTO
 from exceptions.moderation import (
@@ -21,7 +20,6 @@ from keyboards.inline.users import hide_notification_ikb
 from models import ChatSession, User
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services import BotMessageService, BotPermissionService, ChatService, UserService
-from tasks.moderation_tasks import delete_message_from_chat
 
 
 @dataclass
@@ -218,6 +216,9 @@ class ModerationUseCase:
                 text=reason_text,
             )
             if sent:
+                from constants import PUNISHMENT_NOTIFICATION_TTL
+                from tasks.moderation_tasks import delete_message_from_chat
+
                 await delete_message_from_chat.kiq(
                     chat_id=int(context.dto.chat_tgid),
                     message_id=sent.message_id,
