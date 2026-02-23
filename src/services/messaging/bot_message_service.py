@@ -5,7 +5,7 @@ from typing import Optional
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import ChatIdUnion, ChatPermissions, InlineKeyboardMarkup
+from aiogram.types import ChatIdUnion, ChatPermissions, InlineKeyboardMarkup, Message
 
 from constants.punishment import PunishmentType
 from exceptions.moderation import MessageTooOldError
@@ -85,7 +85,9 @@ class BotMessageService:
                 e,
             )
 
-    async def send_chat_message(self, chat_tgid: ChatIdUnion, text: str) -> None:
+    async def send_chat_message(
+        self, chat_tgid: ChatIdUnion, text: str
+    ) -> Optional[Message]:
         """
         Отправляет сообщение в чат.
 
@@ -94,6 +96,9 @@ class BotMessageService:
         Args:
             chat_tgid: Telegram ID чата
             text: Текст сообщения (HTML)
+
+        Returns:
+            Отправленное сообщение или None при ошибке / отсутствии прав
         """
         can_post = await self.permission_service.can_post_messages(chat_tgid=chat_tgid)
         if not can_post:
@@ -101,10 +106,10 @@ class BotMessageService:
                 "Бот не может отправлять сообщения в чат %s. Пропуск отправки.",
                 chat_tgid,
             )
-            return
+            return None
 
         try:
-            await self.bot.send_message(
+            return await self.bot.send_message(
                 chat_id=chat_tgid,
                 text=text,
                 parse_mode="HTML",
@@ -121,6 +126,7 @@ class BotMessageService:
                 chat_tgid,
                 e,
             )
+        return None
 
     async def copy_message(
         self,
