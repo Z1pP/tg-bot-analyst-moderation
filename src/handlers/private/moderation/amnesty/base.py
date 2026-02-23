@@ -26,7 +26,7 @@ from usecases.amnesty import (
 from utils.moderation import (
     ViolatorData,
     extract_violator_data_from_state,
-    format_violator_mention_suffix,
+    format_violator_display,
 )
 from utils.send_message import safe_edit_message
 
@@ -149,11 +149,9 @@ async def amnesty_action_select_handler(
     violator = await extract_violator_data_from_state(state=state)
     await state.update_data(action=action)
 
-    username_display = format_violator_mention_suffix(
-        violator.username, str(violator.tg_id)
-    )
+    user_display = format_violator_display(violator.username, str(violator.tg_id))
     await callback.message.edit_text(
-        text=ACTION_MAP[action].format(username=username_display),
+        text=ACTION_MAP[action].format(user_display=user_display),
         reply_markup=confirm_action_ikb(),
     )
 
@@ -186,11 +184,11 @@ async def amnesty_confirm_handler(
     violator = await extract_violator_data_from_state(state=state)
 
     amnesty_dto = AmnestyUserDTO(
-        violator_tgid=violator.tg_id,
-        violator_username=violator.username,
+        violator_tgid=str(violator.tg_id),
+        violator_username=violator.username or "",
         violator_id=violator.id,
         admin_tgid=str(callback.from_user.id),
-        admin_username=callback.from_user.username,
+        admin_username=callback.from_user.username or "",
     )
 
     config = ACTION_CONFIG.get(action)
@@ -206,20 +204,32 @@ async def amnesty_confirm_handler(
 
     usecase = container.resolve(config["usecase"])
 
+    user_display = format_violator_display(
+        amnesty_dto.violator_username, amnesty_dto.violator_tgid
+    )
+
     try:
         chat_dtos = await usecase.execute(dto=amnesty_dto)
     except Exception as e:
-        await handle_chats_error(callback, state, violator.username, e)
+        await handle_chats_error(
+            callback,
+            state,
+            violator_username=violator.username,
+            violator_tgid=str(violator.tg_id),
+            error=e,
+        )
         return
 
     if not chat_dtos:
-        await handle_chats_error(callback, state, violator.username)
+        await handle_chats_error(
+            callback,
+            state,
+            violator_username=violator.username,
+            violator_tgid=str(violator.tg_id),
+        )
         return
 
-    username_display = format_violator_mention_suffix(
-        amnesty_dto.violator_username, amnesty_dto.violator_tgid
-    )
-    text = config["text"].format(username=username_display)
+    text = config["text"].format(user_display=user_display)
     await state.update_data(
         chat_dtos=[chat.model_dump(mode="json") for chat in chat_dtos]
     )
@@ -301,9 +311,9 @@ async def amnesty_execute_handler(
 
     amnesty_dto = AmnestyUserDTO(
         admin_tgid=str(callback.from_user.id),
-        admin_username=callback.from_user.username,
-        violator_tgid=violator.tg_id,
-        violator_username=violator.username,
+        admin_username=callback.from_user.username or "",
+        violator_tgid=str(violator.tg_id),
+        violator_username=violator.username or "",
         violator_id=violator.id,
         chat_dtos=chat_dtos,
     )

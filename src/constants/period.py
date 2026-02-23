@@ -18,7 +18,7 @@ class TimePeriod(Enum):
 
     @classmethod
     def get_all_periods(cls) -> list[str]:
-        return [p.value for p in cls if p.value != cls.CUSTOM]
+        return [p.value for p in cls if p != cls.CUSTOM]
 
     @classmethod
     def get_all(cls) -> list[str]:

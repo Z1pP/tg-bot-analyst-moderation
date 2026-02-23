@@ -133,3 +133,39 @@ async def test_get_all_tracked_chats(db_manager: Any) -> None:
         assert chat.title is not None
         assert chat.settings is not None
         assert len(chat.admin_access) > 0
+
+
+@pytest.mark.asyncio
+async def test_delete_all_tracked_chats_for_admin(db_manager: Any) -> None:
+    """Удаление всех отслеживаемых чатов для админа возвращает количество удалённых."""
+    repo = ChatTrackingRepository(db_manager)
+    async with db_manager.session() as session:
+        admin = User(tg_id="admin_del_all", username="admin_del_all")
+        c1 = ChatSession(chat_id="-201", title="D1")
+        c2 = ChatSession(chat_id="-202", title="D2")
+        session.add_all([admin, c1, c2])
+        await session.flush()
+        a1 = AdminChatAccess(admin_id=admin.id, chat_id=c1.id)
+        a2 = AdminChatAccess(admin_id=admin.id, chat_id=c2.id)
+        session.add_all([a1, a2])
+        await session.commit()
+        admin_id = admin.id
+
+    count = await repo.delete_all_tracked_chats_for_admin(admin_id)
+    assert count == 2
+    tracked = await repo.get_all_tracked_chats(admin_id)
+    assert len(tracked) == 0
+
+
+@pytest.mark.asyncio
+async def test_delete_all_tracked_chats_for_admin_empty(db_manager: Any) -> None:
+    """delete_all_tracked_chats_for_admin для админа без чатов возвращает 0."""
+    async with db_manager.session() as session:
+        admin = User(tg_id="admin_no_ch", username="admin_no_ch")
+        session.add(admin)
+        await session.commit()
+        admin_id = admin.id
+
+    repo = ChatTrackingRepository(db_manager)
+    count = await repo.delete_all_tracked_chats_for_admin(admin_id)
+    assert count == 0

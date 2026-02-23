@@ -24,8 +24,9 @@ from keyboards.inline.moderation import (
     try_again_ikb,
 )
 from usecases.chat import GetChatsForUserActionUseCase
-from usecases.user import GetUserByTgIdUseCase, GetUserByUsernameUseCase
 from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
+from usecases.user import GetUserByTgIdUseCase, GetUserByUsernameUseCase
+from utils.moderation import format_violator_display
 from utils.send_message import safe_edit_message
 from utils.user_data_parser import parse_data_from_text
 
@@ -39,7 +40,7 @@ logger = logging.getLogger(__name__)
 def _format_moderation_response(
     success_chats_titles: list[str],
     failed_chats_titles: list[str],
-    username: str,
+    user_display: str,
     success_text: str,
     partial_text: str,
     fail_text: str,
@@ -52,14 +53,14 @@ def _format_moderation_response(
             )
         else:
             titles_block = success_chats_titles[0]
-        return success_text.format(username=username, chats_titles=titles_block)
+        return success_text.format(user_display=user_display, chats_titles=titles_block)
     if success_chats_titles and failed_chats_titles:
         return partial_text.format(
-            username=username,
+            user_display=user_display,
             ok=", ".join(success_chats_titles),
             fail=", ".join(failed_chats_titles),
         )
-    return fail_text.format(username=username)
+    return fail_text.format(user_display=user_display)
 
 
 def _get_retry_callback_for_moderation_state(next_state: State) -> str:
@@ -159,7 +160,7 @@ async def execute_moderation_logic(
     username = data.get("username")
     user_tgid = data.get("tg_id")
 
-    if not chat_dtos_data or not username or not user_tgid:
+    if not chat_dtos_data or not user_tgid:
         logger.error("Некорректные данные в state: %s", data)
         await handle_moderation_error(
             event=callback,
@@ -167,6 +168,8 @@ async def execute_moderation_logic(
             text="❌ Ошибка: некорректные данные. Попробуйте снова.",
         )
         return
+
+    user_display = format_violator_display(username, user_tgid)
 
     chat_dtos = [ChatDTO.model_validate(chat) for chat in chat_dtos_data]
 
@@ -178,7 +181,7 @@ async def execute_moderation_logic(
     logger.info(
         "Начало действия %s пользователя %s в %s чатах",
         action.value,
-        username,
+        user_display,
         len(chat_dtos),
     )
 
@@ -191,9 +194,9 @@ async def execute_moderation_logic(
         dto = ModerationActionDTO(
             action=action,
             violator_tgid=user_tgid,
-            violator_username=username,
+            violator_username=username or "",
             admin_tgid=str(callback.from_user.id),
-            admin_username=callback.from_user.username,
+            admin_username=callback.from_user.username or "",
             chat_tgid=chat.tg_id,
             chat_title=chat.title,
             reason=data.get("reason"),
@@ -217,7 +220,7 @@ async def execute_moderation_logic(
     response_text = _format_moderation_response(
         success_chats_titles=success_chats_titles,
         failed_chats_titles=failed_chats_titles,
-        username=username,
+        user_display=user_display,
         success_text=success_text,
         partial_text=partial_text,
         fail_text=fail_text,
@@ -279,9 +282,7 @@ async def handle_user_search_logic(
 
     user = None
     if user_data.tg_id:
-        get_by_tgid: GetUserByTgIdUseCase = container.resolve(
-            GetUserByTgIdUseCase
-        )
+        get_by_tgid: GetUserByTgIdUseCase = container.resolve(GetUserByTgIdUseCase)
         user = await get_by_tgid.execute(tg_id=user_data.tg_id)
     elif user_data.username:
         get_by_username: GetUserByUsernameUseCase = container.resolve(
@@ -325,7 +326,7 @@ async def handle_user_search_logic(
         await safe_edit_message(
             bot=bot,
             text=dialog_texts["user_info"].format(
-                username=user.username,
+                user_display=format_violator_display(user.username, user.tg_id),
                 tg_id=user.tg_id,
             ),
             chat_id=message.chat.id,
@@ -386,17 +387,19 @@ async def handle_reason_input_logic(
     )
     chat_dtos = await usecase.execute(admin_tgid=str(from_user_id), user_tgid=user_tgid)
 
+    user_display = format_violator_display(username, user_tgid)
+
     if not chat_dtos:
         await handle_moderation_error(
             event=sender,
             state=state,
-            text=Dialog.WarnUser.NO_CHATS.format(username=username),
+            text=Dialog.WarnUser.NO_CHATS.format(user_display=user_display),
             message_to_edit_id=message_to_edit_id,
         )
 
         logger.warning(
             "Отслеживаемы чаты не найдены для пользователя %s (%s)",
-            username,
+            user_display,
             user_tgid,
         )
         return
@@ -408,9 +411,9 @@ async def handle_reason_input_logic(
 
     # Формируем текст для выбора чата в зависимости от действия
     if action == Actions.BAN:
-        text = Dialog.BanUser.SELECT_CHAT.format(username=username)
+        text = Dialog.BanUser.SELECT_CHAT.format(user_display=user_display)
     else:
-        text = Dialog.WarnUser.SELECT_CHAT.format(username=username)
+        text = Dialog.WarnUser.SELECT_CHAT.format(user_display=user_display)
 
     await safe_edit_message(
         bot=bot,

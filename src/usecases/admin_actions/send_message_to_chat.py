@@ -5,10 +5,10 @@ from aiogram.exceptions import (
     TelegramBadRequest,
     TelegramForbiddenError,
 )
-from exceptions import BotBaseException
 
 from constants.enums import AdminActionType
 from dto.message_action import SendMessageDTO
+from exceptions import BotBaseException
 from exceptions.moderation import MessageSendError
 from services import AdminActionLogService, BotMessageService, ChatService
 from services.time_service import TimeZoneService
@@ -68,9 +68,14 @@ class SendMessageToChatUseCase:
                 message_link = f"https://t.me/c/{chat_id_str}/{sent_message_id}"
 
                 when_str = TimeZoneService.now().strftime("%d.%m.%Y %H:%M")
+                admin_display = (
+                    f"@{dto.admin_username}"
+                    if dto.admin_username
+                    else f"ID:{dto.admin_tgid}"
+                )
                 report_text = (
                     f"💬 <b>Отправлено сообщение</b>\n\n"
-                    f"Кто: @{dto.admin_username}\n"
+                    f"Кто: {admin_display}\n"
                     f"Когда: {when_str}\n"
                     f"Чат: {chat_title}\n"
                     f"Ссылка на сообщ: <a href='{message_link}'>ссылка</a>"

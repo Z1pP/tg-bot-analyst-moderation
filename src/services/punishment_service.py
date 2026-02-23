@@ -202,9 +202,10 @@ class PunishmentService:
         violator_display = format_violator_display(
             dto.violator_username, dto.violator_tgid
         )
+        admin_display = format_violator_display(dto.admin_username, dto.admin_tgid)
         return Dialog.ModerationReport.REPORT_BODY.format(
             header=header,
-            admin_username=dto.admin_username,
+            admin_display=admin_display,
             date_str=date_str,
             violator_display=violator_display,
             violator_tgid=dto.violator_tgid,

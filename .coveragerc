@@ -4,6 +4,11 @@ omit =
     src/alembic/*
     src/config.py
     src/main.py
+    src/bot.py
+    src/bot_entrypoint.py
+    src/api_entrypoint.py
+    src/analytics_scheduler_entrypoint.py
+    src/create_messages.py
 
 [report]
 exclude_lines =

@@ -37,29 +37,31 @@ class GetAdminLogsPageUseCase:
                 limit=dto.limit,
             )
             if logs:
-                admin_username = (
-                    logs[0].admin.username
+                admin_display = (
+                    f"@{logs[0].admin.username}"
                     if logs[0].admin.username
                     else f"ID:{logs[0].admin.tg_id}"
                 )
                 header_text = Dialog.AdminLogs.ADMIN_LOGS_FORMAT.format(
-                    username=admin_username
+                    user_display=admin_display
                 )
             else:
                 header_text = Dialog.AdminLogs.ADMIN_LOGS_FORMAT.format(
-                    username="неизвестен"
+                    user_display="неизвестен"
                 )
 
         entry_lines: list[str] = []
         for log in logs:
-            admin_username = (
-                log.admin.username if log.admin.username else f"ID:{log.admin.tg_id}"
+            admin_display = (
+                f"@{log.admin.username}"
+                if log.admin.username
+                else f"ID:{log.admin.tg_id}"
             )
             action_name = format_action_type(log.action_type)
             local_time = TimeZoneService.convert_to_local_time(log.created_at)
             time_str = local_time.strftime("%d.%m.%Y %H:%M")
             entry_lines.append(
-                f"• {action_name}\n  Админ: @{admin_username}\n  Дата: {time_str}"
+                f"• {action_name}\n  Админ: {admin_display}\n  Дата: {time_str}"
             )
             if log.details:
                 entry_lines.append(f"  {log.details}")

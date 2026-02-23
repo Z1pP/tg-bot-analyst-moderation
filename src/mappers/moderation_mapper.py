@@ -47,7 +47,7 @@ def map_message_to_moderation_dto(message: Message) -> ModerationActionDTO:
         action=Actions.WARNING,
         violator_tgid=str(reply_user.id),
         violator_username=reply_user.username or "",
-        admin_username=message.from_user.username,
+        admin_username=message.from_user.username or "",
         admin_tgid=str(message.from_user.id),
         chat_tgid=str(message.chat.id),
         chat_title=message.chat.title,

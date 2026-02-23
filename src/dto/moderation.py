@@ -22,7 +22,7 @@ class ModerationActionDTO(BaseModel):
     violator_tgid: str
     violator_username: str = ""
     # ID и username администратора
-    admin_username: str
+    admin_username: str = ""
     admin_tgid: str
     # ID чата где было сделано замечание
     chat_tgid: str

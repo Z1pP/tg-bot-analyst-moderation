@@ -24,7 +24,9 @@ async def start_handler(
         return
 
     await message.answer(
-        text=Dialog.Menu.MENU_TEXT.format(username=user.username),
+        text=Dialog.Menu.MENU_TEXT.format(
+            username=user.username or f"ID:{user.tg_id}",
+        ),
         reply_markup=main_menu_ikb(
             user=user,
             user_language=user_language,

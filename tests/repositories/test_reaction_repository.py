@@ -1,12 +1,16 @@
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy import delete, select
+from sqlalchemy.exc import SQLAlchemyError
 
 from constants.enums import ReactionAction
 from dto.buffer import BufferedReactionDTO
 from dto.reaction import MessageReactionDTO
+from exceptions import DatabaseException
 from models import (
     ChatMessage,
     ChatSession,
@@ -81,6 +85,34 @@ async def test_add_reaction(db_manager: Any) -> None:
         assert reaction.user_id == user.id
         assert reaction.emoji == "👍"
         assert reaction.action == ReactionAction.ADDED
+
+
+@pytest.mark.asyncio
+async def test_add_reaction_raises_database_exception_on_session_error() -> None:
+    """При SQLAlchemyError в сессии add_reaction пробрасывает DatabaseException."""
+    mock_session = MagicMock()
+    mock_session.add = MagicMock()
+    mock_session.commit = AsyncMock(side_effect=SQLAlchemyError("db error"))
+    mock_session.rollback = AsyncMock()
+    mock_session.refresh = AsyncMock()
+
+    class MockDB:
+        @asynccontextmanager
+        async def session(self):
+            yield mock_session
+
+    repo = MessageReactionRepository(MockDB())
+    dto = MessageReactionDTO(
+        chat_tgid="1",
+        user_tgid="1",
+        message_id="m1",
+        action=ReactionAction.ADDED,
+        emoji="👍",
+        message_url="url",
+    )
+    with pytest.raises(DatabaseException) as exc_info:
+        await repo.add_reaction(dto)
+    assert "add_reaction" in str(exc_info.value.details or "")
 
 
 @pytest.mark.asyncio
@@ -337,3 +369,49 @@ async def test_get_reactions_by_user_and_period_and_chats(db_manager: Any) -> No
         assert chat1.id in chat_ids
         assert chat2.id in chat_ids
         assert chat3.id not in chat_ids
+
+
+@pytest.mark.asyncio
+async def test_get_reactions_by_user_and_period_for_users_empty(
+    db_manager: Any,
+) -> None:
+    """Пустой список user_ids — возвращается [] без запроса к БД."""
+    repo = MessageReactionRepository(db_manager)
+    result = await repo.get_reactions_by_user_and_period_for_users(
+        user_ids=[],
+        start_date=datetime.now() - timedelta(days=1),
+        end_date=datetime.now(),
+    )
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_get_reactions_by_user_and_period_for_users_with_data(
+    db_manager: Any,
+) -> None:
+    """Получение реакций для списка пользователей за период."""
+    async with db_manager.session() as session:
+        user1 = await create_test_user(session, "ru1", "react_user1")
+        user2 = await create_test_user(session, "ru2", "react_user2")
+        chat = await create_test_chat(session, "-ru_chat", "RU Chat")
+        repo = MessageReactionRepository(db_manager)
+        await repo.add_reaction(
+            MessageReactionDTO(
+                chat_tgid=str(chat.id),
+                user_tgid=str(user1.id),
+                message_id="1",
+                action=ReactionAction.ADDED,
+                emoji="👍",
+                message_url="u1",
+            )
+        )
+
+    start = datetime.now() - timedelta(days=1)
+    end = datetime.now() + timedelta(days=1)
+    result = await repo.get_reactions_by_user_and_period_for_users(
+        user_ids=[user1.id, user2.id],
+        start_date=start,
+        end_date=end,
+    )
+    assert len(result) == 1
+    assert result[0].user_id == user1.id

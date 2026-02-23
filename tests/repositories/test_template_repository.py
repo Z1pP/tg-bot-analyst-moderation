@@ -190,3 +190,126 @@ async def test_update_template_title(db_manager: Any) -> None:
     found = await repo.get_template_by_id(tid)
     assert found is not None
     assert found.title == "NewTitle"
+
+
+@pytest.mark.asyncio
+async def test_update_template_title_not_found(db_manager: Any) -> None:
+    """update_template_title для несуществующего id возвращает False."""
+    repo = MessageTemplateRepository(db_manager)
+    assert await repo.update_template_title(99999, "New") is False
+
+
+@pytest.mark.asyncio
+async def test_get_templates_count_global_only(db_manager: Any) -> None:
+    """get_templates_count с global_only=True считает только шаблоны без chat_id."""
+    async with db_manager.session() as session:
+        user = User(tg_id="tpl_gonly", username="tpl_gonly")
+        chat = ChatSession(chat_id="-100_gonly", title="GOnly")
+        cat = TemplateCategory(name="CatGOnly", sort_order=0)
+        session.add_all([user, chat, cat])
+        await session.flush()
+        t_global = MessageTemplate(
+            title="GlobalT",
+            content="x",
+            category_id=cat.id,
+            author_id=user.id,
+            chat_id=None,
+        )
+        t_chat = MessageTemplate(
+            title="ChatT",
+            content="x",
+            category_id=cat.id,
+            author_id=user.id,
+            chat_id=chat.id,
+        )
+        session.add_all([t_global, t_chat])
+        await session.commit()
+
+    repo = MessageTemplateRepository(db_manager)
+    count = await repo.get_templates_count(global_only=True)
+    assert count >= 1
+
+
+@pytest.mark.asyncio
+async def test_get_templates_paginated_global_only(db_manager: Any) -> None:
+    """get_templates_paginated с global_only возвращает только глобальные шаблоны."""
+    async with db_manager.session() as session:
+        user = User(tg_id="tpl_pag_gl", username="tpl_pag_gl")
+        cat = TemplateCategory(name="CatPagGl", sort_order=0)
+        session.add_all([user, cat])
+        await session.flush()
+        t = MessageTemplate(
+            title="GlobalPag", content="x", category_id=cat.id, author_id=user.id
+        )
+        session.add(t)
+        await session.commit()
+
+    repo = MessageTemplateRepository(db_manager)
+    page = await repo.get_templates_paginated(offset=0, limit=10, global_only=True)
+    assert all(t.chat_id is None for t in page)
+
+
+@pytest.mark.asyncio
+async def test_get_template_and_increase_usage_count(db_manager: Any) -> None:
+    """get_template_and_increase_usage_count находит шаблон и увеличивает usage_count."""
+    async with db_manager.session() as session:
+        user = User(tg_id="tpl_use", username="tpl_use")
+        chat = ChatSession(chat_id="-100_use", title="Use")
+        cat = TemplateCategory(name="CatUse", sort_order=0)
+        session.add_all([user, chat, cat])
+        await session.flush()
+        t = MessageTemplate(
+            title="UseMe",
+            content="C",
+            category_id=cat.id,
+            author_id=user.id,
+            usage_count=0,
+        )
+        session.add(t)
+        await session.commit()
+        tid = t.id
+
+    repo = MessageTemplateRepository(db_manager)
+    found = await repo.get_template_and_increase_usage_count(tid, "-100_use")
+    assert found is not None
+    assert found.usage_count == 1
+    again = await repo.get_template_by_id(tid)
+    assert again is not None
+    assert again.usage_count == 1
+
+
+@pytest.mark.asyncio
+async def test_get_template_and_increase_usage_count_not_found(db_manager: Any) -> None:
+    """get_template_and_increase_usage_count для несуществующего id возвращает None."""
+    repo = MessageTemplateRepository(db_manager)
+    assert await repo.get_template_and_increase_usage_count(99999, "-100") is None
+
+
+@pytest.mark.asyncio
+async def test_update_template_content_text_only(db_manager: Any) -> None:
+    """update_template_content обновляет только текст."""
+    async with db_manager.session() as session:
+        user = User(tg_id="tpl_cont", username="tpl_cont")
+        cat = TemplateCategory(name="CatCont", sort_order=0)
+        session.add_all([user, cat])
+        await session.flush()
+        t = MessageTemplate(
+            title="ContT", content="Old", category_id=cat.id, author_id=user.id
+        )
+        session.add(t)
+        await session.commit()
+        tid = t.id
+
+    repo = MessageTemplateRepository(db_manager)
+    ok = await repo.update_template_content(tid, {"text": "New content"})
+    assert ok is True
+    found = await repo.get_template_by_id(tid)
+    assert found is not None
+    assert found.content == "New content"
+
+
+@pytest.mark.asyncio
+async def test_update_template_content_not_found(db_manager: Any) -> None:
+    """update_template_content для несуществующего id возвращает False."""
+    repo = MessageTemplateRepository(db_manager)
+    assert await repo.update_template_content(99999, {"text": "x"}) is False

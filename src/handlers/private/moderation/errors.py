@@ -11,6 +11,7 @@ from aiogram import types
 from aiogram.fsm.context import FSMContext
 
 from keyboards.inline.moderation import moderation_menu_ikb
+from utils.moderation import format_violator_display
 from utils.send_message import safe_edit_message
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,8 @@ async def handle_moderation_error(
 async def handle_chats_error(
     callback: types.CallbackQuery,
     state: FSMContext,
-    violator_username: str,
+    violator_username: str = "",
+    violator_tgid: str = "",
     error: Exception = None,
 ) -> None:
     """Обрабатывает ошибки, возникающие при получении списка чатов.
@@ -68,17 +70,14 @@ async def handle_chats_error(
         callback: Объект callback-запроса.
         state: Контекст состояния FSM.
         violator_username: Username пользователя, для которого искались чаты.
+        violator_tgid: Telegram ID пользователя.
         error: Объект исключения (если есть) для логирования.
     """
     if error:
         logger.error("Ошибка получения чатов: %s", error, exc_info=True)
         text = "❌️ Произошла ошибка при получении списка чатов. Попробуйте еще раз."
     else:
-        violator_display = (
-            f"@{violator_username}"
-            if (violator_username and violator_username != "hidden")
-            else (violator_username or "—")
-        )
+        violator_display = format_violator_display(violator_username, violator_tgid)
         text = (
             f"❌️ Мы не нашли чатов, где {violator_display} получил ограничение. "
             "Перепроверьте введённые данные, либо попробуйте снять ограничение вручную."

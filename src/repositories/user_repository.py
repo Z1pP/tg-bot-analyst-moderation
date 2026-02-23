@@ -77,9 +77,9 @@ class UserRepository(BaseRepository):
                 ) from e
 
     async def update_user(
-        self, user_id: int, username: str, check_changes: bool = False
+        self, user_id: int, username: Optional[str], check_changes: bool = False
     ) -> Optional[User]:
-        """Обновляет username пользователя."""
+        """Обновляет username пользователя (None — очищает устаревший username)."""
         async with self._db.session() as session:
             try:
                 user = await session.get(User, user_id)

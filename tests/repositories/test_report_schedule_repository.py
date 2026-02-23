@@ -126,3 +126,35 @@ async def test_update_schedule_not_found(db_manager: Any) -> None:
     """update_schedule возвращает None для несуществующего id."""
     repo = ReportScheduleRepository(db_manager)
     assert await repo.update_schedule(99999, enabled=False) is None
+
+
+def test_calculate_next_run_today_future(db_manager: Any) -> None:
+    """_calculate_next_run: если время отправки ещё не прошло сегодня — следующее сегодня."""
+    from types import SimpleNamespace
+
+    repo = ReportScheduleRepository(db_manager)
+    schedule = SimpleNamespace(
+        id=1,
+        timezone="Europe/Moscow",
+        sent_time=time(23, 0),
+    )
+    now_utc = datetime(2025, 2, 20, 19, 0, tzinfo=timezone.utc)
+    next_run = repo._calculate_next_run(schedule, now_utc)
+    assert next_run > now_utc
+    assert (next_run - now_utc).total_seconds() >= 120
+
+
+def test_calculate_next_run_already_passed(db_manager: Any) -> None:
+    """_calculate_next_run: если время прошло — следующее завтра."""
+    from types import SimpleNamespace
+
+    repo = ReportScheduleRepository(db_manager)
+    schedule = SimpleNamespace(
+        id=1,
+        timezone="UTC",
+        sent_time=time(10, 0),
+    )
+    now_utc = datetime(2025, 2, 20, 12, 0, tzinfo=timezone.utc)
+    next_run = repo._calculate_next_run(schedule, now_utc)
+    assert next_run > now_utc
+    assert next_run.day >= 20
