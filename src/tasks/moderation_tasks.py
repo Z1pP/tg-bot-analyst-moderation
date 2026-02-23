@@ -100,18 +100,18 @@ async def kick_unverified_member_task(
 
 
 @broker.task
-async def delete_welcome_message_task(
+async def delete_message_from_chat(
     chat_id: int,
     message_id: int,
-    delay_seconds: int = 3600,
-):
+    delay_seconds: int = 1800,
+) -> None:
     """
-    Задача для удаления приветственного сообщения через заданное время.
+    Задача для удаления сообщения бота через заданное время.
 
     Args:
         chat_id: ID чата
         message_id: ID сообщения
-        delay_seconds: Задержка перед удалением в секундах
+        delay_seconds: Задержка перед удалением в секундах (по умолчанию 30 минут)
     """
     if delay_seconds > 0:
         logger.info(
@@ -123,7 +123,7 @@ async def delete_welcome_message_task(
         await asyncio.sleep(delay_seconds)
 
     logger.info(
-        "Выполнение задачи удаления приветственного сообщения: chat_id=%s, message_id=%s",
+        "Выполнение задачи удаления сообщения: chat_id=%s, message_id=%s",
         chat_id,
         message_id,
     )
@@ -135,13 +135,13 @@ async def delete_welcome_message_task(
             message_id=message_id,
         )
         logger.info(
-            "Приветственное сообщение успешно удалено: chat_id=%s, message_id=%s",
+            "Сообщение успешно удалено: chat_id=%s, message_id=%s",
             chat_id,
             message_id,
         )
     except Exception as e:
         logger.error(
-            "Ошибка при удалении приветственного сообщения chat_id=%s, message_id=%s: %s",
+            "Ошибка при удалении сообщения chat_id=%s, message_id=%s: %s",
             chat_id,
             message_id,
             e,
