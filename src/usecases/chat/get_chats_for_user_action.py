@@ -1,10 +1,17 @@
+import logging
 from typing import List, Optional
 
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramBadRequest,
+    TelegramForbiddenError,
+)
 
 from dto import ChatDTO
 from repositories import ChatTrackingRepository
 from services import BotPermissionService, UserService
+
+logger = logging.getLogger(__name__)
 
 
 class GetChatsForUserActionUseCase:
@@ -53,8 +60,24 @@ class GetChatsForUserActionUseCase:
                 # Проверяем что пользователь член группы и не забанен
                 if member.status not in ["kicked", "left"]:
                     result_chats.append(ChatDTO.from_model(chat))
-            except TelegramAPIError:
-                # Пользователь не найден в чате или ошибка API — пропускаем чат
+            except (TelegramBadRequest, TelegramForbiddenError) as e:
+                # Пользователь не найден в чате или бот не имеет доступа — ожидаемо
+                logger.debug(
+                    "get_chat_member: чат %s, user %s — %s",
+                    chat.chat_id,
+                    user_tgid,
+                    e,
+                )
+                continue
+            except TelegramAPIError as e:
+                # Непредвиденная ошибка API (flood control и др.) — логируем как warning
+                logger.warning(
+                    "get_chat_member: неожиданная ошибка для чата %s, user %s — %s",
+                    chat.chat_id,
+                    user_tgid,
+                    e,
+                    exc_info=True,
+                )
                 continue
 
         return result_chats
