@@ -5,13 +5,13 @@ from aiogram.enums import ChatType
 from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 from punq import Container
 
-from constants import Dialog
+from constants import WELCOME_MESSAGE_NOTIFICATION_TTL, Dialog
 from constants.callback import CallbackData
 from exceptions.base import BotBaseException
 from keyboards.inline.antibot import confirm_humanity_verification_ikb
 from keyboards.inline.chats import hide_notification_ikb
 from tasks.moderation_tasks import (
-    delete_welcome_message_task,
+    delete_message_from_chat,
     kick_unverified_member_task,
 )
 from usecases.archive import NotifyArchiveChatNewMemberUseCase
@@ -243,8 +243,8 @@ async def _handle_new_member(
         )
 
         if restriction_data.auto_delete_welcome_text:
-            await delete_welcome_message_task.kiq(
+            await delete_message_from_chat.kiq(
                 chat_id=chat.id,
                 message_id=sent_message.message_id,
-                delay_seconds=3600,
+                delay_seconds=WELCOME_MESSAGE_NOTIFICATION_TTL,
             )
