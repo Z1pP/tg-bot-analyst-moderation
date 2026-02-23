@@ -259,7 +259,9 @@ class UserService:
             await self._cache.set(cache_key, admins, ttl=300)  # Кешируем на 5 минут
         return admins if admins is not None else []
 
-    async def update_user_role(self, user_id: int, new_role: str) -> Optional[User]:
+    async def update_user_role(
+        self, user_id: int, new_role: UserRole
+    ) -> Optional[User]:
         """
         Обновляет роль пользователя и синхронизирует кеш.
         """
