@@ -1,4 +1,5 @@
 from .analytics import analytics_menu_ikb
+from .antibot import confirm_humanity_verification_ikb
 from .calendar_kb import CalendarKeyboard
 from .menu import main_menu_ikb
 from .punishments import (
@@ -45,4 +46,5 @@ __all__ = [
     "punishment_action_ikb",
     "punishment_next_step_ikb",
     "analytics_menu_ikb",
+    "confirm_humanity_verification_ikb",
 ]
