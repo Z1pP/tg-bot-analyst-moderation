@@ -4,6 +4,7 @@ from typing import Optional
 from aiogram.exceptions import TelegramForbiddenError
 from aiogram.types import ChatIdUnion
 
+from constants import PUNISHMENT_NOTIFICATION_TTL
 from constants.enums import UserRole
 from dto import ModerationActionDTO
 from exceptions.moderation import (
@@ -20,6 +21,7 @@ from keyboards.inline.users import hide_notification_ikb
 from models import ChatSession, User
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services import BotMessageService, BotPermissionService, ChatService, UserService
+from tasks.moderation_tasks import delete_message_from_chat
 
 
 @dataclass
@@ -211,10 +213,16 @@ class ModerationUseCase:
         """Отправляет уведомления в чат и администратору."""
         # Отправляем уведомление в чат только если не из админ-панели
         if reason_text:
-            await self.bot_message_service.send_chat_message(
+            sent = await self.bot_message_service.send_chat_message(
                 chat_tgid=context.dto.chat_tgid,
                 text=reason_text,
             )
+            if sent:
+                await delete_message_from_chat.kiq(
+                    chat_id=int(context.dto.chat_tgid),
+                    message_id=sent.message_id,
+                    delay_seconds=PUNISHMENT_NOTIFICATION_TTL,
+                )
 
         try:
             if admin_answer_text and not context.dto.from_admin_panel:
