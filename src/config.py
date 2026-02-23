@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     REDIS_PORT: int
     REDIS_DB: int
 
+    # Настройки RabbitMQ
+    RABBITMQ_HOST: str
+    RABBITMQ_PORT: int
+    RABBITMQ_USER: str
+    RABBITMQ_PASS: str
+
     # Настройки кэширования
     SUMMARY_CACHE_TTL_MINUTES: int = 60
     SUMMARY_INVALIDATION_THRESHOLD: int = 50
