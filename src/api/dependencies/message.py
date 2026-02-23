@@ -3,12 +3,9 @@ from typing import cast
 from fastapi import Depends
 from punq import Container
 
-from container import container
 from usecases.message import SaveMessageUseCase
 
-
-def get_container() -> Container:
-    return container
+from .container import get_container
 
 
 def get_save_message_usecase(
