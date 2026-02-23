@@ -162,7 +162,6 @@ async def run_polling():
     await set_bot_commands(bot)
 
     logger.info("Запуск polling...")
-
     await dp.start_polling(bot, allowed_updates=ALLOWED_UPDATES)
 
 
