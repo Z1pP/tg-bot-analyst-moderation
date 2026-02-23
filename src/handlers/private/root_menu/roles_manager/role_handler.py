@@ -7,9 +7,9 @@ from punq import Container
 
 from constants import PROTECTED_USER_TG_ID, Dialog
 from constants.callback import CallbackData
+from constants.enums import UserRole
 from exceptions import BusinessLogicException
 from exceptions.base import BotBaseException
-from constants.enums import UserRole
 from keyboards.inline.roles import cancel_role_select_ikb, role_select_ikb
 from states import RoleState
 from usecases.user import (
@@ -135,6 +135,11 @@ async def process_user_data_input(
     await state.clear()
 
 
+_ROLES_ALLOWED_TO_CHANGE = frozenset(
+    {UserRole.DEV, UserRole.ROOT, UserRole.OWNER, UserRole.ADMIN}
+)
+
+
 @router.callback_query(F.data.startswith(CallbackData.User.PREFIX_ROLE_SELECT))
 async def role_select_callback_handler(
     callback: CallbackQuery, container: Container
@@ -143,19 +148,19 @@ async def role_select_callback_handler(
     Обработчик выбора роли из inline клавиатуры.
     Формат callback_data: role_select__{user_id}__{role}
     """
-    await callback.answer()
-
     try:
         # Проверяем права администратора
         admin_tg_id = str(callback.from_user.id)
         get_by_tgid: GetUserByTgIdUseCase = container.resolve(GetUserByTgIdUseCase)
         admin_user = await get_by_tgid.execute(tg_id=admin_tg_id)
 
-        if not admin_user or admin_user.role != UserRole.ADMIN:
+        if not admin_user or admin_user.role not in _ROLES_ALLOWED_TO_CHANGE:
             await callback.answer(
                 "❌ У вас нет прав для выполнения этого действия", show_alert=True
             )
             return
+
+        await callback.answer()
         # Парсим callback_data
         callback_data = callback.data.replace(CallbackData.User.PREFIX_ROLE_SELECT, "")
         parts = callback_data.split("__")
@@ -235,7 +240,7 @@ async def role_select_callback_handler(
                 chat_id=callback.message.chat.id,
                 message_id=callback.message.message_id,
                 text=text,
-                reply_markup=role_select_ikb(),
+                reply_markup=role_select_ikb(user_id=user.id, current_role=new_role),
             )
             return
 
@@ -299,9 +304,7 @@ async def role_select_callback_handler(
             text=e.get_user_message(),
         )
     except ValueError as e:
-        logger.warning(
-            "Ошибка парсинга данных в role_select_callback_handler: %s", e
-        )
+        logger.warning("Ошибка парсинга данных в role_select_callback_handler: %s", e)
         await safe_edit_message(
             bot=callback.bot,
             chat_id=callback.message.chat.id,

@@ -2,7 +2,7 @@ import enum
 from typing import TYPE_CHECKING, Optional
 
 from aiogram.enums import ContentType
-from sqlalchemy import ForeignKey, Index, Integer, String, Text
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -75,6 +75,9 @@ class ChatMessage(BaseModel):
     )
 
     __table_args__ = (
+        UniqueConstraint(
+            "chat_id", "message_id", name="uq_chat_message_chat_id_message_id"
+        ),
         Index("idx_message_user", "user_id"),
         Index("idx_message_chat", "chat_id"),
         Index("idx_message_created", "created_at"),

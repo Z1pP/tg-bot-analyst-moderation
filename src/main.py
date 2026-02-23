@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 
+import uvicorn
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
@@ -107,8 +108,26 @@ def build_web_app() -> web.Application:
     return app
 
 
+async def run_fastapi() -> None:
+    """Запускает FastAPI (Mini App API) через uvicorn на порту API_PORT."""
+    from api.main import create_app as create_fastapi_app
+
+    api_port = int(settings.API_PORT)
+    fastapi_app = create_fastapi_app()
+    config = uvicorn.Config(
+        fastapi_app,
+        host="0.0.0.0",
+        port=api_port,
+        log_level="info",
+        access_log=False,
+    )
+    server = uvicorn.Server(config)
+    logger.info("FastAPI server starting on port %d", api_port)
+    await server.serve()
+
+
 async def run_webhook() -> None:
-    """Запускает бота в режиме webhook через aiohttp."""
+    """Запускает aiohttp (webhook) и FastAPI (Mini App API) параллельно."""
     logger.info("Запуск в режиме webhook...")
     await init_bot()
     app = build_web_app()
@@ -116,9 +135,12 @@ async def run_webhook() -> None:
     await runner.setup()
     site = web.TCPSite(runner, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
     await site.start()
-    logger.info("Webhook server started")
+    logger.info("Webhook server started on port %s", os.getenv("PORT", 8000))
     try:
-        await asyncio.Event().wait()
+        await asyncio.gather(
+            asyncio.Event().wait(),
+            run_fastapi(),
+        )
     finally:
         await runner.cleanup()
 

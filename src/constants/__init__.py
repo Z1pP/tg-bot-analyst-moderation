@@ -49,6 +49,11 @@ class InlineButtons:
         NO = "❌ Нет"
         TRY_AGAIN = "🔄 Попробовать ещё раз"
 
+    class Antibot:
+        """Кнопки для антибота"""
+
+        CONFIRM_HUMANITY = "🙋‍♂️ Я человек"
+
     class TemplateButtons:
         """Кнопки для действий с шаблонами"""
 

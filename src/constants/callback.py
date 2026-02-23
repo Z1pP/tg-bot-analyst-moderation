@@ -230,6 +230,13 @@ class TemplatesCallbackData:
     SHOW_MENU = "templates_menu"
 
 
+class AntibotCallbackData:
+    """Класс для хранения callback данных антибота"""
+
+    # Prefixes
+    CONFIRM_HUMANITY_PREFIX = "confirm_humanity__"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
@@ -249,3 +256,4 @@ class CallbackData:
     Help = HelpCallbackData
     News = NewsCallbackData
     Templates = TemplatesCallbackData
+    Antibot = AntibotCallbackData

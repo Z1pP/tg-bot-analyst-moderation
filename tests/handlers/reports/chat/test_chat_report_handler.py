@@ -50,7 +50,7 @@ async def test_get_chat_report_handler_success_shows_period(
         with patch(
             "handlers.private.reports.chat.chat_report_handler.time_period_ikb_chat",
             return_value=MagicMock(),
-        ) as mock_edit:
+        ):
             await get_chat_report_handler(callback=callback, state=state)
 
     callback.answer.assert_called_once()

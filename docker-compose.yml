@@ -24,6 +24,9 @@ x-db-env: &db-env
   PROD_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
   PROD_DB_URL_FOR_ALEMBIC: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
   REDIS_URL: redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/${REDIS_DB:-0}
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+  RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
   PYTHONPATH: /app/src
 
 services:
@@ -31,23 +34,32 @@ services:
     <<: *common-setup
     ports:
       - "8000:8000"
+      - "8080:8080"
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
       tunnel: { condition: service_started }
+      tunnel_api: { condition: service_started }
     environment:
       <<: *db-env
       SERVICE_NAME: bot
       USE_WEBHOOK: "True"
     command: >
       bash -c "
-        echo '⏳ Waiting for Cloudflare Tunnel...';
+        echo '⏳ Waiting for Cloudflare Tunnels...';
         until curl -s http://tunnel:4040/metrics | grep -q 'cloudflared_tunnel_user_hostnames_counts'; do
           sleep 2;
         done;
-        PUBLIC_URL=\$$(curl -s http://tunnel:4040/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
-        echo '🌐 Public URL: ' \$$PUBLIC_URL;
-        python src/main.py --webhook-url \$$PUBLIC_URL
+        until curl -s http://tunnel_api:4041/metrics | grep -q 'cloudflared_tunnel_user_hostnames_counts'; do
+          sleep 2;
+        done;
+        WEBHOOK_URL=\$$(curl -s http://tunnel:4040/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
+        API_PUBLIC_URL=\$$(curl -s http://tunnel_api:4041/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
+        echo '🌐 Webhook URL: ' \$$WEBHOOK_URL;
+        echo '🌐 API URL: ' \$$API_PUBLIC_URL;
+        export PUBLIC_URL=\$$API_PUBLIC_URL;
+        python src/main.py --webhook-url \$$WEBHOOK_URL
       "
 
   db:
@@ -79,10 +91,26 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - botnet
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    ports:
+      - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - botnet
 
@@ -93,11 +121,19 @@ services:
     networks:
       - botnet
 
+  tunnel_api:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --url http://bot:8080 --metrics 0.0.0.0:4041
+    networks:
+      - botnet
+
   scheduler:
     <<: *common-setup
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
     environment:
       <<: *db-env
       SERVICE_NAME: scheduler
@@ -108,6 +144,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
     environment:
       <<: *db-env
       SERVICE_NAME: analytics_scheduler
@@ -118,6 +155,7 @@ services:
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
     environment:
       <<: *db-env
       SERVICE_NAME: worker
@@ -130,3 +168,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:

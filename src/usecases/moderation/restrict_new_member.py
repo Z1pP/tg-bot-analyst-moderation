@@ -4,14 +4,13 @@ from dto.moderation import NewMemberRestrictionDTO
 from services import ChatService
 from services.messaging.bot_message_service import BotMessageService
 from services.permissions import BotPermissionService
-from utils.antibot_utils import encode_antibot_params
 
 logger = logging.getLogger(__name__)
 
 
 class RestrictNewMemberUseCase:
     """
-    UseCase для ограничения нового участника и генерации ссылки на антибот.
+    UseCase для ограничения нового участника (мут) перед прохождением антибот-проверки.
     """
 
     def __init__(
@@ -28,7 +27,6 @@ class RestrictNewMemberUseCase:
         self,
         chat_tgid: str,
         user_id: int,
-        bot_username: str,
     ) -> NewMemberRestrictionDTO:
         """
         Проверяет настройки чата, мьютит пользователя и возвращает DTO с данными для ограничения.
@@ -36,17 +34,15 @@ class RestrictNewMemberUseCase:
         Args:
             chat_tgid: Telegram ID чата
             user_id: Telegram ID пользователя
-            bot_username: Username бота для генерации ссылки
 
         Returns:
-            NewMemberRestrictionDTO с информацией о верификации и приветствии.
+            NewMemberRestrictionDTO с информацией о приветствии и настройках антибота.
         """
         chat = await self.chat_service.get_chat(chat_tgid=chat_tgid)
 
         if not chat:
             return NewMemberRestrictionDTO()
 
-        verify_link = None
         if chat.is_antibot_enabled:
             # Проверяем права бота на модерацию
             can_moderate = await self.bot_permission_service.can_moderate(
@@ -61,11 +57,7 @@ class RestrictNewMemberUseCase:
                     duration_seconds=0,
                 )
 
-                if success:
-                    # Генерируем ссылку
-                    payload = encode_antibot_params(chat_tgid, user_id)
-                    verify_link = f"https://t.me/{bot_username}?start={payload}"
-                else:
+                if not success:
                     logger.error(
                         "Не удалось ограничить пользователя %s в чате %s для антибот-проверки",
                         user_id,
@@ -78,7 +70,6 @@ class RestrictNewMemberUseCase:
                 )
 
         return NewMemberRestrictionDTO(
-            verify_link=verify_link,
             welcome_text=chat.welcome_text,
             is_antibot_enabled=chat.is_antibot_enabled,
             show_welcome_text=chat.show_welcome_text,

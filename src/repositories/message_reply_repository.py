@@ -58,7 +58,10 @@ class MessageReplyRepository(BaseRepository):
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_replies_by_period_date_for_users", "original": str(e)}
+                    details={
+                        "context": "get_replies_by_period_date_for_users",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def get_replies_by_chat_id_and_period(
@@ -102,7 +105,10 @@ class MessageReplyRepository(BaseRepository):
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_replies_by_chat_id_and_period", "original": str(e)}
+                    details={
+                        "context": "get_replies_by_chat_id_and_period",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def get_replies_by_period_date_and_chats(
@@ -127,10 +133,15 @@ class MessageReplyRepository(BaseRepository):
                 result = await session.execute(query)
                 return list(result.scalars().all())
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении ответов по чатам: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении ответов по чатам: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_replies_by_period_date_and_chats", "original": str(e)}
+                    details={
+                        "context": "get_replies_by_period_date_and_chats",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def bulk_create_replies(self, dtos: List[BufferedMessageReplyDTO]) -> int:
@@ -162,7 +173,7 @@ class MessageReplyRepository(BaseRepository):
                         ChatMessage.message_id == message_id_str,
                     )
                     result = await session.execute(query)
-                    message = result.scalar_one_or_none()
+                    message = result.scalars().first()
                     if message:
                         message_lookup[(chat_id, message_id_str)] = message.id
                     else:

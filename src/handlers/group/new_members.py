@@ -6,11 +6,16 @@ from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 from punq import Container
 
 from constants import Dialog
+from constants.callback import CallbackData
 from exceptions.base import BotBaseException
+from keyboards.inline.antibot import confirm_humanity_verification_ikb
 from keyboards.inline.chats import hide_notification_ikb
-from tasks.moderation_tasks import delete_welcome_message_task
+from tasks.moderation_tasks import (
+    delete_welcome_message_task,
+    kick_unverified_member_task,
+)
 from usecases.archive import NotifyArchiveChatNewMemberUseCase
-from usecases.moderation import RestrictNewMemberUseCase
+from usecases.moderation import RestrictNewMemberUseCase, VerifyMemberUseCase
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -69,6 +74,45 @@ async def process_chat_member_joined(
             parse_mode="HTML",
             reply_markup=hide_notification_ikb(),
         )
+
+
+@router.callback_query(
+    F.data.startswith(CallbackData.Antibot.CONFIRM_HUMANITY_PREFIX),
+    F.message.chat.type.in_([ChatType.GROUP, ChatType.SUPERGROUP]),
+)
+async def process_humanity_verification(
+    callback: types.CallbackQuery,
+    container: Container,
+) -> None:
+    """Обработчик нажатия кнопки антибот-верификации в групповом чате."""
+    raw_suffix = callback.data.removeprefix(
+        CallbackData.Antibot.CONFIRM_HUMANITY_PREFIX
+    )
+
+    try:
+        target_user_id = int(raw_suffix)
+    except ValueError:
+        logger.warning(
+            "Некорректный формат callback данных антибота: %s",
+            callback.data,
+        )
+        await callback.answer()
+        return
+
+    if callback.from_user.id != target_user_id:
+        await callback.answer(Dialog.Antibot.VERIFIED_ERROR_USER, show_alert=True)
+        return
+
+    verify_usecase: VerifyMemberUseCase = container.resolve(VerifyMemberUseCase)
+    success = await verify_usecase.execute(
+        user_id=callback.from_user.id,
+        chat_id=str(callback.message.chat.id),
+    )
+
+    if success and callback.message:
+        await callback.message.delete()
+
+    await callback.answer(Dialog.Antibot.VERIFIED_SUCCESS, show_alert=False)
 
 
 async def _notify_archive(
@@ -153,17 +197,15 @@ async def _handle_new_member(
     restrict_usecase: RestrictNewMemberUseCase = container.resolve(
         RestrictNewMemberUseCase
     )
-    bot_info = await bot.get_me()
     restriction_data = await restrict_usecase.execute(
         chat_tgid=str(chat.id),
         user_id=user.id,
-        bot_username=bot_info.username,
     )
 
     username_val = user.username or user.first_name or str(user.id)
 
-    # Сценарий 1 и 3: Антибот включен
-    if restriction_data.is_antibot_enabled and restriction_data.verify_link:
+    # Сценарий 1: Антибот включён — мут + сообщение с кнопкой верификации
+    if restriction_data.is_antibot_enabled:
         greeting_text = ""
         if restriction_data.show_welcome_text:
             greeting_text = _get_formatted_welcome_text(
@@ -171,22 +213,21 @@ async def _handle_new_member(
                 username=username_val,
             )
 
-        greeting_template = greeting_text + Dialog.Antibot.VERIFIED_LINK.format(
-            link=restriction_data.verify_link
-        )
+        greeting_template = greeting_text + Dialog.Antibot.VERIFY_BUTTON_PROMPT
 
         sent_message = await bot.send_message(
             chat_id=chat.id,
             text=greeting_template,
             parse_mode="HTML",
+            reply_markup=confirm_humanity_verification_ikb(user.id),
         )
 
-        if restriction_data.auto_delete_welcome_text:
-            await delete_welcome_message_task.kiq(
-                chat_id=chat.id,
-                message_id=sent_message.message_id,
-                delay_seconds=3600,
-            )
+        await kick_unverified_member_task.kiq(
+            chat_id=chat.id,
+            message_id=sent_message.message_id,
+            user_id=user.id,
+            delay_seconds=3600,
+        )
 
     # Сценарий 2: Антибот выключен, но приветствие включено
     elif not restriction_data.is_antibot_enabled and restriction_data.show_welcome_text:

@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
 from .health import router as health_router
-from .messages import router as message_router
+from .miniapp import router as miniapp_router
 
 router = APIRouter()
 
 router.include_router(health_router)
-router.include_router(message_router)
+router.include_router(miniapp_router)
