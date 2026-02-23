@@ -47,6 +47,7 @@ services:
         done;
         PUBLIC_URL=\$$(curl -s http://tunnel:4040/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
         echo '🌐 Public URL: ' \$$PUBLIC_URL;
+        export PUBLIC_URL=\$$PUBLIC_URL;
         python src/main.py --webhook-url \$$PUBLIC_URL
       "
 
