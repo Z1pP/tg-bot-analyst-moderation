@@ -5,7 +5,6 @@ POST /api/miniapp/moderation/warn    — выдать предупреждени
 POST /api/miniapp/moderation/ban     — заблокировать пользователя
 """
 
-import json
 import logging
 from typing import Optional, cast
 
@@ -13,9 +12,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from punq import Container
 from pydantic import BaseModel
 
-from api.dependencies.miniapp import TelegramInitData
+from api.dependencies.container import get_container
+from api.dependencies.miniapp import (
+    TelegramInitData,
+    tg_id_from_init_data,
+    username_from_init_data,
+)
 from constants.punishment import PunishmentActions as Actions
-from container import container as app_container
 from dto.moderation import ModerationActionDTO
 from exceptions.base import BotBaseException
 from repositories import AdminActionLogRepository, UserRepository
@@ -25,28 +28,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-def get_container() -> Container:
-    return app_container
-
-
-def _tg_id_from_init_data(init_data: dict) -> str:
-    user_raw = init_data.get("user", "{}")
-    try:
-        user = json.loads(user_raw) if isinstance(user_raw, str) else user_raw
-        return str(user.get("id", "0"))
-    except Exception:
-        return "0"
-
-
-def _username_from_init_data(init_data: dict) -> str:
-    user_raw = init_data.get("user", "{}")
-    try:
-        user = json.loads(user_raw) if isinstance(user_raw, str) else user_raw
-        return user.get("username", "")
-    except Exception:
-        return ""
-
-
 @router.get("/moderation/log")
 async def get_moderation_log(
     init_data: TelegramInitData,
@@ -54,7 +35,7 @@ async def get_moderation_log(
     limit: int = Query(default=20, ge=1, le=100),
     dc: Container = Depends(get_container),
 ):
-    tg_id = _tg_id_from_init_data(init_data)
+    tg_id = tg_id_from_init_data(init_data)
     user_repo = cast(UserRepository, dc.resolve(UserRepository))
     log_repo = cast(AdminActionLogRepository, dc.resolve(AdminActionLogRepository))
 
@@ -94,8 +75,8 @@ async def perform_moderation_action(
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
 ):
-    tg_id = _tg_id_from_init_data(init_data)
-    username = _username_from_init_data(init_data)
+    tg_id = tg_id_from_init_data(init_data)
+    username = username_from_init_data(init_data)
 
     user_repo = cast(UserRepository, dc.resolve(UserRepository))
     chat_repo = cast(ChatRepository, dc.resolve(ChatRepository))
