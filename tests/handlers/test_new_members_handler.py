@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from aiogram.types import Chat, ChatMemberMember, ChatMemberUpdated, User
@@ -36,10 +36,8 @@ async def test_process_chat_member_joined_human_with_antibot(
 
     mock_container.resolve.side_effect = resolve_side_effect
 
-    verify_link = "https://t.me/my_bot?start=verify_123"
     custom_welcome = "Добро пожаловать, {username}!"
     restrict_usecase.execute.return_value = NewMemberRestrictionDTO(
-        verify_link=verify_link,
         welcome_text=custom_welcome,
         is_antibot_enabled=True,
         show_welcome_text=True,
@@ -70,27 +68,27 @@ async def test_process_chat_member_joined_human_with_antibot(
     event.new_chat_member = new_chat_member
 
     bot_mock = AsyncMock()
-    bot_info = MagicMock(spec=User)
-    bot_info.id = 999
-    bot_info.username = "my_bot"
-    bot_mock.get_me.return_value = bot_info
     bot_mock.send_message = AsyncMock()
 
     # 3. Вызов хендлера
-    await process_chat_member_joined(
-        event=event,
-        container=mock_container,
-        bot=bot_mock,
-    )
+    with patch(
+        "handlers.group.new_members.kick_unverified_member_task.kiq",
+        new_callable=AsyncMock,
+    ):
+        await process_chat_member_joined(
+            event=event,
+            container=mock_container,
+            bot=bot_mock,
+        )
 
     # 4. Проверки
     restrict_usecase.execute.assert_called_once_with(
-        chat_tgid=str(chat_id), user_id=user_id, bot_username="my_bot"
+        chat_tgid=str(chat_id), user_id=user_id
     )
 
-    expected_text = custom_welcome.format(
-        username=username
-    ) + Dialog.Antibot.VERIFIED_LINK.format(link=verify_link)
+    expected_text = (
+        custom_welcome.format(username=username) + Dialog.Antibot.VERIFY_BUTTON_PROMPT
+    )
     bot_mock.send_message.assert_called_once()
     _, kwargs = bot_mock.send_message.call_args
     assert kwargs["chat_id"] == chat_id
