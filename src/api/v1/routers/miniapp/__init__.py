@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from .analytics import router as analytics_router
 from .chats import router as chats_router
 from .moderation import router as moderation_router
 from .stats import router as stats_router
@@ -11,3 +12,4 @@ router.include_router(stats_router)
 router.include_router(chats_router)
 router.include_router(users_router)
 router.include_router(moderation_router)
+router.include_router(analytics_router)
