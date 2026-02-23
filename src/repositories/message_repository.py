@@ -7,8 +7,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 from dto.buffer import BufferedMessageDTO
-from exceptions import DatabaseException
 from dto.daily_activity import UserDailyActivityDTO
+from exceptions import DatabaseException
 from models import ChatMessage, User
 from repositories.base import BaseRepository
 from utils.date_utils import validate_and_normalize_period
@@ -106,7 +106,10 @@ class MessageRepository(BaseRepository):
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_messages_by_period_date_for_users", "original": str(e)}
+                    details={
+                        "context": "get_messages_by_period_date_for_users",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def get_messages_by_chat_id_and_period(
@@ -156,7 +159,10 @@ class MessageRepository(BaseRepository):
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_messages_by_chat_id_and_period", "original": str(e)}
+                    details={
+                        "context": "get_messages_by_chat_id_and_period",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def get_daily_top_users(
@@ -251,10 +257,15 @@ class MessageRepository(BaseRepository):
                 result = await session.execute(query)
                 return list(result.scalars().all())
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении сообщений по чатам: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении сообщений по чатам: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_messages_by_period_date_and_chats", "original": str(e)}
+                    details={
+                        "context": "get_messages_by_period_date_and_chats",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def bulk_create_messages(self, dtos: List[BufferedMessageDTO]) -> int:
@@ -331,4 +342,32 @@ class MessageRepository(BaseRepository):
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "count_messages_since", "original": str(e)}
+                ) from e
+
+    async def count_messages_by_date_range(self, start: datetime, end: datetime) -> int:
+        """Считает количество текстовых сообщений во всех чатах за указанный период."""
+        async with self._db.session() as session:
+            try:
+                query = select(func.count(ChatMessage.id)).where(
+                    ChatMessage.created_at >= start,
+                    ChatMessage.created_at <= end,
+                    ChatMessage.content_type == "text",
+                    ChatMessage.text.is_not(None),
+                )
+                result = await session.execute(query)
+                return result.scalar() or 0
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Ошибка при подсчёте сообщений за период %s — %s: %s",
+                    start,
+                    end,
+                    e,
+                    exc_info=True,
+                )
+                await session.rollback()
+                raise DatabaseException(
+                    details={
+                        "context": "count_messages_by_date_range",
+                        "original": str(e),
+                    }
                 ) from e
