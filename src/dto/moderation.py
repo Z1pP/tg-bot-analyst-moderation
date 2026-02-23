@@ -7,7 +7,6 @@ from constants.punishment import PunishmentActions as Actions
 
 
 class NewMemberRestrictionDTO(BaseModel):
-    verify_link: Optional[str] = None
     welcome_text: Optional[str] = None
     is_antibot_enabled: bool = False
     show_welcome_text: bool = False
