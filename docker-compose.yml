@@ -31,24 +31,31 @@ services:
     <<: *common-setup
     ports:
       - "8000:8000"
+      - "8080:8080"
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
       tunnel: { condition: service_started }
+      tunnel_api: { condition: service_started }
     environment:
       <<: *db-env
       SERVICE_NAME: bot
       USE_WEBHOOK: "True"
     command: >
       bash -c "
-        echo '⏳ Waiting for Cloudflare Tunnel...';
+        echo '⏳ Waiting for Cloudflare Tunnels...';
         until curl -s http://tunnel:4040/metrics | grep -q 'cloudflared_tunnel_user_hostnames_counts'; do
           sleep 2;
         done;
-        PUBLIC_URL=\$$(curl -s http://tunnel:4040/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
-        echo '🌐 Public URL: ' \$$PUBLIC_URL;
-        export PUBLIC_URL=\$$PUBLIC_URL;
-        python src/main.py --webhook-url \$$PUBLIC_URL
+        until curl -s http://tunnel_api:4041/metrics | grep -q 'cloudflared_tunnel_user_hostnames_counts'; do
+          sleep 2;
+        done;
+        WEBHOOK_URL=\$$(curl -s http://tunnel:4040/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
+        API_PUBLIC_URL=\$$(curl -s http://tunnel_api:4041/metrics | grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1);
+        echo '🌐 Webhook URL: ' \$$WEBHOOK_URL;
+        echo '🌐 API URL: ' \$$API_PUBLIC_URL;
+        export PUBLIC_URL=\$$API_PUBLIC_URL;
+        python src/main.py --webhook-url \$$WEBHOOK_URL
       "
 
   db:
@@ -91,6 +98,13 @@ services:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --url http://bot:8000 --metrics 0.0.0.0:4040
+    networks:
+      - botnet
+
+  tunnel_api:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --url http://bot:8080 --metrics 0.0.0.0:4041
     networks:
       - botnet
 
