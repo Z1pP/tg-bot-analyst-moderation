@@ -59,7 +59,7 @@ async def test_get_all_users_report_handler_no_chats_shows_instructions(
         with patch(
             "handlers.private.reports.all_users.all_users_report_handler.all_users_actions_ikb",
             return_value=MagicMock(),
-        ) as mock_edit:
+        ):
             await get_all_users_report_handler(
                 callback=callback, state=state, container=container
             )
@@ -90,7 +90,7 @@ async def test_get_all_users_report_handler_success_shows_period(
         with patch(
             "handlers.private.reports.all_users.all_users_report_handler.time_period_ikb_all_users",
             return_value=MagicMock(),
-        ) as mock_edit:
+        ):
             await get_all_users_report_handler(
                 callback=callback, state=state, container=container
             )
