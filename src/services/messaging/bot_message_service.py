@@ -280,7 +280,9 @@ class BotMessageService:
             logger.error("Не удалось удалить сообщение в чате %s: %s", chat_id, e)
             return False
         except (OSError, asyncio.TimeoutError, ConnectionError) as e:
-            logger.error("Сетевая ошибка при удалении сообщения в чате %s: %s", chat_id, e)
+            logger.error(
+                "Сетевая ошибка при удалении сообщения в чате %s: %s", chat_id, e
+            )
             return False
 
     async def apply_punishment(
@@ -510,6 +512,32 @@ class BotMessageService:
                 e,
             )
             return False
+
+    async def kick_chat_member(
+        self,
+        chat_tg_id: ChatIdUnion,
+        user_tg_id: int,
+    ) -> bool:
+        """
+        Кикает пользователя из чата (бан с последующим разбаном — пользователь может вернуться).
+
+        Проверяет право can_moderate. Внутри: ban_chat_member, затем unban_chat_member.
+
+        Args:
+            chat_tg_id: Telegram ID чата
+            user_tg_id: Telegram ID пользователя
+
+        Returns:
+            True если кик выполнен успешно
+        """
+        banned = await self.ban_chat_member(
+            chat_tg_id=chat_tg_id, user_tg_id=user_tg_id
+        )
+        if not banned:
+            return False
+        return await self.unban_chat_member(
+            chat_tg_id=chat_tg_id, user_tg_id=user_tg_id
+        )
 
     async def unmute_chat_member(
         self,
