@@ -302,9 +302,9 @@ async def handle_user_search_logic(
         )
         return
 
-    # --- Проверка защищенных пользователей (для бана, варна или амнистии)
+    # --- Проверка защищенных пользователей (только для бана и варна)
     if next_state.state.startswith(
-        ("BanUserStates", "WarnUserStates", "AmnestyStates")
+        ("BanUserStates", "WarnUserStates")
     ) and _is_protected_user(user, message.from_user.id):
         error_text = _get_protected_error_text_for_moderation_state(next_state)
         await handle_moderation_error(
