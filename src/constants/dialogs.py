@@ -247,6 +247,7 @@ class AntibotDialogs:
     )
     VERIFIED_SUCCESS = "✅ Проверка пройдена! Теперь вы можете отправлять сообщения."
     VERIFIED_ERROR_USER = "❌ Эта кнопка предназначена для другого пользователя."
+    VERIFIED_HAS_PUNISHMENTS = "У вас {warns_count} предупреждений. Следующее наказание: {next_punishment_description}."
 
 
 # --- Reports ---

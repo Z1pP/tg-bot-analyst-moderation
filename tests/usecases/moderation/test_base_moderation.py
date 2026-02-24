@@ -1,7 +1,7 @@
 """Тесты для usecases/moderation/base.py: _verify_bot_permissions, _cleanup_chat_messages, _notify_participants, _finalize_moderation."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -139,11 +139,15 @@ async def test_notify_participants_sends_reason_and_admin_message(
     base_usecase: ModerationUseCase, sample_context: ModerationContext
 ) -> None:
     """Отправляется reason в чат и admin_answer в ЛС."""
-    await base_usecase._notify_participants(
-        sample_context,
-        reason_text="Нарушитель наказан",
-        admin_answer_text="Готово",
-    )
+    with patch(
+        "tasks.moderation_tasks.delete_message_from_chat.kiq",
+        new_callable=AsyncMock,
+    ):
+        await base_usecase._notify_participants(
+            sample_context,
+            reason_text="Нарушитель наказан",
+            admin_answer_text="Готово",
+        )
     base_usecase.bot_message_service.send_chat_message.assert_called_once_with(
         chat_tgid="100", text="Нарушитель наказан"
     )
@@ -158,11 +162,15 @@ async def test_notify_participants_skips_private_if_from_admin_panel(
 ) -> None:
     """При from_admin_panel в ЛС админу не отправляется."""
     sample_context.dto.from_admin_panel = True
-    await base_usecase._notify_participants(
-        sample_context,
-        reason_text="Причина",
-        admin_answer_text="Ответ админу",
-    )
+    with patch(
+        "tasks.moderation_tasks.delete_message_from_chat.kiq",
+        new_callable=AsyncMock,
+    ):
+        await base_usecase._notify_participants(
+            sample_context,
+            reason_text="Причина",
+            admin_answer_text="Ответ админу",
+        )
     base_usecase.bot_message_service.send_chat_message.assert_called_once()
     base_usecase.bot_message_service.send_private_message.assert_not_called()
 
@@ -173,12 +181,16 @@ async def test_finalize_moderation_calls_forward_cleanup_archive_notify(
 ) -> None:
     """_finalize_moderation вызывает forward, cleanup, archive, notify."""
     base_usecase.bot_message_service.delete_message_from_chat.return_value = True
-    await base_usecase._finalize_moderation(
-        context=sample_context,
-        report_text="Отчёт",
-        reason_text="Причина",
-        admin_answer_text="",
-    )
+    with patch(
+        "tasks.moderation_tasks.delete_message_from_chat.kiq",
+        new_callable=AsyncMock,
+    ):
+        await base_usecase._finalize_moderation(
+            context=sample_context,
+            report_text="Отчёт",
+            reason_text="Причина",
+            admin_answer_text="",
+        )
     base_usecase.bot_message_service.forward_message.assert_called_once_with(
         chat_tgid="200",
         from_chat_tgid="100",

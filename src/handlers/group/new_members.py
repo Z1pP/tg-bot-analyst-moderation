@@ -5,13 +5,13 @@ from aiogram.enums import ChatType
 from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 from punq import Container
 
-from constants import Dialog
+from constants import WELCOME_MESSAGE_NOTIFICATION_TTL, Dialog
 from constants.callback import CallbackData
 from exceptions.base import BotBaseException
 from keyboards.inline.antibot import confirm_humanity_verification_ikb
 from keyboards.inline.chats import hide_notification_ikb
 from tasks.moderation_tasks import (
-    delete_welcome_message_task,
+    delete_message_from_chat,
     kick_unverified_member_task,
 )
 from usecases.archive import NotifyArchiveChatNewMemberUseCase
@@ -104,15 +104,15 @@ async def process_humanity_verification(
         return
 
     verify_usecase: VerifyMemberUseCase = container.resolve(VerifyMemberUseCase)
-    success = await verify_usecase.execute(
-        user_id=callback.from_user.id,
-        chat_id=str(callback.message.chat.id),
+    result = await verify_usecase.execute(
+        user_tgid=str(callback.from_user.id),
+        chat_tgid=str(callback.message.chat.id),
     )
 
-    if success and callback.message:
+    if callback.message:
         await callback.message.delete()
 
-    await callback.answer(Dialog.Antibot.VERIFIED_SUCCESS, show_alert=False)
+    await callback.answer(result.message, show_alert=True)
 
 
 async def _notify_archive(
@@ -243,8 +243,8 @@ async def _handle_new_member(
         )
 
         if restriction_data.auto_delete_welcome_text:
-            await delete_welcome_message_task.kiq(
+            await delete_message_from_chat.kiq(
                 chat_id=chat.id,
                 message_id=sent_message.message_id,
-                delay_seconds=3600,
+                delay_seconds=WELCOME_MESSAGE_NOTIFICATION_TTL,
             )
