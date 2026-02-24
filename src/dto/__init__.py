@@ -26,7 +26,7 @@ from .daily_activity import (
 )
 from .message import CreateMessageDTO, ResultMessageDTO
 from .message_reply import CreateMessageReplyDTO, ResultMessageReplyDTO
-from .moderation import ModerationActionDTO
+from .moderation import ModerationActionDTO, ResultVerifyMember
 from .punishment import (
     PunishmentCommandResultDTO,
     PunishmentLadderResultDTO,
@@ -73,6 +73,7 @@ __all__ = [
     "ResultMessageReplyDTO",
     # Moderation
     "ModerationActionDTO",
+    "ResultVerifyMember",
     # Reaction
     "MessageReactionDTO",
     # Report
