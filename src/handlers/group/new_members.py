@@ -104,15 +104,15 @@ async def process_humanity_verification(
         return
 
     verify_usecase: VerifyMemberUseCase = container.resolve(VerifyMemberUseCase)
-    success = await verify_usecase.execute(
-        user_id=callback.from_user.id,
-        chat_id=str(callback.message.chat.id),
+    result = await verify_usecase.execute(
+        user_tgid=str(callback.from_user.id),
+        chat_tgid=str(callback.message.chat.id),
     )
 
-    if success and callback.message:
+    if callback.message:
         await callback.message.delete()
 
-    await callback.answer(Dialog.Antibot.VERIFIED_SUCCESS, show_alert=False)
+    await callback.answer(result.message, show_alert=True)
 
 
 async def _notify_archive(
