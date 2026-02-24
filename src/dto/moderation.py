@@ -6,6 +6,15 @@ from pydantic import BaseModel, ConfigDict
 from constants.punishment import PunishmentActions as Actions
 
 
+class ResultVerifyMember(BaseModel):
+    """Результат верификации участника через кнопку антибота."""
+
+    unmuted: bool
+    message: str
+
+    model_config = ConfigDict(frozen=True)
+
+
 class NewMemberRestrictionDTO(BaseModel):
     welcome_text: Optional[str] = None
     is_antibot_enabled: bool = False
