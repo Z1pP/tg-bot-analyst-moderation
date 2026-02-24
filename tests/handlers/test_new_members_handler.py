@@ -1,14 +1,25 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from aiogram.types import Chat, ChatMemberMember, ChatMemberUpdated, User
+from aiogram.types import (
+    CallbackQuery,
+    Chat,
+    ChatMemberMember,
+    ChatMemberUpdated,
+    Message,
+    User,
+)
 from punq import Container
 
 from constants import Dialog
+from dto import ResultVerifyMember
 from dto.moderation import NewMemberRestrictionDTO
-from handlers.group.new_members import process_chat_member_joined
+from handlers.group.new_members import (
+    process_chat_member_joined,
+    process_humanity_verification,
+)
 from usecases.archive import NotifyArchiveChatNewMemberUseCase
-from usecases.moderation import RestrictNewMemberUseCase
+from usecases.moderation import RestrictNewMemberUseCase, VerifyMemberUseCase
 
 
 @pytest.mark.asyncio
@@ -156,3 +167,65 @@ async def test_process_chat_member_joined_bot_joining(
     restrict_usecase.execute.assert_not_called()
     notify_usecase.execute.assert_not_called()
     bot_mock.send_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_process_humanity_verification_deletes_message_and_answers_with_result(
+    mock_container: Container,
+) -> None:
+    """
+    При нажатии кнопки верификации: сообщение удаляется, ответ — result.message с show_alert.
+    """
+    from constants.callback import CallbackData
+
+    verify_usecase = AsyncMock(spec=VerifyMemberUseCase)
+    result_msg = "✅ Проверка пройдена! Теперь вы можете отправлять сообщения."
+    verify_usecase.execute.return_value = ResultVerifyMember(
+        unmuted=True,
+        message=result_msg,
+    )
+    mock_container.resolve.side_effect = lambda cls: (
+        verify_usecase if cls == VerifyMemberUseCase else MagicMock()
+    )
+
+    user_id = 456
+    chat_id = -100999
+    callback = MagicMock(spec=CallbackQuery)
+    callback.from_user = MagicMock(spec=User)
+    callback.from_user.id = user_id
+    callback.data = f"{CallbackData.Antibot.CONFIRM_HUMANITY_PREFIX}{user_id}"
+    callback.message = MagicMock(spec=Message)
+    callback.message.chat = MagicMock()
+    callback.message.chat.id = chat_id
+    callback.message.chat.type = "supergroup"
+    callback.message.delete = AsyncMock()
+    callback.answer = AsyncMock()
+
+    await process_humanity_verification(callback=callback, container=mock_container)
+
+    verify_usecase.execute.assert_called_once_with(
+        user_tgid=str(user_id),
+        chat_tgid=str(chat_id),
+    )
+    callback.message.delete.assert_called_once()
+    callback.answer.assert_called_once_with(result_msg, show_alert=True)
+
+
+@pytest.mark.asyncio
+async def test_process_humanity_verification_wrong_user_shows_error(
+    mock_container: Container,
+) -> None:
+    """Если на кнопку нажал не тот пользователь — показывается VERIFIED_ERROR_USER, use case не вызывается."""
+    callback = MagicMock(spec=CallbackQuery)
+    callback.from_user = MagicMock(spec=User)
+    callback.from_user.id = 111
+    callback.data = "confirm_humanity__222"  # кнопка для другого пользователя
+    callback.answer = AsyncMock()
+
+    await process_humanity_verification(callback=callback, container=mock_container)
+
+    mock_container.resolve.assert_not_called()
+    callback.answer.assert_called_once_with(
+        Dialog.Antibot.VERIFIED_ERROR_USER,
+        show_alert=True,
+    )
