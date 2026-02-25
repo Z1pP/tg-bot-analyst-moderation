@@ -62,9 +62,7 @@ class AnalyticsBufferService:
     async def _add_to_buffer(self, key: str, dto: BaseModel, entity_name: str) -> None:
         """Общий метод для добавления DTO в буфер Redis"""
         if not await self._ensure_connection():
-            logger.error(
-                "Redis недоступен, %s не добавлено в буфер", entity_name
-            )
+            logger.error("Redis недоступен, %s не добавлено в буфер", entity_name)
             return
 
         try:
@@ -102,14 +100,10 @@ class AnalyticsBufferService:
                     dto = dto_class.model_validate_json(json_str)
                     items.append(dto)
                 except (ValueError, UnicodeDecodeError, TypeError) as e:
-                    logger.error(
-                        "Ошибка десериализации %s: %s", entity_name, e
-                    )
+                    logger.error("Ошибка десериализации %s: %s", entity_name, e)
                     continue
 
-            logger.debug(
-                "Прочитано %s %s из буфера", len(items), entity_name
-            )
+            logger.debug("Прочитано %s %s из буфера", len(items), entity_name)
             return items
         except _REDIS_ERRORS as e:
             logger.error(
@@ -147,6 +141,30 @@ class AnalyticsBufferService:
     async def add_reply(self, dto: BufferedMessageReplyDTO) -> None:
         """Добавляет reply сообщение в буфер Redis"""
         await self._add_to_buffer(self.REDIS_KEY_REPLIES, dto, "reply")
+
+    async def re_add_replies(self, dtos: List[BufferedMessageReplyDTO]) -> None:
+        """Возвращает reply в буфер для повторной обработки."""
+        if not dtos:
+            return
+        if not await self._ensure_connection():
+            logger.error("Redis недоступен, reply не возвращены в буфер")
+            return
+        try:
+            values = [dto.model_dump_json().encode("utf-8") for dto in dtos]
+            await self._redis.rpush(self.REDIS_KEY_REPLIES, *values)
+            logger.debug("Возвращено %d reply в буфер", len(dtos))
+        except _REDIS_ERRORS as e:
+            logger.error(
+                "Ошибка при возврате reply в буфер: %s",
+                e,
+                exc_info=True,
+            )
+        except (UnicodeEncodeError, TypeError) as e:
+            logger.error(
+                "Ошибка сериализации reply при возврате в буфер: %s",
+                e,
+                exc_info=True,
+            )
 
     async def pop_messages(self, count: int = 100) -> List[BufferedMessageDTO]:
         """Безопасно читает пачку сообщений из Redis без удаления."""
