@@ -186,8 +186,6 @@ async def test_bulk_create_replies(db_manager: Any) -> None:
             reply_user_id=user_db_id,
             response_time_seconds=15,
             created_at=now,
-            original_message_date=now,
-            reply_message_date=now,
         ),
         # 2. Невалидный (сообщения нет в базе)
         BufferedMessageReplyDTO(
@@ -197,16 +195,16 @@ async def test_bulk_create_replies(db_manager: Any) -> None:
             reply_user_id=user_db_id,
             response_time_seconds=5,
             created_at=now,
-            original_message_date=now,
-            reply_message_date=now,
         ),
     ]
 
     # Act
-    inserted_count = await repo.bulk_create_replies(dtos)
+    inserted_count, failed_dtos = await repo.bulk_create_replies(dtos)
 
     # Assert
     assert inserted_count == 1
+    assert len(failed_dtos) == 1
+    assert failed_dtos[0].reply_message_id_str == "non_existent_msg"
 
     # Проверяем в базе
     async with db_manager.session() as session:
