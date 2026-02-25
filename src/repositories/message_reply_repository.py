@@ -144,7 +144,9 @@ class MessageReplyRepository(BaseRepository):
                     }
                 ) from e
 
-    async def bulk_create_replies(self, dtos: List[BufferedMessageReplyDTO]) -> int:
+    async def bulk_create_replies(
+        self, dtos: List[BufferedMessageReplyDTO]
+    ) -> tuple[int, List[BufferedMessageReplyDTO]]:
         """
         Массовое создание reply сообщений с защитой от дубликатов.
 
@@ -152,10 +154,10 @@ class MessageReplyRepository(BaseRepository):
             dtos: Список DTO для создания reply сообщений
 
         Returns:
-            Количество успешно вставленных записей
+            Кортеж (количество успешно вставленных записей, список DTO без родителя)
         """
         if not dtos:
-            return 0
+            return (0, [])
 
         async with self._db.session() as session:
             try:
@@ -186,13 +188,15 @@ class MessageReplyRepository(BaseRepository):
                         message_lookup[(chat_id, message_id_str)] = None
 
                 # Подготавливаем данные для bulk insert, пропуская те, где не найден ChatMessage
-                mappings = []
+                mappings: List[dict[str, Any]] = []
+                failed_dtos: List[BufferedMessageReplyDTO] = []
                 for dto in dtos:
                     db_message_id = message_lookup.get(
                         (dto.chat_id, dto.reply_message_id_str)
                     )
                     if db_message_id is None:
-                        continue  # Пропускаем, если сообщение еще не обработано
+                        failed_dtos.append(dto)
+                        continue
 
                     mappings.append(
                         {
@@ -209,11 +213,12 @@ class MessageReplyRepository(BaseRepository):
                     logger.warning(
                         "Нет валидных reply для вставки (все сообщения еще не обработаны)"
                     )
-                    return 0
+                    return (0, failed_dtos)
 
-                return await self._bulk_upsert_on_conflict_nothing(
+                inserted_count = await self._bulk_upsert_on_conflict_nothing(
                     MessageReply, mappings, "reply сообщений"
                 )
+                return (inserted_count, failed_dtos)
             except SQLAlchemyError as e:
                 logger.error(
                     "Ошибка при массовом создании reply сообщений: %s", e, exc_info=True
