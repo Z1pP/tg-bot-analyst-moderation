@@ -82,9 +82,14 @@ async def test_process_chat_member_joined_human_with_antibot(
     bot_mock.send_message = AsyncMock()
 
     # 3. Вызов хендлера
+    mock_kick_task = MagicMock()
+    mock_kick_chain = MagicMock()
+    mock_kick_chain.kiq = AsyncMock()
+    mock_kick_chain.with_labels.return_value = mock_kick_chain
+    mock_kick_task.kicker.return_value = mock_kick_chain
     with patch(
-        "handlers.group.new_members.kick_unverified_member_task.kiq",
-        new_callable=AsyncMock,
+        "handlers.group.new_members.kick_unverified_member_task",
+        mock_kick_task,
     ):
         await process_chat_member_joined(
             event=event,
