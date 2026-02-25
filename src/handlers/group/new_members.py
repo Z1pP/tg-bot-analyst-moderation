@@ -5,7 +5,11 @@ from aiogram.enums import ChatType
 from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 from punq import Container
 
-from constants import WELCOME_MESSAGE_NOTIFICATION_TTL, Dialog
+from constants import (
+    KICK_UNVERIFIED_MEMBER_TTL,
+    WELCOME_MESSAGE_NOTIFICATION_TTL,
+    Dialog,
+)
 from constants.callback import CallbackData
 from exceptions.base import BotBaseException
 from keyboards.inline.antibot import confirm_humanity_verification_ikb
@@ -204,7 +208,7 @@ async def _handle_new_member(
 
     username_val = user.username or user.first_name or str(user.id)
 
-    # Сценарий 1: Антибот включён — мут + сообщение с кнопкой верификации
+    # Сценарий 1: Антибот включён + Приветствие включено
     if restriction_data.is_antibot_enabled:
         greeting_text = ""
         if restriction_data.show_welcome_text:
@@ -224,7 +228,7 @@ async def _handle_new_member(
 
         await (
             kick_unverified_member_task.kicker()
-            .with_labels(delay=3600)
+            .with_labels(delay=KICK_UNVERIFIED_MEMBER_TTL)
             .kiq(
                 chat_id=chat.id,
                 message_id=sent_message.message_id,
@@ -232,7 +236,7 @@ async def _handle_new_member(
             )
         )
 
-    # Сценарий 2: Антибот выключен, но приветствие включено
+    # Сценарий 2: Антибот выключен + Приветствие включено
     elif not restriction_data.is_antibot_enabled and restriction_data.show_welcome_text:
         greeting_text = _get_formatted_welcome_text(
             welcome_text=restriction_data.welcome_text,
