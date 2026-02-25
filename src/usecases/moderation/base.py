@@ -219,10 +219,13 @@ class ModerationUseCase:
                 from constants import PUNISHMENT_NOTIFICATION_TTL
                 from tasks.moderation_tasks import delete_message_from_chat
 
-                await delete_message_from_chat.kiq(
-                    chat_id=int(context.dto.chat_tgid),
-                    message_id=sent.message_id,
-                    delay_seconds=PUNISHMENT_NOTIFICATION_TTL,
+                await (
+                    delete_message_from_chat.kicker()
+                    .with_labels(delay=PUNISHMENT_NOTIFICATION_TTL)
+                    .kiq(
+                        chat_id=int(context.dto.chat_tgid),
+                        message_id=sent.message_id,
+                    )
                 )
 
         try:
