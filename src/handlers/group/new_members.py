@@ -222,11 +222,14 @@ async def _handle_new_member(
             reply_markup=confirm_humanity_verification_ikb(user.id),
         )
 
-        await kick_unverified_member_task.kiq(
-            chat_id=chat.id,
-            message_id=sent_message.message_id,
-            user_id=user.id,
-            delay_seconds=3600,
+        await (
+            kick_unverified_member_task.kicker()
+            .with_labels(delay=3600)
+            .kiq(
+                chat_id=chat.id,
+                message_id=sent_message.message_id,
+                user_id=user.id,
+            )
         )
 
     # Сценарий 2: Антибот выключен, но приветствие включено
@@ -243,8 +246,11 @@ async def _handle_new_member(
         )
 
         if restriction_data.auto_delete_welcome_text:
-            await delete_message_from_chat.kiq(
-                chat_id=chat.id,
-                message_id=sent_message.message_id,
-                delay_seconds=WELCOME_MESSAGE_NOTIFICATION_TTL,
+            await (
+                delete_message_from_chat.kicker()
+                .with_labels(delay=WELCOME_MESSAGE_NOTIFICATION_TTL)
+                .kiq(
+                    chat_id=chat.id,
+                    message_id=sent_message.message_id,
+                )
             )
