@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import ChatIdUnion, ChatPermissions, InlineKeyboardMarkup, Message
 
 from constants.punishment import PunishmentType
@@ -282,6 +282,17 @@ class BotMessageService:
                 chat_id=chat_id,
                 message_id=message_id,
             )
+        except TelegramBadRequest as e:
+            msg = (e.message or str(e)).lower()
+            if "message to delete not found" in msg:
+                logger.info(
+                    "Сообщение уже удалено в чате %s (message_id=%s) — возможно, пользователь прошёл верификацию",
+                    chat_id,
+                    message_id,
+                )
+            else:
+                logger.error("Не удалось удалить сообщение в чате %s: %s", chat_id, e)
+            return False
         except TelegramAPIError as e:
             logger.error("Не удалось удалить сообщение в чате %s: %s", chat_id, e)
             return False
