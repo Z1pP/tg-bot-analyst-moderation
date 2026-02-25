@@ -138,3 +138,37 @@ async def test_trim_reactions_calls_ltrim(
     buffer_service._redis.ltrim.assert_called_once_with(
         AnalyticsBufferService.REDIS_KEY_REACTIONS, 2, -1
     )
+
+
+@pytest.mark.asyncio
+async def test_re_add_replies_calls_rpush(
+    buffer_service: AnalyticsBufferService,
+) -> None:
+    """re_add_replies возвращает reply в буфер через rpush."""
+    from dto.buffer import BufferedMessageReplyDTO
+
+    dtos = [
+        BufferedMessageReplyDTO(
+            chat_id=1,
+            original_message_url="url1",
+            reply_message_id_str="100",
+            reply_user_id=2,
+            response_time_seconds=10,
+            created_at=datetime.now(timezone.utc),
+        ),
+    ]
+    await buffer_service.re_add_replies(dtos)
+    buffer_service._redis.rpush.assert_called_once()
+    call_args = buffer_service._redis.rpush.call_args
+    assert call_args[0][0] == AnalyticsBufferService.REDIS_KEY_REPLIES
+    assert len(call_args[0]) == 2  # key + value(s)
+    assert b"chat_id" in call_args[0][1] or b"original_message_url" in call_args[0][1]
+
+
+@pytest.mark.asyncio
+async def test_re_add_replies_empty_does_nothing(
+    buffer_service: AnalyticsBufferService,
+) -> None:
+    """re_add_replies с пустым списком не вызывает Redis."""
+    await buffer_service.re_add_replies([])
+    buffer_service._redis.rpush.assert_not_called()
