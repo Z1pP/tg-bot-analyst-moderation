@@ -181,29 +181,22 @@ async def _handle_new_member(
         chat_title,
     )
 
-    # 1. Уведомление в архивный чат
-    logger.debug(
-        "Вызов _notify_archive: chat_id=%s, user_id=%s, username=%s, chat_title=%s",
-        chat.id,
-        user.id,
-        user.username,
-        chat_title,
-    )
-    await _notify_archive(
-        container=container,
-        chat_id=chat.id,
-        user_id=user.id,
-        username=user.username,
-        chat_title=chat_title,
-    )
-
-    # 2. Проверка антиботом и приветствие
+    # 1. Проверка антиботом и приветствие
     restrict_usecase: RestrictNewMemberUseCase = container.resolve(
         RestrictNewMemberUseCase
     )
     restriction_data = await restrict_usecase.execute(
         chat_tgid=str(chat.id),
         user_id=user.id,
+    )
+
+    # 2. Уведомление в архивный чат
+    await _notify_archive(
+        container=container,
+        chat_id=chat.id,
+        user_id=user.id,
+        username=user.username,
+        chat_title=chat_title,
     )
 
     username_val = user.username or user.first_name or str(user.id)
