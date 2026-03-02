@@ -3,6 +3,7 @@
 from .bind_archive_chat import BindArchiveChatUseCase
 from .generate_bind_hash import GenerateArchiveBindHashUseCase
 from .get_archive_settings import ArchiveSettingsResult, GetArchiveSettingsUseCase
+from .notify_member_left import NotifyArchiveChatMemberLeftUseCase
 from .notify_new_member import NotifyArchiveChatNewMemberUseCase
 from .set_archive_sending_time import (
     SetArchiveSendingTimeResult,
@@ -15,6 +16,7 @@ __all__ = [
     "BindArchiveChatUseCase",
     "GenerateArchiveBindHashUseCase",
     "GetArchiveSettingsUseCase",
+    "NotifyArchiveChatMemberLeftUseCase",
     "NotifyArchiveChatNewMemberUseCase",
     "SetArchiveSendingTimeResult",
     "SetArchiveSendingTimeUseCase",
