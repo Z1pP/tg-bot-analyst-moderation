@@ -12,7 +12,7 @@ from aiogram.types import (
 from punq import Container
 
 from constants import Dialog
-from dto import ResultVerifyMember
+from dto import ArchiveMemberNotificationDTO, ResultVerifyMember
 from dto.moderation import NewMemberRestrictionDTO
 from handlers.group.new_members import (
     process_chat_member_joined,
@@ -100,6 +100,14 @@ async def test_process_chat_member_joined_human_with_antibot(
     # 4. Проверки
     restrict_usecase.execute.assert_called_once_with(
         chat_tgid=str(chat_id), user_id=user_id
+    )
+    notify_usecase.execute.assert_called_once_with(
+        ArchiveMemberNotificationDTO(
+            chat_tgid=str(chat_id),
+            user_tgid=user_id,
+            username=username,
+            chat_title="Test Group",
+        )
     )
 
     expected_text = (
