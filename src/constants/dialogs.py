@@ -912,6 +912,14 @@ class ArchiveNotificationDialogs:
         "Чат: {chat_title}"
     )
 
+    MEMBER_KICKED = (
+        "👢 <b>Участник кикнут из группы</b>\n"
+        "Нейм: {username}\n"
+        "ID: <code>{tg_id}</code>\n"
+        "Когда: {date} {time}\n"
+        "Чат: {chat_title}"
+    )
+
 
 class ModerationReportDialogs:
     """Шаблоны для отчетов о наказаниях в архивный чат"""
