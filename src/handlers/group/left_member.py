@@ -5,6 +5,8 @@ from aiogram.enums import ChatType
 from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 from punq import Container
 
+from usecases.archive import NotifyArchiveChatMemberLeftUseCase
+
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
 
@@ -32,8 +34,8 @@ async def process_chat_member_left(
                     chat_title,
                     event.chat.id,
                 )
-            else:
-                logger.info("Бот %s покинул группу '%s'", username, chat_title)
+                return
+            logger.info("Бот %s покинул группу '%s'", username, chat_title)
         else:
             logger.info(
                 "Пользователь %s (ID: %s) покинул группу '%s'",
@@ -41,6 +43,16 @@ async def process_chat_member_left(
                 left_user.id,
                 chat_title,
             )
+
+        notify_usecase: NotifyArchiveChatMemberLeftUseCase = container.resolve(
+            NotifyArchiveChatMemberLeftUseCase
+        )
+        await notify_usecase.execute(
+            chat_tgid=str(event.chat.id),
+            user_tgid=left_user.id,
+            username=username,
+            chat_title=chat_title,
+        )
 
     except Exception as e:
         logger.error(
