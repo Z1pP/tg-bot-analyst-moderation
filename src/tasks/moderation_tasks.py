@@ -1,8 +1,10 @@
 import logging
 
 from container import ContainerSetup, container
+from dto import ArchiveMemberNotificationDTO
 from scheduler import broker
 from services.messaging.bot_message_service import BotMessageService
+from usecases.archive import NotifyArchiveChatMemberKickedUseCase
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,8 @@ async def kick_unverified_member_task(
     chat_id: int,
     message_id: int,
     user_id: int,
+    username: str,
+    chat_title: str,
 ) -> None:
     """
     Задача для кика непроверенного участника по истечении времени.
@@ -29,6 +33,8 @@ async def kick_unverified_member_task(
         chat_id: ID чата
         message_id: ID приветственного сообщения с кнопкой
         user_id: ID пользователя, которого нужно кикнуть при неудаче
+        username: Username пользователя для уведомления в архив
+        chat_title: Название чата для уведомления в архив
     """
     logger.info(
         "Проверка верификации пользователя %s в чате %s (сообщение %s)",
@@ -68,6 +74,24 @@ async def kick_unverified_member_task(
         )
 
         if kicked:
+            try:
+                dto = ArchiveMemberNotificationDTO(
+                    chat_tgid=str(chat_id),
+                    user_tgid=user_id,
+                    username=username,
+                    chat_title=chat_title,
+                )
+                notify_usecase: NotifyArchiveChatMemberKickedUseCase = (
+                    container.resolve(NotifyArchiveChatMemberKickedUseCase)
+                )
+                await notify_usecase.execute(dto)
+            except Exception as notify_err:
+                logger.warning(
+                    "Не удалось отправить уведомление о кике %s в архив: %s",
+                    user_id,
+                    notify_err,
+                    exc_info=True,
+                )
             logger.info(
                 "Пользователь %s успешно кикнут из чата %s",
                 user_id,
