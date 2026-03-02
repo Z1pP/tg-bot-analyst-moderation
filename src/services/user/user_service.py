@@ -81,9 +81,9 @@ class UserService:
         Args:
             tg_id: Telegram ID пользователя
             username: Telegram username пользователя.
-                      Не передавайте аргумент, если username неизвестен.
-                      Передайте None явно, чтобы синхронизировать удаление username в Telegram.
-                      Передайте "" как нейтральное значение из DTO (обновления не будет).
+            Не передавайте аргумент, если username неизвестен.
+            Передайте None явно, чтобы синхронизировать удаление username в Telegram.
+            Передайте "" как нейтральное значение из DTO (обновления не будет).
 
         Returns:
             Объект User или None
@@ -235,29 +235,6 @@ class UserService:
                 raise
 
         return user
-
-    async def get_admins_for_chat(self, chat_tg_id: str) -> list[User]:
-        """
-        Получает список администраторов для указанного чата.
-        Сначала проверяет кеш, затем БД.
-
-        Args:
-            chat_tg_id: Telegram ID чата
-
-        Returns:
-            Список объектов User
-        """
-        cache_key = f"chat_admins:{chat_tg_id}"
-        admins = await self._cache.get(cache_key)
-        if admins is not None:
-            return admins
-
-        admins = await self._user_repository.get_admins_for_chat(
-            chat_tg_id=chat_tg_id,
-        )
-        if admins is not None:
-            await self._cache.set(cache_key, admins, ttl=300)  # Кешируем на 5 минут
-        return admins if admins is not None else []
 
     async def update_user_role(
         self, user_id: int, new_role: UserRole
