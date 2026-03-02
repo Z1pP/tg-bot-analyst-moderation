@@ -4,6 +4,7 @@ from .admin_log import (
     GetAdminLogsPageDTO,
 )
 from .amnesty import AmnestyUserDTO, CancelWarnResultDTO
+from .archive_notification import ArchiveMemberNotificationDTO
 from .category_dto import (
     CategoryDTO,
     CreateCategoryDTO,
@@ -48,6 +49,8 @@ __all__ = [
     "AdminLogPageResultDTO",
     "AdminWithLogsDTO",
     "GetAdminLogsPageDTO",
+    # Archive
+    "ArchiveMemberNotificationDTO",
     # Category
     "CategoryDTO",
     "CreateCategoryDTO",
