@@ -68,6 +68,7 @@ from usecases.archive import (
     BindArchiveChatUseCase,
     GenerateArchiveBindHashUseCase,
     GetArchiveSettingsUseCase,
+    NotifyArchiveChatMemberKickedUseCase,
     NotifyArchiveChatMemberLeftUseCase,
     NotifyArchiveChatNewMemberUseCase,
     SetArchiveSendingTimeUseCase,
@@ -314,6 +315,7 @@ class ContainerSetup:
         container.register(BindArchiveChatUseCase)
         container.register(GenerateArchiveBindHashUseCase)
         container.register(GetArchiveSettingsUseCase)
+        container.register(NotifyArchiveChatMemberKickedUseCase)
         container.register(NotifyArchiveChatMemberLeftUseCase)
         container.register(NotifyArchiveChatNewMemberUseCase)
 
