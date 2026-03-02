@@ -68,6 +68,7 @@ from usecases.archive import (
     BindArchiveChatUseCase,
     GenerateArchiveBindHashUseCase,
     GetArchiveSettingsUseCase,
+    NotifyArchiveChatMemberLeftUseCase,
     NotifyArchiveChatNewMemberUseCase,
     SetArchiveSendingTimeUseCase,
     ToggleArchiveScheduleUseCase,
@@ -75,15 +76,15 @@ from usecases.archive import (
 from usecases.categories import (
     CreateCategoryUseCase,
     DeleteCategoryUseCase,
-    GetCategoriesUseCase,
     GetCategoriesPaginatedUseCase,
+    GetCategoriesUseCase,
     GetCategoryByIdUseCase,
     UpdateCategoryNameUseCase,
 )
 from usecases.chat import (
     GetAllChatsUseCase,
-    GetChatWithArchiveUseCase,
     GetChatsForUserActionUseCase,
+    GetChatWithArchiveUseCase,
     GetTrackedChatsUseCase,
     ToggleAntibotUseCase,
     ToggleAutoDeleteWelcomeTextUseCase,
@@ -106,6 +107,7 @@ from usecases.moderation import (
     RestrictNewMemberUseCase,
     VerifyMemberUseCase,
 )
+from usecases.permissions import GetBotPermissionsInChatUseCase
 from usecases.punishment import (
     GetPunishmentLadderUseCase,
     SetDefaultPunishmentLadderUseCase,
@@ -124,21 +126,20 @@ from usecases.report import (
 )
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from usecases.settings import ResetAllTrackingUseCase
-from usecases.time import ConvertToLocalTimeUseCase, GetAppNowUseCase
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
-from usecases.permissions import GetBotPermissionsInChatUseCase
 from usecases.templates import (
     CreateTemplateFromContentUseCase,
     DeleteTemplateUseCase,
     GetTemplateAndIncreaseUsageUseCase,
-    GetTemplatesByCategoryUseCase,
-    GetTemplatesByScopeUseCase,
-    GetTemplatesByQueryUseCase,
-    GetTemplatesPaginatedUseCase,
     GetTemplateByIdUseCase,
+    GetTemplatesByCategoryUseCase,
+    GetTemplatesByQueryUseCase,
+    GetTemplatesByScopeUseCase,
+    GetTemplatesPaginatedUseCase,
     UpdateTemplateContentUseCase,
     UpdateTemplateTitleUseCase,
 )
+from usecases.time import ConvertToLocalTimeUseCase, GetAppNowUseCase
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
@@ -313,6 +314,7 @@ class ContainerSetup:
         container.register(BindArchiveChatUseCase)
         container.register(GenerateArchiveBindHashUseCase)
         container.register(GetArchiveSettingsUseCase)
+        container.register(NotifyArchiveChatMemberLeftUseCase)
         container.register(NotifyArchiveChatNewMemberUseCase)
 
     @staticmethod
