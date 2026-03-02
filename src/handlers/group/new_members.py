@@ -11,6 +11,7 @@ from constants import (
     Dialog,
 )
 from constants.callback import CallbackData
+from dto import ArchiveMemberNotificationDTO
 from exceptions.base import BotBaseException
 from keyboards.inline.antibot import confirm_humanity_verification_ikb
 from keyboards.inline.chats import hide_notification_ikb
@@ -127,15 +128,16 @@ async def _notify_archive(
     chat_title: str,
 ) -> None:
     """Уведомление в архивный чат о новом участнике."""
+    dto = ArchiveMemberNotificationDTO(
+        chat_tgid=str(chat_id),
+        user_tgid=user_id,
+        username=username or "",
+        chat_title=chat_title,
+    )
     notify_archive_usecase: NotifyArchiveChatNewMemberUseCase = container.resolve(
         NotifyArchiveChatNewMemberUseCase
     )
-    await notify_archive_usecase.execute(
-        chat_tgid=str(chat_id),
-        user_tgid=user_id,
-        username=username,
-        chat_title=chat_title,
-    )
+    await notify_archive_usecase.execute(dto)
 
 
 def _get_formatted_welcome_text(
@@ -226,6 +228,8 @@ async def _handle_new_member(
                 chat_id=chat.id,
                 message_id=sent_message.message_id,
                 user_id=user.id,
+                username=username_val,
+                chat_title=chat_title,
             )
         )
 
