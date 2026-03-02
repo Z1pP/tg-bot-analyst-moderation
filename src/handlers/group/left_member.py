@@ -5,6 +5,7 @@ from aiogram.enums import ChatType
 from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 from punq import Container
 
+from dto import ArchiveMemberNotificationDTO
 from usecases.archive import NotifyArchiveChatMemberLeftUseCase
 
 router = Router(name=__name__)
@@ -44,15 +45,16 @@ async def process_chat_member_left(
                 chat_title,
             )
 
-        notify_usecase: NotifyArchiveChatMemberLeftUseCase = container.resolve(
-            NotifyArchiveChatMemberLeftUseCase
-        )
-        await notify_usecase.execute(
+        dto = ArchiveMemberNotificationDTO(
             chat_tgid=str(event.chat.id),
             user_tgid=left_user.id,
             username=username,
             chat_title=chat_title,
         )
+        notify_usecase: NotifyArchiveChatMemberLeftUseCase = container.resolve(
+            NotifyArchiveChatMemberLeftUseCase
+        )
+        await notify_usecase.execute(dto)
 
     except Exception as e:
         logger.error(
