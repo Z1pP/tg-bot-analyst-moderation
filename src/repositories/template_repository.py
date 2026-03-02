@@ -111,7 +111,9 @@ class MessageTemplateRepository(BaseRepository):
                 result = await session.execute(query)
                 return result.scalar() or 0
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении количества шаблонов: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении количества шаблонов: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "get_templates_count", "original": str(e)}
@@ -150,7 +152,9 @@ class MessageTemplateRepository(BaseRepository):
                 result = await session.execute(query)
                 return list(result.scalars().all())
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении списка шаблонов: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении списка шаблонов: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "get_templates_paginated", "original": str(e)}
@@ -203,10 +207,15 @@ class MessageTemplateRepository(BaseRepository):
                     )
                 return template
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении и обновлении шаблона: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении и обновлении шаблона: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_template_and_increase_usage_count", "original": str(e)}
+                    details={
+                        "context": "get_template_and_increase_usage_count",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def _get_effective_template(
@@ -297,7 +306,9 @@ class MessageTemplateRepository(BaseRepository):
                     return True
                 return False
             except SQLAlchemyError as e:
-                logger.error("Ошибка при обновлении названия шаблона: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при обновлении названия шаблона: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "update_template_title", "original": str(e)}
@@ -372,7 +383,9 @@ class MessageTemplateRepository(BaseRepository):
                 logger.info("Содержимое шаблона %s обновлено", template_id)
                 return True
             except SQLAlchemyError as e:
-                logger.error("Ошибка при обновлении содержимого шаблона: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при обновлении содержимого шаблона: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "update_template_content", "original": str(e)}

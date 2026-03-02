@@ -25,7 +25,9 @@ class TemplateCategoryRepository(BaseRepository):
 
                 return categories
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении списка категорий: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении списка категорий: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "get_all_categories", "original": str(e)}
@@ -46,7 +48,9 @@ class TemplateCategoryRepository(BaseRepository):
 
                 return last_category
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении последней категории: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении последней категории: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "get_last_category", "original": str(e)}
@@ -66,7 +70,9 @@ class TemplateCategoryRepository(BaseRepository):
 
                 return category
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении категории по id: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении категории по id: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "get_category_by_id", "original": str(e)}
@@ -77,9 +83,9 @@ class TemplateCategoryRepository(BaseRepository):
         async with self._db.session() as session:
             try:
                 last_result = await session.execute(
-                    select(TemplateCategory).order_by(
-                        TemplateCategory.sort_order.desc()
-                    ).limit(1)
+                    select(TemplateCategory)
+                    .order_by(TemplateCategory.sort_order.desc())
+                    .limit(1)
                 )
                 last_category = last_result.scalars().first()
                 sort_order = last_category.sort_order + 1 if last_category else 1
@@ -97,7 +103,9 @@ class TemplateCategoryRepository(BaseRepository):
 
                 return new_category
             except SQLAlchemyError as e:
-                logger.error("Ошибка при создании новой категории: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при создании новой категории: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "create_category", "original": str(e)},
@@ -144,7 +152,9 @@ class TemplateCategoryRepository(BaseRepository):
                 )
                 return categories
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении категорий с пагинацией: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении категорий с пагинацией: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "get_categories_paginated", "original": str(e)}
@@ -172,9 +182,7 @@ class TemplateCategoryRepository(BaseRepository):
         async with self._db.session() as session:
             try:
                 result = await session.execute(
-                    select(TemplateCategory).where(
-                        TemplateCategory.id == category_id
-                    )
+                    select(TemplateCategory).where(TemplateCategory.id == category_id)
                 )
                 category = result.scalar_one_or_none()
                 if not category:
@@ -192,7 +200,9 @@ class TemplateCategoryRepository(BaseRepository):
                 )
                 return category
             except SQLAlchemyError as e:
-                logger.error("Ошибка при обновлении названия категории: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при обновлении названия категории: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "update_category_name", "original": str(e)}

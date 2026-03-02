@@ -7,9 +7,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
 from dto.buffer import BufferedReactionDTO
-from exceptions import DatabaseException
 from dto.daily_activity import PopularReactionDTO, UserReactionActivityDTO
 from dto.reaction import MessageReactionDTO
+from exceptions import DatabaseException
 from models import MessageReaction, User
 from repositories.base import BaseRepository
 from utils.date_utils import validate_and_normalize_period
@@ -84,11 +84,17 @@ class MessageReactionRepository(BaseRepository):
                 return reactions
             except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при получении реакций для чата с ID=%s: %s", chat_id, e, exc_info=True
+                    "Ошибка при получении реакций для чата с ID=%s: %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_reactions_by_chat_and_period", "original": str(e)}
+                    details={
+                        "context": "get_reactions_by_chat_and_period",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def get_reactions_by_user_and_period_for_users(
@@ -124,11 +130,16 @@ class MessageReactionRepository(BaseRepository):
                 return reactions
             except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при получении реакций для пользователей: %s", e, exc_info=True
+                    "Ошибка при получении реакций для пользователей: %s",
+                    e,
+                    exc_info=True,
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_reactions_by_user_and_period_for_users", "original": str(e)}
+                    details={
+                        "context": "get_reactions_by_user_and_period_for_users",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def get_daily_top_reactors(
@@ -238,7 +249,11 @@ class MessageReactionRepository(BaseRepository):
 
                 popular_reactions: List[PopularReactionDTO] = []
                 for rank, row in enumerate(rows, 1):
-                    count_val: int = row._mapping["count"] if hasattr(row, "_mapping") else int(row[1])
+                    count_val: int = (
+                        row._mapping["count"]
+                        if hasattr(row, "_mapping")
+                        else int(row[1])
+                    )
                     popular_reactions.append(
                         PopularReactionDTO(emoji=row.emoji, count=count_val, rank=rank)
                     )
@@ -263,7 +278,10 @@ class MessageReactionRepository(BaseRepository):
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_daily_popular_reactions", "original": str(e)}
+                    details={
+                        "context": "get_daily_popular_reactions",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def get_reactions_by_user_and_period_and_chats(
@@ -288,10 +306,15 @@ class MessageReactionRepository(BaseRepository):
                 result = await session.execute(query)
                 return list(result.scalars().all())
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении реакций по чатам: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении реакций по чатам: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_reactions_by_user_and_period_and_chats", "original": str(e)}
+                    details={
+                        "context": "get_reactions_by_user_and_period_and_chats",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def bulk_add_reactions(self, dtos: List[BufferedReactionDTO]) -> int:

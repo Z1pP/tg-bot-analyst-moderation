@@ -40,7 +40,9 @@ class TemplateMediaRepository(BaseRepository):
 
                 return new_media
             except SQLAlchemyError as e:
-                logger.error("Ошибка при создании новой медиа для шаблона: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при создании новой медиа для шаблона: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "create_media", "original": str(e)}
