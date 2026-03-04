@@ -3,10 +3,14 @@ import logging
 from aiogram import Bot, F, Router, types
 from aiogram.enums import ChatType
 from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
+from aiogram.types import ChatMemberBanned
 from punq import Container
 
 from dto import ArchiveMemberNotificationDTO
-from usecases.archive import NotifyArchiveChatMemberLeftUseCase
+from usecases.archive import (
+    NotifyArchiveChatMemberKickedUseCase,
+    NotifyArchiveChatMemberLeftUseCase,
+)
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -45,14 +49,25 @@ async def process_chat_member_left(
                 chat_title,
             )
 
+        # Кик: new_chat_member = ChatMemberBanned. Не дублируем уведомление,
+        # если кикнул наш бот (задача kick_unverified_member_task уже уведомила).
+        if isinstance(event.new_chat_member, ChatMemberBanned):
+            bot_info = await bot.get_me()
+            if event.from_user.id == bot_info.id:
+                logger.info(
+                    "Пользователь %s кикнут нашим ботом — уведомление уже отправлено задачей",
+                    left_user.id,
+                )
+                return
+            notify_usecase = container.resolve(NotifyArchiveChatMemberKickedUseCase)
+        else:
+            notify_usecase = container.resolve(NotifyArchiveChatMemberLeftUseCase)
+
         dto = ArchiveMemberNotificationDTO(
             chat_tgid=str(event.chat.id),
             user_tgid=left_user.id,
             username=username,
             chat_title=chat_title,
-        )
-        notify_usecase: NotifyArchiveChatMemberLeftUseCase = container.resolve(
-            NotifyArchiveChatMemberLeftUseCase
         )
         await notify_usecase.execute(dto)
 
