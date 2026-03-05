@@ -614,9 +614,10 @@ def archive_channel_setting_ikb(
         else:
             url = f"https://t.me/c/{archive_chat.chat_id}/1"
 
+        title = archive_chat.title or "Архивный чат"
         builder.row(
             InlineKeyboardButton(
-                text=f"💬 {archive_chat.title[:15]}...",
+                text=f"💬 {title[:15]}...",
                 url=url,
             ),
             InlineKeyboardButton(
