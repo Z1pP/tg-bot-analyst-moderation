@@ -23,7 +23,7 @@ async def archive_channel_setting_handler(
     container: Container,
 ) -> None:
     """Обработчик настроек архивного чата."""
-    chat_id = await state.get_value("chat_id")
+    chat_id: int | None = await state.get_value("chat_id")
 
     if chat_id is None:
         await safe_edit_message(
