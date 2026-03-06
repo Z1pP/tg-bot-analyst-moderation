@@ -56,12 +56,12 @@ class ModerationUseCase:
 
     async def is_chat_administrator(
         self,
-        tg_id: ChatIdUnion,
-        chat_tg_id: ChatIdUnion,
+        user_id: int,
+        chat_tgid: ChatIdUnion,
     ) -> bool:
         return await self.permission_service.is_administrator(
-            tg_id=tg_id,
-            chat_tg_id=chat_tg_id,
+            user_id=user_id,
+            chat_tgid=chat_tgid,
         )
 
     def is_bot_administrator(
@@ -143,8 +143,8 @@ class ModerationUseCase:
 
         # Проверяем что не пытаемся наказать администратора чата
         if await self.is_chat_administrator(
-            tg_id=dto.violator_tgid,
-            chat_tg_id=dto.chat_tgid,
+            user_id=int(dto.violator_tgid),
+            chat_tgid=dto.chat_tgid,
         ):
             raise CannotPunishChatAdminError()
 
