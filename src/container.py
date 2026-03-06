@@ -4,6 +4,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.base import BaseStorage
 from aiogram.fsm.storage.redis import RedisStorage
 from punq import Container, Scope
+from redis.asyncio import Redis
 
 from config import settings
 from database.session import DatabaseContextManager, async_session
@@ -160,15 +161,29 @@ from usecases.user_tracking import (
 from utils.exception_handler import AsyncErrorHandler
 
 
+def _redis_url() -> str:
+    """URL подключения к Redis (единый для всех сервисов)."""
+    return f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+
+
 class ContainerSetup:
     @staticmethod
     def setup() -> None:
+        ContainerSetup._register_redis(container)
         ContainerSetup._register_bot_components(container)
         ContainerSetup._register_database(container)
         ContainerSetup._register_repositories(container)
         ContainerSetup._register_services(container)
         ContainerSetup._register_usecases(container)
         ContainerSetup._register_async_error_handler(container)
+
+    @staticmethod
+    def _register_redis(container: Container) -> None:
+        """Единый клиент Redis для FSM, кеша и буфера аналитики."""
+        container.register(
+            Redis,
+            instance=Redis.from_url(_redis_url()),
+        )
 
     @staticmethod
     def _register_bot_components(container: Container) -> None:
@@ -179,11 +194,23 @@ class ContainerSetup:
                 default=DefaultBotProperties(parse_mode=ParseMode.HTML),
             ),
         )
-        storage = RedisStorage.from_url(
-            f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+
+        def make_storage(redis_client: Redis) -> BaseStorage:
+            return RedisStorage(redis=redis_client)
+
+        def make_dispatcher(storage: BaseStorage) -> Dispatcher:
+            return Dispatcher(storage=storage)
+
+        container.register(
+            BaseStorage,
+            factory=make_storage,
+            scope=Scope.singleton,
         )
-        container.register(BaseStorage, instance=storage)
-        container.register(Dispatcher, instance=Dispatcher(storage=storage))
+        container.register(
+            Dispatcher,
+            factory=make_dispatcher,
+            scope=Scope.singleton,
+        )
 
     @staticmethod
     def _register_database(container: Container) -> None:
@@ -223,36 +250,43 @@ class ContainerSetup:
     @staticmethod
     def _register_services(container: Container) -> None:
         """Регистрация сервисов."""
+
+        def make_cache(redis_client: Redis) -> ICache:
+            return RedisCache(redis_client=redis_client)
+
         container.register(
             ICache,
-            lambda: RedisCache(
-                f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
-            ),
+            factory=make_cache,
+            scope=Scope.singleton,
         )
         container.register(
             IAIService,
-            lambda: OpenRouterService(
+            factory=lambda: OpenRouterService(
                 api_key=settings.OPEN_ROUTER_TOKEN,
                 model_name=settings.OPEN_ROUTER_MODEL,
             ),
+            scope=Scope.singleton,
         )
-        container.register(UserService)
-        container.register(ChatService)
-        container.register(ArchiveBindService)
-        container.register(TemplateService)
-        container.register(TemplateContentService)
-        container.register(CategoryService)
-        container.register(BotPermissionService)
-        container.register(BotMessageService)
-        container.register(PunishmentService)
-        container.register(AdminActionLogService)
-        container.register(ReportScheduleService)
-        container.register(TaskiqSchedulerService)
+        container.register(UserService, scope=Scope.singleton)
+        container.register(ChatService, scope=Scope.singleton)
+        container.register(ArchiveBindService, scope=Scope.singleton)
+        container.register(TemplateService, scope=Scope.singleton)
+        container.register(TemplateContentService, scope=Scope.singleton)
+        container.register(CategoryService, scope=Scope.singleton)
+        container.register(BotPermissionService, scope=Scope.singleton)
+        container.register(BotMessageService, scope=Scope.singleton)
+        container.register(PunishmentService, scope=Scope.singleton)
+        container.register(AdminActionLogService, scope=Scope.singleton)
+        container.register(ReportScheduleService, scope=Scope.singleton)
+        container.register(TaskiqSchedulerService, scope=Scope.singleton)
+
+        def make_analytics_buffer(redis_client: Redis) -> AnalyticsBufferService:
+            return AnalyticsBufferService(redis_client=redis_client)
+
         container.register(
             AnalyticsBufferService,
-            lambda: AnalyticsBufferService(
-                f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
-            ),
+            factory=make_analytics_buffer,
+            scope=Scope.singleton,
         )
         container.register(
             ApiClient,
