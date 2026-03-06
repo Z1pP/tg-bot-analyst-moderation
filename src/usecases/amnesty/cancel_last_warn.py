@@ -53,8 +53,8 @@ class CancelLastWarnUseCase(BaseAmnestyUseCase):
         archive_chats = await self._validate_and_get_archive_chats(chat)
 
         member_status = await self.bot_permission_service.get_chat_member_status(
+            user_id=int(dto.violator_tgid),
             chat_tgid=chat.tg_id,
-            user_tgid=int(dto.violator_tgid),
         )
 
         is_deleted = await self.punishment_repository.delete_last_punishment(
