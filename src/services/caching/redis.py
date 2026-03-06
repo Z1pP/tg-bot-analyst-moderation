@@ -3,11 +3,15 @@ import logging
 import pickle
 from typing import Optional, TypeVar
 
-import redis.asyncio as redis
+from redis.asyncio import Redis as RedisClient
 from redis.exceptions import (
     AuthenticationError,
-    ConnectionError as RedisConnectionError,
     ResponseError,
+)
+from redis.exceptions import (
+    ConnectionError as RedisConnectionError,
+)
+from redis.exceptions import (
     TimeoutError as RedisTimeoutError,
 )
 
@@ -27,8 +31,8 @@ _REDIS_ERRORS = (
 
 
 class RedisCache(ICache):
-    def __init__(self, redis_url: str, default_ttl: int = 3600) -> None:
-        self.redis = redis.from_url(redis_url)
+    def __init__(self, redis_client: RedisClient, default_ttl: int = 3600) -> None:
+        self.redis = redis_client
         self.default_ttl = default_ttl
         self._connected = False
 
