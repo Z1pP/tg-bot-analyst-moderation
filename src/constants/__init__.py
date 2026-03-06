@@ -35,7 +35,7 @@ PUNISHMENT_NOTIFICATION_TTL = (
     1800  # Время жизни уведомления о наказании в чате (30 минут)
 )
 WELCOME_MESSAGE_NOTIFICATION_TTL = (
-    3600  # Время жизни уведомления о приветствии в чате (1 час)
+    300  # Время жизни уведомления о приветствии в чате (5 минут)
 )
 KICK_UNVERIFIED_MEMBER_TTL = WELCOME_MESSAGE_NOTIFICATION_TTL
 
