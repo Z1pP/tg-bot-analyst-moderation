@@ -1,12 +1,11 @@
 import logging
-from typing import List, Optional, Type, TypeVar
+from typing import List, Type, TypeVar
 
-import redis.asyncio as redis
 from pydantic import BaseModel
+from redis.asyncio import Redis as RedisClient
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 
-from config import settings
 from dto.buffer import BufferedMessageDTO, BufferedMessageReplyDTO, BufferedReactionDTO
 
 logger = logging.getLogger(__name__)
@@ -27,34 +26,20 @@ class AnalyticsBufferService:
     REDIS_KEY_REACTIONS = "buffer:reactions"
     REDIS_KEY_REPLIES = "buffer:replies"
 
-    def __init__(self, redis_url: Optional[str] = None) -> None:
-        self.redis_url = (
-            redis_url
-            or f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
-        )
-        self._redis: redis.Redis | None = None
+    def __init__(self, redis_client: RedisClient) -> None:
+        self._redis = redis_client
         self._connected = False
 
     async def _ensure_connection(self) -> bool:
-        """Устанавливает соединение с Redis если его нет"""
-        if self._redis is None:
+        """Проверяет доступность Redis."""
+        if not self._connected:
             try:
-                self._redis = redis.from_url(self.redis_url, decode_responses=False)
                 await self._redis.ping()
                 self._connected = True
                 logger.debug("Подключение к Redis установлено")
                 return True
             except _REDIS_ERRORS as e:
                 logger.error("Ошибка подключения к Redis: %s", e)
-                self._connected = False
-                return False
-        elif not self._connected:
-            try:
-                await self._redis.ping()
-                self._connected = True
-                return True
-            except _REDIS_ERRORS as e:
-                logger.error("Ошибка проверки соединения Redis: %s", e)
                 self._connected = False
                 return False
         return True
@@ -197,8 +182,5 @@ class AnalyticsBufferService:
         await self._trim_buffer(self.REDIS_KEY_REPLIES, count, "reply")
 
     async def close(self) -> None:
-        """Закрывает соединение с Redis"""
-        if self._redis:
-            await self._redis.close()
-            self._connected = False
-            logger.debug("Соединение с Redis закрыто")
+        """Закрывает соединение с Redis. При использовании shared Redis — no-op."""
+        self._connected = False
