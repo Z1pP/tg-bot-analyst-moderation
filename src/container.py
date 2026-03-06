@@ -195,20 +195,13 @@ class ContainerSetup:
             ),
         )
 
-        def make_storage(redis_client: Redis) -> BaseStorage:
-            return RedisStorage(redis=redis_client)
-
-        def make_dispatcher(storage: BaseStorage) -> Dispatcher:
-            return Dispatcher(storage=storage)
-
         container.register(
             BaseStorage,
-            factory=make_storage,
+            RedisStorage,
             scope=Scope.singleton,
         )
         container.register(
             Dispatcher,
-            factory=make_dispatcher,
             scope=Scope.singleton,
         )
 
@@ -250,13 +243,9 @@ class ContainerSetup:
     @staticmethod
     def _register_services(container: Container) -> None:
         """Регистрация сервисов."""
-
-        def make_cache(redis_client: Redis) -> ICache:
-            return RedisCache(redis_client=redis_client)
-
         container.register(
             ICache,
-            factory=make_cache,
+            RedisCache,
             scope=Scope.singleton,
         )
         container.register(
@@ -280,14 +269,7 @@ class ContainerSetup:
         container.register(ReportScheduleService, scope=Scope.singleton)
         container.register(TaskiqSchedulerService, scope=Scope.singleton)
 
-        def make_analytics_buffer(redis_client: Redis) -> AnalyticsBufferService:
-            return AnalyticsBufferService(redis_client=redis_client)
-
-        container.register(
-            AnalyticsBufferService,
-            factory=make_analytics_buffer,
-            scope=Scope.singleton,
-        )
+        container.register(AnalyticsBufferService, scope=Scope.singleton)
         container.register(
             ApiClient,
             factory=lambda: ApiClient(base_url=settings.API_BASE_URL),
