@@ -1,12 +1,17 @@
+import logging
 from collections.abc import Awaitable, Callable
 from datetime import time
 from typing import Any, Optional
 
 from cachetools import TTLCache
+from sqlalchemy.exc import IntegrityError
 
+from exceptions import DatabaseException
 from models import ChatSession
 from repositories import ChatRepository
 from services.caching import ICache
+
+logger = logging.getLogger(__name__)
 
 
 class ChatService:
@@ -55,36 +60,40 @@ class ChatService:
         chat = await self._cache.get(cache_key)
         if chat:
             if title and chat.title != title:
-                chat = await self._chat_repository.update_chat(
+                updated_chat = await self._chat_repository.update_chat(
                     chat_id=chat.id,
                     title=title,
                 )
-                await self._set_chat_cache(chat)
+                if updated_chat:
+                    chat = updated_chat
+                    await self._set_chat_cache(chat)
             return chat
 
         chat = await self._chat_repository.get_chat_by_tgid(chat_tgid)
         if chat:
             if title and chat.title != title:
-                chat = await self._chat_repository.update_chat(
+                updated_chat = await self._chat_repository.update_chat(
                     chat_id=chat.id,
                     title=title,
                 )
+                if updated_chat:
+                    chat = updated_chat
             await self._set_chat_cache(chat)
         return chat or None
 
-    async def create_chat(self, chat_id: str, title: str) -> ChatSession:
+    async def create_chat(self, chat_tgid: str, title: str) -> ChatSession:
         """
         Создает новую запись чата в БД и кеширует её.
 
         Args:
-            chat_id: Telegram ID чата
+            chat_tgid: Telegram ID чата
             title: Название чата
 
         Returns:
             Созданный объект ChatSession
         """
         chat = await self._chat_repository.create_chat(
-            chat_id=str(chat_id), title=title
+            chat_id=str(chat_tgid), title=title
         )
         if chat:
             await self._set_chat_cache(chat)
@@ -97,7 +106,7 @@ class ChatService:
         Получает существующий чат или создает новый, если он не найден.
 
         Args:
-            chat_id: Telegram ID чата
+            chat_tgid: Telegram ID чата
             title: Название чата
 
         Returns:
@@ -107,9 +116,31 @@ class ChatService:
         if chat:
             return chat
 
-        new_chat = await self.create_chat(chat_tgid, title)
+        try:
+            return await self.create_chat(chat_tgid, title)
+        except DatabaseException as e:
+            if isinstance(e.__cause__, IntegrityError):
+                logger.warning(
+                    "Race condition: чат с chat_tgid=%s создан параллельно",
+                    chat_tgid,
+                )
+                chat = await self.get_chat(chat_tgid=chat_tgid, title=title)
+                if chat:
+                    return chat
+            raise
 
-        return new_chat
+    async def update_chat_title(
+        self, chat_id: int, title: str
+    ) -> Optional[ChatSession]:
+        """
+        Обновляет title чата в БД и синхронизирует кеш.
+        chat_id — id записи в БД (ChatSession.id).
+        """
+        return await self._update_and_sync_cache(
+            chat_id=chat_id,
+            update_func=self._chat_repository.update_chat,
+            title=title,
+        )
 
     async def _update_and_sync_cache(
         self,
@@ -128,12 +159,6 @@ class ChatService:
         Returns:
             Обновленный объект ChatSession или None
         """
-        current_chat = await self._chat_repository.get_chat_by_id(chat_id)
-        if current_chat:
-            await self._cache.delete(f"chat:tg_id:{current_chat.chat_id}")
-            await self._cache.delete(f"chat:archive:{current_chat.chat_id}")
-            self._archive_chat_cache.pop(current_chat.chat_id, None)
-
         chat = await update_func(chat_id=chat_id, **kwargs)
         if chat:
             await self._set_chat_cache(chat)
@@ -147,6 +172,10 @@ class ChatService:
         """
         Получает чат и его архивный чат если есть.
         Использует in-memory кеш (без pickle) — ORM relationships остаются работоспособными.
+
+        Примечание: in-memory кеш проверяется только при вызове с chat_tgid.
+        При вызове с chat_id (DB id) кеш не проверяется — запрос идёт в БД.
+        Для производительности предпочтительно передавать chat_tgid.
         """
         if not chat_tgid and not chat_id:
             raise ValueError("Необходимо передать chat_tgid или chat_id")
