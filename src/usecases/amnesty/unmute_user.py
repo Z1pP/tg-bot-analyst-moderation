@@ -34,7 +34,7 @@ class UnmuteUserUseCase(BaseAmnestyUseCase):
 
             # Проверяем текущий статус в Telegram API
             member_status = await self.bot_permission_service.get_chat_member_status(
-                user_tgid=int(dto.violator_tgid),
+                user_id=int(dto.violator_tgid),
                 chat_tgid=chat.tg_id,
             )
 
