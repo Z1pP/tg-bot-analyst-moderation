@@ -50,7 +50,7 @@ class GetChatsWithAnyRestrictionUseCase(BaseGetChatsUseCase):
             # 3. Проверяем фактический статус в Telegram
             member_status = await safe_telegram_check(
                 self.bot_permission_service.get_chat_member_status(
-                    user_tgid=int(dto.violator_tgid),
+                    user_id=int(dto.violator_tgid),
                     chat_tgid=chat.chat_id,
                 ),
                 None,
