@@ -195,15 +195,10 @@ class ContainerSetup:
             ),
         )
 
-        container.register(
-            BaseStorage,
-            RedisStorage,
-            scope=Scope.singleton,
-        )
-        container.register(
-            Dispatcher,
-            scope=Scope.singleton,
-        )
+        redis_client = container.resolve(Redis)
+        storage = RedisStorage(redis=redis_client)
+        container.register(BaseStorage, instance=storage)
+        container.register(Dispatcher, instance=Dispatcher(storage=storage))
 
     @staticmethod
     def _register_database(container: Container) -> None:
