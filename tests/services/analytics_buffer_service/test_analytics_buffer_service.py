@@ -12,8 +12,8 @@ from services.analytics_buffer_service import AnalyticsBufferService
 @pytest.fixture
 def buffer_service() -> AnalyticsBufferService:
     """Сервис с подменённым подключением к Redis."""
-    svc = AnalyticsBufferService(redis_url="redis://localhost:6379/0")
-    svc._redis = AsyncMock()
+    mock_redis = AsyncMock()
+    svc = AnalyticsBufferService(redis_client=mock_redis)
     svc._connected = True
     return svc
 
@@ -87,7 +87,8 @@ async def test_add_message_when_connection_fails_does_not_raise(
     sample_message_dto: BufferedMessageDTO,
 ) -> None:
     """При недоступности Redis add_message не выбрасывает исключение."""
-    svc = AnalyticsBufferService(redis_url="redis://localhost:6379/0")
+    mock_redis = AsyncMock()
+    svc = AnalyticsBufferService(redis_client=mock_redis)
     svc._ensure_connection = AsyncMock(return_value=False)
     await svc.add_message(sample_message_dto)
     # Не должно быть исключения
@@ -100,7 +101,6 @@ async def test_pop_messages_when_connection_fails_returns_empty(
 ) -> None:
     """При недоступности Redis pop_messages возвращает пустой список."""
     buffer_service._ensure_connection = AsyncMock(return_value=False)
-    buffer_service._redis = None
     result = await buffer_service.pop_messages(count=5)
     assert result == []
 
