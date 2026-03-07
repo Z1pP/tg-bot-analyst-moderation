@@ -49,3 +49,6 @@ SERVICE_JWT_TTL_SECONDS=300
 # Пути к ключам для сервисного бота (опционально)
 SERVICE_BOT_PUBLIC_KEY_PATH=./secrets/service_bot_public.pem
 SERVICE_BOT_PRIVATE_KEY_PATH=./secrets/service_bot_private.pem
+
+# Защищённый пользователь — нельзя изменить роль (Telegram ID)
+PROTECTED_USER_TG_ID=1234567890
