@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     # Публичный URL (Cloudflare Tunnel / домен) — используется фронтендом Mini App
     PUBLIC_URL: str = ""
 
+    # Защищённый пользователь — нельзя изменить роль (Telegram ID)
+    PROTECTED_USER_TG_ID: str
+
     @computed_field
     @property
     def API_BASE_URL(self) -> str:
