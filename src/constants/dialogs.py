@@ -905,7 +905,7 @@ class ArchiveNotificationDialogs:
     )
 
     MEMBER_LEFT = (
-        "🚪 <b>Участник покинул группу</b>\n"
+        "🚪 <b>Выход из чата</b>\n"
         "Нейм: {username}\n"
         "ID: <code>{tg_id}</code>\n"
         "Когда: {date} {time}\n"
@@ -913,7 +913,7 @@ class ArchiveNotificationDialogs:
     )
 
     MEMBER_KICKED = (
-        "❌<b>Кик юзера</b> (🛡Антибот)\n"
+        "❌<b>Кик юзера</b>\n"
         "Нейм: {username}\n"
         "ID: <code>{tg_id}</code>\n"
         "Когда: {date} {time}\n"
