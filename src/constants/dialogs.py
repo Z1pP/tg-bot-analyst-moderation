@@ -913,7 +913,7 @@ class ArchiveNotificationDialogs:
     )
 
     MEMBER_KICKED = (
-        "❌<b>Кик юзера</b>\n"
+        "❌ <b>Кик юзера</b>\n"
         "Нейм: {username}\n"
         "ID: <code>{tg_id}</code>\n"
         "Когда: {date} {time}\n"
