@@ -5,6 +5,7 @@ import os
 import sys
 
 import uvicorn
+from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
@@ -165,17 +166,17 @@ async def run_polling():
     await dp.start_polling(bot, allowed_updates=ALLOWED_UPDATES)
 
 
-async def shutdown(bot, dp) -> None:
+async def shutdown(bot: Bot, dp: Dispatcher) -> None:
     """
     Функция для корректного завершения всех ресурсов.
     """
     logger.info("Начало процесса Graceful Shutdown...")
 
-    if dp and dp.is_polling():
+    if dp:
         logger.info("Остановка polling...")
         dp.stop_polling()
 
-    if bot and hasattr(bot, "session") and not bot.session.closed:
+    if bot:
         logger.info("Закрытие сессии бота...")
         await bot.session.close()
 
