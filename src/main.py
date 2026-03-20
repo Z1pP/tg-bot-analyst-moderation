@@ -174,7 +174,7 @@ async def shutdown(bot: Bot, dp: Dispatcher) -> None:
 
     if dp:
         logger.info("Остановка polling...")
-        dp.stop_polling()
+        await dp.stop_polling()
 
     if bot:
         logger.info("Закрытие сессии бота...")
