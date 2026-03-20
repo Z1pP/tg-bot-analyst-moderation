@@ -13,6 +13,7 @@ def confirm_humanity_verification_ikb(user_id: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=InlineButtons.Antibot.CONFIRM_HUMANITY,
             callback_data=f"{CallbackData.Antibot.CONFIRM_HUMANITY_PREFIX}{user_id}",
+            style="danger",
         ),
     )
     return builder.as_markup()
