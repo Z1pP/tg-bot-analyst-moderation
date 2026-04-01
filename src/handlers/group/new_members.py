@@ -11,7 +11,9 @@ from constants import (
     Dialog,
 )
 from constants.callback import CallbackData
+from constants.enums import MembershipEventType
 from dto import ArchiveMemberNotificationDTO
+from dto.membership_event import RecordChatMembershipEventDTO
 from exceptions.base import BotBaseException
 from keyboards.inline.antibot import confirm_humanity_verification_ikb
 from keyboards.inline.chats import hide_notification_ikb
@@ -20,6 +22,7 @@ from tasks.moderation_tasks import (
     kick_unverified_member_task,
 )
 from usecases.archive import NotifyArchiveChatNewMemberUseCase
+from usecases.membership import RecordChatMembershipEventUseCase
 from usecases.moderation import RestrictNewMemberUseCase, VerifyMemberUseCase
 
 router = Router(name=__name__)
@@ -39,6 +42,18 @@ async def process_chat_member_joined(
     try:
         chat_title = event.chat.title or "Неизвестная группа"
         user = event.new_chat_member.user
+
+        if not user.is_bot:
+            record_uc: RecordChatMembershipEventUseCase = container.resolve(
+                RecordChatMembershipEventUseCase
+            )
+            await record_uc.execute(
+                RecordChatMembershipEventDTO(
+                    chat_tgid=str(event.chat.id),
+                    user_tgid=user.id,
+                    event_type=MembershipEventType.JOIN,
+                )
+            )
 
         logger.info(
             "Новый участник в группе '%s': %s (ID: %s)",
