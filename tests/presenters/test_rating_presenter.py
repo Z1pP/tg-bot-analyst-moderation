@@ -77,3 +77,32 @@ def test_format_daily_rating_with_data_includes_header_and_sections(
     assert "bob" in result or "@bob" in result
     assert "5" in result
     assert "👍" in result
+    assert "Вступили" in result
+
+
+def test_format_daily_rating_no_top_but_membership_shows_stats_and_no_activity() -> (
+    None
+):
+    """Без топа по сообщениям, но с событиями состава — шапка с цифрами и NO_ACTIVITY."""
+    start = datetime(2025, 1, 15, 0, 0, tzinfo=timezone.utc)
+    stats = ChatDailyStatsDTO(
+        chat_id=1,
+        chat_title="X",
+        top_users=[],
+        top_reactors=[],
+        popular_reactions=[],
+        total_messages=0,
+        total_reactions=0,
+        active_users_count=0,
+        joins_count=3,
+        left_count=1,
+        removed_count=2,
+        start_date=start,
+        end_date=None,
+        total_users_count=100,
+    )
+    result = RatingPresenter.format_daily_rating(stats)
+    assert "3" in result
+    assert "1" in result
+    assert "2" in result
+    assert "активност" in result.lower() or "нет" in result.lower()
