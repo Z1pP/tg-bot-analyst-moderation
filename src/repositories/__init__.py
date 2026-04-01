@@ -1,5 +1,6 @@
 from .admin_action_log_repository import AdminActionLogRepository
 from .categories_repository import TemplateCategoryRepository
+from .chat_membership_event_repository import ChatMembershipEventRepository
 from .chat_repository import ChatRepository
 from .chat_tracking_repository import ChatTrackingRepository
 from .media_repository import TemplateMediaRepository
@@ -17,6 +18,7 @@ from .user_tracking_repository import UserTrackingRepository
 __all__ = [
     "AdminActionLogRepository",
     "ChatRepository",
+    "ChatMembershipEventRepository",
     "MessageRepository",
     "UserRepository",
     "MessageReplyRepository",
