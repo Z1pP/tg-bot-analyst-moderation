@@ -68,9 +68,10 @@ class RatingPresenter:
         lines = [
             title,
             "",
-            f"{Dialog.Rating.ACTIVE_USERS} {stats.active_users_count} из {stats.total_users_count}",
             f"{Dialog.Rating.TOTAL_MESSAGES} {stats.total_messages}",
             f"{Dialog.Rating.TOTAL_REACTIONS} {stats.total_reactions}",
+            "",
+            f"{Dialog.Rating.ACTIVE_USERS} {stats.active_users_count} из {stats.total_users_count}",
             f"{Dialog.Rating.JOINS_COUNT} {stats.joins_count}",
             f"{Dialog.Rating.LEFT_COUNT} {stats.left_count}",
             f"{Dialog.Rating.REMOVED_COUNT} {stats.removed_count}",
