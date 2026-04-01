@@ -2,6 +2,7 @@ from .admin_action_log import AdminActionLog
 from .admin_chat_access import AdminChatAccess
 from .associations import admin_user_tracking
 from .base import Base
+from .chat_membership_event import ChatMembershipEvent
 from .chat_session import ChatSession
 from .chat_settings import ChatSettings
 from .message import ChatMessage
@@ -18,6 +19,7 @@ from .user_chat_status import UserChatStatus
 __all__ = [
     "Base",
     "ChatSession",
+    "ChatMembershipEvent",
     "ChatMessage",
     "MessageReply",
     "User",
