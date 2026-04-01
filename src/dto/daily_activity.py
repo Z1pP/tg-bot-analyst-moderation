@@ -39,6 +39,9 @@ class ChatDailyStatsDTO(BaseModel):
     total_messages: int
     total_reactions: int
     active_users_count: int
+    joins_count: int = 0
+    left_count: int = 0
+    removed_count: int = 0
     start_date: datetime
     end_date: Optional[datetime] = None
     total_users_count: int = 0
