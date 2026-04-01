@@ -11,6 +11,7 @@ from database.session import DatabaseContextManager, async_session
 from di import container
 from repositories import (
     AdminActionLogRepository,
+    ChatMembershipEventRepository,
     ChatRepository,
     ChatTrackingRepository,
     MessageReactionRepository,
@@ -99,6 +100,7 @@ from usecases.chat_tracking import (
     GetUserTrackedChatsUseCase,
     RemoveChatFromTrackingUseCase,
 )
+from usecases.membership import RecordChatMembershipEventUseCase
 from usecases.message import (
     SaveMessageUseCase,
     SaveReplyMessageUseCase,
@@ -230,6 +232,7 @@ class ContainerSetup:
             UserChatStatusRepository,
             AdminActionLogRepository,
             ReportScheduleRepository,
+            ChatMembershipEventRepository,
         ]
 
         for repo in repositories:
@@ -392,6 +395,8 @@ class ContainerSetup:
 
         for usecase in message_usecases:
             container.register(usecase)
+
+        container.register(RecordChatMembershipEventUseCase)
 
     @staticmethod
     def _register_moderation_usecases(container: Container) -> None:
