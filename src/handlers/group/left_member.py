@@ -6,11 +6,14 @@ from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 from aiogram.types import ChatMemberBanned
 from punq import Container
 
+from constants.enums import MembershipEventType
 from dto import ArchiveMemberNotificationDTO
+from dto.membership_event import RecordChatMembershipEventDTO
 from usecases.archive import (
     NotifyArchiveChatMemberKickedUseCase,
     NotifyArchiveChatMemberLeftUseCase,
 )
+from usecases.membership import RecordChatMembershipEventUseCase
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -30,6 +33,23 @@ async def process_chat_member_left(
         chat_title = event.chat.title or "Неизвестная группа"
         left_user = event.old_chat_member.user
         username = left_user.username or left_user.first_name or f"user_{left_user.id}"
+
+        if not left_user.is_bot:
+            record_uc: RecordChatMembershipEventUseCase = container.resolve(
+                RecordChatMembershipEventUseCase
+            )
+            leave_kind = (
+                MembershipEventType.REMOVED
+                if isinstance(event.new_chat_member, ChatMemberBanned)
+                else MembershipEventType.LEFT
+            )
+            await record_uc.execute(
+                RecordChatMembershipEventDTO(
+                    chat_tgid=str(event.chat.id),
+                    user_tgid=left_user.id,
+                    event_type=leave_kind,
+                )
+            )
 
         if left_user.is_bot:
             bot_info = await bot.get_me()
