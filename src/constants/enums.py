@@ -70,3 +70,11 @@ class SummaryType(str, Enum):
 
     SHORT = "short"
     FULL = "full"
+
+
+class MembershipEventType(str, Enum):
+    """Тип события состава чата (вступление / уход / исключение)."""
+
+    JOIN = "join"
+    LEFT = "left"
+    REMOVED = "removed"
