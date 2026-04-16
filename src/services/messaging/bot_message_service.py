@@ -231,11 +231,43 @@ class BotMessageService:
                 from_chat_id=from_chat_tgid,
                 message_id=message_tgid,
             )
+        except TelegramBadRequest as e:
+            err_text = (e.message or str(e)).lower()
+            if "message_id_invalid" in err_text:
+                logger.warning(
+                    "Пересылка в архив пропущена: message_id=%s не найден в чате %s "
+                    "(назначение пересылки %s): %s",
+                    message_tgid,
+                    from_chat_tgid,
+                    chat_tgid,
+                    e,
+                )
+            else:
+                logger.error(
+                    "Не удалось переслать сообщение message_id=%s из чата %s в %s: %s",
+                    message_tgid,
+                    from_chat_tgid,
+                    chat_tgid,
+                    e,
+                )
+            return None
         except TelegramAPIError as e:
-            logger.error("Не удалось переслать сообщение в чат %s: %s", chat_tgid, e)
+            logger.error(
+                "Не удалось переслать сообщение message_id=%s из чата %s в %s: %s",
+                message_tgid,
+                from_chat_tgid,
+                chat_tgid,
+                e,
+            )
             return None
         except (OSError, asyncio.TimeoutError, ConnectionError) as e:
-            logger.error("Сетевая ошибка при пересылке в чат %s: %s", chat_tgid, e)
+            logger.error(
+                "Сетевая ошибка при пересылке message_id=%s из %s в %s: %s",
+                message_tgid,
+                from_chat_tgid,
+                chat_tgid,
+                e,
+            )
             return None
 
     async def delete_message_from_chat(
