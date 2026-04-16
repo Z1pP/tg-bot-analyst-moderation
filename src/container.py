@@ -106,6 +106,7 @@ from usecases.message import (
     SaveReplyMessageUseCase,
 )
 from usecases.moderation import (
+    ExecuteModerationInChatsUseCase,
     GiveUserBanUseCase,
     GiveUserWarnUseCase,
     RestrictNewMemberUseCase,
@@ -403,6 +404,7 @@ class ContainerSetup:
         """Регистрация use cases для модерации."""
         container.register(GiveUserWarnUseCase)
         container.register(GiveUserBanUseCase)
+        container.register(ExecuteModerationInChatsUseCase)
         container.register(RestrictNewMemberUseCase)
         container.register(VerifyMemberUseCase)
         container.register(CancelLastWarnUseCase)
