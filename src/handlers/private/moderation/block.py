@@ -17,7 +17,6 @@ from keyboards.inline.moderation import (
     no_reason_ikb,
 )
 from states import BanUserStates
-from usecases.moderation import GiveUserBanUseCase
 
 from .helpers import (
     execute_moderation_logic,
@@ -176,7 +175,6 @@ async def block_chat_select_handler(
         callback=callback,
         state=state,
         action=Actions.BAN,
-        usecase_cls=GiveUserBanUseCase,
         success_text=Dialog.BanUser.SUCCESS_BAN,
         partial_text=Dialog.BanUser.PARTIAL_BAN,
         fail_text=Dialog.BanUser.FAIL_BAN,
