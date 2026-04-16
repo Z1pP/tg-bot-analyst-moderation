@@ -139,14 +139,6 @@ def show_tracked_users_ikb(
             )
         )
 
-    # Кнопка перехода в меню управления пользователями
-    builder.row(
-        InlineKeyboardButton(
-            text=InlineButtons.User.MANAGEMENT,
-            callback_data=CallbackData.User.SHOW_MENU,
-        ),
-    )
-
     # Пагинация (только если больше одной страницы)
     if total_count > page_size:
         max_pages = (total_count + page_size - 1) // page_size
@@ -179,6 +171,14 @@ def show_tracked_users_ikb(
 
         if pagination_buttons:
             builder.row(*pagination_buttons)
+
+    # Кнопка перехода в меню управления пользователями
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.User.MANAGEMENT,
+            callback_data=CallbackData.User.SHOW_MENU,
+        ),
+    )
 
     # Кнопка возврата в меню (в самом низу)
     builder.row(
