@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from aiogram.types import InlineKeyboardMarkup
 
 from constants import Dialog
+from dto import GetChatWithArchiveDTO
 from exceptions.base import BotBaseException
 from keyboards.inline.chats import archive_channel_setting_ikb, chats_menu_ikb
-from dto import GetChatWithArchiveDTO
 from services import ChatService
 from services.messaging import BotMessageService
 from services.permissions import BotPermissionService
@@ -66,6 +66,17 @@ class GetArchiveSettingsUseCase:
             )
 
         if chat.archive_chat:
+            # Синхронизация title архивного чата из Telegram (при переименовании канала)
+            tg_chat = await self._bot_permission_service.get_chat_from_telegram(
+                chat.archive_chat.chat_id
+            )
+            if tg_chat and tg_chat.title and tg_chat.title != chat.archive_chat.title:
+                updated = await self._chat_service.update_chat_title(
+                    chat.archive_chat.id, tg_chat.title
+                )
+                if updated:
+                    chat.archive_chat = updated
+
             permissions_check = (
                 await self._bot_permission_service.check_archive_permissions(
                     chat_tgid=chat.archive_chat.chat_id
@@ -89,9 +100,7 @@ class GetArchiveSettingsUseCase:
                     ),
                 )
 
-            schedule = await self._report_schedule_service.get_schedule(
-                chat_id=chat.id
-            )
+            schedule = await self._report_schedule_service.get_schedule(chat_id=chat.id)
             schedule_info, schedule_enabled = build_schedule_info(schedule)
             text = Dialog.Chat.ARCHIVE_CHANNEL_EXISTS.format(
                 title=chat.title,

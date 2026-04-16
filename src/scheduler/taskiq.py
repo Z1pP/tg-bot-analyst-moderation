@@ -1,6 +1,6 @@
 import logging
 
-from taskiq_aio_pika import AioPikaBroker
+from taskiq_aio_pika import AioPikaBroker, Queue
 from taskiq_redis import RedisAsyncResultBackend
 
 from config import settings
@@ -15,4 +15,5 @@ result_backend = RedisAsyncResultBackend(
 
 broker = AioPikaBroker(
     url=f"amqp://{settings.RABBITMQ_USER}:{settings.RABBITMQ_PASS}@{settings.RABBITMQ_HOST}:{settings.RABBITMQ_PORT}/",
+    delay_queue=Queue(name="taskiq.delay_queue"),
 ).with_result_backend(result_backend)

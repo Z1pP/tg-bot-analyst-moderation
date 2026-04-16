@@ -12,8 +12,8 @@ from services.analytics_buffer_service import AnalyticsBufferService
 @pytest.fixture
 def buffer_service() -> AnalyticsBufferService:
     """Сервис с подменённым подключением к Redis."""
-    svc = AnalyticsBufferService(redis_url="redis://localhost:6379/0")
-    svc._redis = AsyncMock()
+    mock_redis = AsyncMock()
+    svc = AnalyticsBufferService(redis_client=mock_redis)
     svc._connected = True
     return svc
 
@@ -87,7 +87,8 @@ async def test_add_message_when_connection_fails_does_not_raise(
     sample_message_dto: BufferedMessageDTO,
 ) -> None:
     """При недоступности Redis add_message не выбрасывает исключение."""
-    svc = AnalyticsBufferService(redis_url="redis://localhost:6379/0")
+    mock_redis = AsyncMock()
+    svc = AnalyticsBufferService(redis_client=mock_redis)
     svc._ensure_connection = AsyncMock(return_value=False)
     await svc.add_message(sample_message_dto)
     # Не должно быть исключения
@@ -100,7 +101,6 @@ async def test_pop_messages_when_connection_fails_returns_empty(
 ) -> None:
     """При недоступности Redis pop_messages возвращает пустой список."""
     buffer_service._ensure_connection = AsyncMock(return_value=False)
-    buffer_service._redis = None
     result = await buffer_service.pop_messages(count=5)
     assert result == []
 
@@ -138,3 +138,37 @@ async def test_trim_reactions_calls_ltrim(
     buffer_service._redis.ltrim.assert_called_once_with(
         AnalyticsBufferService.REDIS_KEY_REACTIONS, 2, -1
     )
+
+
+@pytest.mark.asyncio
+async def test_re_add_replies_calls_rpush(
+    buffer_service: AnalyticsBufferService,
+) -> None:
+    """re_add_replies возвращает reply в буфер через rpush."""
+    from dto.buffer import BufferedMessageReplyDTO
+
+    dtos = [
+        BufferedMessageReplyDTO(
+            chat_id=1,
+            original_message_url="url1",
+            reply_message_id_str="100",
+            reply_user_id=2,
+            response_time_seconds=10,
+            created_at=datetime.now(timezone.utc),
+        ),
+    ]
+    await buffer_service.re_add_replies(dtos)
+    buffer_service._redis.rpush.assert_called_once()
+    call_args = buffer_service._redis.rpush.call_args
+    assert call_args[0][0] == AnalyticsBufferService.REDIS_KEY_REPLIES
+    assert len(call_args[0]) == 2  # key + value(s)
+    assert b"chat_id" in call_args[0][1] or b"original_message_url" in call_args[0][1]
+
+
+@pytest.mark.asyncio
+async def test_re_add_replies_empty_does_nothing(
+    buffer_service: AnalyticsBufferService,
+) -> None:
+    """re_add_replies с пустым списком не вызывает Redis."""
+    await buffer_service.re_add_replies([])
+    buffer_service._redis.rpush.assert_not_called()

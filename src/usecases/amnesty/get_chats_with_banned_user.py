@@ -3,7 +3,7 @@ from typing import List, Optional
 from dto import AmnestyUserDTO, ChatDTO
 from models.chat_session import ChatSession
 from repositories import ChatTrackingRepository, UserChatStatusRepository
-from services import UserService, BotPermissionService
+from services import BotPermissionService, UserService
 
 from .base_get_chats import BaseGetChatsUseCase
 from .helpers import safe_telegram_check
@@ -32,8 +32,8 @@ class GetChatsWithBannedUserUseCase(BaseGetChatsUseCase):
             )
             is_member_banned = await safe_telegram_check(
                 self.bot_permission_service.is_member_banned(
-                    tg_id=dto.violator_tgid,
-                    chat_tg_id=chat.chat_id,
+                    user_id=int(dto.violator_tgid),
+                    chat_tgid=chat.chat_id,
                 ),
                 False,
                 "Не удалось проверить бан в чате %s для %s: %s",

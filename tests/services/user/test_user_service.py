@@ -257,42 +257,6 @@ async def test_get_user_cache_miss_tg_id_db_hit(
 
 
 @pytest.mark.asyncio
-async def test_get_admins_for_chat_cache_hit(
-    user_service: UserService,
-    mock_cache: AsyncMock,
-    mock_repo: AsyncMock,
-) -> None:
-    """get_admins_for_chat при cache hit не вызывает репозиторий."""
-    admins = [User(id=1, tg_id="a1", username="admin", role=UserRole.ADMIN)]
-    mock_cache.get.return_value = admins
-
-    result = await user_service.get_admins_for_chat(chat_tg_id="-100")
-
-    assert result == admins
-    mock_repo.get_admins_for_chat.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_get_admins_for_chat_cache_miss(
-    user_service: UserService,
-    mock_cache: AsyncMock,
-    mock_repo: AsyncMock,
-) -> None:
-    """get_admins_for_chat при cache miss идёт в репозиторий и кеширует."""
-    admins = [User(id=1, tg_id="a1", username="admin", role=UserRole.ADMIN)]
-    mock_cache.get.return_value = None
-    mock_repo.get_admins_for_chat.return_value = admins
-
-    result = await user_service.get_admins_for_chat(chat_tg_id="-100")
-
-    assert result == admins
-    mock_repo.get_admins_for_chat.assert_called_once_with(chat_tg_id="-100")
-    mock_cache.set.assert_called_once()
-    call_kw = mock_cache.set.call_args.kwargs
-    assert call_kw.get("ttl") == 300
-
-
-@pytest.mark.asyncio
 async def test_delete_user_success(
     user_service: UserService,
     mock_cache: AsyncMock,

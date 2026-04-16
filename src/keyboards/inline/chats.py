@@ -130,14 +130,6 @@ def show_tracked_chats_ikb(
             )
         )
 
-    if show_management_button:
-        builder.row(
-            InlineKeyboardButton(
-                text=InlineButtons.Chat.MANAGEMENT,
-                callback_data=CallbackData.Chat.SHOW_MENU,
-            ),
-        )
-
     pagination_buttons = _build_pagination_row(
         page=page,
         total_count=total_count,
@@ -148,6 +140,15 @@ def show_tracked_chats_ikb(
     )
     if pagination_buttons:
         builder.row(*pagination_buttons)
+
+    # Кнопка перехода в меню управления чатами
+    if show_management_button:
+        builder.row(
+            InlineKeyboardButton(
+                text=InlineButtons.Chat.MANAGEMENT,
+                callback_data=CallbackData.Chat.SHOW_MENU,
+            ),
+        )
 
     # Кнопка возврата в меню (в самом низу)
     builder.row(
@@ -614,9 +615,10 @@ def archive_channel_setting_ikb(
         else:
             url = f"https://t.me/c/{archive_chat.chat_id}/1"
 
+        title = archive_chat.title or "Архивный чат"
         builder.row(
             InlineKeyboardButton(
-                text=f"💬 {archive_chat.title[:15]}...",
+                text=f"💬 {title[:15]}...",
                 url=url,
             ),
             InlineKeyboardButton(

@@ -7,8 +7,8 @@ from sqlalchemy.orm import aliased, selectinload
 
 from exceptions import DatabaseException
 from models import User
-from repositories.base import BaseRepository
 from models.associations import admin_user_tracking
+from repositories.base import BaseRepository
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,9 @@ class UserTrackingRepository(BaseRepository):
                 )
                 admin = admin_result.scalar_one()
 
-                user_result = await session.execute(select(User).where(User.id == user_id))
+                user_result = await session.execute(
+                    select(User).where(User.id == user_id)
+                )
                 user = user_result.scalar_one()
 
                 admin.tracked_users.append(user)
@@ -108,7 +110,10 @@ class UserTrackingRepository(BaseRepository):
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_tracked_users_by_admin", "original": str(e)}
+                    details={
+                        "context": "get_tracked_users_by_admin",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def get_tracked_users_with_dates(
@@ -149,7 +154,10 @@ class UserTrackingRepository(BaseRepository):
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_tracked_users_with_dates", "original": str(e)}
+                    details={
+                        "context": "get_tracked_users_with_dates",
+                        "original": str(e),
+                    }
                 ) from e
 
     async def has_tracked_users(self, admin_tgid: str) -> bool:
@@ -199,5 +207,8 @@ class UserTrackingRepository(BaseRepository):
                 )
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "delete_all_tracked_users_for_admin", "original": str(e)}
+                    details={
+                        "context": "delete_all_tracked_users_for_admin",
+                        "original": str(e),
+                    }
                 ) from e

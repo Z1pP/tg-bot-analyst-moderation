@@ -6,6 +6,7 @@ from typing import List, Optional
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import (
+    Chat,
     ChatIdUnion,
     ChatMemberAdministrator,
     ChatMemberBanned,
@@ -64,19 +65,17 @@ class BotPermissionService:
             return 0
 
     async def get_chat_member_status(
-        self, user_tgid: int, chat_tgid: ChatIdUnion
+        self, user_id: int, chat_tgid: ChatIdUnion
     ) -> ChatMemberStatus:
         """Получает информацию о статусе пользователя в чате."""
         status = ChatMemberStatus()
 
         try:
-            member = await self.bot.get_chat_member(
-                chat_id=chat_tgid, user_id=user_tgid
-            )
+            member = await self.bot.get_chat_member(chat_id=chat_tgid, user_id=user_id)
         except TelegramAPIError as e:
             logger.warning(
                 "Не удалось получить статус участника %s в чате %s: %s",
-                user_tgid,
+                user_id,
                 chat_tgid,
                 e,
             )
@@ -84,14 +83,16 @@ class BotPermissionService:
 
         if isinstance(member, ChatMemberBanned):
             status.is_banned = True
-            status.banned_until = TimeZoneService.convert_to_local_time(
-                member.until_date
-            )
+            if member.until_date:
+                status.banned_until = TimeZoneService.convert_to_local_time(
+                    member.until_date
+                )
         elif isinstance(member, ChatMemberRestricted):
             status.is_muted = not member.can_send_messages
-            status.muted_until = TimeZoneService.convert_to_local_time(
-                member.until_date
-            )
+            if member.until_date:
+                status.muted_until = TimeZoneService.convert_to_local_time(
+                    member.until_date
+                )
         return status
 
     async def get_bot_member(
@@ -108,9 +109,7 @@ class BotPermissionService:
             )
             return None
 
-    async def _has_bot_permission(
-        self, chat_tgid: ChatIdUnion, attr_name: str
-    ) -> bool:
+    async def _has_bot_permission(self, chat_tgid: ChatIdUnion, attr_name: str) -> bool:
         """
         Проверяет наличие у бота права (атрибута администратора).
         Владелец чата считается имеющим все права.
@@ -124,18 +123,18 @@ class BotPermissionService:
             return getattr(member, attr_name, False)
         return False
 
+    async def get_chat_from_telegram(self, chat_tgid: ChatIdUnion) -> Optional[Chat]:
+        """Возвращает актуальные данные чата из Telegram API."""
+        try:
+            return await self.bot.get_chat(chat_id=chat_tgid)
+        except TelegramAPIError as e:
+            logger.warning("Не удалось получить чат %s из Telegram: %s", chat_tgid, e)
+            return None
+
     async def is_channel(self, chat_tgid: ChatIdUnion) -> bool:
         """Возвращает True, если чат — канал."""
-        try:
-            chat = await self.bot.get_chat(chat_id=chat_tgid)
-            return chat.type == "channel"
-        except TelegramAPIError as e:
-            logger.warning(
-                "Не удалось получить тип чата %s, считаем группой: %s",
-                chat_tgid,
-                e,
-            )
-            return False
+        chat = await self.get_chat_from_telegram(chat_tgid)
+        return chat.type == "channel" if chat else False
 
     async def is_bot_in_chat(self, chat_tgid: ChatIdUnion) -> bool:
         """Проверяет, состоит ли бот в чате."""
@@ -157,60 +156,62 @@ class BotPermissionService:
         return await self._has_bot_permission(chat_tgid, "can_delete_messages")
 
     async def can_post_messages(self, chat_tgid: ChatIdUnion) -> bool:
-        """Проверяет право бота на отправку сообщений (канал: админ может постить)."""
+        """Проверяет право бота на отправку сообщений (корректно для групп и каналов)."""
+        is_channel = await self.is_channel(chat_tgid)
+        if is_channel:
+            return await self._has_bot_permission(chat_tgid, "can_post_messages")
         member = await self.get_bot_member(chat_tgid=chat_tgid)
-        if not member:
+        if not member or member.status in ("left", "kicked"):
             return False
-        return isinstance(member, (ChatMemberOwner, ChatMemberAdministrator))
+        if isinstance(member, ChatMemberRestricted):
+            return member.can_send_messages
+        return True
 
     async def can_invite_users(self, chat_tgid: ChatIdUnion) -> bool:
         """Проверяет право бота на создание приглашений."""
         return await self._has_bot_permission(chat_tgid, "can_invite_users")
 
-    async def is_administrator(
-        self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
-    ) -> bool:
+    async def is_administrator(self, user_id: int, chat_tgid: ChatIdUnion) -> bool:
         """Проверяет, является ли пользователь администратором."""
         try:
-            member = await self.bot.get_chat_member(
-                chat_id=chat_tg_id, user_id=int(tg_id)
-            )
+            member = await self.bot.get_chat_member(chat_id=chat_tgid, user_id=user_id)
             return isinstance(member, (ChatMemberOwner, ChatMemberAdministrator))
         except TelegramAPIError as e:
             logger.error(
-                "Ошибка проверки админ-прав для %s в чате %s: %s", tg_id, chat_tg_id, e
+                "Ошибка проверки админ-прав для %s в чате %s: %s",
+                user_id,
+                chat_tgid,
+                e,
             )
             return False
 
-    async def is_member_banned(
-        self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
-    ) -> bool:
+    async def is_member_banned(self, user_id: int, chat_tgid: ChatIdUnion) -> bool:
         """Проверяет бан пользователя."""
         try:
-            member = await self.bot.get_chat_member(
-                chat_id=chat_tg_id, user_id=int(tg_id)
-            )
+            member = await self.bot.get_chat_member(chat_id=chat_tgid, user_id=user_id)
             return isinstance(member, ChatMemberBanned)
         except TelegramAPIError as e:
             logger.error(
-                "Ошибка проверки бана для %s в чате %s: %s", tg_id, chat_tg_id, e
+                "Ошибка проверки бана для %s в чате %s: %s",
+                user_id,
+                chat_tgid,
+                e,
             )
             return False
 
-    async def is_member_muted(
-        self, tg_id: ChatIdUnion, chat_tg_id: ChatIdUnion
-    ) -> bool:
+    async def is_member_muted(self, user_id: int, chat_tgid: ChatIdUnion) -> bool:
         """Проверяет мут пользователя."""
         try:
-            member = await self.bot.get_chat_member(
-                chat_id=chat_tg_id, user_id=int(tg_id)
-            )
+            member = await self.bot.get_chat_member(chat_id=chat_tgid, user_id=user_id)
             if isinstance(member, ChatMemberRestricted):
                 return not member.can_send_messages
             return False
         except TelegramAPIError as e:
             logger.error(
-                "Ошибка проверки мута для %s в чате %s: %s", tg_id, chat_tg_id, e
+                "Ошибка проверки мута для %s в чате %s: %s",
+                user_id,
+                chat_tgid,
+                e,
             )
             return False
 
@@ -229,14 +230,7 @@ class BotPermissionService:
                 status="not_member",
             )
 
-        try:
-            chat = await self.bot.get_chat(chat_id=chat_tgid)
-            is_channel = chat.type == "channel"
-        except TelegramAPIError as e:
-            logger.warning(
-                "Не удалось получить тип чата %s, считаем группой: %s", chat_tgid, e
-            )
-            is_channel = False
+        is_channel = await self.is_channel(chat_tgid)
 
         permission_names = {
             "can_restrict_members": "Блокировка и мут пользователей",
@@ -266,9 +260,13 @@ class BotPermissionService:
                 if not getattr(member, attr, False):
                     missing_permissions.append(name)
 
-        if not is_admin:
-            missing_permissions = list(permission_names.values())
+        elif not is_admin:
             logger.info("Бот не является администратором в чате %s", chat_tgid)
+            missing_permissions = [
+                name
+                for attr, name in permission_names.items()
+                if not (attr == "can_post_messages" and not is_channel)
+            ]
 
         return BotPermissionsCheck(
             is_admin=is_admin,

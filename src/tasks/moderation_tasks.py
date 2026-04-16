@@ -1,9 +1,10 @@
-import asyncio
 import logging
 
 from container import ContainerSetup, container
+from dto import ArchiveMemberNotificationDTO
 from scheduler import broker
 from services.messaging.bot_message_service import BotMessageService
+from usecases.archive import NotifyArchiveChatMemberKickedUseCase
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +16,14 @@ async def kick_unverified_member_task(
     chat_id: int,
     message_id: int,
     user_id: int,
-    delay_seconds: int = 3600,
+    username: str,
+    chat_title: str,
 ) -> None:
     """
     Задача для кика непроверенного участника по истечении времени.
+
+    Задержка задаётся при вызове через .kicker().with_labels(delay=N).kiq(...).
+    RabbitMQ доставляет сообщение воркеру через N секунд.
 
     Если сообщение с кнопкой верификации ещё существует (пользователь не нажал кнопку),
     удаляет его и кикает пользователя (бан + разбан = кик без постоянного бана).
@@ -28,17 +33,9 @@ async def kick_unverified_member_task(
         chat_id: ID чата
         message_id: ID приветственного сообщения с кнопкой
         user_id: ID пользователя, которого нужно кикнуть при неудаче
-        delay_seconds: Задержка перед проверкой в секундах
+        username: Username пользователя для уведомления в архив
+        chat_title: Название чата для уведомления в архив
     """
-    if delay_seconds > 0:
-        logger.info(
-            "Ожидание %s секунд перед проверкой верификации пользователя %s в чате %s",
-            delay_seconds,
-            user_id,
-            chat_id,
-        )
-        await asyncio.sleep(delay_seconds)
-
     logger.info(
         "Проверка верификации пользователя %s в чате %s (сообщение %s)",
         user_id,
@@ -77,6 +74,24 @@ async def kick_unverified_member_task(
         )
 
         if kicked:
+            try:
+                dto = ArchiveMemberNotificationDTO(
+                    chat_tgid=str(chat_id),
+                    user_tgid=user_id,
+                    username=username,
+                    chat_title=chat_title,
+                )
+                notify_usecase: NotifyArchiveChatMemberKickedUseCase = (
+                    container.resolve(NotifyArchiveChatMemberKickedUseCase)
+                )
+                await notify_usecase.execute(dto)
+            except Exception as notify_err:
+                logger.warning(
+                    "Не удалось отправить уведомление о кике %s в архив: %s",
+                    user_id,
+                    notify_err,
+                    exc_info=True,
+                )
             logger.info(
                 "Пользователь %s успешно кикнут из чата %s",
                 user_id,
@@ -103,25 +118,17 @@ async def kick_unverified_member_task(
 async def delete_message_from_chat(
     chat_id: int,
     message_id: int,
-    delay_seconds: int = 1800,
 ) -> None:
     """
     Задача для удаления сообщения бота через заданное время.
 
+    Задержка задаётся при вызове через .kicker().with_labels(delay=N).kiq(...).
+    RabbitMQ доставляет сообщение воркеру через N секунд.
+
     Args:
         chat_id: ID чата
         message_id: ID сообщения
-        delay_seconds: Задержка перед удалением в секундах (по умолчанию 30 минут)
     """
-    if delay_seconds > 0:
-        logger.info(
-            "Ожидание %s секунд перед удалением сообщения %s в чате %s",
-            delay_seconds,
-            message_id,
-            chat_id,
-        )
-        await asyncio.sleep(delay_seconds)
-
     logger.info(
         "Выполнение задачи удаления сообщения: chat_id=%s, message_id=%s",
         chat_id,

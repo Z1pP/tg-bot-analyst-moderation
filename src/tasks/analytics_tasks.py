@@ -105,14 +105,23 @@ async def process_buffered_replies_task():
             logger.debug("Нет reply сообщений для обработки")
             return
 
-        inserted_count = await reply_repository.bulk_create_replies(replies)
-        # Удаляем из Redis даже если все были дубликатами
-        await buffer_service.trim_replies(len(replies))
+        inserted_count, failed_dtos = await reply_repository.bulk_create_replies(
+            replies
+        )
+
+        if inserted_count == 0:
+            # Ничего не вставлено — данные остаются в буфере для следующего цикла
+            pass
+        else:
+            if failed_dtos:
+                await buffer_service.re_add_replies(failed_dtos)
+            await buffer_service.trim_replies(len(replies))
 
         logger.info(
-            "Обработано reply сообщений: прочитано=%d, вставлено=%d",
+            "Обработано reply сообщений: прочитано=%d, вставлено=%d, возвращено=%d",
             len(replies),
             inserted_count,
+            len(failed_dtos),
         )
     except Exception as e:
         logger.error(

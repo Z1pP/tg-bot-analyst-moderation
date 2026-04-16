@@ -85,7 +85,12 @@ class PunishmentLadderRepository(BaseRepository):
                 )
                 return ladder
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении лестницы для чата %s: %s", chat_id, e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении лестницы для чата %s: %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "get_ladder_by_chat_id", "original": str(e)}
@@ -106,7 +111,9 @@ class PunishmentLadderRepository(BaseRepository):
                 logger.info("Найдено %d ступеней в глобальной лестнице.", len(ladder))
                 return ladder
             except SQLAlchemyError as e:
-                logger.error("Ошибка при получении глобальной лестницы: %s", e, exc_info=True)
+                logger.error(
+                    "Ошибка при получении глобальной лестницы: %s", e, exc_info=True
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "get_global_ladder", "original": str(e)}
@@ -125,7 +132,12 @@ class PunishmentLadderRepository(BaseRepository):
                 await session.commit()
                 logger.info("Лестница наказаний для чата %s удалена.", chat_id)
             except SQLAlchemyError as e:
-                logger.error("Ошибка при удалении лестницы для чата %s: %s", chat_id, e, exc_info=True)
+                logger.error(
+                    "Ошибка при удалении лестницы для чата %s: %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
+                )
                 await session.rollback()
                 raise DatabaseException(
                     details={"context": "delete_ladder_by_chat_id", "original": str(e)}

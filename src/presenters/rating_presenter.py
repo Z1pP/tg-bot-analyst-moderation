@@ -25,6 +25,13 @@ class RatingPresenter:
         chat_name = f"<b>{stats.chat_title}</b>" if stats.chat_title else "чате"
 
         if not stats.top_users and not stats.top_reactors:
+            has_membership_stats = bool(
+                stats.joins_count or stats.left_count or stats.removed_count
+            )
+            if has_membership_stats:
+                header = cls._format_header(stats, period_str, chat_name)
+                return f"{header}\n\n{Dialog.Rating.NO_ACTIVITY}"
+
             title = Dialog.Rating.RATING_TITLE.format(
                 period=period_str, chat_name=chat_name
             )
@@ -61,9 +68,13 @@ class RatingPresenter:
         lines = [
             title,
             "",
-            f"{Dialog.Rating.ACTIVE_USERS} {stats.active_users_count} из {stats.total_users_count}",
             f"{Dialog.Rating.TOTAL_MESSAGES} {stats.total_messages}",
             f"{Dialog.Rating.TOTAL_REACTIONS} {stats.total_reactions}",
+            "",
+            f"{Dialog.Rating.ACTIVE_USERS} {stats.active_users_count} из {stats.total_users_count}",
+            f"{Dialog.Rating.JOINS_COUNT} {stats.joins_count}",
+            f"{Dialog.Rating.LEFT_COUNT} {stats.left_count}",
+            f"{Dialog.Rating.REMOVED_COUNT} {stats.removed_count}",
         ]
         return "\n".join(lines)
 

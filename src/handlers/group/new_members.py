@@ -5,8 +5,15 @@ from aiogram.enums import ChatType
 from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 from punq import Container
 
-from constants import WELCOME_MESSAGE_NOTIFICATION_TTL, Dialog
+from constants import (
+    KICK_UNVERIFIED_MEMBER_TTL,
+    WELCOME_MESSAGE_NOTIFICATION_TTL,
+    Dialog,
+)
 from constants.callback import CallbackData
+from constants.enums import MembershipEventType
+from dto import ArchiveMemberNotificationDTO
+from dto.membership_event import RecordChatMembershipEventDTO
 from exceptions.base import BotBaseException
 from keyboards.inline.antibot import confirm_humanity_verification_ikb
 from keyboards.inline.chats import hide_notification_ikb
@@ -15,6 +22,7 @@ from tasks.moderation_tasks import (
     kick_unverified_member_task,
 )
 from usecases.archive import NotifyArchiveChatNewMemberUseCase
+from usecases.membership import RecordChatMembershipEventUseCase
 from usecases.moderation import RestrictNewMemberUseCase, VerifyMemberUseCase
 
 router = Router(name=__name__)
@@ -34,6 +42,18 @@ async def process_chat_member_joined(
     try:
         chat_title = event.chat.title or "Неизвестная группа"
         user = event.new_chat_member.user
+
+        if not user.is_bot:
+            record_uc: RecordChatMembershipEventUseCase = container.resolve(
+                RecordChatMembershipEventUseCase
+            )
+            await record_uc.execute(
+                RecordChatMembershipEventDTO(
+                    chat_tgid=str(event.chat.id),
+                    user_tgid=user.id,
+                    event_type=MembershipEventType.JOIN,
+                )
+            )
 
         logger.info(
             "Новый участник в группе '%s': %s (ID: %s)",
@@ -123,15 +143,16 @@ async def _notify_archive(
     chat_title: str,
 ) -> None:
     """Уведомление в архивный чат о новом участнике."""
+    dto = ArchiveMemberNotificationDTO(
+        chat_tgid=str(chat_id),
+        user_tgid=user_id,
+        username=username or "",
+        chat_title=chat_title,
+    )
     notify_archive_usecase: NotifyArchiveChatNewMemberUseCase = container.resolve(
         NotifyArchiveChatNewMemberUseCase
     )
-    await notify_archive_usecase.execute(
-        chat_tgid=str(chat_id),
-        user_tgid=user_id,
-        username=username,
-        chat_title=chat_title,
-    )
+    await notify_archive_usecase.execute(dto)
 
 
 def _get_formatted_welcome_text(
@@ -177,23 +198,7 @@ async def _handle_new_member(
         chat_title,
     )
 
-    # 1. Уведомление в архивный чат
-    logger.debug(
-        "Вызов _notify_archive: chat_id=%s, user_id=%s, username=%s, chat_title=%s",
-        chat.id,
-        user.id,
-        user.username,
-        chat_title,
-    )
-    await _notify_archive(
-        container=container,
-        chat_id=chat.id,
-        user_id=user.id,
-        username=user.username,
-        chat_title=chat_title,
-    )
-
-    # 2. Проверка антиботом и приветствие
+    # 1. Проверка антиботом и приветствие
     restrict_usecase: RestrictNewMemberUseCase = container.resolve(
         RestrictNewMemberUseCase
     )
@@ -202,9 +207,18 @@ async def _handle_new_member(
         user_id=user.id,
     )
 
+    # 2. Уведомление в архивный чат
+    await _notify_archive(
+        container=container,
+        chat_id=chat.id,
+        user_id=user.id,
+        username=user.username,
+        chat_title=chat_title,
+    )
+
     username_val = user.username or user.first_name or str(user.id)
 
-    # Сценарий 1: Антибот включён — мут + сообщение с кнопкой верификации
+    # Сценарий 1: Антибот включён + Приветствие включено
     if restriction_data.is_antibot_enabled:
         greeting_text = ""
         if restriction_data.show_welcome_text:
@@ -222,14 +236,19 @@ async def _handle_new_member(
             reply_markup=confirm_humanity_verification_ikb(user.id),
         )
 
-        await kick_unverified_member_task.kiq(
-            chat_id=chat.id,
-            message_id=sent_message.message_id,
-            user_id=user.id,
-            delay_seconds=3600,
+        await (
+            kick_unverified_member_task.kicker()
+            .with_labels(delay=KICK_UNVERIFIED_MEMBER_TTL)
+            .kiq(
+                chat_id=chat.id,
+                message_id=sent_message.message_id,
+                user_id=user.id,
+                username=username_val,
+                chat_title=chat_title,
+            )
         )
 
-    # Сценарий 2: Антибот выключен, но приветствие включено
+    # Сценарий 2: Антибот выключен + Приветствие включено
     elif not restriction_data.is_antibot_enabled and restriction_data.show_welcome_text:
         greeting_text = _get_formatted_welcome_text(
             welcome_text=restriction_data.welcome_text,
@@ -243,8 +262,11 @@ async def _handle_new_member(
         )
 
         if restriction_data.auto_delete_welcome_text:
-            await delete_message_from_chat.kiq(
-                chat_id=chat.id,
-                message_id=sent_message.message_id,
-                delay_seconds=WELCOME_MESSAGE_NOTIFICATION_TTL,
+            await (
+                delete_message_from_chat.kicker()
+                .with_labels(delay=WELCOME_MESSAGE_NOTIFICATION_TTL)
+                .kiq(
+                    chat_id=chat.id,
+                    message_id=sent_message.message_id,
+                )
             )

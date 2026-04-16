@@ -71,7 +71,10 @@ class ReportScheduleRepository(BaseRepository):
                 logger.error("Ошибка в шедулере: %s", e, exc_info=True)
                 await session.rollback()
                 raise DatabaseException(
-                    details={"context": "get_due_schedules_and_reschedule", "original": str(e)}
+                    details={
+                        "context": "get_due_schedules_and_reschedule",
+                        "original": str(e),
+                    }
                 ) from e
 
     def _calculate_next_run(
@@ -259,7 +262,10 @@ class ReportScheduleRepository(BaseRepository):
                 return schedule
             except SQLAlchemyError as e:
                 logger.error(
-                    "Ошибка при обновлении расписания id=%s: %s", schedule_id, e, exc_info=True
+                    "Ошибка при обновлении расписания id=%s: %s",
+                    schedule_id,
+                    e,
+                    exc_info=True,
                 )
                 await session.rollback()
                 raise DatabaseException(

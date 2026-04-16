@@ -5,6 +5,7 @@ import os
 import sys
 
 import uvicorn
+from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
@@ -17,16 +18,7 @@ from scheduler import broker
 from utils.logger_config import setup_logger
 
 setup_logger(log_level=logging.INFO)
-
 logger = logging.getLogger(__name__)
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--webhook-url", type=str, default=None)
-args = parser.parse_args()
-
-bot = None
-dp = None
-
 
 ALLOWED_UPDATES = [
     "message",
@@ -38,34 +30,28 @@ ALLOWED_UPDATES = [
 ]
 
 
-async def init_bot() -> None:
-    """Инициализирует контейнер зависимостей и настраивает бота."""
-    global bot, dp
+async def init_bot() -> tuple[Bot, Dispatcher]:
+    """Инициализирует контейнер зависимостей и возвращает экземпляры бота и диспетчера."""
     logger.info("Инициализация контейнера...")
     ContainerSetup.setup()
     logger.info("Настройка и запуск бота...")
-    bot, dp = await configure_dispatcher()
+    return await configure_dispatcher()
 
 
-async def on_startup(app: web.Application) -> None:
-    """Устанавливает webhook и команды при старте сервера."""
+async def setup_webhook_and_commands(bot: Bot, webhook_url: str) -> None:
+    """Настраивает вебхук и команды перед стартом веб-сервера."""
     await broker.startup()
     logger.info("TaskIQ broker запущен")
-    if args.webhook_url:
-        url = f"{args.webhook_url}/webhook"
-        logger.info("🚀 Устанавливаем webhook: %s", url)
-        await bot.set_webhook(url, allowed_updates=ALLOWED_UPDATES)
-        await set_bot_commands(bot)
 
-
-async def on_shutdown(app: web.Application) -> None:
-    """Освобождает ресурсы при остановке сервера."""
-    await shutdown(bot, dp)
+    url = f"{webhook_url}/webhook"
+    logger.info("🚀 Устанавливаем webhook: %s", url)
+    await bot.set_webhook(url, allowed_updates=ALLOWED_UPDATES)
+    await set_bot_commands(bot)
 
 
 async def root(request: web.Request) -> web.Response:
-    """Проверка работоспособности бота."""
-    return web.json_response({"status": "ok", "message": "Bot is running"})
+    """Проверка работоспособности aiohttp сервера."""
+    return web.json_response({"status": "ok", "message": "Webhook server is running"})
 
 
 async def health(request: web.Request) -> web.Response:
@@ -73,14 +59,15 @@ async def health(request: web.Request) -> web.Response:
     return web.json_response(
         {
             "status": "healthy",
-            "webhook_configured": args.webhook_url is not None,
-            "bot_initialized": bot is not None,
+            "webhook_configured": request.app.get("webhook_url") is not None,
+            "bot_initialized": request.app.get("bot") is not None,
         }
     )
 
 
 async def webhook_info(request: web.Request) -> web.Response:
-    """Возвращает информацию о текущем webhook."""
+    """Возвращает информацию о текущем webhook от Telegram API."""
+    bot: Bot | None = request.app.get("bot")
     if bot:
         info = await bot.get_webhook_info()
         return web.json_response(
@@ -95,9 +82,13 @@ async def webhook_info(request: web.Request) -> web.Response:
     return web.json_response({"error": "Bot not initialized"}, status=503)
 
 
-def build_web_app() -> web.Application:
-    """Создает aiohttp приложение для webhook."""
+def build_web_app(bot: Bot, dp: Dispatcher, webhook_url: str) -> web.Application:
+    """Создает aiohttp приложение для webhook, изолируя зависимости внутри app."""
     app = web.Application()
+
+    app["bot"] = bot
+    app["webhook_url"] = webhook_url
+
     app.router.add_get("/", root)
     app.router.add_get("/health", health)
     app.router.add_get("/webhook-info", webhook_info)
@@ -106,17 +97,16 @@ def build_web_app() -> web.Application:
     webhook_requests_handler.register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
 
-    app.on_startup.append(on_startup)
-    app.on_shutdown.append(on_shutdown)
     return app
 
 
 async def run_fastapi() -> None:
-    """Запускает FastAPI (Mini App API) через uvicorn на порту API_PORT."""
+    """Запускает FastAPI (Mini App API) через uvicorn."""
     from api.main import create_app as create_fastapi_app
 
     api_port = int(settings.API_PORT)
     fastapi_app = create_fastapi_app()
+
     config = uvicorn.Config(
         fastapi_app,
         host="0.0.0.0",
@@ -126,32 +116,34 @@ async def run_fastapi() -> None:
     )
     server = uvicorn.Server(config)
     logger.info("FastAPI server starting on port %d", api_port)
+
     await server.serve()
 
 
-async def run_webhook() -> None:
-    """Запускает aiohttp (webhook) и FastAPI (Mini App API) параллельно."""
+async def run_webhook(bot: Bot, dp: Dispatcher, webhook_url: str) -> None:
+    """Запускает aiohttp (webhook) в фоне и FastAPI (Mini App) как блокирующий процесс."""
     logger.info("Запуск в режиме webhook...")
-    await init_bot()
-    app = build_web_app()
+
+    await setup_webhook_and_commands(bot, webhook_url)
+
+    app = build_web_app(bot, dp, webhook_url)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+
+    port = int(os.getenv("PORT", 8000))
+    site = web.TCPSite(runner, host="0.0.0.0", port=port)
     await site.start()
-    logger.info("Webhook server started on port %s", os.getenv("PORT", 8000))
+    logger.info("Webhook server started on port %s", port)
+
     try:
-        await asyncio.gather(
-            asyncio.Event().wait(),
-            run_fastapi(),
-        )
+        await run_fastapi()
     finally:
+        logger.info("Остановка Webhook сервера aiohttp...")
         await runner.cleanup()
 
 
-async def run_polling():
+async def run_polling(bot: Bot, dp: Dispatcher):
     """Запускает бота в режиме long polling."""
-
-    await init_bot()
     await broker.startup()
     logger.info("TaskIQ broker запущен")
 
@@ -165,41 +157,48 @@ async def run_polling():
     await dp.start_polling(bot, allowed_updates=ALLOWED_UPDATES)
 
 
-async def shutdown(bot, dp) -> None:
-    """
-    Функция для корректного завершения всех ресурсов.
-    """
+async def shutdown(bot: Bot, dp: Dispatcher) -> None:
+    """Идемпотентная функция для безопасного закрытия ресурсов."""
     logger.info("Начало процесса Graceful Shutdown...")
 
-    if dp and dp.is_polling():
-        logger.info("Остановка polling...")
-        dp.stop_polling()
-
-    if bot and hasattr(bot, "session") and not bot.session.closed:
+    if bot and bot.session:
         logger.info("Закрытие сессии бота...")
         await bot.session.close()
 
-    logger.info("Закрытие соединений с БД...")
-    await engine.dispose()
+    try:
+        logger.info("Остановка TaskIQ broker...")
+        await broker.shutdown()
+    except Exception as e:
+        logger.warning("Ошибка при остановке брокера: %s", e)
 
-    logger.info("Остановка TaskIQ broker...")
-    await broker.shutdown()
-
-    if dp and dp.storage:
+    if dp and getattr(dp, "storage", None):
         logger.info("Закрытие хранилища FSM...")
         await dp.storage.close()
+
+    try:
+        logger.info("Закрытие пула соединений с БД...")
+        await engine.dispose()
+    except Exception as e:
+        logger.warning("Ошибка при закрытии БД: %s", e)
 
     logger.info("Бот успешно остановлен.")
 
 
 async def main():
-    """Точка входа: выбирает режим запуска (webhook/polling)."""
+    """Точка входа."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--webhook-url", type=str, default=None)
+    args = parser.parse_args()
+
     webhook_url = args.webhook_url or settings.USE_WEBHOOK
+
+    bot, dp = await init_bot()
+
     try:
         if webhook_url:
-            await run_webhook()
+            await run_webhook(bot, dp, webhook_url)
         else:
-            await run_polling()
+            await run_polling(bot, dp)
     except Exception as e:
         logger.error("Критическая ошибка: %s", str(e), exc_info=True)
         sys.exit(1)
@@ -212,4 +211,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("Приложение остановлено пользователем")
-        sys.exit(0)

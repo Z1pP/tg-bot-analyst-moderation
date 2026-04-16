@@ -5,7 +5,8 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from punq import Container
 
-from constants import PROTECTED_USER_TG_ID, Dialog
+from config import settings
+from constants import Dialog
 from constants.callback import CallbackData
 from constants.enums import UserRole
 from exceptions import BusinessLogicException
@@ -92,7 +93,7 @@ async def process_user_data_input(
         return
 
     # Защита от изменения роли для захардкоженного пользователя
-    if user.tg_id == PROTECTED_USER_TG_ID:
+    if user.tg_id == settings.PROTECTED_USER_TG_ID:
         if active_message_id:
             await safe_edit_message(
                 bot=message.bot,
@@ -205,7 +206,7 @@ async def role_select_callback_handler(
             return
 
         # Защита от изменения роли для захардкоженного пользователя
-        if user.tg_id == PROTECTED_USER_TG_ID:
+        if user.tg_id == settings.PROTECTED_USER_TG_ID:
             await safe_edit_message(
                 bot=callback.bot,
                 chat_id=callback.message.chat.id,

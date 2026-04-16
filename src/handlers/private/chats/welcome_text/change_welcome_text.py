@@ -37,13 +37,13 @@ async def change_welcome_text_handler(
     )
 
 
-@router.message(WelcomeTextState.waiting_welcome_text_input)
+@router.message(WelcomeTextState.waiting_welcome_text_input, F.text | F.caption)
 async def welcome_text_input_handler(
     message: Message,
     state: FSMContext,
     container: Container,
 ) -> None:
-    """Обработчик ввода нового приветственного текста"""
+    """Обработчик ввода нового приветственного текста (html_text сохраняет форматирование)."""
     data = await state.get_data()
     chat_id = data.get("chat_id")
 
@@ -57,6 +57,17 @@ async def welcome_text_input_handler(
         )
         return
 
+    welcome_text = (message.html_text or message.text or "").strip()
+    if not welcome_text:
+        await safe_edit_message(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text=Dialog.Chat.WELCOME_TEXT_EMPTY,
+            reply_markup=cancel_welcome_text_setting_ikb(),
+        )
+        return
+
     try:
         usecase: UpdateChatWelcomeTextUseCase = container.resolve(
             UpdateChatWelcomeTextUseCase
@@ -64,7 +75,7 @@ async def welcome_text_input_handler(
         updated_chat = await usecase.execute(
             chat_id=chat_id,
             admin_tg_id=str(message.from_user.id),
-            welcome_text=message.html_text,
+            welcome_text=welcome_text,
         )
 
         if not updated_chat:

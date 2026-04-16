@@ -8,6 +8,7 @@ from .base import BaseModel
 
 if TYPE_CHECKING:
     from .admin_chat_access import AdminChatAccess
+    from .chat_membership_event import ChatMembershipEvent
     from .chat_settings import ChatSettings
     from .message import ChatMessage
     from .message_reply import MessageReply
@@ -67,6 +68,12 @@ class ChatSession(BaseModel):
 
     user_statuses: Mapped[list["UserChatStatus"]] = relationship(
         "UserChatStatus",
+        back_populates="chat",
+        cascade="all, delete-orphan",
+    )
+
+    membership_events: Mapped[list["ChatMembershipEvent"]] = relationship(
+        "ChatMembershipEvent",
         back_populates="chat",
         cascade="all, delete-orphan",
     )

@@ -4,12 +4,14 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.base import BaseStorage
 from aiogram.fsm.storage.redis import RedisStorage
 from punq import Container, Scope
+from redis.asyncio import Redis
 
 from config import settings
 from database.session import DatabaseContextManager, async_session
 from di import container
 from repositories import (
     AdminActionLogRepository,
+    ChatMembershipEventRepository,
     ChatRepository,
     ChatTrackingRepository,
     MessageReactionRepository,
@@ -68,6 +70,8 @@ from usecases.archive import (
     BindArchiveChatUseCase,
     GenerateArchiveBindHashUseCase,
     GetArchiveSettingsUseCase,
+    NotifyArchiveChatMemberKickedUseCase,
+    NotifyArchiveChatMemberLeftUseCase,
     NotifyArchiveChatNewMemberUseCase,
     SetArchiveSendingTimeUseCase,
     ToggleArchiveScheduleUseCase,
@@ -75,15 +79,15 @@ from usecases.archive import (
 from usecases.categories import (
     CreateCategoryUseCase,
     DeleteCategoryUseCase,
-    GetCategoriesUseCase,
     GetCategoriesPaginatedUseCase,
+    GetCategoriesUseCase,
     GetCategoryByIdUseCase,
     UpdateCategoryNameUseCase,
 )
 from usecases.chat import (
     GetAllChatsUseCase,
-    GetChatWithArchiveUseCase,
     GetChatsForUserActionUseCase,
+    GetChatWithArchiveUseCase,
     GetTrackedChatsUseCase,
     ToggleAntibotUseCase,
     ToggleAutoDeleteWelcomeTextUseCase,
@@ -96,6 +100,7 @@ from usecases.chat_tracking import (
     GetUserTrackedChatsUseCase,
     RemoveChatFromTrackingUseCase,
 )
+from usecases.membership import RecordChatMembershipEventUseCase
 from usecases.message import (
     SaveMessageUseCase,
     SaveReplyMessageUseCase,
@@ -106,6 +111,7 @@ from usecases.moderation import (
     RestrictNewMemberUseCase,
     VerifyMemberUseCase,
 )
+from usecases.permissions import GetBotPermissionsInChatUseCase
 from usecases.punishment import (
     GetPunishmentLadderUseCase,
     SetDefaultPunishmentLadderUseCase,
@@ -124,21 +130,20 @@ from usecases.report import (
 )
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from usecases.settings import ResetAllTrackingUseCase
-from usecases.time import ConvertToLocalTimeUseCase, GetAppNowUseCase
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
-from usecases.permissions import GetBotPermissionsInChatUseCase
 from usecases.templates import (
     CreateTemplateFromContentUseCase,
     DeleteTemplateUseCase,
     GetTemplateAndIncreaseUsageUseCase,
-    GetTemplatesByCategoryUseCase,
-    GetTemplatesByScopeUseCase,
-    GetTemplatesByQueryUseCase,
-    GetTemplatesPaginatedUseCase,
     GetTemplateByIdUseCase,
+    GetTemplatesByCategoryUseCase,
+    GetTemplatesByQueryUseCase,
+    GetTemplatesByScopeUseCase,
+    GetTemplatesPaginatedUseCase,
     UpdateTemplateContentUseCase,
     UpdateTemplateTitleUseCase,
 )
+from usecases.time import ConvertToLocalTimeUseCase, GetAppNowUseCase
 from usecases.user import (
     CreateNewUserUserCase,
     DeleteUserUseCase,
@@ -158,15 +163,29 @@ from usecases.user_tracking import (
 from utils.exception_handler import AsyncErrorHandler
 
 
+def _redis_url() -> str:
+    """URL подключения к Redis (единый для всех сервисов)."""
+    return f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
+
+
 class ContainerSetup:
     @staticmethod
     def setup() -> None:
+        ContainerSetup._register_redis(container)
         ContainerSetup._register_bot_components(container)
         ContainerSetup._register_database(container)
         ContainerSetup._register_repositories(container)
         ContainerSetup._register_services(container)
         ContainerSetup._register_usecases(container)
         ContainerSetup._register_async_error_handler(container)
+
+    @staticmethod
+    def _register_redis(container: Container) -> None:
+        """Единый клиент Redis для FSM, кеша и буфера аналитики."""
+        container.register(
+            Redis,
+            instance=Redis.from_url(_redis_url()),
+        )
 
     @staticmethod
     def _register_bot_components(container: Container) -> None:
@@ -177,9 +196,9 @@ class ContainerSetup:
                 default=DefaultBotProperties(parse_mode=ParseMode.HTML),
             ),
         )
-        storage = RedisStorage.from_url(
-            f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
-        )
+
+        redis_client = container.resolve(Redis)
+        storage = RedisStorage(redis=redis_client)
         container.register(BaseStorage, instance=storage)
         container.register(Dispatcher, instance=Dispatcher(storage=storage))
 
@@ -213,6 +232,7 @@ class ContainerSetup:
             UserChatStatusRepository,
             AdminActionLogRepository,
             ReportScheduleRepository,
+            ChatMembershipEventRepository,
         ]
 
         for repo in repositories:
@@ -223,35 +243,31 @@ class ContainerSetup:
         """Регистрация сервисов."""
         container.register(
             ICache,
-            lambda: RedisCache(
-                f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
-            ),
+            RedisCache,
+            scope=Scope.singleton,
         )
         container.register(
             IAIService,
-            lambda: OpenRouterService(
+            factory=lambda: OpenRouterService(
                 api_key=settings.OPEN_ROUTER_TOKEN,
                 model_name=settings.OPEN_ROUTER_MODEL,
             ),
+            scope=Scope.singleton,
         )
-        container.register(UserService)
-        container.register(ChatService)
-        container.register(ArchiveBindService)
-        container.register(TemplateService)
-        container.register(TemplateContentService)
-        container.register(CategoryService)
-        container.register(BotPermissionService)
-        container.register(BotMessageService)
-        container.register(PunishmentService)
-        container.register(AdminActionLogService)
-        container.register(ReportScheduleService)
-        container.register(TaskiqSchedulerService)
-        container.register(
-            AnalyticsBufferService,
-            lambda: AnalyticsBufferService(
-                f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
-            ),
-        )
+        container.register(UserService, scope=Scope.singleton)
+        container.register(ChatService, scope=Scope.singleton)
+        container.register(ArchiveBindService, scope=Scope.singleton)
+        container.register(TemplateService, scope=Scope.singleton)
+        container.register(TemplateContentService, scope=Scope.singleton)
+        container.register(CategoryService, scope=Scope.singleton)
+        container.register(BotPermissionService, scope=Scope.singleton)
+        container.register(BotMessageService, scope=Scope.singleton)
+        container.register(PunishmentService, scope=Scope.singleton)
+        container.register(AdminActionLogService, scope=Scope.singleton)
+        container.register(ReportScheduleService, scope=Scope.singleton)
+        container.register(TaskiqSchedulerService, scope=Scope.singleton)
+
+        container.register(AnalyticsBufferService, scope=Scope.singleton)
         container.register(
             ApiClient,
             factory=lambda: ApiClient(base_url=settings.API_BASE_URL),
@@ -313,6 +329,8 @@ class ContainerSetup:
         container.register(BindArchiveChatUseCase)
         container.register(GenerateArchiveBindHashUseCase)
         container.register(GetArchiveSettingsUseCase)
+        container.register(NotifyArchiveChatMemberKickedUseCase)
+        container.register(NotifyArchiveChatMemberLeftUseCase)
         container.register(NotifyArchiveChatNewMemberUseCase)
 
     @staticmethod
@@ -377,6 +395,8 @@ class ContainerSetup:
 
         for usecase in message_usecases:
             container.register(usecase)
+
+        container.register(RecordChatMembershipEventUseCase)
 
     @staticmethod
     def _register_moderation_usecases(container: Container) -> None:

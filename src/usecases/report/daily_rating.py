@@ -3,7 +3,12 @@ from datetime import datetime
 
 from constants.enums import AdminActionType
 from dto.daily_activity import ChatDailyStatsDTO
-from repositories import ChatRepository, MessageRepository, UserRepository
+from repositories import (
+    ChatMembershipEventRepository,
+    ChatRepository,
+    MessageRepository,
+    UserRepository,
+)
 from repositories.reaction_repository import MessageReactionRepository
 from services import AdminActionLogService, BotPermissionService
 from utils.date_utils import validate_and_normalize_period
@@ -24,6 +29,7 @@ class GetDailyTopUsersUseCase:
         reaction_repository: MessageReactionRepository,
         bot_permission_service: BotPermissionService,
         admin_action_log_service: AdminActionLogService,
+        membership_event_repository: ChatMembershipEventRepository,
     ):
         self._user_repository = user_repository
         self._message_repository = message_repository
@@ -31,6 +37,7 @@ class GetDailyTopUsersUseCase:
         self._reaction_repository = reaction_repository
         self._bot_permission_service = bot_permission_service
         self._admin_action_log_service = admin_action_log_service
+        self._membership_event_repository = membership_event_repository
 
     async def execute(
         self,
@@ -90,6 +97,21 @@ class GetDailyTopUsersUseCase:
             end_date=end_date,
         )
 
+        joins_count = 0
+        left_only_count = 0
+        removed_count = 0
+        if chat is not None:
+            membership_counts = (
+                await self._membership_event_repository.count_by_chat_and_period(
+                    chat_id=chat.id,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            )
+            joins_count = membership_counts.joins
+            left_only_count = membership_counts.left_count
+            removed_count = membership_counts.removed_count
+
         # Подсчитываем общую статистику
         total_messages = sum(user.message_count for user in top_users)
         total_reactions = sum(user.reaction_count for user in top_reactors)
@@ -114,6 +136,9 @@ class GetDailyTopUsersUseCase:
             total_reactions=total_reactions,
             active_users_count=activity_info.active_users,
             total_users_count=activity_info.total_users,
+            joins_count=joins_count,
+            left_count=left_only_count,
+            removed_count=removed_count,
         )
 
     async def _get_chat_activity_info(

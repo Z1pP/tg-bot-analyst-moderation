@@ -7,13 +7,45 @@ from punq import Container
 
 from constants.callback import CallbackData
 from dto.user import UserDTO
-from keyboards.inline.users import remove_user_inline_kb
+from keyboards.inline.users import remove_user_inline_kb, show_tracked_users_ikb
 from states import UserStateManager
 from utils.pagination_handler import BasePaginationHandler
 
 from .list import get_tracked_users, paginate_users
 
 router = Router(name=__name__)
+
+
+class SelectUserForReportPaginationHandler(BasePaginationHandler):
+    """Пагинация списка пользователей при выборе пользователя для аналитики."""
+
+    def __init__(self) -> None:
+        super().__init__("пользователей")
+
+    async def get_page_data(
+        self,
+        page: int,
+        query: CallbackQuery,
+        state: FSMContext,
+        container: Container,
+    ) -> Tuple[List[UserDTO], int]:
+        users = await get_tracked_users(str(query.from_user.id), container)
+        return paginate_users(users, page)
+
+    async def build_keyboard(
+        self,
+        items: List[UserDTO],
+        page: int,
+        total_count: int,
+    ) -> InlineKeyboardMarkup:
+        return show_tracked_users_ikb(
+            users=items,
+            page=page,
+            total_count=total_count,
+        )
+
+
+select_user_for_report_pagination_handler = SelectUserForReportPaginationHandler()
 
 
 class RemoveUsersPaginationHandler(BasePaginationHandler):
@@ -48,6 +80,32 @@ class RemoveUsersPaginationHandler(BasePaginationHandler):
 remove_users_handler = RemoveUsersPaginationHandler()
 
 
+@router.callback_query(F.data.startswith(CallbackData.User.PREFIX_PREV_USERS_PAGE))
+async def prev_page_select_user_for_report_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
+    """Предыдущая страница списка пользователей для отчёта."""
+    await select_user_for_report_pagination_handler.handle_prev_page(
+        callback, state, container
+    )
+
+
+@router.callback_query(F.data.startswith(CallbackData.User.PREFIX_NEXT_USERS_PAGE))
+async def next_page_select_user_for_report_handler(
+    callback: CallbackQuery, state: FSMContext, container: Container
+) -> None:
+    """Следующая страница списка пользователей для отчёта."""
+    await select_user_for_report_pagination_handler.handle_next_page(
+        callback, state, container
+    )
+
+
+@router.callback_query(F.data == CallbackData.User.USERS_PAGE_INFO)
+async def users_page_info_handler(callback: CallbackQuery) -> None:
+    """Заглушка для неактивной кнопки диапазона страницы (снимает «часики» в клиенте)."""
+    await callback.answer()
+
+
 @router.callback_query(
     UserStateManager.removing_user,
     F.data.startswith(CallbackData.User.PREFIX_PREV_REMOVE_USERS_PAGE),
@@ -68,3 +126,12 @@ async def next_page_remove_users_handler(
 ) -> None:
     """Обработчик перехода на следующую страницу для удаления пользователей"""
     await remove_users_handler.handle_next_page(callback, state, container)
+
+
+@router.callback_query(
+    UserStateManager.removing_user,
+    F.data == CallbackData.User.REMOVE_USERS_PAGE_INFO,
+)
+async def remove_users_page_info_handler(callback: CallbackQuery) -> None:
+    """Заглушка для кнопки диапазона при удалении пользователей."""
+    await callback.answer()

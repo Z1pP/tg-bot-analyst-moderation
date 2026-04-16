@@ -176,6 +176,9 @@ class ChatDialogs:
     )
 
     WELCOME_TEXT_UPDATED = "✅ Новое приветствие сохранено"
+    WELCOME_TEXT_EMPTY = (
+        "❌ Текст приветствия не может быть пустым.\n\nПожалуйста, введите текст."
+    )
     ERROR_SAVE_WELCOME_TEXT = (
         "❌ Приветственное сообщение не сохранено\n\nПопробуйте ещё раз."
     )
@@ -326,6 +329,9 @@ class RatingDialogs:
     ACTIVE_USERS = "👥 Активных польз.:"
     TOTAL_MESSAGES = "💬 Всего сообщений:"
     TOTAL_REACTIONS = "🔥 Всего реакций:"
+    JOINS_COUNT = "➕ Вступили в группу:"
+    LEFT_COUNT = "➖ Покинули группу (сами):"
+    REMOVED_COUNT = "🚫 Исключены из группы:"
     TOP_USERS_BY_MESSAGES = "🏆 Топ-10 польз. по сообщениям:"
     TOP_USERS_BY_REACTIONS = "🏆 Топ-5 польз. по реакциям:"
     TOP_REACTIONS_LIST = "🔥 Топ-7 реакций:"
@@ -895,6 +901,22 @@ class ArchiveNotificationDialogs:
 
     NEW_MEMBER = (
         "👤 <b>Новый участник</b>\n"
+        "Нейм: {username}\n"
+        "ID: <code>{tg_id}</code>\n"
+        "Когда: {date} {time}\n"
+        "Чат: {chat_title}"
+    )
+
+    MEMBER_LEFT = (
+        "🚪 <b>Выход из чата</b>\n"
+        "Нейм: {username}\n"
+        "ID: <code>{tg_id}</code>\n"
+        "Когда: {date} {time}\n"
+        "Чат: {chat_title}"
+    )
+
+    MEMBER_KICKED = (
+        "❌ <b>Кик юзера</b>\n"
         "Нейм: {username}\n"
         "ID: <code>{tg_id}</code>\n"
         "Когда: {date} {time}\n"
