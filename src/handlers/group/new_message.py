@@ -4,10 +4,13 @@ from aiogram import Router
 from aiogram.types import Message
 from punq import Container
 
+from dto.automoderation import AutoModerationRunDTO
 from dto.message import CreateMessageDTO
 from dto.message_reply import CreateMessageReplyDTO
 from dto.time_dto import ConvertToLocalTimeDTO
 from models.message import MessageType
+from services.chat import ChatService
+from usecases.automoderation import RunAutoModerationOnMessageUseCase
 from usecases.message import (
     SaveMessageUseCase,
     SaveReplyMessageUseCase,
@@ -16,6 +19,40 @@ from usecases.time import ConvertToLocalTimeUseCase
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
+
+
+async def _run_automoderation_if_needed(message: Message, container: Container) -> None:
+    """Запускает цепочку автомодерации для текстового сообщения (не глотает исключения наружу)."""
+    if not message.text:
+        return
+    try:
+        chat_service: ChatService = container.resolve(ChatService)
+        chat = await chat_service.get_chat(
+            chat_tgid=str(message.chat.id),
+            title=message.chat.title,
+        )
+        if not chat or not chat.is_auto_moderation_enabled:
+            return
+        run_uc: RunAutoModerationOnMessageUseCase = container.resolve(
+            RunAutoModerationOnMessageUseCase
+        )
+        await run_uc.execute(
+            AutoModerationRunDTO(
+                chat_tgid=str(message.chat.id),
+                chat_title=chat.title or "",
+                is_auto_moderation_enabled=True,
+                archive_chat_tgid=chat.archive_chat_id,
+                username=message.from_user.username,
+                user_tg_id=message.from_user.id,
+                message_id=message.message_id,
+                message_text=message.text,
+            )
+        )
+    except Exception:
+        logger.exception(
+            "automod: непойманная ошибка после сообщения chat_id=%s",
+            message.chat.id,
+        )
 
 
 def _get_message_type(message: Message) -> MessageType:
@@ -99,6 +136,7 @@ async def process_reply_message(
             SaveReplyMessageUseCase
         )
         await reply_usecase.execute(reply_message_dto=reply_dto)
+        await _run_automoderation_if_needed(message, container)
     except Exception as e:
         logger.error("Ошибка сохранения reply сообщения: %s", str(e))
 
@@ -127,6 +165,7 @@ async def process_message(
     try:
         usecase: SaveMessageUseCase = container.resolve(SaveMessageUseCase)
         await usecase.execute(message_dto=msg_dto)
+        await _run_automoderation_if_needed(message, container)
         # client_service: ApiClient = container.resolve(ApiClient)
         # await client_service.message.create_message(msg_dto)
 
