@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+from dto.chat_dto import ChatSessionCacheDTO
 from exceptions import DatabaseException
 from models import ChatSession
 from repositories import ChatRepository
@@ -119,16 +120,28 @@ async def test_get_or_create_creates_when_not_found(
 @pytest.mark.asyncio
 async def test_get_chat_from_cache_returns_cached(
     chat_service: ChatService,
+    mock_repo: AsyncMock,
     mock_cache: AsyncMock,
-    sample_chat: MagicMock,
 ) -> None:
-    """get_chat возвращает чат из кеша при наличии."""
-    mock_cache.get = AsyncMock(return_value=sample_chat)
+    """get_chat материализует ChatSession из ChatSessionCacheDTO в Redis."""
+    cached = ChatSessionCacheDTO(
+        id=1,
+        chat_id="-100",
+        title="Test Chat",
+        archive_chat_id=None,
+        is_auto_moderation_enabled=True,
+    )
+    mock_cache.get = AsyncMock(return_value=cached)
 
     result = await chat_service.get_chat(chat_tgid="-100")
 
-    assert result is sample_chat
+    assert result is not None
+    assert result.id == 1
+    assert result.chat_id == "-100"
+    assert result.title == "Test Chat"
+    assert result.is_auto_moderation_enabled is True
     mock_cache.get.assert_called_once_with("chat:tg_id:-100")
+    mock_repo.get_chat_by_tgid.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -154,15 +167,20 @@ async def test_get_chat_updates_title_when_different_from_cache(
     chat_service: ChatService,
     mock_repo: AsyncMock,
     mock_cache: AsyncMock,
-    sample_chat: MagicMock,
 ) -> None:
     """get_chat обновляет title в БД и кеше при расхождении (чат из кеша)."""
-    sample_chat.title = "Old Title"
+    cached = ChatSessionCacheDTO(
+        id=1,
+        chat_id="-100",
+        title="Old Title",
+        archive_chat_id=None,
+    )
     updated_chat = MagicMock(spec=ChatSession)
     updated_chat.id = 1
     updated_chat.chat_id = "-100"
     updated_chat.title = "New Title"
-    mock_cache.get = AsyncMock(return_value=sample_chat)
+    updated_chat.archive_chat_id = None
+    mock_cache.get = AsyncMock(return_value=cached)
     mock_repo.update_chat = AsyncMock(return_value=updated_chat)
 
     result = await chat_service.get_chat(chat_tgid="-100", title="New Title")
@@ -274,22 +292,6 @@ async def test_get_or_create_race_condition_raises_when_still_not_found(
 
 
 @pytest.mark.asyncio
-async def test_get_chat_from_cache_returns_cached(
-    chat_service: ChatService,
-    mock_repo: AsyncMock,
-    mock_cache: AsyncMock,
-    sample_chat: MagicMock,
-) -> None:
-    """get_chat возвращает чат из кеша при наличии."""
-    mock_cache.get = AsyncMock(return_value=sample_chat)
-
-    result = await chat_service.get_chat(chat_tgid="-100")
-
-    assert result is sample_chat
-    mock_repo.get_chat_by_tgid.assert_not_called()
-
-
-@pytest.mark.asyncio
 async def test_get_chat_from_repo_and_caches(
     chat_service: ChatService,
     mock_repo: AsyncMock,
@@ -308,21 +310,6 @@ async def test_get_chat_from_repo_and_caches(
 
 
 @pytest.mark.asyncio
-async def test_get_chat_returns_none_when_not_found(
-    chat_service: ChatService,
-    mock_repo: AsyncMock,
-    mock_cache: AsyncMock,
-) -> None:
-    """get_chat возвращает None когда чат не найден."""
-    mock_cache.get = AsyncMock(return_value=None)
-    mock_repo.get_chat_by_tgid = AsyncMock(return_value=None)
-
-    result = await chat_service.get_chat(chat_tgid="-100")
-
-    assert result is None
-
-
-@pytest.mark.asyncio
 async def test_create_chat_and_cache(
     chat_service: ChatService,
     mock_repo: AsyncMock,
@@ -335,9 +322,7 @@ async def test_create_chat_and_cache(
     result = await chat_service.create_chat(chat_tgid="-100", title="Test")
 
     assert result is sample_chat
-    mock_repo.create_chat.assert_called_once_with(
-        chat_id="-100", title="Test"
-    )
+    mock_repo.create_chat.assert_called_once_with(chat_id="-100", title="Test")
     mock_cache.set.assert_called()
 
 
@@ -348,8 +333,11 @@ async def test_bind_archive_chat_success(
     sample_chat: MagicMock,
 ) -> None:
     """bind_archive_chat привязывает архив и обновляет кеш."""
-    archive_chat = MagicMock()
+    archive_chat = MagicMock(spec=ChatSession)
+    archive_chat.id = 2
     archive_chat.chat_id = "-200"
+    archive_chat.title = "Archive"
+    archive_chat.archive_chat_id = None
     sample_chat.archive_chat_id = "-200"
     sample_chat.archive_chat = archive_chat
     mock_repo.bind_archive_chat = AsyncMock(return_value=sample_chat)
