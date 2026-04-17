@@ -19,6 +19,7 @@ from handlers.group.new_members import (
     process_humanity_verification,
 )
 from usecases.archive import NotifyArchiveChatNewMemberUseCase
+from usecases.membership import RecordChatMembershipEventUseCase
 from usecases.moderation import RestrictNewMemberUseCase, VerifyMemberUseCase
 
 
@@ -37,12 +38,15 @@ async def test_process_chat_member_joined_human_with_antibot(
     # 1. Настройка моков
     restrict_usecase = AsyncMock(spec=RestrictNewMemberUseCase)
     notify_usecase = AsyncMock(spec=NotifyArchiveChatNewMemberUseCase)
+    record_membership_uc = AsyncMock(spec=RecordChatMembershipEventUseCase)
 
     def resolve_side_effect(cls):
         if cls == RestrictNewMemberUseCase:
             return restrict_usecase
         if cls == NotifyArchiveChatNewMemberUseCase:
             return notify_usecase
+        if cls == RecordChatMembershipEventUseCase:
+            return record_membership_uc
         return MagicMock()
 
     mock_container.resolve.side_effect = resolve_side_effect
