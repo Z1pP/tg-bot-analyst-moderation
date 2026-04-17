@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import computed_field
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     # Настройки нейросети
     OPEN_ROUTER_TOKEN: str
     OPEN_ROUTER_MODEL: str = "mistralai/devstral-2512:free"
+    # Автомодерация: размер пачки текстовых сообщений перед вызовом LLM
+    AUTO_MODERATION_BATCH_SIZE: int = Field(default=30, ge=1)
 
     # Базы данных
     DEV_DATABASE_URL: str
