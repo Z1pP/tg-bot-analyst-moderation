@@ -6,8 +6,9 @@ from typing import Any, Optional
 from cachetools import TTLCache
 from sqlalchemy.exc import IntegrityError
 
+from dto.chat_dto import ChatSessionCacheDTO
 from exceptions import DatabaseException
-from models import ChatSession
+from models import ChatSession, ChatSettings
 from repositories import ChatRepository
 from services.caching import ICache
 
@@ -34,11 +35,42 @@ class ChatService:
         self._cache = cache
         self._archive_chat_cache: TTLCache = TTLCache(maxsize=200, ttl=300)
 
+    def _materialize_chat_from_cache_dto(
+        self, data: ChatSessionCacheDTO
+    ) -> ChatSession:
+        """Восстанавливает отсоединённые ORM-объекты для чтения (свойства без lazy load)."""
+        kw: dict = {
+            "chat_id": data.id,
+            "start_time": data.start_time,
+            "end_time": data.end_time,
+            "tolerance": data.tolerance,
+            "breaks_time": data.breaks_time,
+            "is_antibot_enabled": data.is_antibot_enabled,
+            "is_auto_moderation_enabled": data.is_auto_moderation_enabled,
+            "welcome_text": data.welcome_text,
+            "auto_delete_welcome_text": data.auto_delete_welcome_text,
+            "show_welcome_text": data.show_welcome_text,
+        }
+        if data.settings_id is not None:
+            kw["id"] = data.settings_id
+        settings = ChatSettings(**kw)
+        chat = ChatSession(
+            id=data.id,
+            chat_id=data.chat_id,
+            title=data.title,
+            archive_chat_id=data.archive_chat_id,
+        )
+        settings.chat = chat
+        chat.settings = settings
+        return chat
+
     async def _set_chat_cache(self, chat: ChatSession) -> None:
-        """Записывает чат в кеш по tg_id и archive-ключу."""
-        await self._cache.set(f"chat:tg_id:{chat.chat_id}", chat)
-        await self._cache.set(f"chat:archive:{chat.chat_id}", chat)
-        self._archive_chat_cache[chat.chat_id] = chat
+        """Пишет в Redis плоский DTO; in-memory — только полный ORM из БД (есть archive_chat в __dict__)."""
+        payload = ChatSessionCacheDTO.from_chat_session(chat)
+        await self._cache.set(f"chat:tg_id:{chat.chat_id}", payload)
+        await self._cache.set(f"chat:archive:{chat.chat_id}", payload)
+        if "archive_chat" in chat.__dict__:
+            self._archive_chat_cache[chat.chat_id] = chat
 
     async def get_chat(
         self,
@@ -57,7 +89,25 @@ class ChatService:
             Объект ChatSession или None
         """
         cache_key = f"chat:tg_id:{chat_tgid}"
-        chat = await self._cache.get(cache_key)
+        cached = await self._cache.get(cache_key)
+        chat: Optional[ChatSession] = None
+        if cached is not None:
+            if isinstance(cached, ChatSessionCacheDTO):
+                chat = self._materialize_chat_from_cache_dto(cached)
+            elif isinstance(cached, ChatSession):
+                logger.debug(
+                    "chat cache: устаревший pickle ORM для %s — инвалидация ключа",
+                    chat_tgid,
+                )
+                await self._cache.delete(cache_key)
+            else:
+                logger.warning(
+                    "chat cache: неожиданный тип %s для %s — инвалидация",
+                    type(cached),
+                    chat_tgid,
+                )
+                await self._cache.delete(cache_key)
+
         if chat:
             if title and chat.title != title:
                 updated_chat = await self._chat_repository.update_chat(
