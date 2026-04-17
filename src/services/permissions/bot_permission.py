@@ -13,6 +13,7 @@ from aiogram.types import (
     ChatMemberOwner,
     ChatMemberRestricted,
     ResultChatMemberUnion,
+    User,
 )
 
 from services.time_service import TimeZoneService
@@ -184,6 +185,27 @@ class BotPermissionService:
                 e,
             )
             return False
+
+    async def get_member_username(
+        self,
+        user_id: int,
+        chat_tgid: ChatIdUnion,
+    ) -> str:
+        """Возвращает username участника в чате или пустую строку при ошибке."""
+        try:
+            member = await self.bot.get_chat_member(chat_id=chat_tgid, user_id=user_id)
+        except TelegramAPIError as e:
+            logger.warning(
+                "Не удалось получить участника %s в чате %s: %s",
+                user_id,
+                chat_tgid,
+                e,
+            )
+            return ""
+        user: Optional[User] = getattr(member, "user", None)
+        if not user:
+            return ""
+        return user.username or ""
 
     async def is_member_banned(self, user_id: int, chat_tgid: ChatIdUnion) -> bool:
         """Проверяет бан пользователя."""
