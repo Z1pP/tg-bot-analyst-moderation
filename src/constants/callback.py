@@ -42,6 +42,8 @@ class ChatCallbackData:
     WELCOME_TEXT_TOGGLE = "chat_welcome_text_toggle"
     AUTO_DELETE_TOGGLE = "chat_auto_delete_toggle"
     CHANGE_WELCOME_TEXT = "chat_change_welcome_text"
+    AUTO_MODERATION_SETTING = "chat_auto_moderation_setting"
+    AUTO_MODERATION_TOGGLE = "chat_auto_moderation_toggle"
     ALL_CHATS = "chat__all"
     CHATS_PAGE_INFO = "chats_page_info"
     REMOVE_CHATS_PAGE_INFO = "remove_chats_page_info"
@@ -237,6 +239,13 @@ class AntibotCallbackData:
     CONFIRM_HUMANITY_PREFIX = "confirm_humanity__"
 
 
+class AutoModerationCallbackData:
+    """Callback данных карточки автомодерации в архивном чате."""
+
+    BLOCK_PREFIX = "am_b__"
+    CANCEL = "amod_cancel"
+
+
 class CallbackData:
     """Класс для хранения callback данных"""
 
@@ -257,3 +266,4 @@ class CallbackData:
     News = NewsCallbackData
     Templates = TemplatesCallbackData
     Antibot = AntibotCallbackData
+    AutoModeration = AutoModerationCallbackData
