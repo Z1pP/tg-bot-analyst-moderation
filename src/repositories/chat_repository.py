@@ -460,6 +460,38 @@ class ChatRepository(BaseRepository):
                     details={"context": "toggle_antibot", "original": str(e)}
                 ) from e
 
+    async def toggle_auto_moderation(self, chat_id: int) -> Optional[ChatSession]:
+        """
+        Переключает автомодерацию (LLM-батч) для чата.
+
+        Args:
+            chat_id: ID чата из БД
+
+        Returns:
+            Обновлённый чат или None если чат не найден
+        """
+        async with self._db.session() as session:
+            try:
+                return await self._toggle_chat_setting_boolean(
+                    session,
+                    chat_id,
+                    "is_auto_moderation_enabled",
+                    "Чат не найден для переключения автомодерации: id=%s",
+                    "Автомодерация для чата %s (ID: %s) переключена в состояние: %s",
+                    lambda c: c.is_auto_moderation_enabled,
+                )
+            except SQLAlchemyError as e:
+                logger.error(
+                    "Ошибка при переключении автомодерации для чата %s: %s",
+                    chat_id,
+                    e,
+                    exc_info=True,
+                )
+                await session.rollback()
+                raise DatabaseException(
+                    details={"context": "toggle_auto_moderation", "original": str(e)}
+                ) from e
+
     async def toggle_show_welcome_text(self, chat_id: int) -> Optional[ChatSession]:
         """
         Переключает показ приветственного текста для чата.
