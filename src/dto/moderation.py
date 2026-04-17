@@ -70,5 +70,7 @@ class ModerationActionDTO(BaseModel):
     reason: Optional[str] = None
     # Флаг вызова из админ-панели (меняет логику отчетов и уведомлений)
     from_admin_panel: bool = False
+    # Бан по кнопке «Заблокировать» в карточке авто-модерации (архивный чат)
+    from_auto_moderation: bool = False
 
     model_config = ConfigDict(frozen=True)
