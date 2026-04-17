@@ -246,6 +246,22 @@ class ChatService:
         )
         return chat.is_antibot_enabled if chat else None
 
+    async def toggle_auto_moderation(self, chat_id: int) -> Optional[bool]:
+        """
+        Переключает автомодерацию для чата и обновляет кеш.
+
+        Args:
+            chat_id: ID чата из БД
+
+        Returns:
+            Новое состояние или None
+        """
+        chat = await self._update_and_sync_cache(
+            chat_id=chat_id,
+            update_func=self._chat_repository.toggle_auto_moderation,
+        )
+        return chat.is_auto_moderation_enabled if chat else None
+
     async def toggle_show_welcome_text(self, chat_id: int) -> Optional[bool]:
         """
         Переключает показ приветственного текста для чата и обновляет кеш.
