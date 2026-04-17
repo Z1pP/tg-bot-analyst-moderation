@@ -14,7 +14,7 @@ from dto import ModerationActionDTO
 from services import ChatService
 from services.permissions.bot_permission import BotPermissionService
 from usecases.moderation import GiveUserBanUseCase
-from utils.automoderation_callback import decode_automod_block_callback
+from utils.automoderation import decode_automod_block_callback
 from utils.parse_automoderation_card import parse_automoderation_card
 
 from .staff import is_automoderation_staff

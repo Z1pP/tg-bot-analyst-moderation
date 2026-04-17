@@ -5,7 +5,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from constants import InlineButtons
 from constants.callback import CallbackData
-from utils.automoderation_callback import encode_automod_block_callback
+from utils.automoderation import encode_automod_block_callback
 
 
 def automoderation_alert_ikb(
