@@ -1,140 +1,24 @@
 import asyncio
-import json
 import logging
-import re
 from typing import Optional
 
 import httpx
 from openrouter import OpenRouter
 from openrouter.errors import OpenRouterError
-from pydantic import ValidationError
 
 from constants.enums import SummaryType
+from constants.promps import (
+    AUTOMOD_SYSTEM,
+    SYSTEM_CONTENT,
+    USER_CONTENT_FULL,
+    USER_CONTENT_SHORT,
+)
 from dto.automoderation import AutoModerationBufferItemDTO, SpamDetectionLLMResultDTO
+from utils.automoderation_llm import format_automod_batch, parse_automod_response
 
 from .ai_service_base import IAIService, SummaryResult
 
 logger = logging.getLogger(__name__)
-
-SYSTEM_CONTENT = (
-    "Ты — эксперт-аналитик коммуникаций. Твоя задача — проанализировать лог чата и выдать глубокую аналитику. "
-    "ВАЖНО: Не исользуй HTML-разметку Telegram (<b>, <i>, <code>), а только текст."
-    "ПРАВИЛА ОФОРМЛЕНИЯ:\n"
-    "- При упоминании пользователей всегда добавляй символ '@' перед их username (например, @username).\n"
-    "- Будь лаконичен: фокусируйся на качестве выводов, а не на объеме текста.\n"
-    "- В анализе обязательно учитывай список отслеживаемых пользователей: {tracked_users_list}."
-    "- Если в списке отслеживаемых пользователей есть пользователь, который не упоминается в логе сообщений, то не упоминай его в анализе."
-)
-USER_CONTENT_SHORT = (
-    "Проведи экспресс-анализ диалога. В начале ответа добавь заголовок: "
-    "'📊 Аналитическая выжимка ({msg_count} сообщ.)'\n\n"
-    "Сфокусируйся на следующих пунктах:\n"
-    "🌡 Атмосфера: [тезисно об общем настроении в чате]\n"
-    "🔍 Суть: [топ-1 тема для обсуждения]\n"
-    "🤩 Ключевое событие: [ключевое событие, которое все обсуждали]\n"
-    "🧐 Участие отсл. пользователей: [общее направление ответов отслеживаемых пользователей: {tracked_users_list}]\n\n"
-    "Лог сообщений для анализа:\n{text}"
-)
-
-AUTOMOD_SYSTEM = """Ты — эксперт по модерации чатов. Твоя задача: выявление спама, ботов, фишинга и вредоносных аккаунтов в логах сообщений.
-
-КРИТЕРИИ СПАМА (банить за это):
-- Прямая реклама (криптовалюта, казино, ставки, "заработок").
-- Призывы перейти по подозрительным ссылкам или в личные сообщения.
-- Бессмысленный флуд от ботов.
-[Здесь можешь добавить специфичные правила твоего чата]
-
-ПРАВИЛО: Нормальное общение людей, даже с эмоциями, матом (если разрешено) или ссылками на известные ресурсы (YouTube, Википедия) — это НЕ спам. Если сомневаешься, бот это или живой человек — считай, что это живой человек.
-
-ФОРМАТ ОТВЕТА:
-Ты должен вернуть строго JSON-массив. Если спамеров нет — верни пустой массив [].
-Если спамеры есть, верни массив объектов:
-[
-  {"user_tg_id": <int>, "message_id": <int>, "reason": "<краткая причина>", "username": <строка или null>}
-]
-
-СТРОГИЕ ОГРАНИЧЕНИЯ:
-- Поля user_tg_id и message_id должны точно соответствовать логу.
-- Возвращай ТОЛЬКО сырой JSON.
-- Запрещено использовать Markdown-разметку (никаких ```json и ```).
-- Запрещен любой текст до или после массива."""
-
-
-def _format_automod_batch(messages: list[AutoModerationBufferItemDTO]) -> str:
-    lines: list[str] = []
-    for m in messages:
-        u = m.username if m.username else "(no username)"
-        safe = (m.message_text or "").replace("\n", " ").replace("\r", "")[:400]
-        lines.append(
-            f"- user_tg_id={m.user_tg_id} message_id={m.message_id} "
-            f"username={u!r} text={safe!r}"
-        )
-    return "\n".join(lines)
-
-
-def _parse_automod_response(
-    raw: str,
-    messages: list[AutoModerationBufferItemDTO],
-) -> Optional[SpamDetectionLLMResultDTO]:
-    text = raw.strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
-        text = re.sub(r"\s*```\s*$", "", text)
-        text = text.strip()
-    lower = text.lower()
-    if lower in ("null", "none", "") or lower == "undefined":
-        return None
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        logger.warning(
-            "automod LLM: невалидный JSON, chat_snippet=%r",
-            text[:500],
-        )
-        return None
-    if data is None:
-        return None
-    if isinstance(data, list):
-        items = data
-    elif isinstance(data, dict):
-        items = [data]
-    else:
-        logger.warning("automod LLM: ответ не массив и не объект JSON")
-        return None
-    if len(items) == 0:
-        return None
-    valid = {(m.user_tg_id, m.message_id) for m in messages}
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        try:
-            dto = SpamDetectionLLMResultDTO.model_validate(item)
-        except ValidationError:
-            continue
-        if (dto.user_tg_id, dto.message_id) in valid:
-            return dto
-    logger.warning(
-        "automod LLM: нет валидной пары user_tg_id/message_id из пачки, snippet=%r",
-        text[:500],
-    )
-    return None
-
-
-USER_CONTENT_FULL = (
-    "Проведи глубокий аналитический разбор диалога. В начале ответа добавь заголовок: "
-    "'📈 Глубокий анализ обсуждения ({msg_count} сообщ.)'\n\n"
-    "Структурируй отчет по следующим категориям:\n"
-    "🌡 Атмосфера и тон: [анализ общего настроения в чате]\n"
-    "🔍 Суть: [топ-5 тем для обсуждения]\n"
-    "🤩 Ключевые события: [топ-3 событий, которые все обсуждали]\n"
-    "🤨 Участники: [топ-5 частников и их характеристика]\n"
-    "❌ Риски и конфликты: [топ-5 конфликтных ситуаций между участниками и риски для компании]\n"
-    "🧐 <b>Участие отсл. пользователей:</b> [общее направление ответов отслеживаемых пользователей: {tracked_users_list}]\n\n"
-    "ПРАВИЛА ОФОРМЛЕНИЯ:\n"
-    "- Используй буллиты (•) для списков.\n"
-    "- Не используй вложенные списки более чем одного уровня.\n"
-    "Лог сообщений для анализа:\n{text}"
-)
 
 
 class OpenRouterService(IAIService):
@@ -225,7 +109,7 @@ class OpenRouterService(IAIService):
             return None
         user_content = (
             f"Название чата: {chat_title}\n\n"
-            f"Сообщения ({len(messages)} шт.):\n{_format_automod_batch(messages)}"
+            f"Сообщения ({len(messages)} шт.):\n{format_automod_batch(messages)}"
         )
         async with OpenRouter(api_key=self._api_key) as client:
             try:
@@ -251,7 +135,7 @@ class OpenRouterService(IAIService):
                         chat_title,
                     )
                     return None
-                parsed = _parse_automod_response(str(content), messages)
+                parsed = parse_automod_response(str(content), messages)
                 if parsed:
                     logger.info(
                         "automod: срабатывание LLM chat_title=%s user_tg_id=%s",
