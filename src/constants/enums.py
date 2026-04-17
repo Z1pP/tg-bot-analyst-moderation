@@ -60,6 +60,7 @@ class AdminActionType(str, Enum):
 
     # SETTINGS ACTIONS
     ANTIBOT_TOGGLE = "antibot_toggle"
+    AUTO_MODERATION_TOGGLE = "auto_moderation_toggle"
     SET_WELCOME_TEXT = "set_welcome_text"
     UPDATE_PUNISHMENT_LADDER = "update_punishment_ladder"
     SET_DEFAULT_PUNISHMENT_LADDER = "set_default_punishment_ladder"
