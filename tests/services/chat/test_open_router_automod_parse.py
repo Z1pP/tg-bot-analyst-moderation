@@ -26,12 +26,14 @@ def test_parse_null_and_empty() -> None:
     assert _parse_automod_response("null", msgs) is None
     assert _parse_automod_response(" NULL ", msgs) is None
     assert _parse_automod_response("", msgs) is None
+    assert _parse_automod_response("[]", msgs) is None
+    assert _parse_automod_response(" [ ] ", msgs) is None
 
 
 def test_parse_json_in_fence() -> None:
     msgs = _messages()
     raw = """```json
-{"user_tg_id": 200, "message_id": 2, "reason": "spam", "username": "b"}
+[{"user_tg_id": 200, "message_id": 2, "reason": "spam", "username": "b"}]
 ```"""
     got = _parse_automod_response(raw, msgs)
     assert got == SpamDetectionLLMResultDTO(
@@ -39,6 +41,21 @@ def test_parse_json_in_fence() -> None:
         message_id=2,
         reason="spam",
         username="b",
+    )
+
+
+def test_parse_array_first_valid_wins() -> None:
+    msgs = _messages()
+    raw = (
+        '[{"user_tg_id": 999, "message_id": 1, "reason": "bad"}, '
+        '{"user_tg_id": 100, "message_id": 1, "reason": "spam", "username": "a"}]'
+    )
+    got = _parse_automod_response(raw, msgs)
+    assert got == SpamDetectionLLMResultDTO(
+        user_tg_id=100,
+        message_id=1,
+        reason="spam",
+        username="a",
     )
 
 
