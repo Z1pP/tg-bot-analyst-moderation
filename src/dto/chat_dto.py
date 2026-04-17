@@ -39,6 +39,7 @@ class ChatDTO(BaseModel):
     tg_id: str
     title: str
     is_antibot_enabled: bool
+    is_auto_moderation_enabled: bool
     welcome_text: Optional[str] = None
 
     model_config = ConfigDict(frozen=True)
@@ -47,10 +48,12 @@ class ChatDTO(BaseModel):
     def from_model(cls, chat: ChatSession) -> "ChatDTO":
         """Создает DTO из доменной модели"""
         is_antibot_enabled = False
+        is_auto_moderation_enabled = False
         welcome_text = None
 
         if chat.settings:
             is_antibot_enabled = chat.settings.is_antibot_enabled
+            is_auto_moderation_enabled = chat.settings.is_auto_moderation_enabled
             welcome_text = chat.settings.welcome_text
 
         return cls(
@@ -58,6 +61,7 @@ class ChatDTO(BaseModel):
             tg_id=chat.chat_id,
             title=chat.title or "",
             is_antibot_enabled=is_antibot_enabled,
+            is_auto_moderation_enabled=is_auto_moderation_enabled,
             welcome_text=welcome_text,
         )
 
