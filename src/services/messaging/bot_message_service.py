@@ -86,7 +86,10 @@ class BotMessageService:
             )
 
     async def send_chat_message(
-        self, chat_tgid: ChatIdUnion, text: str
+        self,
+        chat_tgid: ChatIdUnion,
+        text: str,
+        reply_markup: Optional[InlineKeyboardMarkup] = None,
     ) -> Optional[Message]:
         """
         Отправляет сообщение в чат.
@@ -96,6 +99,7 @@ class BotMessageService:
         Args:
             chat_tgid: Telegram ID чата
             text: Текст сообщения (HTML)
+            reply_markup: Опциональная инлайн-клавиатура
 
         Returns:
             Отправленное сообщение или None при ошибке / отсутствии прав
@@ -113,6 +117,7 @@ class BotMessageService:
                 chat_id=chat_tgid,
                 text=text,
                 parse_mode="HTML",
+                reply_markup=reply_markup,
             )
         except TelegramAPIError as e:
             logger.error(
