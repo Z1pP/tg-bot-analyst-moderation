@@ -8,7 +8,6 @@ from services.caching import ICache
 
 from .group import router as group_router
 from .private import router as private_router
-from .private.antibot import router as antibot_router
 
 
 def _make_inject_container_middleware(container: Container):
@@ -21,9 +20,7 @@ def _make_inject_container_middleware(container: Container):
     return middleware
 
 
-def registry_admin_routers(
-    dispatcher: Dispatcher, container: Container
-) -> None:
+def registry_admin_routers(dispatcher: Dispatcher, container: Container) -> None:
     # Создаем роутер для админов
     only_admin_router = Router(name="admin_router")
 
@@ -54,27 +51,7 @@ def registry_admin_routers(
     dispatcher.include_router(only_admin_router)
 
 
-def registry_public_private_routers(
-    dispatcher: Dispatcher, container: Container
-) -> None:
-    # Роутеры для приватных чатов, доступные всем (не только админам)
-    public_private_router = Router(name="public_private_router")
-    public_private_router.message.filter(ChatTypeFilter(chat_type=[ChatType.PRIVATE]))
-
-    # Передаем контейнер в контекст через middleware
-    inject_container = _make_inject_container_middleware(container)
-    public_private_router.message.outer_middleware(inject_container)
-    public_private_router.callback_query.outer_middleware(inject_container)
-    public_private_router.inline_query.outer_middleware(inject_container)
-
-    public_private_router.include_router(antibot_router)
-
-    dispatcher.include_router(public_private_router)
-
-
-def registry_group_routers(
-    dispatcher: Dispatcher, container: Container
-) -> None:
+def registry_group_routers(dispatcher: Dispatcher, container: Container) -> None:
     # Регистриуем групповой роутер
     public_router = Router(name="public_router")
     public_router.message.filter(GroupTypeFilter())
@@ -92,9 +69,6 @@ def registry_group_routers(
     dispatcher.include_router(public_router)
 
 
-def registry_routers(
-    dispatcher: Dispatcher, container: Container
-) -> None:
-    registry_public_private_routers(dispatcher, container)
+def registry_routers(dispatcher: Dispatcher, container: Container) -> None:
     registry_admin_routers(dispatcher, container)
     registry_group_routers(dispatcher, container)
