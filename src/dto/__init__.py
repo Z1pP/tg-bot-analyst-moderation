@@ -20,6 +20,7 @@ from .category_dto import (
 from .chat_dto import (
     BindArchiveChatDTO,
     ChatDTO,
+    ChatSessionCacheDTO,
     DbChatDTO,
     GenerateArchiveBindHashDTO,
     GetChatWithArchiveDTO,
@@ -69,6 +70,7 @@ __all__ = [
     "UpdateCategoryDTO",
     # Chat
     "ChatDTO",
+    "ChatSessionCacheDTO",
     "UserChatsDTO",
     "DbChatDTO",
     "GetChatWithArchiveDTO",
