@@ -5,6 +5,12 @@ from .admin_log import (
 )
 from .amnesty import AmnestyUserDTO, CancelWarnResultDTO
 from .archive_notification import ArchiveMemberNotificationDTO
+from .automoderation import (
+    AutoModerationBatchJobDTO,
+    AutoModerationBufferItemDTO,
+    AutoModerationRunDTO,
+    SpamDetectionLLMResultDTO,
+)
 from .category_dto import (
     CategoryDTO,
     CreateCategoryDTO,
@@ -100,6 +106,11 @@ __all__ = [
     # Amnesty
     "AmnestyUserDTO",
     "CancelWarnResultDTO",
+    # Auto-moderation
+    "AutoModerationBatchJobDTO",
+    "AutoModerationBufferItemDTO",
+    "AutoModerationRunDTO",
+    "SpamDetectionLLMResultDTO",
     # User Tracking
     "UserTrackingDTO",
     "RemoveUserTrackingDTO",
