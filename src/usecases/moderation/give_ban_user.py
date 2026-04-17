@@ -54,15 +54,15 @@ class GiveUserBanUseCase(ModerationUseCase):
         self.punishment_service = punishment_service
         self.admin_action_log_service = admin_action_log_service
 
-    async def execute(self, dto: ModerationActionDTO) -> None:
+    async def execute(self, dto: ModerationActionDTO) -> bool:
         """
         Выполняет бессрочную блокировку пользователя.
 
         Args:
             dto: Данные о действии модерации
 
-        Raises:
-            ModerationError: При ошибках проверок или прав
+        Returns:
+            True при полном успехе. При ModerationError отправляется ЛС, возвращается False.
         """
         try:
             context = await self._prepare_moderation_context(dto=dto)
@@ -71,10 +71,10 @@ class GiveUserBanUseCase(ModerationUseCase):
                 user_tgid=dto.admin_tgid,
                 text=e.get_user_message(),
             )
-            return
+            return False
 
         if not context:
-            return
+            return False
 
         is_success = await self.bot_message_service.apply_punishment(
             chat_tg_id=context.chat.chat_id,
@@ -88,7 +88,7 @@ class GiveUserBanUseCase(ModerationUseCase):
                 context.violator.tg_id,
                 context.chat.chat_id,
             )
-            return
+            return False
 
         try:
             await self.user_chat_status_repository.update_status(
@@ -103,7 +103,7 @@ class GiveUserBanUseCase(ModerationUseCase):
                 e,
                 exc_info=True,
             )
-            return
+            return False
 
         correct_date = TimeZoneService.now()
 
@@ -133,8 +133,9 @@ class GiveUserBanUseCase(ModerationUseCase):
         )
 
         # Логируем действие администратора
+        prefix = "[Авто-модерация] " if dto.from_auto_moderation else ""
         details = (
-            f"Нарушитель: {violator_display} ({context.violator.tg_id}), "
+            prefix + f"Нарушитель: {violator_display} ({context.violator.tg_id}), "
             f"Чат: {context.chat.title} ({context.chat.chat_id}), "
             f"Период: бессрочно"
         )
@@ -143,3 +144,4 @@ class GiveUserBanUseCase(ModerationUseCase):
             action_type=AdminActionType.BAN_USER,
             details=details,
         )
+        return True
