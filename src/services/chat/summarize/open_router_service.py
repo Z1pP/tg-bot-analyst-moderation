@@ -36,16 +36,28 @@ USER_CONTENT_SHORT = (
     "Лог сообщений для анализа:\n{text}"
 )
 
-AUTOMOD_SYSTEM = (
-    "Ты — эксперт по модерации чатов: выявление спама, ботов и вредоносных аккаунтов. "
-    "Проанализируй переданный лог сообщений. Если есть явное подозрение на спамера или бота — "
-    "верни один JSON-объект. Если подозрений нет — верни ровно JSON null (без другого текста).\n\n"
-    "Формат при срабатывании (один JSON-объект):\n"
-    '{"user_tg_id": <int>, "message_id": <int>, "reason": "<краткая причина>", '
-    '"username": <строка или null>}\n\n'
-    "Поля user_tg_id и message_id должны точно соответствовать одному из сообщений в логе. "
-    "Запрещены markdown, обёртки в кодовые блоки и любой текст до или после JSON."
-)
+AUTOMOD_SYSTEM = """Ты — эксперт по модерации чатов. Твоя задача: выявление спама, ботов, фишинга и вредоносных аккаунтов в логах сообщений.
+
+КРИТЕРИИ СПАМА (банить за это):
+- Прямая реклама (криптовалюта, казино, ставки, "заработок").
+- Призывы перейти по подозрительным ссылкам или в личные сообщения.
+- Бессмысленный флуд от ботов.
+[Здесь можешь добавить специфичные правила твоего чата]
+
+ПРАВИЛО: Нормальное общение людей, даже с эмоциями, матом (если разрешено) или ссылками на известные ресурсы (YouTube, Википедия) — это НЕ спам. Если сомневаешься, бот это или живой человек — считай, что это живой человек.
+
+ФОРМАТ ОТВЕТА:
+Ты должен вернуть строго JSON-массив. Если спамеров нет — верни пустой массив [].
+Если спамеры есть, верни массив объектов:
+[
+  {"user_tg_id": <int>, "message_id": <int>, "reason": "<краткая причина>", "username": <строка или null>}
+]
+
+СТРОГИЕ ОГРАНИЧЕНИЯ:
+- Поля user_tg_id и message_id должны точно соответствовать логу.
+- Возвращай ТОЛЬКО сырой JSON.
+- Запрещено использовать Markdown-разметку (никаких ```json и ```).
+- Запрещен любой текст до или после массива."""
 
 
 def _format_automod_batch(messages: list[AutoModerationBufferItemDTO]) -> str:
@@ -82,27 +94,30 @@ def _parse_automod_response(
         return None
     if data is None:
         return None
-    if not isinstance(data, dict):
-        logger.warning("automod LLM: ответ не объект JSON")
+    if isinstance(data, list):
+        items = data
+    elif isinstance(data, dict):
+        items = [data]
+    else:
+        logger.warning("automod LLM: ответ не массив и не объект JSON")
         return None
-    try:
-        dto = SpamDetectionLLMResultDTO.model_validate(data)
-    except ValidationError as e:
-        logger.warning(
-            "automod LLM: ошибка Pydantic %s snippet=%r",
-            e,
-            text[:500],
-        )
+    if len(items) == 0:
         return None
     valid = {(m.user_tg_id, m.message_id) for m in messages}
-    if (dto.user_tg_id, dto.message_id) not in valid:
-        logger.warning(
-            "automod LLM: пары id нет в пачке user_tg_id=%s message_id=%s",
-            dto.user_tg_id,
-            dto.message_id,
-        )
-        return None
-    return dto
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        try:
+            dto = SpamDetectionLLMResultDTO.model_validate(item)
+        except ValidationError:
+            continue
+        if (dto.user_tg_id, dto.message_id) in valid:
+            return dto
+    logger.warning(
+        "automod LLM: нет валидной пары user_tg_id/message_id из пачки, snippet=%r",
+        text[:500],
+    )
+    return None
 
 
 USER_CONTENT_FULL = (
