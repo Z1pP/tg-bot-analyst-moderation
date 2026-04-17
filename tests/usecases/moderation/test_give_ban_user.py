@@ -47,7 +47,8 @@ async def test_execute_moderation_error_sends_private_message(
         side_effect=CannotPunishChatAdminError()
     )
 
-    await usecase.execute(dto=dto)
+    ok = await usecase.execute(dto=dto)
+    assert ok is False
 
     usecase.bot_message_service.send_private_message.assert_called_once_with(
         user_tgid="20",
@@ -70,7 +71,8 @@ async def test_execute_apply_punishment_false_returns_early(
     usecase._prepare_moderation_context = AsyncMock(return_value=context)
     usecase.bot_message_service.apply_punishment = AsyncMock(return_value=False)
 
-    await usecase.execute(dto=dto)
+    ok = await usecase.execute(dto=dto)
+    assert ok is False
 
     usecase.user_chat_status_repository.update_status.assert_not_called()
 
@@ -95,7 +97,8 @@ async def test_execute_update_status_exception_returns_early(
     finalize_mock = AsyncMock()
     usecase._finalize_moderation = finalize_mock
 
-    await usecase.execute(dto=dto)
+    ok = await usecase.execute(dto=dto)
+    assert ok is False
 
     finalize_mock.assert_not_called()
 
@@ -119,7 +122,34 @@ async def test_execute_success_calls_finalize_and_log(
     usecase.punishment_service.generate_reason_for_user = lambda **kw: "Забанен"
     usecase._finalize_moderation = AsyncMock()
 
-    await usecase.execute(dto=dto)
+    ok = await usecase.execute(dto=dto)
+    assert ok is True
 
     usecase._finalize_moderation.assert_called_once()
     usecase.admin_action_log_service.log_action.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_execute_auto_moderation_prefix_in_admin_log(
+    usecase: GiveUserBanUseCase, dto: ModerationActionDTO
+) -> None:
+    """При from_auto_moderation в деталях лога есть префикс авто-модерации."""
+    dto_auto = dto.model_copy(update={"from_auto_moderation": True})
+    context = SimpleNamespace(
+        violator=SimpleNamespace(id=1, tg_id="10"),
+        admin=SimpleNamespace(id=2, tg_id="20"),
+        chat=SimpleNamespace(id=1, chat_id="-100", title="Chat"),
+        dto=dto_auto,
+        archive_chat=SimpleNamespace(chat_id="-200"),
+    )
+    usecase._prepare_moderation_context = AsyncMock(return_value=context)
+    usecase.bot_message_service.apply_punishment = AsyncMock(return_value=True)
+    usecase.user_chat_status_repository.update_status = AsyncMock()
+    usecase.punishment_service.generate_ban_report = lambda **kw: "Отчёт"
+    usecase.punishment_service.generate_reason_for_user = lambda **kw: "x"
+    usecase._finalize_moderation = AsyncMock()
+
+    await usecase.execute(dto=dto_auto)
+
+    call_kw = usecase.admin_action_log_service.log_action.call_args.kwargs
+    assert call_kw["details"].startswith("[Авто-модерация] ")

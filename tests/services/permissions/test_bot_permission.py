@@ -352,6 +352,42 @@ async def test_is_administrator_false_on_api_error(
 
 
 @pytest.mark.asyncio
+async def test_get_member_username_returns_username(
+    bot_permission_service: BotPermissionService,
+    mock_bot: MagicMock,
+) -> None:
+    """get_member_username возвращает username участника."""
+    user = MagicMock()
+    user.username = "violator"
+    member = MagicMock()
+    member.user = user
+    mock_bot.get_chat_member = AsyncMock(return_value=member)
+
+    result = await bot_permission_service.get_member_username(
+        user_id=42, chat_tgid="-100"
+    )
+
+    assert result == "violator"
+
+
+@pytest.mark.asyncio
+async def test_get_member_username_empty_on_api_error(
+    bot_permission_service: BotPermissionService,
+    mock_bot: MagicMock,
+) -> None:
+    """get_member_username возвращает пустую строку при ошибке API."""
+    mock_bot.get_chat_member = AsyncMock(
+        side_effect=TelegramAPIError(MagicMock(), "error")
+    )
+
+    result = await bot_permission_service.get_member_username(
+        user_id=42, chat_tgid="-100"
+    )
+
+    assert result == ""
+
+
+@pytest.mark.asyncio
 async def test_is_member_banned_true(
     bot_permission_service: BotPermissionService,
     mock_bot: MagicMock,
