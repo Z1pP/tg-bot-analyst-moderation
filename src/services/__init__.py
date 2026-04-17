@@ -3,6 +3,7 @@ from .analytics_buffer_service import AnalyticsBufferService
 from .break_analysis_service import BreakAnalysisService
 from .categories.category_service import CategoryService
 from .chat import ArchiveBindService, ChatService
+from .chat.summarize import IAIService
 from .messaging import BotMessageService
 from .permissions import BotPermissionService
 from .punishment_service import PunishmentService
@@ -19,6 +20,7 @@ __all__ = [
     "BreakAnalysisService",
     "BotMessageService",
     "UserService",
+    "IAIService",
     "PunishmentService",
     "BotPermissionService",
     "ReportScheduleService",

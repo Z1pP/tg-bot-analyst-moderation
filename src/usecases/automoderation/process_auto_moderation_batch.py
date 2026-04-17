@@ -1,7 +1,7 @@
 import logging
 
 from dto.automoderation import AutoModerationBatchJobDTO
-from services.chat.summarize.ai_service_base import IAIService
+from services import IAIService
 
 from .notify_auto_moderation_hit import NotifyAutoModerationHitUseCase
 
