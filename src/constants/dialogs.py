@@ -253,6 +253,29 @@ class AntibotDialogs:
     VERIFIED_HAS_PUNISHMENTS = "У вас {warns_count} предупреждений. Следующее наказание: {next_punishment_description}."
 
 
+class AutoModerationDialogs:
+    """Тексты автомодерации (LLM-батч)."""
+
+    SETTINGS_INFO = (
+        "🧠 <b>Авто-модерация</b> для чата <b>{chat_title}</b>\n\n"
+        "Бот накапливает текстовые сообщения и периодически отправляет их в нейросеть "
+        "для поиска потенциальных спамеров и ботов. При срабатывании в архивный чат "
+        "приходит карточка с кнопками «Заблокировать» и «Отменить».\n\n"
+        "Статус: {status}"
+    )
+
+    ALERT_BODY = (
+        "⚠️ <b>Спамер обнаружен</b>\n"
+        "Нарушитель: {violator_line}\n"
+        "ID: <code>{user_tg_id}</code>\n"
+        "Причина: {reason}\n"
+        "Чат: {chat_title}\n"
+        'Сообщение: <a href="{message_url}">ссылка</a>'
+    )
+
+    NO_USERNAME = "Отсутствует"
+
+
 # --- Reports ---
 class ReportDialogs:
     """Сообщения для функционала отчетов"""
