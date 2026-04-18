@@ -103,6 +103,10 @@ class ChatSession(BaseModel):
         return self.settings.is_antibot_enabled if self.settings else False
 
     @property
+    def is_auto_moderation_enabled(self) -> bool:
+        return self.settings.is_auto_moderation_enabled if self.settings else False
+
+    @property
     def start_time(self) -> Optional[time]:
         return self.settings.start_time if self.settings else None
 

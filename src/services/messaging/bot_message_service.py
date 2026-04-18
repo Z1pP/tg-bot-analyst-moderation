@@ -86,7 +86,10 @@ class BotMessageService:
             )
 
     async def send_chat_message(
-        self, chat_tgid: ChatIdUnion, text: str
+        self,
+        chat_tgid: ChatIdUnion,
+        text: str,
+        reply_markup: Optional[InlineKeyboardMarkup] = None,
     ) -> Optional[Message]:
         """
         Отправляет сообщение в чат.
@@ -96,6 +99,7 @@ class BotMessageService:
         Args:
             chat_tgid: Telegram ID чата
             text: Текст сообщения (HTML)
+            reply_markup: Опциональная инлайн-клавиатура
 
         Returns:
             Отправленное сообщение или None при ошибке / отсутствии прав
@@ -113,6 +117,7 @@ class BotMessageService:
                 chat_id=chat_tgid,
                 text=text,
                 parse_mode="HTML",
+                reply_markup=reply_markup,
             )
         except TelegramAPIError as e:
             logger.error(
@@ -231,11 +236,43 @@ class BotMessageService:
                 from_chat_id=from_chat_tgid,
                 message_id=message_tgid,
             )
+        except TelegramBadRequest as e:
+            err_text = (e.message or str(e)).lower()
+            if "message_id_invalid" in err_text:
+                logger.warning(
+                    "Пересылка в архив пропущена: message_id=%s не найден в чате %s "
+                    "(назначение пересылки %s): %s",
+                    message_tgid,
+                    from_chat_tgid,
+                    chat_tgid,
+                    e,
+                )
+            else:
+                logger.error(
+                    "Не удалось переслать сообщение message_id=%s из чата %s в %s: %s",
+                    message_tgid,
+                    from_chat_tgid,
+                    chat_tgid,
+                    e,
+                )
+            return None
         except TelegramAPIError as e:
-            logger.error("Не удалось переслать сообщение в чат %s: %s", chat_tgid, e)
+            logger.error(
+                "Не удалось переслать сообщение message_id=%s из чата %s в %s: %s",
+                message_tgid,
+                from_chat_tgid,
+                chat_tgid,
+                e,
+            )
             return None
         except (OSError, asyncio.TimeoutError, ConnectionError) as e:
-            logger.error("Сетевая ошибка при пересылке в чат %s: %s", chat_tgid, e)
+            logger.error(
+                "Сетевая ошибка при пересылке message_id=%s из %s в %s: %s",
+                message_tgid,
+                from_chat_tgid,
+                chat_tgid,
+                e,
+            )
             return None
 
     async def delete_message_from_chat(

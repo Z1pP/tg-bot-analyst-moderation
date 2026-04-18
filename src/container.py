@@ -42,6 +42,7 @@ from services import (
     TemplateService,
     UserService,
 )
+from services.automoderation_buffer_service import AutoModerationBufferService
 from services.caching import ICache, RedisCache
 from services.chat.summarize import IAIService
 from services.chat.summarize.open_router_service import OpenRouterService
@@ -76,6 +77,12 @@ from usecases.archive import (
     SetArchiveSendingTimeUseCase,
     ToggleArchiveScheduleUseCase,
 )
+from usecases.automoderation import (
+    GetAutoModerationSettingsUseCase,
+    NotifyAutoModerationHitUseCase,
+    ProcessAutoModerationBatchUseCase,
+    RunAutoModerationOnMessageUseCase,
+)
 from usecases.categories import (
     CreateCategoryUseCase,
     DeleteCategoryUseCase,
@@ -91,6 +98,7 @@ from usecases.chat import (
     GetTrackedChatsUseCase,
     ToggleAntibotUseCase,
     ToggleAutoDeleteWelcomeTextUseCase,
+    ToggleAutoModerationUseCase,
     ToggleWelcomeTextUseCase,
     UpdateChatWelcomeTextUseCase,
     UpdateChatWorkHoursUseCase,
@@ -106,6 +114,7 @@ from usecases.message import (
     SaveReplyMessageUseCase,
 )
 from usecases.moderation import (
+    ExecuteModerationInChatsUseCase,
     GiveUserBanUseCase,
     GiveUserWarnUseCase,
     RestrictNewMemberUseCase,
@@ -268,6 +277,7 @@ class ContainerSetup:
         container.register(TaskiqSchedulerService, scope=Scope.singleton)
 
         container.register(AnalyticsBufferService, scope=Scope.singleton)
+        container.register(AutoModerationBufferService, scope=Scope.singleton)
         container.register(
             ApiClient,
             factory=lambda: ApiClient(base_url=settings.API_BASE_URL),
@@ -322,6 +332,16 @@ class ContainerSetup:
     def _register_antibot_usecases(container: Container) -> None:
         """Регистрация use cases для антибота."""
         container.register(GetAntibotSettingsUseCase)
+        container.register(GetAutoModerationSettingsUseCase)
+        container.register(NotifyAutoModerationHitUseCase)
+        container.register(ProcessAutoModerationBatchUseCase)
+        container.register(
+            RunAutoModerationOnMessageUseCase,
+            factory=lambda: RunAutoModerationOnMessageUseCase(
+                buffer_service=container.resolve(AutoModerationBufferService),
+                batch_size=settings.AUTO_MODERATION_BATCH_SIZE,
+            ),
+        )
 
     @staticmethod
     def _register_archive_usecases(container: Container) -> None:
@@ -377,6 +397,7 @@ class ContainerSetup:
             GetChatsForUserActionUseCase,
             UpdateChatWorkHoursUseCase,
             ToggleAntibotUseCase,
+            ToggleAutoModerationUseCase,
             ToggleWelcomeTextUseCase,
             ToggleAutoDeleteWelcomeTextUseCase,
             UpdateChatWelcomeTextUseCase,
@@ -403,6 +424,7 @@ class ContainerSetup:
         """Регистрация use cases для модерации."""
         container.register(GiveUserWarnUseCase)
         container.register(GiveUserBanUseCase)
+        container.register(ExecuteModerationInChatsUseCase)
         container.register(RestrictNewMemberUseCase)
         container.register(VerifyMemberUseCase)
         container.register(CancelLastWarnUseCase)

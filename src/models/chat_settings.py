@@ -51,6 +51,13 @@ class ChatSettings(BaseModel):
         doc="Whether antibot verification is enabled for this chat.",
     )
 
+    is_auto_moderation_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        doc="Whether LLM-based auto-moderation batch check is enabled for this chat.",
+    )
+
     welcome_text: Mapped[Optional[str]] = mapped_column(
         String(length=4096),  # Maximum message length in TG
         nullable=True,

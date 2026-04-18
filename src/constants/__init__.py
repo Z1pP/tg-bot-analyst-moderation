@@ -4,6 +4,7 @@ from .dialogs import (
     AnalyticsDialogs,
     AntibotDialogs,
     ArchiveNotificationDialogs,
+    AutoModerationDialogs,
     BanUserDialogs,
     BotSettingsDialogs,
     CalendarDialogs,
@@ -207,6 +208,11 @@ class InlineButtons:
         WELCOME_TEXT_ENABLE = "🟢 Включить Приветствие"
         SUMMARY_SHORT = "Краткая"
         SUMMARY_FULL = "Полная"
+        AUTO_MODERATION_SETTING = "🧠 Авто-модерация"
+        AUTO_MODERATION_ENABLE = "🟢 Включить Авто-модерацию"
+        AUTO_MODERATION_DISABLE = "🛑 Выключить Авто-модерацию"
+        AUTO_MODERATION_BLOCK = "🚫 Заблокировать"
+        AUTO_MODERATION_CANCEL = "❌ Отменить"
         # Аналитика по чату
         STATISTICS = "📊 Статистика"
         AI_SUMMARY = "📝 AI-сводка"
@@ -264,6 +270,8 @@ class Dialog:
     Template = TemplateDialogs
     # Antibot
     Antibot = AntibotDialogs
+    # Auto-moderation
+    AutoModeration = AutoModerationDialogs
     # Admin Logs
     AdminLogs = AdminLogsDialogs
     # Release Notes

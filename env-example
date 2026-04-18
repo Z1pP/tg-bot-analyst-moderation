@@ -4,6 +4,8 @@ BOT_TOKEN=1234567890:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # OpenRouter (ИИ-сводка чатов)
 OPEN_ROUTER_TOKEN=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPEN_ROUTER_MODEL=mistralai/mistral-small-3.1-24b-instruct:free
+# Автомодерация: число текстовых сообщений до вызова LLM
+AUTO_MODERATION_BATCH_SIZE=30
 
 IS_DEVELOPMENT=True
 

@@ -1,6 +1,7 @@
 from aiogram import Router
 
 from .archive import router as archive_bind_router
+from .automoderation import router as automoderation_router
 from .common import router as group_common_router
 from .left_member import router as left_member_router
 from .moderation import router as moderation_router
@@ -12,6 +13,7 @@ from .track_chat import router as track_chat_router
 from .untrack_chat import router as untrack_chat_router
 
 router = Router(name="group_router")
+router.include_router(automoderation_router)
 router.include_router(moderation_router)
 router.include_router(new_members_router)
 router.include_router(left_member_router)

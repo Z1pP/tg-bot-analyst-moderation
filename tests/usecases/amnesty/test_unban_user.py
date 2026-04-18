@@ -12,7 +12,13 @@ from usecases.amnesty.unban_user import UnbanUserUseCase
 
 @pytest.fixture
 def chat_dto() -> ChatDTO:
-    return ChatDTO(id=1, tg_id="-100", title="Chat", is_antibot_enabled=False)
+    return ChatDTO(
+        id=1,
+        tg_id="-100",
+        title="Chat",
+        is_antibot_enabled=False,
+        is_auto_moderation_enabled=False,
+    )
 
 
 @pytest.fixture

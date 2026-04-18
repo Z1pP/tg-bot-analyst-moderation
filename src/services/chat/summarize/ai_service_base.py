@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Optional
 
 from constants.enums import SummaryType
+from dto.automoderation import AutoModerationBufferItemDTO, SpamDetectionLLMResultDTO
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,4 +28,13 @@ class IAIService(ABC):
         summary_type: SummaryType,
         tracked_users: list[str],
     ) -> SummaryResult:
+        pass
+
+    @abstractmethod
+    async def analyze_spam_batch(
+        self,
+        chat_title: str,
+        messages: list[AutoModerationBufferItemDTO],
+    ) -> Optional[SpamDetectionLLMResultDTO]:
+        """Анализ пачки сообщений на спамеров/ботов; при отсутствии срабатывания — None."""
         pass

@@ -18,7 +18,6 @@ from keyboards.inline.moderation import (
     no_reason_ikb,
 )
 from states import WarnUserStates
-from usecases.moderation import GiveUserWarnUseCase
 
 from .helpers import (
     execute_moderation_logic,
@@ -176,7 +175,6 @@ async def warn_chat_select_handler(
         callback=callback,
         state=state,
         action=Actions.WARNING,
-        usecase_cls=GiveUserWarnUseCase,
         success_text=Dialog.WarnUser.SUCCESS_WARN,
         partial_text=Dialog.WarnUser.PARTIAL_WARN,
         fail_text=Dialog.WarnUser.FAIL_WARN,

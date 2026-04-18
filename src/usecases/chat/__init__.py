@@ -6,6 +6,7 @@ from .toggle_antibot import ToggleAntibotUseCase
 from .toggle_auto_delete_welcome_text import (
     ToggleAutoDeleteWelcomeTextUseCase,
 )
+from .toggle_auto_moderation import ToggleAutoModerationUseCase
 from .toggle_welcome_text import ToggleWelcomeTextUseCase
 from .update_chat_welcome_text import UpdateChatWelcomeTextUseCase
 from .update_chat_work_hours import UpdateChatWorkHoursUseCase
@@ -17,6 +18,7 @@ __all__ = [
     "GetChatsForUserActionUseCase",
     "UpdateChatWorkHoursUseCase",
     "ToggleAntibotUseCase",
+    "ToggleAutoModerationUseCase",
     "ToggleAutoDeleteWelcomeTextUseCase",
     "ToggleWelcomeTextUseCase",
     "UpdateChatWelcomeTextUseCase",

@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Literal, Optional, Type, Union
+from typing import Literal, Optional, Union
 
 from aiogram import Bot, types
 from aiogram.fsm.context import FSMContext
@@ -15,7 +15,7 @@ from punq import Container
 from constants import Dialog, InlineButtons
 from constants.enums import UserRole
 from constants.punishment import PunishmentActions as Actions
-from dto import ModerationActionDTO
+from dto import ExecuteModerationInChatsDTO
 from dto.chat_dto import ChatDTO
 from keyboards.inline.chats import tracked_chats_with_all_ikb
 from keyboards.inline.moderation import (
@@ -23,44 +23,18 @@ from keyboards.inline.moderation import (
     moderation_menu_ikb,
     try_again_ikb,
 )
+from presenters.moderation_in_chats_presenter import ModerationInChatsResultPresenter
 from usecases.chat import GetChatsForUserActionUseCase
-from usecases.moderation import GiveUserBanUseCase, GiveUserWarnUseCase
+from usecases.moderation import ExecuteModerationInChatsUseCase
 from usecases.user import GetUserByTgIdUseCase, GetUserByUsernameUseCase
+from utils.chat_selection import filter_chats_by_callback_selection
 from utils.moderation import format_violator_display
 from utils.send_message import safe_edit_message
 from utils.user_data_parser import parse_data_from_text
 
 from .errors import handle_moderation_error
 
-ModerationUsecase = Union[GiveUserWarnUseCase, GiveUserBanUseCase]
-
 logger = logging.getLogger(__name__)
-
-
-def _format_moderation_response(
-    success_chats_titles: list[str],
-    failed_chats_titles: list[str],
-    user_display: str,
-    success_text: str,
-    partial_text: str,
-    fail_text: str,
-) -> str:
-    """Формирует текст ответа по результатам модерации (успех/частичный/неудача)."""
-    if success_chats_titles and not failed_chats_titles:
-        if len(success_chats_titles) > 1:
-            titles_block = "\n".join(
-                f"{i}. {title}" for i, title in enumerate(success_chats_titles, 1)
-            )
-        else:
-            titles_block = success_chats_titles[0]
-        return success_text.format(user_display=user_display, chats_titles=titles_block)
-    if success_chats_titles and failed_chats_titles:
-        return partial_text.format(
-            user_display=user_display,
-            ok=", ".join(success_chats_titles),
-            fail=", ".join(failed_chats_titles),
-        )
-    return fail_text.format(user_display=user_display)
 
 
 def _get_retry_callback_for_moderation_state(next_state: State) -> str:
@@ -133,7 +107,6 @@ async def execute_moderation_logic(
     callback: types.CallbackQuery,
     state: FSMContext,
     action: Actions,
-    usecase_cls: Type[ModerationUsecase],
     success_text: str,
     partial_text: str,
     fail_text: str,
@@ -145,7 +118,6 @@ async def execute_moderation_logic(
         callback: Объект callback-запроса с ID выбранного чата (или "all").
         state: Контекст состояния FSM.
         action: Тип выполняемого действия (Actions.BAN, Actions.WARNING).
-        usecase_cls: Класс юзкейса для выполнения действия.
         success_text: Текст при успешном выполнении во всех чатах.
         partial_text: Текст при частичном успехе.
         fail_text: Текст при полной неудаче.
@@ -171,55 +143,25 @@ async def execute_moderation_logic(
 
     user_display = format_violator_display(username, user_tgid)
 
-    chat_dtos = [ChatDTO.model_validate(chat) for chat in chat_dtos_data]
+    all_chat_dtos = [ChatDTO.model_validate(chat) for chat in chat_dtos_data]
+    chat_dtos = filter_chats_by_callback_selection(all_chat_dtos, chat_id_from_callback)
 
-    if chat_id_from_callback != "all":
-        chat_dtos = [
-            chat for chat in chat_dtos if chat.id == int(chat_id_from_callback)
-        ]
-
-    logger.info(
-        "Начало действия %s пользователя %s в %s чатах",
-        action.value,
-        user_display,
-        len(chat_dtos),
+    batch_usecase: ExecuteModerationInChatsUseCase = container.resolve(
+        ExecuteModerationInChatsUseCase
     )
+    batch_dto = ExecuteModerationInChatsDTO(
+        action=action,
+        chats=tuple(chat_dtos),
+        violator_tgid=str(user_tgid),
+        violator_username=username or "",
+        admin_tgid=str(callback.from_user.id),
+        admin_username=callback.from_user.username or "",
+        reason=data.get("reason"),
+    )
+    batch_result = await batch_usecase.execute(dto=batch_dto)
 
-    usecase = container.resolve(usecase_cls)
-
-    success_chats_titles: list[str] = []
-    failed_chats_titles: list[str] = []
-
-    for chat in chat_dtos:
-        dto = ModerationActionDTO(
-            action=action,
-            violator_tgid=user_tgid,
-            violator_username=username or "",
-            admin_tgid=str(callback.from_user.id),
-            admin_username=callback.from_user.username or "",
-            chat_tgid=chat.tg_id,
-            chat_title=chat.title,
-            reason=data.get("reason"),
-            from_admin_panel=True,
-        )
-
-        try:
-            await usecase.execute(dto=dto)
-            success_chats_titles.append(chat.title)
-            logger.info("Действие %s в чате %s успешно", action.value, chat.title)
-        except Exception as e:
-            failed_chats_titles.append(chat.title)
-            logger.error(
-                "Ошибка действия %s в чате %s: %s",
-                action.value,
-                chat.title,
-                e,
-                exc_info=True,
-            )
-
-    response_text = _format_moderation_response(
-        success_chats_titles=success_chats_titles,
-        failed_chats_titles=failed_chats_titles,
+    response_text = ModerationInChatsResultPresenter.format_result(
+        batch_result,
         user_display=user_display,
         success_text=success_text,
         partial_text=partial_text,

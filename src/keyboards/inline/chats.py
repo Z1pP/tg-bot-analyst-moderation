@@ -353,16 +353,17 @@ def chat_actions_ikb() -> InlineKeyboardMarkup:
             text=InlineButtons.Chat.PUNISHMENT_SETTING,
             callback_data=CallbackData.Chat.PUNISHMENT_SETTING,
         ),
-    )
-
-    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.Chat.AUTO_MODERATION_SETTING,
+            callback_data=CallbackData.Chat.AUTO_MODERATION_SETTING,
+        ),
         InlineKeyboardButton(
             text=InlineButtons.Common.COME_BACK,
             callback_data=CallbackData.Chat.SELECT_CHAT_FOR_SETTINGS,
         ),
     )
 
-    builder.adjust(2, 2, 2, 1)
+    builder.adjust(2, 2, 2, 1, 1)
 
     return builder.as_markup()
 
@@ -455,6 +456,29 @@ def antibot_setting_ikb(is_enabled: bool = False) -> InlineKeyboardMarkup:
     )
 
     builder.adjust(2, 1)
+    return builder.as_markup()
+
+
+def auto_moderation_setting_ikb(is_enabled: bool = False) -> InlineKeyboardMarkup:
+    """Клавиатура раздела автомодерации."""
+    builder = InlineKeyboardBuilder()
+    toggle_text = (
+        InlineButtons.Chat.AUTO_MODERATION_DISABLE
+        if is_enabled
+        else InlineButtons.Chat.AUTO_MODERATION_ENABLE
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=toggle_text,
+            callback_data=CallbackData.Chat.AUTO_MODERATION_TOGGLE,
+        ),
+    )
+    builder.row(
+        InlineKeyboardButton(
+            text=InlineButtons.Common.COME_BACK,
+            callback_data=CallbackData.Chat.BACK_TO_CHAT_ACTIONS,
+        )
+    )
     return builder.as_markup()
 
 

@@ -1,50 +1,24 @@
+import asyncio
 import logging
+from typing import Optional
 
 import httpx
 from openrouter import OpenRouter
 from openrouter.errors import OpenRouterError
 
 from constants.enums import SummaryType
+from constants.promps import (
+    AUTOMOD_SYSTEM,
+    SYSTEM_CONTENT,
+    USER_CONTENT_FULL,
+    USER_CONTENT_SHORT,
+)
+from dto.automoderation import AutoModerationBufferItemDTO, SpamDetectionLLMResultDTO
+from utils.automoderation_llm import format_automod_batch, parse_automod_response
 
 from .ai_service_base import IAIService, SummaryResult
 
 logger = logging.getLogger(__name__)
-
-SYSTEM_CONTENT = (
-    "Ты — эксперт-аналитик коммуникаций. Твоя задача — проанализировать лог чата и выдать глубокую аналитику. "
-    "ВАЖНО: Не исользуй HTML-разметку Telegram (<b>, <i>, <code>), а только текст."
-    "ПРАВИЛА ОФОРМЛЕНИЯ:\n"
-    "- При упоминании пользователей всегда добавляй символ '@' перед их username (например, @username).\n"
-    "- Будь лаконичен: фокусируйся на качестве выводов, а не на объеме текста.\n"
-    "- В анализе обязательно учитывай список отслеживаемых пользователей: {tracked_users_list}."
-    "- Если в списке отслеживаемых пользователей есть пользователь, который не упоминается в логе сообщений, то не упоминай его в анализе."
-)
-USER_CONTENT_SHORT = (
-    "Проведи экспресс-анализ диалога. В начале ответа добавь заголовок: "
-    "'📊 Аналитическая выжимка ({msg_count} сообщ.)'\n\n"
-    "Сфокусируйся на следующих пунктах:\n"
-    "🌡 Атмосфера: [тезисно об общем настроении в чате]\n"
-    "🔍 Суть: [топ-1 тема для обсуждения]\n"
-    "🤩 Ключевое событие: [ключевое событие, которое все обсуждали]\n"
-    "🧐 Участие отсл. пользователей: [общее направление ответов отслеживаемых пользователей: {tracked_users_list}]\n\n"
-    "Лог сообщений для анализа:\n{text}"
-)
-
-USER_CONTENT_FULL = (
-    "Проведи глубокий аналитический разбор диалога. В начале ответа добавь заголовок: "
-    "'📈 Глубокий анализ обсуждения ({msg_count} сообщ.)'\n\n"
-    "Структурируй отчет по следующим категориям:\n"
-    "🌡 Атмосфера и тон: [анализ общего настроения в чате]\n"
-    "🔍 Суть: [топ-5 тем для обсуждения]\n"
-    "🤩 Ключевые события: [топ-3 событий, которые все обсуждали]\n"
-    "🤨 Участники: [топ-5 частников и их характеристика]\n"
-    "❌ Риски и конфликты: [топ-5 конфликтных ситуаций между участниками и риски для компании]\n"
-    "🧐 <b>Участие отсл. пользователей:</b> [общее направление ответов отслеживаемых пользователей: {tracked_users_list}]\n\n"
-    "ПРАВИЛА ОФОРМЛЕНИЯ:\n"
-    "- Используй буллиты (•) для списков.\n"
-    "- Не используй вложенные списки более чем одного уровня.\n"
-    "Лог сообщений для анализа:\n{text}"
-)
 
 
 class OpenRouterService(IAIService):
@@ -125,3 +99,80 @@ class OpenRouterService(IAIService):
                     status_code=503,
                     summary="❌ Произошла непредвиденная ошибка при генерации сводки.",
                 )
+
+    async def analyze_spam_batch(
+        self,
+        chat_title: str,
+        messages: list[AutoModerationBufferItemDTO],
+    ) -> Optional[SpamDetectionLLMResultDTO]:
+        if not messages:
+            return None
+        user_content = (
+            f"Название чата: {chat_title}\n\n"
+            f"Сообщения ({len(messages)} шт.):\n{format_automod_batch(messages)}"
+        )
+        async with OpenRouter(api_key=self._api_key) as client:
+            try:
+                response = await client.chat.send_async(
+                    model=self._model_name,
+                    messages=[
+                        {"role": "system", "content": AUTOMOD_SYSTEM},
+                        {"role": "user", "content": user_content},
+                    ],
+                )
+                if not response.choices:
+                    logger.error(
+                        "automod OpenRouter: нет choices, chat_title=%s",
+                        chat_title,
+                    )
+                    return None
+                first_choice = response.choices[0]
+                message = getattr(first_choice, "message", None)
+                content = getattr(message, "content", None)
+                if not content or not str(content).strip():
+                    logger.warning(
+                        "automod OpenRouter: пустой content, chat_title=%s",
+                        chat_title,
+                    )
+                    return None
+                parsed = parse_automod_response(str(content), messages)
+                if parsed:
+                    logger.info(
+                        "automod: срабатывание LLM chat_title=%s user_tg_id=%s",
+                        chat_title,
+                        parsed.user_tg_id,
+                    )
+                return parsed
+            except OpenRouterError as exc:
+                logger.error(
+                    "automod OpenRouter API error chat_title=%s: %s (status=%s)",
+                    chat_title,
+                    exc,
+                    getattr(exc, "status_code", None),
+                    exc_info=True,
+                )
+                return None
+            except httpx.HTTPError as exc:
+                logger.error(
+                    "automod OpenRouter HTTP error chat_title=%s: %s",
+                    chat_title,
+                    exc,
+                    exc_info=True,
+                )
+                return None
+            except (asyncio.TimeoutError, OSError) as exc:
+                logger.error(
+                    "automod OpenRouter timeout/OS chat_title=%s: %s",
+                    chat_title,
+                    exc,
+                    exc_info=True,
+                )
+                return None
+            except (TypeError, ValueError, AttributeError) as exc:
+                logger.error(
+                    "automod OpenRouter внутренняя ошибка chat_title=%s: %s",
+                    chat_title,
+                    exc,
+                    exc_info=True,
+                )
+                return None

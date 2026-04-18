@@ -3,6 +3,7 @@ from aiogram import Router
 from .add import router as add_chat_router
 from .antibot import antibot_router
 from .archive import router as archive_router
+from .automoderation import auto_moderation_router
 from .change_work_hours import router as change_work_hours_router
 from .check_permissions import router as check_permissions_router
 from .dashboard import router as dashboard_router
@@ -19,6 +20,7 @@ router = Router(name="chats_router")
 
 router.include_router(add_chat_router)
 router.include_router(antibot_router)
+router.include_router(auto_moderation_router)
 router.include_router(chats_navigation_router)
 router.include_router(chat_rating_router)
 router.include_router(untrack_chat_router)

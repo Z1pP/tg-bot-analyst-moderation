@@ -5,6 +5,12 @@ from .admin_log import (
 )
 from .amnesty import AmnestyUserDTO, CancelWarnResultDTO
 from .archive_notification import ArchiveMemberNotificationDTO
+from .automoderation import (
+    AutoModerationBatchJobDTO,
+    AutoModerationBufferItemDTO,
+    AutoModerationRunDTO,
+    SpamDetectionLLMResultDTO,
+)
 from .category_dto import (
     CategoryDTO,
     CreateCategoryDTO,
@@ -14,6 +20,7 @@ from .category_dto import (
 from .chat_dto import (
     BindArchiveChatDTO,
     ChatDTO,
+    ChatSessionCacheDTO,
     DbChatDTO,
     GenerateArchiveBindHashDTO,
     GetChatWithArchiveDTO,
@@ -27,7 +34,12 @@ from .daily_activity import (
 )
 from .message import CreateMessageDTO, ResultMessageDTO
 from .message_reply import CreateMessageReplyDTO, ResultMessageReplyDTO
-from .moderation import ModerationActionDTO, ResultVerifyMember
+from .moderation import (
+    ExecuteModerationInChatsDTO,
+    ModerationActionDTO,
+    ModerationInChatsResultDTO,
+    ResultVerifyMember,
+)
 from .punishment import (
     PunishmentCommandResultDTO,
     PunishmentLadderResultDTO,
@@ -58,6 +70,7 @@ __all__ = [
     "UpdateCategoryDTO",
     # Chat
     "ChatDTO",
+    "ChatSessionCacheDTO",
     "UserChatsDTO",
     "DbChatDTO",
     "GetChatWithArchiveDTO",
@@ -75,7 +88,9 @@ __all__ = [
     "CreateMessageReplyDTO",
     "ResultMessageReplyDTO",
     # Moderation
+    "ExecuteModerationInChatsDTO",
     "ModerationActionDTO",
+    "ModerationInChatsResultDTO",
     "ResultVerifyMember",
     # Reaction
     "MessageReactionDTO",
@@ -93,6 +108,11 @@ __all__ = [
     # Amnesty
     "AmnestyUserDTO",
     "CancelWarnResultDTO",
+    # Auto-moderation
+    "AutoModerationBatchJobDTO",
+    "AutoModerationBufferItemDTO",
+    "AutoModerationRunDTO",
+    "SpamDetectionLLMResultDTO",
     # User Tracking
     "UserTrackingDTO",
     "RemoveUserTrackingDTO",

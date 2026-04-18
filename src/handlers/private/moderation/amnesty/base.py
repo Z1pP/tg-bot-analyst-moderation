@@ -23,6 +23,7 @@ from usecases.amnesty import (
     GetChatsWithMutedUserUseCase,
     GetChatsWithPunishedUserUseCase,
 )
+from utils.chat_selection import filter_chats_by_callback_selection
 from utils.moderation import (
     ViolatorData,
     extract_violator_data_from_state,
@@ -296,18 +297,16 @@ async def amnesty_execute_handler(
     chat_id_from_callback = callback.data.split("__")[1]
     chat_dtos_data = data.get("chat_dtos")
 
-    chat_dtos = [ChatDTO.model_validate(chat) for chat in chat_dtos_data]
+    chat_dtos = filter_chats_by_callback_selection(
+        (ChatDTO.model_validate(chat) for chat in chat_dtos_data),
+        chat_id_from_callback,
+    )
 
     violator = ViolatorData(
         id=data.get("id"),
         username=data.get("username"),
         tg_id=data.get("tg_id"),
     )
-
-    if chat_id_from_callback != "all":
-        chat_dtos = [
-            chat for chat in chat_dtos if chat.id == int(chat_id_from_callback)
-        ]
 
     amnesty_dto = AmnestyUserDTO(
         admin_tgid=str(callback.from_user.id),

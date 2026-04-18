@@ -181,6 +181,9 @@ class ModerationUseCase:
         if context.dto.from_admin_panel:
             return False, report_text
 
+        if context.dto.reply_message_id is None:
+            return False, report_text
+
         try:
             violator_msg_deleted = (
                 await self.bot_message_service.delete_message_from_chat(
@@ -244,7 +247,10 @@ class ModerationUseCase:
         reason_text: Optional[str],
         admin_answer_text: str,
     ) -> None:
-        if not context.dto.from_admin_panel:
+        if (
+            not context.dto.from_admin_panel
+            and context.dto.reply_message_id is not None
+        ):
             await self.bot_message_service.forward_message(
                 chat_tgid=context.archive_chat.chat_id,
                 from_chat_tgid=context.dto.chat_tgid,

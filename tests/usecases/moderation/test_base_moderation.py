@@ -212,3 +212,40 @@ async def test_finalize_moderation_calls_forward_cleanup_archive_notify(
         chat_tgid="200", text="Отчёт"
     )
     assert sample_context.message_deleted is True
+
+
+@pytest.mark.asyncio
+async def test_cleanup_chat_messages_skips_delete_without_reply_id(
+    base_usecase: ModerationUseCase, sample_context: ModerationContext
+) -> None:
+    """Если reply_message_id отсутствует, удаление не вызывается."""
+    sample_context.dto.reply_message_id = None
+    deleted, text = await base_usecase._cleanup_chat_messages(
+        sample_context, "Отчёт"
+    )
+    assert deleted is False
+    assert text == "Отчёт"
+    base_usecase.bot_message_service.delete_message_from_chat.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_finalize_moderation_skips_forward_without_reply_id(
+    base_usecase: ModerationUseCase, sample_context: ModerationContext
+) -> None:
+    """Без reply_message_id пересылка в архив не выполняется."""
+    sample_context.dto.reply_message_id = None
+    base_usecase.bot_message_service.delete_message_from_chat.return_value = False
+    with patch(
+        "tasks.moderation_tasks.delete_message_from_chat",
+        _make_delete_message_task_mock(),
+    ):
+        await base_usecase._finalize_moderation(
+            context=sample_context,
+            report_text="Отчёт",
+            reason_text="Причина",
+            admin_answer_text="",
+        )
+    base_usecase.bot_message_service.forward_message.assert_not_called()
+    base_usecase.bot_message_service.send_chat_message.assert_any_call(
+        chat_tgid="200", text="Отчёт"
+    )
