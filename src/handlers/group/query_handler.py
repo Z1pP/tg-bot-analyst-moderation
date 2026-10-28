@@ -7,6 +7,7 @@ from aiogram.types import (
     CallbackQuery,
     InlineQuery,
     InlineQueryResultArticle,
+    InlineQueryResultUnion,
     InputMediaAnimation,
     InputMediaDocument,
     InputMediaPhoto,
@@ -23,7 +24,7 @@ from usecases.templates import (
     GetTemplateAndIncreaseUsageUseCase,
     GetTemplatesByQueryUseCase,
 )
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ async def handle_inline_query(query: InlineQuery, container: Container) -> None:
     """Обработчик inline запросов"""
     try:
         variants = await get_variants(query.query, container)
-        results = []
+        results: list[InlineQueryResultUnion] = []
 
         for variant in variants:
             cleaned_content = remove_html_tags(variant.content)
@@ -77,6 +78,8 @@ def short_the_text(text: str, length: int = 75) -> str:
 @router.message(F.text.startswith("🔸TEMPLATE__"))
 async def handle_template_message(message: Message, container: Container) -> None:
     """Обработчик сообщений с маркером шаблона"""
+    if message.text is None:
+        return
     try:
         # Извлекаем ID шаблона
         template_id = int(message.text.replace("🔸TEMPLATE__", ""))
@@ -113,6 +116,9 @@ async def send_template(
     container: Container,
 ) -> None:
     """Отправляет ответ по шаблону"""
+    bot = message.bot
+    if bot is None:
+        return
     usecase: GetTemplateAndIncreaseUsageUseCase = container.resolve(
         GetTemplateAndIncreaseUsageUseCase
     )
@@ -132,7 +138,7 @@ async def send_template(
             reply_message_id=reply_message_id,
         )
     else:
-        await message.bot.send_message(
+        await bot.send_message(
             chat_id=message.chat.id,
             text=template.content,
             reply_to_message_id=reply_message_id,
@@ -146,6 +152,9 @@ async def send_media_group(
     reply_message_id: Optional[int],
 ) -> None:
     """Отправляет медиа-группу"""
+    bot = message.bot
+    if bot is None:
+        return
     try:
         media_group = []
         media_types = {
@@ -159,7 +168,7 @@ async def send_media_group(
         for i, media in enumerate(template.media_items):
             try:
                 # Проверяем файл на доступолность
-                await message.bot.get_file(file_id=media.file_id)
+                await bot.get_file(file_id=media.file_id)
 
                 media_class = media_types.get(media.media_type)
                 if media_class:
@@ -175,13 +184,13 @@ async def send_media_group(
                 continue
 
         if media_group:
-            await message.bot.send_media_group(
+            await bot.send_media_group(
                 chat_id=message.chat.id,
                 media=media_group,
                 reply_to_message_id=reply_message_id,
             )
         else:
-            await message.bot.send_message(
+            await bot.send_message(
                 chat_id=message.chat.id,
                 text=f"{template.content}\n\n⚠️ Медиафайлы временно недоступны",
                 reply_to_message_id=reply_message_id,
@@ -190,7 +199,7 @@ async def send_media_group(
     except Exception as e:
         logger.error(f"Ошибка при отправке медиа-группы: {e}")
         # Отправляем только текст в случае ошибки
-        await message.bot.send_message(
+        await bot.send_message(
             chat_id=message.chat.id,
             text=template.content,
             reply_to_message_id=reply_message_id,
@@ -215,27 +224,28 @@ async def save_moderator_message(message: Message, container: Container) -> None
 @router.callback_query(F.data.startswith("hide_template_"))
 async def hide_template_handler(callback: CallbackQuery) -> None:
     """Обработчик скрытия шаблона (одно сообщение)"""
+    if callback.data is None or callback.bot is None or callback.message is None:
+        return
+    bot = callback.bot
     try:
         message_id = int(callback.data.split("_")[2])
-        await callback.bot.delete_message(
+        await bot.delete_message(
             chat_id=callback.message.chat.id,
             message_id=message_id,
         )
         # Удаляем само сообщение с кнопкой, если оно существует
-        if callback.message:
+        if isinstance(callback.message, Message):
             try:
                 await callback.message.delete()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Не удалось удалить сообщение: %s", e, exc_info=True)
         await callback.answer("✅ Сообщение скрыто")
     except Exception as e:
         logger.error(f"Ошибка при скрытии шаблона: {e}")
         # Пытаемся отредактировать сообщение с ошибкой
         if callback.message:
-            success = await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            success = await safe_edit_callback_message(
+                callback=callback,
                 text="❌ Ошибка при скрытии сообщения",
             )
             if not success:
@@ -250,6 +260,9 @@ async def hide_template_handler(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("hide_album_"))
 async def hide_album_handler(callback: CallbackQuery) -> None:
     """Обработчик скрытия альбома шаблонов (несколько сообщений)"""
+    if callback.data is None or callback.bot is None or callback.message is None:
+        return
+    bot = callback.bot
     try:
         # Извлекаем ID сообщений из callback_data
         message_ids_str = callback.data.replace("hide_album_", "")
@@ -258,7 +271,7 @@ async def hide_album_handler(callback: CallbackQuery) -> None:
         # Удаляем все сообщения альбома
         for msg_id in message_ids:
             try:
-                await callback.bot.delete_message(
+                await bot.delete_message(
                     chat_id=callback.message.chat.id,
                     message_id=msg_id,
                 )
@@ -266,21 +279,19 @@ async def hide_album_handler(callback: CallbackQuery) -> None:
                 logger.warning(f"Не удалось удалить сообщение {msg_id}: {e}")
 
         # Удаляем само сообщение с кнопкой
-        if callback.message:
+        if isinstance(callback.message, Message):
             try:
                 await callback.message.delete()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Не удалось удалить сообщение: %s", e, exc_info=True)
 
         await callback.answer("✅ Альбом скрыт")
     except Exception as e:
         logger.error(f"Ошибка при скрытии альбома: {e}")
         # Пытаемся отредактировать сообщение с ошибкой
         if callback.message:
-            success = await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            success = await safe_edit_callback_message(
+                callback=callback,
                 text="❌ Ошибка при скрытии альбома",
             )
             if not success:

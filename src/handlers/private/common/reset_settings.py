@@ -15,7 +15,7 @@ from keyboards.inline.users_chats_settings import (
     users_chats_settings_ikb,
 )
 from usecases.settings import ResetAllTrackingUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +35,8 @@ async def reset_settings_handler(
         callback.from_user.id,
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.UserAndChatsSettings.RESET_CONFIRMATION,
         reply_markup=confirm_reset_ikb(),
     )
@@ -87,10 +85,8 @@ async def confirm_reset_handler(
             callback.from_user.id,
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.UserAndChatsSettings.RESET_SUCCESS,
             reply_markup=reset_success_ikb(),
         )
@@ -101,10 +97,8 @@ async def confirm_reset_handler(
             callback.from_user.id,
             e,
         )
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.UserAndChatsSettings.RESET_ERROR,
             reply_markup=users_chats_settings_ikb(has_tracking=True),
         )

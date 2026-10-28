@@ -20,6 +20,8 @@ router = Router(name=__name__)
 async def add_chat_to_tracking_handler(message: Message, container: Container) -> None:
     """Обработчик команды /track для добавления чата в отслеживание."""
     admin_user = message.from_user
+    if admin_user is None or message.bot is None:
+        return
     chat = message.chat
 
     logger.info(
@@ -35,7 +37,7 @@ async def add_chat_to_tracking_handler(message: Message, container: Container) -
         result = await usecase.execute(
             admin_tg_id=str(admin_user.id),
             chat_tg_id=str(chat.id),
-            chat_title=chat.title,
+            chat_title=chat.title or "",
             admin_username=admin_user.username,
         )
 
@@ -43,11 +45,16 @@ async def add_chat_to_tracking_handler(message: Message, container: Container) -
             await _handle_error(message, result)
             return
 
+        if result.chat is None:
+            return
+
         if result.is_already_tracked:
             await _send_already_tracked_notification(message, result.chat.id)
             return
 
-        await _send_success_notification(message, result.chat.title, result.chat.id)
+        await _send_success_notification(
+            message, result.chat.title or "", result.chat.id
+        )
 
     except Exception as e:
         logger.error("Ошибка в chat_added_to_tracking_handler: %s", e, exc_info=True)
@@ -57,6 +64,8 @@ async def add_chat_to_tracking_handler(message: Message, container: Container) -
 
 async def _handle_error(message: Message, result: AddChatToTrackResult) -> None:
     """Обработка ошибок при добавлении чата."""
+    if message.from_user is None or message.bot is None:
+        return
     if result.permissions_check and not result.permissions_check.has_all_permissions:
         await send_permission_error(
             bot=message.bot,
@@ -73,6 +82,8 @@ async def _handle_error(message: Message, result: AddChatToTrackResult) -> None:
 
 async def _send_already_tracked_notification(message: Message, chat_id: int) -> None:
     """Уведомление о том, что чат уже отслеживается."""
+    if message.from_user is None or message.bot is None:
+        return
     await send_notification(
         bot=message.bot,
         chat_id=message.from_user.id,
@@ -85,6 +96,8 @@ async def _send_success_notification(
     message: Message, chat_title: str, chat_id: int
 ) -> None:
     """Уведомление об успешном добавлении чата."""
+    if message.from_user is None or message.bot is None:
+        return
     await send_notification(
         bot=message.bot,
         chat_id=message.from_user.id,

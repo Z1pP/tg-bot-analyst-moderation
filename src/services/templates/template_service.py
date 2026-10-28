@@ -25,7 +25,7 @@ class TemplateService:
     ) -> List[MessageTemplate]:
         """Получает список шаблонов по категории с пагинацией и кешированием"""
         cache_key = f"tpl:cat:{category_id}:page:{page}"
-        cached = await self._cache.get(cache_key)
+        cached: list[MessageTemplate] | None = await self._cache.get(cache_key)
         if cached is not None:
             return cached
 

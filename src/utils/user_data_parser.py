@@ -4,8 +4,8 @@ from typing import Optional
 
 @dataclass
 class UserData:
-    username: str = None
-    tg_id: str = None
+    username: Optional[str] = None
+    tg_id: Optional[str] = None
 
 
 def parse_data_from_text(text: str) -> Optional[UserData]:

@@ -1,5 +1,8 @@
+from typing import Any
+
 from aiogram import Bot
 from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineKeyboardMarkup
 
 from constants import Dialog
 from keyboards.inline.users_chats_settings import (
@@ -15,7 +18,7 @@ async def _show_error_and_stay(
     chat_id: int,
     active_message_id: int | None,
     text: str,
-    reply_markup=None,
+    reply_markup: InlineKeyboardMarkup | None = None,
 ) -> None:
     """
     Показывает ошибку в текущем сообщении визарда и оставляет состояние без перехода.
@@ -38,7 +41,7 @@ async def _show_error_and_stay(
         )
 
 
-def _build_first_time_work_hours_view(state_data: dict) -> str:
+def _build_first_time_work_hours_view(state_data: dict[str, Any]) -> str:
     """Формирует текст экрана настройки времени из данных state (указанные/не указанные)."""
     start_time = state_data.get("start_time")
     end_time = state_data.get("end_time")
@@ -63,7 +66,7 @@ def _build_first_time_work_hours_view(state_data: dict) -> str:
 async def _show_time_menu(
     bot: Bot,
     chat_id: int,
-    message_id: int,
+    message_id: int | None,
     state: FSMContext,
 ) -> None:
     """Показывает экран меню времени (текст + клавиатура с кнопкой Сохранить только при всех заполненных)."""

@@ -8,7 +8,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.time_period import time_period_ikb_single_user
 from states import SingleUserReportStates
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -26,10 +26,8 @@ async def back_to_periods_handler(callback: CallbackQuery, state: FSMContext) ->
     """Обработчик возврата к выбору периода отчета для одного пользователя."""
     await callback.answer()
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Report.SELECT_PERIOD,
         reply_markup=time_period_ikb_single_user(),
     )

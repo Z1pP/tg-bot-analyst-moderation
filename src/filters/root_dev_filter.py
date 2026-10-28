@@ -11,6 +11,9 @@ class RootDevOnlyFilter(BaseUserFilter):
         event: Message | CallbackQuery,
         container: Container,
     ) -> bool:
+        if event.from_user is None:
+            return False
+
         if isinstance(event, Message):
             tg_id = str(event.from_user.id)
             current_username = event.from_user.username

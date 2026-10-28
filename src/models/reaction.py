@@ -36,7 +36,7 @@ class MessageReaction(BaseModel):
         String(64),
         nullable=False,
     )
-    message_url: Mapped[str] = mapped_column(
+    message_url: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )

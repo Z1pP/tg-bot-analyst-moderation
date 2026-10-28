@@ -1,3 +1,4 @@
+from .check_and_run_auto_moderation import CheckAndRunAutoModerationUseCase
 from .get_auto_moderation_settings import (
     AutoModerationSettingsResult,
     GetAutoModerationSettingsUseCase,
@@ -8,6 +9,7 @@ from .run_auto_moderation_on_message import RunAutoModerationOnMessageUseCase
 
 __all__ = [
     "AutoModerationSettingsResult",
+    "CheckAndRunAutoModerationUseCase",
     "GetAutoModerationSettingsUseCase",
     "NotifyAutoModerationHitUseCase",
     "ProcessAutoModerationBatchUseCase",

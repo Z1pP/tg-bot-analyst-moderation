@@ -1,5 +1,6 @@
 """DTO для просмотра логов действий администраторов."""
 
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -31,5 +32,29 @@ class AdminLogPageResultDTO(BaseModel):
     header_text: str
     entry_lines: list[str]
     total_count: int
+
+    model_config = ConfigDict(frozen=True)
+
+
+class AdminLogItemDTO(BaseModel):
+    """Одна запись лога администратора для API."""
+
+    id: int
+    action_type: str
+    details: Optional[str] = None
+    admin_username: Optional[str] = None
+    admin_tg_id: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(frozen=True)
+
+
+class AdminLogsPageResultDTO(BaseModel):
+    """Страница логов администраторов для API."""
+
+    items: list[AdminLogItemDTO]
+    total: int
+    page: int
+    limit: int
 
     model_config = ConfigDict(frozen=True)

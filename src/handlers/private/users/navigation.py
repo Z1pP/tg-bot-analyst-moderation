@@ -9,7 +9,7 @@ from constants.callback import CallbackData
 from keyboards.inline.users import users_menu_ikb
 from states import UserStateManager
 from usecases.user_tracking import HasTrackedUsersUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 from ..common.navigation import show_main_menu
 
@@ -22,7 +22,7 @@ async def users_menu_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
     container: Container,
-):
+) -> None:
     """Обработчик меню пользователей"""
     await callback.answer()
     await state.clear()
@@ -34,10 +34,8 @@ async def users_menu_handler(
         admin_tgid=str(callback.from_user.id)
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.User.SELECT_ACTION,
         reply_markup=users_menu_ikb(has_tracked_users=has_tracked_users),
     )

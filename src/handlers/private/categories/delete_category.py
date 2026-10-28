@@ -15,7 +15,7 @@ from keyboards.inline.templates import templates_menu_ikb
 from states import CategoryStateManager, TemplateStateManager
 from usecases.categories import GetCategoriesUseCase
 from usecases.categories import DeleteCategoryUseCase, GetCategoryByIdUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -32,14 +32,15 @@ async def remove_category_handler(
     """Обработчик запроса на удаление категории"""
     await callback.answer()
 
+    if callback.data is None:
+        return
+
     try:
         category_id = int(callback.data.split("__")[1])
     except (IndexError, ValueError):
         logger.warning("Некорректный формат callback_data: %s", callback.data)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text="⚠️ Некорректный запрос. Повторите действие через меню.",
             reply_markup=templates_menu_ikb(),
         )
@@ -53,10 +54,8 @@ async def remove_category_handler(
 
     await state.update_data(category_id=category_id)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text="Вы уверены, что хотите удалить эту категорию?",
         reply_markup=conf_remove_category_kb(),
     )
@@ -81,19 +80,20 @@ async def confirm_removing_category_handler(
 
     if not category_id:
         logger.warning("Попытка удалить категорию без сохранённого ID в состоянии")
-        return await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text="⚠️ Не удалось определить категорию для удаления.",
             reply_markup=templates_menu_ikb(),
         )
+        return
 
     try:
         usecase: DeleteCategoryUseCase = container.resolve(DeleteCategoryUseCase)
         category = await usecase.execute(
             category_id=category_id, admin_tg_id=str(callback.from_user.id)
         )
+        if category is None:
+            raise CategoryNotFoundError()
         category_name = category.name
         text = f"✅ Категория <b>{category_name}</b> успешно удалена."
         logger.info("Категория ID=%d успешно удалена", category_id)
@@ -106,10 +106,8 @@ async def confirm_removing_category_handler(
 
         if not categories:
             # Если категорий не осталось, возвращаемся в меню
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=f"{text}\n\n❗ Категорий не осталось.",
                 reply_markup=templates_menu_ikb(),
             )
@@ -118,10 +116,8 @@ async def confirm_removing_category_handler(
 
         first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=f"{text}\n\nВыберите категорию:",
             reply_markup=categories_inline_ikb(
                 categories=first_page_categories,
@@ -135,20 +131,16 @@ async def confirm_removing_category_handler(
     except CategoryNotFoundError as e:
         logger.warning("Категория ID=%d не найдена: %s", category_id, e)
         text = e.get_user_message()
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=text,
             reply_markup=templates_menu_ikb(),
         )
         await state.set_state(TemplateStateManager.templates_menu)
 
     except BusinessLogicException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )
@@ -182,10 +174,8 @@ async def cancel_removing_category_handler(
         logger.warning(
             "Попытка отменить удаление категории без сохранённого ID в состоянии"
         )
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text="❌ Удаление категории отменено.",
             reply_markup=templates_menu_ikb(),
         )
@@ -213,10 +203,8 @@ async def cancel_removing_category_handler(
         categories = await get_categories_uc.execute()
 
         if not categories:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=f"❌ Удаление категории {category_name} отменено.\n\n❗ Категорий не найдено.",
                 reply_markup=templates_menu_ikb(),
             )
@@ -225,10 +213,8 @@ async def cancel_removing_category_handler(
 
         first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=f"❌ Удаление категории {category_name} отменено.\n\nВыберите категорию:",
             reply_markup=categories_inline_ikb(
                 categories=first_page_categories,
@@ -240,10 +226,8 @@ async def cancel_removing_category_handler(
         await state.set_state(TemplateStateManager.listing_categories)
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )

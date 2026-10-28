@@ -78,7 +78,7 @@ class GiveUserBanUseCase(ModerationUseCase):
 
         is_success = await self.bot_message_service.apply_punishment(
             chat_tg_id=context.chat.chat_id,
-            user_tg_id=context.violator.tg_id,
+            user_tg_id=context.violator.tg_id or "",
             action=PunishmentType.BAN,
         )
 
@@ -108,8 +108,8 @@ class GiveUserBanUseCase(ModerationUseCase):
         correct_date = TimeZoneService.now()
 
         violator_display = format_violator_display(
-            context.dto.violator_username,
-            context.violator.tg_id,
+            context.dto.violator_username or "",
+            context.violator.tg_id or "",
         )
 
         report_text = self.punishment_service.generate_ban_report(
@@ -120,8 +120,8 @@ class GiveUserBanUseCase(ModerationUseCase):
 
         reason_text = self.punishment_service.generate_reason_for_user(
             duration_of_punishment=0,
-            violator_username=context.dto.violator_username,
-            violator_tg_id=context.violator.tg_id,
+            violator_username=context.dto.violator_username or "",
+            violator_tg_id=context.violator.tg_id or "",
             punishment_type=PunishmentType.BAN,
         )
 

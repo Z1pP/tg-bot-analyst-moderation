@@ -22,7 +22,7 @@ class MessageTemplate(BaseModel):
         Text,
         nullable=False,
     )
-    category_id: Mapped[int] = mapped_column(
+    category_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         ForeignKey("template_categories.id"),
         nullable=True,

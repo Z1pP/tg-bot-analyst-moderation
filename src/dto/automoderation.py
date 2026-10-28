@@ -40,6 +40,19 @@ class AutoModerationRunDTO(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class CheckAndRunAutoModerationDTO(BaseModel):
+    """Входные данные для проверки необходимости и запуска автомодерации."""
+
+    chat_tgid: str
+    chat_title: str | None = None
+    username: str | None = None
+    user_tg_id: int
+    message_id: int
+    message_text: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class AutoModerationBatchJobDTO(BaseModel):
     """Пачка сообщений для фоновой обработки (LLM + уведомление в архив)."""
 

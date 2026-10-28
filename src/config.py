@@ -64,18 +64,18 @@ class Settings(BaseSettings):
     # Защищённый пользователь — нельзя изменить роль (Telegram ID)
     PROTECTED_USER_TG_ID: str
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def API_BASE_URL(self) -> str:
         return f"http://{self.API_HOST}:{self.API_PORT}"
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def DATABASE_URL(self) -> str:
         """Автоматический выбор URL базы данных."""
         return self.DEV_DATABASE_URL if self.IS_DEVELOPMENT else self.PROD_DATABASE_URL
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def ALEMBIC_DB_URL(self) -> str:
         """Автоматический выбор URL для Alembic."""

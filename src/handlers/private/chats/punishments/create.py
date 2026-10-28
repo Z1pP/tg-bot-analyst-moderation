@@ -19,7 +19,7 @@ from usecases.punishment import (
 )
 from utils.data_parser import parse_duration
 from utils.formatter import format_duration
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 
 from .settings import punishment_settings_handler
 
@@ -50,15 +50,15 @@ async def start_create_ladder_handler(
 ) -> None:
     """Начало создания новой лестницы"""
     await callback.answer()
+    if callback.message is None:
+        return
 
     await state.update_data(
         temp_ladder=[], current_step=1, active_message_id=callback.message.message_id
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Punishment.STEP_SELECT_ACTION.format(step_emoji=_step_to_emoji(1)),
         reply_markup=punishment_action_ikb(),
     )
@@ -73,9 +73,11 @@ async def process_action_type_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
-):
+) -> None:
     """Обработка выбора типа наказания для ступени"""
     await callback.answer()
+    if callback.data is None or callback.bot is None or callback.message is None:
+        return
 
     action = callback.data.split("_")[-1]
 
@@ -89,10 +91,8 @@ async def process_action_type_handler(
 
     if action == "mute":
         await state.set_state(PunishmentState.waiting_for_duration)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Punishment.ENTER_MUTE_DURATION,
             reply_markup=cancel_punishment_creation_ikb(),
         )
@@ -113,6 +113,9 @@ async def process_mute_duration_handler(
     message: Message, state: FSMContext
 ) -> None:
     """Обработка ввода длительности мута"""
+    if message.text is None or message.bot is None:
+        return
+
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
 
@@ -151,8 +154,8 @@ async def add_step_to_temp_ladder(
     message_id: int,
     state: FSMContext,
     action: str,
-    duration: int = None,
-):
+    duration: int | None = None,
+) -> None:
     """Вспомогательная функция для добавления ступени в список"""
     data = await state.get_data()
     temp_ladder = data.get("temp_ladder", [])
@@ -198,10 +201,8 @@ async def next_step_handler(
     data = await state.get_data()
     step = data.get("current_step", 1)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Punishment.STEP_SELECT_ACTION.format(
             step_emoji=_step_to_emoji(step)
         ),
@@ -218,7 +219,7 @@ async def save_ladder_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
-):
+) -> None:
     """Сохранение всей лестницы в БД"""
     data = await state.get_data()
     chat_db_id = data.get("chat_id")
@@ -256,7 +257,7 @@ async def cancel_creation_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
-):
+) -> None:
     """Отмена создания"""
     await callback.answer()
     await state.set_state(ChatStateManager.selecting_chat)

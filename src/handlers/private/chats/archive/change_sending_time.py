@@ -18,7 +18,7 @@ from keyboards.inline.chats import cancel_archive_time_setting_ikb
 from states import ChatArchiveState
 from usecases.archive import SetArchiveSendingTimeUseCase
 from utils.data_parser import parse_time
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -54,23 +54,21 @@ async def change_sending_time_handler(
 ) -> None:
     """Обработчик для изменения/установки времени отправки отчета."""
     await callback.answer()
+    if callback.message is None:
+        return
 
     chat_id = await state.get_value("chat_id")
     if chat_id is None:
         logger.error("chat_id не найден в state для изменения времени")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=cancel_archive_time_setting_ikb(),
         )
         return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=_build_time_prompt(),
         reply_markup=cancel_archive_time_setting_ikb(),
     )

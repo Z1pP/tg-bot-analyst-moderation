@@ -102,6 +102,8 @@ async def warn_reason_input_handler(
         Ожидает: WarnUserStates.waiting_reason_input.
         Устанавливает: WarnUserStates.waiting_chat_select при наличии доступных чатов.
     """
+    if message.text is None:
+        return
     reason = message.text.strip()
 
     await handle_reason_input_logic(
@@ -110,7 +112,6 @@ async def warn_reason_input_handler(
         state=state,
         bot=bot,
         container=container,
-        is_callback=False,
         next_state=WarnUserStates.waiting_chat_select,
         action=Actions.WARNING,
     )
@@ -146,7 +147,6 @@ async def warn_no_reason_handler(
         state=state,
         bot=bot,
         container=container,
-        is_callback=True,
         next_state=WarnUserStates.waiting_chat_select,
         action=Actions.WARNING,
     )

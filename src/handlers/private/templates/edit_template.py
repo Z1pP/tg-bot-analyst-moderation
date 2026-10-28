@@ -26,7 +26,7 @@ from usecases.templates import (
     UpdateTemplateContentUseCase,
     UpdateTemplateTitleUseCase,
 )
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 from utils.template_content import extract_media_content_from_messages
 
 from .common import validate_template_title
@@ -41,6 +41,8 @@ async def edit_template_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик начала редактирования шаблона"""
+    if callback.data is None:
+        return
     try:
         template_id = int(callback.data.split("__")[1])
 
@@ -65,10 +67,8 @@ async def edit_template_handler(
             template_scope=current_data.get("template_scope"),
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Template.EDIT_TEMPLATE_TITLE.format(title=template.title),
             reply_markup=edit_template_kb(),
             parse_mode="HTML",
@@ -81,10 +81,8 @@ async def edit_template_handler(
         )
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
             parse_mode="HTML",
@@ -103,14 +101,14 @@ async def edit_template_handler(
 @router.callback_query(F.data == "edit_title", TemplateStateManager.editing_template)
 async def edit_title_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик начала редактирования названия шаблона"""
+    if callback.message is None:
+        return
     try:
         # Сохраняем message_id для последующего редактирования
         await state.update_data(active_message_id=callback.message.message_id)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Template.EDIT_TITLE_INPUT,
             reply_markup=cancel_edit_ikb(),
             parse_mode="HTML",
@@ -119,10 +117,8 @@ async def edit_title_handler(callback: CallbackQuery, state: FSMContext) -> None
         await state.set_state(TemplateStateManager.editing_title)
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=cancel_edit_ikb(),
             parse_mode="HTML",
@@ -143,6 +139,8 @@ async def process_edit_title_handler(
     message: Message, state: FSMContext, bot: Bot, container: Container
 ) -> None:
     """Обработчик получения нового названия шаблона"""
+    if message.text is None:
+        return
     try:
         data = await state.get_data()
         template_id = data.get("edit_template_id")
@@ -277,14 +275,14 @@ async def process_edit_title_handler(
 @router.callback_query(F.data == "edit_content", TemplateStateManager.editing_template)
 async def edit_content_handler(callback: CallbackQuery, state: FSMContext) -> None:
     """Обработчик начала редактирования содержимого шаблона"""
+    if callback.message is None:
+        return
     try:
         # Сохраняем message_id для последующего редактирования
         await state.update_data(active_message_id=callback.message.message_id)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Template.EDIT_CONTENT_INPUT,
             reply_markup=cancel_edit_ikb(),
             parse_mode="HTML",
@@ -293,10 +291,8 @@ async def edit_content_handler(callback: CallbackQuery, state: FSMContext) -> No
         await state.set_state(TemplateStateManager.editing_content)
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=cancel_edit_ikb(),
             parse_mode="HTML",
@@ -467,10 +463,8 @@ async def cancel_edit_handler(
                     data=state_data, page=1, container=container
                 )
 
-                await safe_edit_message(
-                    bot=callback.bot,
-                    chat_id=callback.message.chat.id,
-                    message_id=callback.message.message_id,
+                await safe_edit_callback_message(
+                    callback=callback,
                     text=f"{Dialog.Template.EDIT_CANCELLED}\n\n{Dialog.Template.SELECT_TEMPLATE}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
@@ -486,10 +480,8 @@ async def cancel_edit_handler(
                     data=state_data, page=1, container=container
                 )
 
-                await safe_edit_message(
-                    bot=callback.bot,
-                    chat_id=callback.message.chat.id,
-                    message_id=callback.message.message_id,
+                await safe_edit_callback_message(
+                    callback=callback,
                     text=f"{Dialog.Template.EDIT_CANCELLED}\n\n{Dialog.Template.TEMPLATES_FOR_CHAT.format(count=total_count)}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
@@ -505,10 +497,8 @@ async def cancel_edit_handler(
                     data=state_data, page=1, container=container
                 )
 
-                await safe_edit_message(
-                    bot=callback.bot,
-                    chat_id=callback.message.chat.id,
-                    message_id=callback.message.message_id,
+                await safe_edit_callback_message(
+                    callback=callback,
                     text=f"{Dialog.Template.EDIT_CANCELLED}\n\n{Dialog.Template.GLOBAL_TEMPLATES.format(count=total_count)}",
                     reply_markup=templates_inline_kb(
                         templates=templates,
@@ -520,10 +510,8 @@ async def cancel_edit_handler(
                 await state.set_state(TemplateStateManager.listing_templates)
             else:
                 # Если нет ни category_id, ни chat_id, ни global scope, возвращаемся в меню
-                await safe_edit_message(
-                    bot=callback.bot,
-                    chat_id=callback.message.chat.id,
-                    message_id=callback.message.message_id,
+                await safe_edit_callback_message(
+                    callback=callback,
                     text=Dialog.Template.EDIT_CANCELLED,
                     reply_markup=templates_menu_ikb(),
                 )
@@ -537,10 +525,8 @@ async def cancel_edit_handler(
             )
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )
@@ -576,10 +562,8 @@ async def _cancel_edit_title_or_content(
         return
 
     # Возвращаемся к окну редактирования шаблона
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Template.EDIT_TEMPLATE_TITLE.format(title=template.title),
         reply_markup=edit_template_kb(),
         parse_mode="HTML",
@@ -604,10 +588,8 @@ async def cancel_edit_title_handler(
     try:
         await _cancel_edit_title_or_content(callback, state, container)
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )
@@ -633,10 +615,8 @@ async def cancel_edit_content_handler(
     try:
         await _cancel_edit_title_or_content(callback, state, container)
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )

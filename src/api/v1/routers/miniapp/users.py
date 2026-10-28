@@ -5,7 +5,7 @@ GET /api/miniapp/users/me        — профиль текущего польз�
 """
 
 import logging
-from typing import cast
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from punq import Container
@@ -13,7 +13,8 @@ from punq import Container
 from api.dependencies.container import get_container
 from api.dependencies.miniapp import TelegramInitData, tg_id_from_init_data
 from dto.user import UserDTO
-from repositories import UserRepository
+from usecases.user import GetUserByTgIdUseCase
+from usecases.user_tracking import GetListTrackedUsersUseCase
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -23,11 +24,11 @@ logger = logging.getLogger(__name__)
 async def get_me(
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     tg_id = tg_id_from_init_data(init_data)
-    user_repo = cast(UserRepository, dc.resolve(UserRepository))
+    get_user = cast(GetUserByTgIdUseCase, dc.resolve(GetUserByTgIdUseCase))
 
-    user = await user_repo.get_user_by_tg_id(tg_id=tg_id)
+    user = await get_user.execute(tg_id=tg_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -41,17 +42,20 @@ async def get_me(
 async def get_users(
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     tg_id = tg_id_from_init_data(init_data)
-    user_repo = cast(UserRepository, dc.resolve(UserRepository))
+    get_user = cast(GetUserByTgIdUseCase, dc.resolve(GetUserByTgIdUseCase))
+    get_tracked = cast(
+        GetListTrackedUsersUseCase, dc.resolve(GetListTrackedUsersUseCase)
+    )
 
-    caller = await user_repo.get_user_by_tg_id(tg_id=tg_id)
+    caller = await get_user.execute(tg_id=tg_id)
     if not caller:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-    tracked = await user_repo.get_tracked_users_for_admin(admin_tg_id=tg_id)
+    tracked = await get_tracked.execute(admin_tgid=tg_id)
 
     return {
-        "users": [UserDTO.from_model(u).model_dump() for u in tracked],
+        "users": [u.model_dump() for u in tracked],
         "total": len(tracked),
     }

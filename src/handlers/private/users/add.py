@@ -15,7 +15,7 @@ from keyboards.inline.users import (
 )
 from states.user import UsernameStates
 from usecases.user_tracking import AddUserToTrackingUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 from utils.user_data_parser import parse_data_from_text
 
 router = Router(name=__name__)
@@ -38,10 +38,8 @@ async def add_user_to_tracking_handler(
         callback.from_user.username,
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.User.ADD_USER_INSTRUCTION,
         reply_markup=back_to_users_menu_ikb(),
     )
@@ -56,6 +54,9 @@ async def process_adding_user(
     container: Container,
 ) -> None:
     """Обработчик для получения @username и ID пользователя."""
+    if message.from_user is None or message.text is None:
+        return
+
     admin_id = message.from_user.id
     admin_username = message.from_user.username or "неизвестно"
 
@@ -99,6 +100,8 @@ async def process_adding_user(
         )
         return
 
+    result_text = result.message or Dialog.UserTracking.ERROR_ADD_USER_TO_TRACKING
+
     if not result.success:
         logger.info(
             "Ошибка добавления пользователя %s в отслеживание администратором %s: %s",
@@ -114,7 +117,7 @@ async def process_adding_user(
         )
 
         await message.answer(
-            text=result.message,
+            text=result_text,
             reply_markup=reply_markup,
         )
 
@@ -127,6 +130,10 @@ async def process_adding_user(
     )
 
     await message.answer(
-        text=result.message,
-        reply_markup=move_to_analytics_ikb(user_id=result.user_id),
+        text=result_text,
+        reply_markup=(
+            move_to_analytics_ikb(user_id=result.user_id)
+            if result.user_id
+            else hide_notification_ikb()
+        ),
     )

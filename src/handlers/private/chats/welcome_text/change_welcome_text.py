@@ -13,7 +13,7 @@ from keyboards.inline.chats import (
 )
 from states import WelcomeTextState
 from usecases.chat import UpdateChatWelcomeTextUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -28,10 +28,8 @@ async def change_welcome_text_handler(
     await callback.answer()
     await state.set_state(WelcomeTextState.waiting_welcome_text_input)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.WELCOME_TEXT_ENTER,
         reply_markup=cancel_welcome_text_setting_ikb(),
     )
@@ -44,6 +42,9 @@ async def welcome_text_input_handler(
     container: Container,
 ) -> None:
     """Обработчик ввода нового приветственного текста (html_text сохраняет форматирование)."""
+    if message.from_user is None:
+        return
+
     data = await state.get_data()
     chat_id = data.get("chat_id")
 

@@ -53,9 +53,11 @@ class RemoveChatFromTrackingUseCase:
     async def execute(
         self,
         admin_tg_id: str,
-        chat_tg_id: str,
-        chat_title: str,
+        chat_tg_id: Optional[str] = None,
+        chat_title: str = "",
         admin_username: Optional[str] = None,
+        *,
+        chat_id: Optional[int] = None,
     ) -> RemoveChatFromTrackingResult:
         """
         Выполняет процесс удаления чата из отслеживания.
@@ -65,11 +67,16 @@ class RemoveChatFromTrackingUseCase:
             chat_tg_id: Telegram ID чата
             chat_title: Название чата
             admin_username: Username администратора
+            chat_id: Внутренний ID чата (альтернатива chat_tg_id)
 
         Returns:
             RemoveChatFromTrackingResult: Результат выполнения
         """
         result = RemoveChatFromTrackingResult()
+
+        if chat_id is None and chat_tg_id is None:
+            result.error_message = "Не указан чат для удаления"
+            return result
 
         try:
             # 1. Получаем администратора
@@ -83,14 +90,20 @@ class RemoveChatFromTrackingUseCase:
             result.admin = admin
 
             # 2. Получаем чат
-            chat = await self._chat_service.get_chat(
-                chat_tgid=chat_tg_id, title=chat_title
-            )
+            if chat_id is not None:
+                chat = await self._chat_service.get_chat_with_archive(chat_id=chat_id)
+            elif chat_tg_id is not None:
+                chat = await self._chat_service.get_chat(
+                    chat_tgid=chat_tg_id, title=chat_title
+                )
+            else:
+                chat = None
             if not chat:
-                logger.warning("Чат не найден в БД: %s", chat_tg_id)
+                logger.warning("Чат не найден в БД: %s", chat_id or chat_tg_id)
                 result.error_message = "Чат не найден"
                 return result
             result.chat = chat
+            chat_tg_id = chat.chat_id
 
             # 3. Проверяем права бота в чате
             permissions_check = (
@@ -154,7 +167,7 @@ class RemoveChatFromTrackingUseCase:
                 f"Чат: {chat_name}"
             )
             await self._admin_action_log_service.log_action(
-                admin_tg_id=admin.tg_id,
+                admin_tg_id=admin.tg_id or "",
                 action_type=AdminActionType.REMOVE_CHAT,
                 details=details,
             )

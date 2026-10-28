@@ -54,7 +54,7 @@ class AddUserToTrackingUseCase:
             )
 
         tracked_users = await self._user_tracking_repository.get_tracked_users_by_admin(
-            admin_tgid=admin.tg_id,
+            admin_tgid=admin.tg_id or "",
         )
 
         tracked_user_ids = {u.id for u in tracked_users}
@@ -82,7 +82,7 @@ class AddUserToTrackingUseCase:
                 f"Кого: {target_who}"
             )
             await self._admin_action_log_service.log_action(
-                admin_tg_id=admin.tg_id,
+                admin_tg_id=admin.tg_id or "",
                 action_type=AdminActionType.ADD_USER,
                 details=details,
             )

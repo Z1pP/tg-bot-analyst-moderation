@@ -78,28 +78,32 @@ class ModerationUseCase:
         )
 
         if not bot_can_moderate:
-            raise BotInsufficientPermissionsError(chat_title=chat.title)
+            raise BotInsufficientPermissionsError(chat_title=chat.title or "")
 
         # Проверка что бот в архивном чате
         is_member = await self.permission_service.is_bot_in_chat(
-            chat_tgid=chat.archive_chat_id
+            chat_tgid=chat.archive_chat_id or ""
         )
         if not is_member:
             raise BotNotInArchiveChatError(
-                archive_chat_title=chat.archive_chat.title
-                if chat.archive_chat
-                else "архивном чате"
+                archive_chat_title=(
+                    chat.archive_chat.title
+                    if chat.archive_chat and chat.archive_chat.title
+                    else "архивном чате"
+                )
             )
 
         # Проверка прав в архивном чате
         archive_check = await self.permission_service.check_archive_permissions(
-            chat_tgid=chat.archive_chat_id
+            chat_tgid=chat.archive_chat_id or ""
         )
         if not archive_check.is_admin:
             raise BotNoAdminRightsInArchiveChatError(
-                archive_chat_title=chat.archive_chat.title
-                if chat.archive_chat
-                else "архивном чате"
+                archive_chat_title=(
+                    chat.archive_chat.title
+                    if chat.archive_chat and chat.archive_chat.title
+                    else "архивном чате"
+                )
             )
 
     async def _prepare_moderation_context(
@@ -169,6 +173,8 @@ class ModerationUseCase:
         self, context: ModerationContext, report_text: str
     ) -> None:
         """Отправляет отчет в архивный чат."""
+        if context.archive_chat is None:
+            return
         await self.bot_message_service.send_chat_message(
             chat_tgid=context.archive_chat.chat_id,
             text=report_text,
@@ -194,11 +200,12 @@ class ModerationUseCase:
             )
         except MessageTooOldError as e:
             violator_msg_deleted = False
-            await self.bot_message_service.send_private_message(
-                user_tgid=context.admin.tg_id,
-                text=e.get_user_message(),
-                reply_markup=hide_notification_ikb(),
-            )
+            if context.admin.tg_id is not None:
+                await self.bot_message_service.send_private_message(
+                    user_tgid=context.admin.tg_id,
+                    text=e.get_user_message(),
+                    reply_markup=hide_notification_ikb(),
+                )
 
         if not violator_msg_deleted:
             report_text = report_text.replace("удалено", "не удалено (старше 48ч)")
@@ -233,10 +240,11 @@ class ModerationUseCase:
 
         try:
             if admin_answer_text and not context.dto.from_admin_panel:
-                await self.bot_message_service.send_private_message(
-                    user_tgid=context.admin.tg_id,
-                    text=admin_answer_text,
-                )
+                if context.admin.tg_id is not None:
+                    await self.bot_message_service.send_private_message(
+                        user_tgid=context.admin.tg_id,
+                        text=admin_answer_text,
+                    )
         except TelegramForbiddenError:
             pass
 
@@ -250,6 +258,7 @@ class ModerationUseCase:
         if (
             not context.dto.from_admin_panel
             and context.dto.reply_message_id is not None
+            and context.archive_chat is not None
         ):
             await self.bot_message_service.forward_message(
                 chat_tgid=context.archive_chat.chat_id,

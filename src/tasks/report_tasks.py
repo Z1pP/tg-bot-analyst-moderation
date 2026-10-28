@@ -16,7 +16,7 @@ async def send_chat_report_task(
     schedule_id: int,
     chat_id: int,
     period: str = TimePeriod.TODAY.value,
-):
+) -> None:
     """
     Задача для отправки ежедневного отчета по расписанию.
 

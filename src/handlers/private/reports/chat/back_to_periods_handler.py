@@ -8,7 +8,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.time_period import time_period_ikb_chat
 from states import ChatStateManager, RatingStateManager
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -49,10 +49,8 @@ async def back_to_periods_handler(callback: CallbackQuery, state: FSMContext) ->
         text = Dialog.Report.SELECT_PERIOD
         new_state = ChatStateManager.selecting_period
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=text,
         reply_markup=time_period_ikb_chat(),
     )

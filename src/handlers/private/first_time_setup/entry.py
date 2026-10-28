@@ -6,7 +6,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.users_chats_settings import first_time_setup_ikb
 from states.first_time_setup import FirstTimeSetupStates
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 
@@ -23,10 +23,8 @@ async def first_time_settings_handler(
 
     await state.set_state(FirstTimeSetupStates.waiting_chat_bound)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.UserAndChatsSettings.CHAT_BOUND_TEXT.format(
             instruction=Dialog.Chat.ADD_CHAT_INSTRUCTION
         ),
@@ -45,14 +43,15 @@ async def process_chat_bound(callback: CallbackQuery, state: FSMContext) -> None
     """
     await callback.answer()
 
-    message = await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    message = await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.UserAndChatsSettings.USER_ADD_TEXT.format(
             instruction=Dialog.User.ADD_USER_INSTRUCTION
         ),
     )
+    if message is None:
+        return
+
     await state.update_data(active_message_id=message.message_id)
 
     await state.set_state(FirstTimeSetupStates.waiting_user_added)

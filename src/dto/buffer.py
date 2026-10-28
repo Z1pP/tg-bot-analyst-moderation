@@ -15,7 +15,7 @@ class BufferedMessageDTO(BaseModel):
     text: Optional[str] = None
     created_at: datetime
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
 
 class BufferedReactionDTO(BaseModel):
@@ -29,7 +29,7 @@ class BufferedReactionDTO(BaseModel):
     message_url: str
     created_at: datetime
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
 
 class BufferedMessageReplyDTO(BaseModel):
@@ -42,4 +42,4 @@ class BufferedMessageReplyDTO(BaseModel):
     response_time_seconds: int
     created_at: datetime
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)

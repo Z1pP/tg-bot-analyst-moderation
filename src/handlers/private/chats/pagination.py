@@ -7,16 +7,18 @@ from punq import Container
 
 from constants.callback import CallbackData
 from constants.pagination import CHATS_PAGE_SIZE
+from dto.chat_dto import ChatDTO
 from keyboards.inline.chats import remove_chat_ikb, show_tracked_chats_ikb
-from models import ChatSession
 from usecases.chat import GetTrackedChatsUseCase
 from utils.pagination_handler import BasePaginationHandler
 
 router = Router(name=__name__)
 
 
-class ChatsPaginationHandler(BasePaginationHandler):
-    def __init__(self):
+class TrackedChatsPaginationHandler(BasePaginationHandler):
+    """Общая логика пагинации по отслеживаемым чатам."""
+
+    def __init__(self) -> None:
         super().__init__("чатов")
 
     async def get_page_data(
@@ -25,14 +27,15 @@ class ChatsPaginationHandler(BasePaginationHandler):
         callback: CallbackQuery,
         state: FSMContext,
         container: Container,
-    ) -> Tuple[List[ChatSession], int]:
-        chats = await get_tracked_chats(callback.from_user.username, container)
-        chats_page, total_count = paginate_chats(chats, page)
-        return chats_page, total_count
+    ) -> Tuple[List[ChatDTO], int]:
+        chats = await get_tracked_chats(str(callback.from_user.id), container)
+        return paginate_chats(chats, page)
 
+
+class ChatsPaginationHandler(TrackedChatsPaginationHandler):
     async def build_keyboard(
         self,
-        items: List[ChatSession],
+        items: List[ChatDTO],
         page: int,
         total_count: int,
     ) -> InlineKeyboardMarkup:
@@ -47,24 +50,10 @@ class ChatsPaginationHandler(BasePaginationHandler):
         )
 
 
-class ReportChatsPaginationHandler(BasePaginationHandler):
-    def __init__(self):
-        super().__init__("чатов")
-
-    async def get_page_data(
-        self,
-        page: int,
-        callback: CallbackQuery,
-        state: FSMContext,
-        container: Container,
-    ) -> Tuple[List[ChatSession], int]:
-        chats = await get_tracked_chats(callback.from_user.username, container)
-        chats_page, total_count = paginate_chats(chats, page)
-        return chats_page, total_count
-
+class ReportChatsPaginationHandler(TrackedChatsPaginationHandler):
     async def build_keyboard(
         self,
-        items: List[ChatSession],
+        items: List[ChatDTO],
         page: int,
         total_count: int,
     ) -> InlineKeyboardMarkup:
@@ -79,24 +68,10 @@ class ReportChatsPaginationHandler(BasePaginationHandler):
         )
 
 
-class RemoveChatsPaginationHandler(BasePaginationHandler):
-    def __init__(self):
-        super().__init__("чатов")
-
-    async def get_page_data(
-        self,
-        page: int,
-        callback: CallbackQuery,
-        state: FSMContext,
-        container: Container,
-    ) -> Tuple[List[ChatSession], int]:
-        chats = await get_tracked_chats(callback.from_user.username, container)
-        chats_page, total_count = paginate_chats(chats, page)
-        return chats_page, total_count
-
+class RemoveChatsPaginationHandler(TrackedChatsPaginationHandler):
     async def build_keyboard(
         self,
-        items: List[ChatSession],
+        items: List[ChatDTO],
         page: int,
         total_count: int,
     ) -> InlineKeyboardMarkup:
@@ -162,19 +137,17 @@ async def next_remove_chats_page_handler(
     await remove_chats_handler.handle_next_page(callback, state, container)
 
 
-async def get_tracked_chats(
-    admin_username: str, container: Container
-) -> List[ChatSession]:
-    """Получает все отслеживаемые чаты."""
+async def get_tracked_chats(tg_id: str, container: Container) -> List[ChatDTO]:
+    """Получает все отслеживаемые чаты администратора."""
     usecase: GetTrackedChatsUseCase = container.resolve(GetTrackedChatsUseCase)
-    return await usecase.execute(username=admin_username)
+    return await usecase.execute(tg_id=tg_id)
 
 
 def paginate_chats(
-    chats: List[ChatSession],
+    chats: List[ChatDTO],
     page: int,
     page_size: int = CHATS_PAGE_SIZE,
-) -> tuple[List[ChatSession], int]:
+) -> tuple[List[ChatDTO], int]:
     """Разбивает список чатов на страницы."""
 
     start_idx = (page - 1) * page_size

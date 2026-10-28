@@ -39,9 +39,9 @@ async def test_back_to_periods_handler_calls_answer_and_edit(
     callback: MagicMock,
     state: MagicMock,
 ) -> None:
-    """Обработчик вызывает callback.answer(), safe_edit_message с текстом периода, state.set_state."""
+    """Обработчик вызывает callback.answer(), safe_edit_callback_message с текстом периода, state.set_state."""
     with patch(
-        "handlers.private.reports.chat.back_to_periods_handler.safe_edit_message",
+        "handlers.private.reports.chat.back_to_periods_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(
@@ -54,8 +54,7 @@ async def test_back_to_periods_handler_calls_answer_and_edit(
     mock_edit.assert_called_once()
     call_kw = mock_edit.call_args.kwargs
     assert call_kw["text"] == Dialog.Report.SELECT_PERIOD
-    assert call_kw["chat_id"] == 100
-    assert call_kw["message_id"] == 1
+    assert call_kw["callback"] is callback
     state.set_state.assert_called_once()
 
 
@@ -70,7 +69,7 @@ async def test_back_to_periods_handler_rating_state_uses_rating_text(
     )
 
     with patch(
-        "handlers.private.reports.chat.back_to_periods_handler.safe_edit_message",
+        "handlers.private.reports.chat.back_to_periods_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(

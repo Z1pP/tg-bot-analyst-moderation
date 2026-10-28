@@ -20,7 +20,7 @@ from dto.chat_dto import GetChatWithArchiveDTO
 from states import ChatStateManager, WorkHoursState
 from usecases.chat import GetChatWithArchiveUseCase, UpdateChatWorkHoursUseCase
 from utils.data_parser import parse_breaks_time, parse_time, parse_tolerance
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -38,10 +38,8 @@ async def _resolve_chat_for_work_hours(
     chat_id = await state.get_value("chat_id")
     if not chat_id:
         logger.error("chat_id не найден в state")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chat_actions_ikb(),
         )
@@ -53,10 +51,8 @@ async def _resolve_chat_for_work_hours(
     chat = await get_chat_uc.execute(GetChatWithArchiveDTO(chat_id=chat_id))
 
     if not chat:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
             reply_markup=chat_actions_ikb(),
         )
@@ -73,6 +69,8 @@ async def work_hours_menu_handler(
 ) -> None:
     """Обработчик открытия меню настройки времени сбора данных"""
     await callback.answer()
+    if callback.message is None:
+        return
 
     try:
         chat = await _resolve_chat_for_work_hours(callback, state, container)
@@ -81,10 +79,8 @@ async def work_hours_menu_handler(
 
         msg_text = _build_work_hours_view(chat)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=msg_text,
             reply_markup=time_report_settings_ikb(),
         )
@@ -92,10 +88,8 @@ async def work_hours_menu_handler(
         await state.update_data(active_message_id=callback.message.message_id)
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=chat_actions_ikb(),
         )
@@ -115,11 +109,11 @@ async def change_work_start_handler(
 ) -> None:
     """Обработчик выбора изменения времени начала"""
     await callback.answer()
+    if callback.message is None:
+        return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.ENTER_WORK_START,
         reply_markup=cancel_work_hours_setting_ikb(),
     )
@@ -135,11 +129,11 @@ async def change_work_end_handler(
 ) -> None:
     """Обработчик выбора изменения времени конца"""
     await callback.answer()
+    if callback.message is None:
+        return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.ENTER_WORK_END,
         reply_markup=cancel_work_hours_setting_ikb(),
     )
@@ -155,11 +149,11 @@ async def change_tolerance_handler(
 ) -> None:
     """Обработчик выбора изменения отклонения"""
     await callback.answer()
+    if callback.message is None:
+        return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.ENTER_TOLERANCE,
         reply_markup=cancel_work_hours_setting_ikb(),
     )
@@ -175,11 +169,11 @@ async def change_breaks_time_handler(
 ) -> None:
     """Обработчик выбора изменения интервала паузы"""
     await callback.answer()
+    if callback.message is None:
+        return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.ENTER_BREAKS_TIME,
         reply_markup=cancel_work_hours_setting_ikb(),
     )
@@ -272,10 +266,8 @@ async def cancel_work_hours_handler(
         if chat is None:
             return
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_ACTIONS_INFO,
             reply_markup=chat_actions_ikb(),
         )
@@ -283,10 +275,8 @@ async def cancel_work_hours_handler(
         await state.set_state(ChatStateManager.selecting_chat)
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=chat_actions_ikb(),
         )
@@ -309,6 +299,9 @@ async def _process_work_hours_input(
     success_format_func: Callable[[Any], str],
 ) -> None:
     """Универсальная функция для обработки ввода настроек времени"""
+    if message.bot is None or message.from_user is None or message.text is None:
+        return
+
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
     chat_id = data.get("chat_id")
@@ -403,11 +396,13 @@ async def _process_work_hours_input(
 async def _return_to_work_hours_menu(
     bot: Bot,
     chat_id: int,
-    message_id: int,
+    message_id: int | None,
     state: FSMContext,
     container: Container,
 ) -> None:
     """Вспомогательная функция для возврата в меню настройки времени"""
+    if message_id is None:
+        return
     try:
         db_chat_id = await state.get_value("chat_id")
         get_chat_uc: GetChatWithArchiveUseCase = container.resolve(

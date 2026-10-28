@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Any
 
 from constants.enums import AdminActionType
 from constants.work_time import END_TIME, START_TIME, TOLERANCE
@@ -26,7 +27,7 @@ from .base import BaseReportUseCase
 logger = logging.getLogger(__name__)
 
 
-class GetSingleUserReportUseCase(BaseReportUseCase):
+class GetSingleUserReportUseCase(BaseReportUseCase[SingleUserReportDTO]):
     def __init__(
         self,
         msg_reply_repository: MessageReplyRepository,
@@ -78,7 +79,7 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         # Проверяем наличие отслеживаемых чатов
         if user_data.get("no_chats"):
             return SingleUserReportResultDTO(
-                username=user.username,
+                username=user.username or "",
                 user_id=user.id,
                 start_date=adjusted_start,
                 end_date=adjusted_end,
@@ -107,6 +108,8 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
                 start_date=adjusted_start,
                 end_date=adjusted_end,
             )
+            if self._punishment_repository
+            else {"warns": 0, "bans": 0}
         )
 
         # Рассчитываем статистику
@@ -146,7 +149,7 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
             )
 
         return SingleUserReportResultDTO(
-            username=user.username,
+            username=user.username or "",
             user_id=user.id,
             start_date=adjusted_start,
             end_date=adjusted_end,
@@ -171,7 +174,7 @@ class GetSingleUserReportUseCase(BaseReportUseCase):
         dto: SingleUserReportDTO,
         start_date: datetime,
         end_date: datetime,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Получает все данные пользователя за период."""
         # Проверяем наличие отслеживаемых чатов
         tracked_chats = await self._chat_repository.get_tracked_chats_for_admin(

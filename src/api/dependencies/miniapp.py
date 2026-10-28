@@ -14,7 +14,7 @@ import hmac
 import json
 import logging
 import time
-from typing import Annotated
+from typing import Annotated, Any
 from urllib.parse import parse_qsl, unquote
 
 from fastapi import Depends, HTTPException, status
@@ -33,7 +33,7 @@ def _compute_secret_key(bot_token: str) -> bytes:
     return hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
 
 
-def _verify_init_data(raw: str) -> dict:
+def _verify_init_data(raw: str) -> dict[str, Any]:
     """
     Проверяет подпись initData и возвращает распарсенные поля.
     Raises HTTPException при невалидных или устаревших данных.
@@ -72,7 +72,7 @@ def _verify_init_data(raw: str) -> dict:
 
 def verify_telegram_init_data(
     raw_init_data: Annotated[str | None, Depends(INIT_DATA_HEADER)],
-) -> dict:
+) -> dict[str, Any]:
     """
     FastAPI dependency. Возвращает распарсенные поля initData.
     В dev-режиме пропускает проверку подписи если заголовок отсутствует.
@@ -89,10 +89,10 @@ def verify_telegram_init_data(
     return _verify_init_data(unquote(raw_init_data))
 
 
-TelegramInitData = Annotated[dict, Depends(verify_telegram_init_data)]
+TelegramInitData = Annotated[dict[str, Any], Depends(verify_telegram_init_data)]
 
 
-def tg_id_from_init_data(init_data: dict) -> str:
+def tg_id_from_init_data(init_data: dict[str, Any]) -> str:
     """Извлекает tg_id пользователя из распарсенных полей initData."""
     user_raw = init_data.get("user", "{}")
     try:
@@ -102,11 +102,11 @@ def tg_id_from_init_data(init_data: dict) -> str:
         return "0"
 
 
-def username_from_init_data(init_data: dict) -> str:
+def username_from_init_data(init_data: dict[str, Any]) -> str:
     """Извлекает username пользователя из распарсенных полей initData."""
     user_raw = init_data.get("user", "{}")
     try:
         user = json.loads(user_raw) if isinstance(user_raw, str) else user_raw
-        return user.get("username", "")
+        return str(user.get("username", "") or "")
     except Exception:
         return ""

@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from dto.report import AllUsersReportDTO, BreaksDetailReportDTO, BreaksDetailUserDTO
 from models import User
@@ -10,7 +11,7 @@ from .base import BaseReportUseCase
 logger = logging.getLogger(__name__)
 
 
-class GetAllUsersBreaksDetailReportUseCase(BaseReportUseCase):
+class GetAllUsersBreaksDetailReportUseCase(BaseReportUseCase[AllUsersReportDTO]):
     async def execute(self, dto: AllUsersReportDTO) -> BreaksDetailReportDTO:
         """Генерирует детализированный отчет по перерывам для всех пользователей."""
         users = await self._user_repository.get_tracked_users_for_admin(
@@ -50,7 +51,7 @@ class GetAllUsersBreaksDetailReportUseCase(BaseReportUseCase):
 
     async def _get_all_users_data(
         self, user_ids: list[int], dto: AllUsersReportDTO
-    ) -> dict:
+    ) -> dict[int, dict[str, list[Any]]]:
         """Получает данные пользователей за период одной выборкой."""
         messages = await self._message_repository.get_messages_by_period_date_for_users(
             user_ids=user_ids,
@@ -80,7 +81,7 @@ class GetAllUsersBreaksDetailReportUseCase(BaseReportUseCase):
         }
 
     def _generate_user_breaks_detail(
-        self, data: dict, user: User, period: str
+        self, data: dict[str, Any], user: User, period: str
     ) -> BreaksDetailUserDTO:
         """Генерирует детализацию перерывов для одного пользователя."""
         messages = data["messages"]
@@ -88,7 +89,7 @@ class GetAllUsersBreaksDetailReportUseCase(BaseReportUseCase):
 
         if not messages and not reactions:
             return BreaksDetailUserDTO(
-                username=user.username,
+                username=user.username or "",
                 has_activity=False,
                 days=[],
             )
@@ -96,7 +97,7 @@ class GetAllUsersBreaksDetailReportUseCase(BaseReportUseCase):
         breaks = BreakAnalysisService.calculate_breaks_structured(messages, reactions)
 
         return BreaksDetailUserDTO(
-            username=user.username,
+            username=user.username or "",
             has_activity=True,
             days=breaks,
         )

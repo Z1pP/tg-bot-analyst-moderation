@@ -13,7 +13,7 @@ from states.message_management import (
     MessageManagerState,
     get_message_action_state,
 )
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 from .helpers import show_message_actions_menu, show_message_management_menu
 
@@ -36,12 +36,12 @@ async def select_action_handler(
 ) -> None:
     """Обработчик выбора действия с сообщением."""
     await callback.answer()
+    if callback.bot is None or callback.message is None:
+        return
 
     if callback.data == CallbackData.Messages.DELETE_MESSAGE:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Messages.DELETE_CONFIRM,
             reply_markup=confirm_delete_ikb(),
         )
@@ -49,10 +49,8 @@ async def select_action_handler(
         logger.info("Админ %s запросил удаление сообщения", callback.from_user.id)
 
     elif callback.data == CallbackData.Messages.REPLY_MESSAGE:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Messages.REPLY_INPUT,
             reply_markup=cancel_reply_ikb(),
         )
@@ -82,6 +80,8 @@ async def cancel_reply_handler(
 ) -> None:
     """Обработчик отмены ответа на сообщение."""
     await callback.answer()
+    if callback.bot is None or callback.message is None:
+        return
 
     action_state = await get_message_action_state(state)
     active_message_id = (

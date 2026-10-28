@@ -142,7 +142,7 @@ async def run_webhook(bot: Bot, dp: Dispatcher, webhook_url: str) -> None:
         await runner.cleanup()
 
 
-async def run_polling(bot: Bot, dp: Dispatcher):
+async def run_polling(bot: Bot, dp: Dispatcher) -> None:
     """Запускает бота в режиме long polling."""
     await broker.startup()
     logger.info("TaskIQ broker запущен")
@@ -184,13 +184,15 @@ async def shutdown(bot: Bot, dp: Dispatcher) -> None:
     logger.info("Бот успешно остановлен.")
 
 
-async def main():
+async def main() -> None:
     """Точка входа."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--webhook-url", type=str, default=None)
     args = parser.parse_args()
 
-    webhook_url = args.webhook_url or settings.USE_WEBHOOK
+    webhook_url: str | None = args.webhook_url
+    if webhook_url is None and settings.USE_WEBHOOK:
+        webhook_url = settings.PUBLIC_URL or None
 
     bot, dp = await init_bot()
 

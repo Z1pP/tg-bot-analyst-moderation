@@ -3,6 +3,7 @@ from collections import defaultdict
 from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware, types
+from aiogram.types import TelegramObject
 
 DataType = dict[str, Any]
 AlbumMessages = list[types.Message]
@@ -40,7 +41,10 @@ class AlbumMiddleware(BaseMiddleware):
         Returns:
             int: Количество сообщений в группе
         """
-        return len(self.album_messages[message.media_group_id])
+        media_group_id = message.media_group_id
+        if media_group_id is None:
+            return 0
+        return len(self.album_messages[media_group_id])
 
     def store_album_message(self, message: types.Message) -> int:
         """
@@ -52,7 +56,10 @@ class AlbumMiddleware(BaseMiddleware):
         Returns:
             int: Новое количество сообщений в группе
         """
-        self.album_messages[message.media_group_id].append(message)
+        media_group_id = message.media_group_id
+        if media_group_id is None:
+            return 0
+        self.album_messages[media_group_id].append(message)
         return self.get_count(message)
 
     def get_result_messages(self, message: types.Message) -> AlbumMessages:
@@ -65,16 +72,19 @@ class AlbumMiddleware(BaseMiddleware):
         Returns:
             AlbumMessages: Отсортированный список сообщений группы
         """
-        album_messages = self.album_messages.pop(message.media_group_id)
+        media_group_id = message.media_group_id
+        if media_group_id is None:
+            return []
+        album_messages = self.album_messages.pop(media_group_id)
         album_messages.sort(key=lambda m: m.message_id)
         return album_messages
 
     async def __call__(
         self,
-        handler: Callable[[types.Message, DataType], Awaitable],
-        event: types.Message,
+        handler: Callable[[TelegramObject, DataType], Awaitable[Any]],
+        event: TelegramObject,
         data: DataType,
-    ):
+    ) -> Any:
         """
         Обрабатывает вызов middleware.
 
@@ -89,7 +99,7 @@ class AlbumMiddleware(BaseMiddleware):
         Returns:
             Результат выполнения обработчика
         """
-        if event.media_group_id is None:
+        if not isinstance(event, types.Message) or event.media_group_id is None:
             return await handler(event, data)
 
         count = self.store_album_message(event)

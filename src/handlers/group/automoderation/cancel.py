@@ -4,7 +4,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from punq import Container
 
 from constants.callback import CallbackData
@@ -35,7 +35,7 @@ async def automoderation_cancel_handler(
 
     await callback.answer("Действие отменено")
     await state.clear()
-    if callback.message:
+    if isinstance(callback.message, Message):
         try:
             await callback.message.delete()
         except Exception as e:

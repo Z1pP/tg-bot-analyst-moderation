@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 
 from keyboards.inline.templates import cancel_template_ikb, templates_menu_ikb
 from states.templates import TemplateStateManager
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 
 router = Router(name=__name__)
 
@@ -12,7 +12,10 @@ async def common_process_template_title_handler(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
-):
+) -> None:
+    if message.text is None:
+        return
+
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
 
@@ -49,10 +52,8 @@ async def cancel_template_handler(
     callback: types.CallbackQuery, state: FSMContext
 ) -> None:
     await callback.answer()
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text="❌ Действие отменено.",
         reply_markup=templates_menu_ikb(),
     )

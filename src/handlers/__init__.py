@@ -1,6 +1,9 @@
+from typing import Any, Callable
+
 from aiogram import Dispatcher, Router
-from aiogram.enums import ChatType
 from punq import Container
+
+from constants.enums import ChatType
 
 from filters import AdminOnlyFilter, ChatTypeFilter, GroupTypeFilter
 from middlewares import AdminAntispamMiddleware
@@ -10,10 +13,12 @@ from .group import router as group_router
 from .private import router as private_router
 
 
-def _make_inject_container_middleware(container: Container):
+def _make_inject_container_middleware(container: Container) -> Callable[..., Any]:
     """Фабрика middleware: подставляет container в data для handler."""
 
-    async def middleware(handler, event, data):
+    async def middleware(
+        handler: Callable[..., Any], event: Any, data: dict[str, Any]
+    ) -> Any:
         data["container"] = container
         return await handler(event, data)
 

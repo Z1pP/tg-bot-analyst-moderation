@@ -39,11 +39,3 @@ class BaseGetChatsUseCase:
                 filtered_chats.append(ChatDTO.from_model(chat))
 
         return filtered_chats if filtered_chats else None
-
-    async def execute(
-        self,
-        dto: AmnestyUserDTO,
-        chat_predicate: Callable[[ChatSession], Awaitable[bool]],
-    ) -> Optional[List[ChatDTO]]:
-        """Публичный контракт: делегирует в _get_chats_with_predicate."""
-        return await self._get_chats_with_predicate(dto, chat_predicate)

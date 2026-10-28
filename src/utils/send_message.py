@@ -1,7 +1,9 @@
 import html
 import logging
 import re
+from collections.abc import Awaitable, Callable
 from functools import wraps
+from typing import ParamSpec, TypeVar, cast
 
 from aiogram import Bot, types
 from aiogram.enums import ParseMode
@@ -9,12 +11,15 @@ from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 logger = logging.getLogger(__name__)
 
+P = ParamSpec("P")
+R = TypeVar("R")
 
-def safe_telegram_delete(func):
+
+def safe_telegram_delete(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
     """Декоратор для безопасного удаления сообщений Telegram"""
 
     @wraps(func)
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         message_id = kwargs.get("message_id")
         if not message_id and len(args) > 2:
             message_id = args[2]
@@ -33,23 +38,23 @@ def safe_telegram_delete(func):
                 logger.error(
                     "Ошибка при выполнении %s: %s", func.__name__, e, exc_info=True
                 )
-            return False
+            return cast(R, False)
         except TelegramForbiddenError as e:
             logger.warning(
                 "Нет доступа к чату при удалении сообщения %s: %s",
                 message_id,
                 e,
             )
-            return False
+            return cast(R, False)
 
     return wrapper
 
 
-def safe_telegram_edit(func):
+def safe_telegram_edit(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
     """Декоратор для безопасного редактирования сообщений Telegram"""
 
     @wraps(func)
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         # Пытаемся получить message_id для логов
         message_id = kwargs.get("message_id")
         if not message_id and len(args) > 2:
@@ -69,14 +74,18 @@ def safe_telegram_edit(func):
                 logger.error(
                     "Ошибка при выполнении %s: %s", func.__name__, e, exc_info=True
                 )
-            return False
+            return cast(R, False)
 
     return wrapper
 
 
 @safe_telegram_delete
-async def safe_delete_message(bot: Bot, chat_id: int, message_id: int) -> bool:
+async def safe_delete_message(
+    bot: Bot | None, chat_id: int, message_id: int | None
+) -> bool:
     """Безопасное удаление сообщения с обработкой типичных ошибок Telegram"""
+    if bot is None or message_id is None:
+        return False
     return await bot.delete_message(chat_id=chat_id, message_id=message_id)
 
 
@@ -96,52 +105,111 @@ async def send_html_message_with_kb(
 
 @safe_telegram_edit
 async def safe_edit_message(
-    bot: Bot,
+    bot: Bot | None,
     chat_id: int,
-    message_id: int,
+    message_id: int | None,
     text: str | None = None,
     reply_markup: types.InlineKeyboardMarkup | None = None,
     parse_mode: str | None = ParseMode.HTML,
 ) -> types.Message | None:
     """Безопасное редактирование сообщения с обработкой типичных ошибок Telegram"""
+    if bot is None or message_id is None or text is None:
+        return None
     try:
-        return await bot.edit_message_text(
+        result = await bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
             text=text,
             reply_markup=reply_markup,
             parse_mode=parse_mode,
         )
+        return cast(types.Message | None, result)
     except TelegramBadRequest as e:
         if "message is not modified" in str(e).lower():
             return None
         logger.error(f"Ошибка при редактировании сообщения с {parse_mode}: {e}")
-        return await bot.edit_message_text(
+        result = await bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
             text=text,
             reply_markup=reply_markup,
             parse_mode=None,
         )
+        return cast(types.Message | None, result)
     except Exception as e:
         logger.error(f"Критическая ошибка при редактировании сообщения: {e}")
         return None
 
 
+async def safe_edit_callback_message(
+    callback: types.CallbackQuery,
+    text: str | None = None,
+    reply_markup: types.InlineKeyboardMarkup | None = None,
+    parse_mode: str | None = ParseMode.HTML,
+) -> types.Message | None:
+    """
+    Безопасно редактирует сообщение, к которому привязан callback.
+
+    Если callback пришёл без доступного сообщения (устаревшее сообщение),
+    редактирование пропускается и возвращается None.
+    """
+    message = callback.message
+    if not isinstance(message, types.Message):
+        return None
+    if callback.bot is None:
+        return None
+
+    result: types.Message | None = await safe_edit_message(
+        bot=callback.bot,
+        chat_id=message.chat.id,
+        message_id=message.message_id,
+        text=text,
+        reply_markup=reply_markup,
+        parse_mode=parse_mode,
+    )
+    return result
+
+
 @safe_telegram_edit
 async def safe_edit_message_reply_markup(
-    bot: Bot,
+    bot: Bot | None,
     chat_id: int,
-    message_id: int,
+    message_id: int | None,
     reply_markup: types.InlineKeyboardMarkup | None = None,
 ) -> bool:
     """Безопасное редактирование только клавиатуры сообщения с обработкой типичных ошибок Telegram"""
+    if bot is None or message_id is None:
+        return False
     await bot.edit_message_reply_markup(
         chat_id=chat_id,
         message_id=message_id,
         reply_markup=reply_markup,
     )
     return True
+
+
+async def safe_edit_callback_reply_markup(
+    callback: types.CallbackQuery,
+    reply_markup: types.InlineKeyboardMarkup | None = None,
+) -> bool:
+    """
+    Безопасно обновляет клавиатуру сообщения, к которому привязан callback.
+
+    Если callback пришёл без доступного сообщения, обновление пропускается.
+    """
+    message = callback.message
+    if not isinstance(message, types.Message):
+        return False
+    if callback.bot is None:
+        return False
+
+    result: bool = await safe_edit_message_reply_markup(
+        bot=callback.bot,
+        chat_id=message.chat.id,
+        message_id=message.message_id,
+        reply_markup=reply_markup,
+    )
+    return result
 
 
 def sanitize_html_for_telegram(text: str) -> str:
@@ -185,7 +253,7 @@ def sanitize_html_for_telegram(text: str) -> str:
     tag_re = re.compile(r"<(/?)(\w+)([^>]*)>")
     parts = []
     last_pos = 0
-    stack = []
+    stack: list[str] = []
 
     for match in tag_re.finditer(text):
         # Текст перед тегом экранируем

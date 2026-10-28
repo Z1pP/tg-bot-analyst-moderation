@@ -15,7 +15,7 @@ from exceptions.base import BotBaseException
 from handlers._handler_errors import raise_business_logic
 from keyboards.inline.chats import archive_bind_instruction_ikb, chats_menu_ikb
 from usecases.archive import GenerateArchiveBindHashUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -32,10 +32,8 @@ async def archive_bind_instruction_handler(
 
     if chat_id is None:
         logger.error("chat_id не найден в state")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chats_menu_ikb(),
         )
@@ -57,18 +55,14 @@ async def archive_bind_instruction_handler(
             bind_hash=bind_hash,
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=instruction_text,
             reply_markup=archive_bind_instruction_ikb(),
         )
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=archive_bind_instruction_ikb(),
         )

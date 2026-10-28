@@ -35,7 +35,7 @@ class BotInsufficientPermissionsError(PrivateModerationError):
     def __init__(self, chat_title: str) -> None:
         self.chat_title = chat_title
 
-    def get_user_message(self):
+    def get_user_message(self) -> str:
         return (
             f"❌ Бот не имеет необходимых прав для модерации в чате <b>{self.chat_title}</b>. "
             "Требуются права: удаление сообщений, блокировка пользователей."

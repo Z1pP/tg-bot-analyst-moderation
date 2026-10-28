@@ -11,7 +11,7 @@ from keyboards.inline.categories import categories_inline_ikb
 from keyboards.inline.templates import templates_menu_ikb
 from states import TemplateStateManager
 from usecases.categories import GetCategoriesUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +34,8 @@ async def select_category_handler(
         categories = await usecase.execute()
 
         if not categories:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text="❗ Категорий не найдено",
                 reply_markup=templates_menu_ikb(),
             )
@@ -45,10 +43,8 @@ async def select_category_handler(
 
         first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text="Выберите категорию.",
             reply_markup=categories_inline_ikb(
                 categories=first_page_categories,
@@ -59,10 +55,8 @@ async def select_category_handler(
 
         await state.set_state(TemplateStateManager.listing_categories)
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )

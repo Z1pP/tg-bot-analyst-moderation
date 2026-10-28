@@ -1,11 +1,20 @@
 """Тесты для utils/pagination_handler.py."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from aiogram import types
 from aiogram.types import InlineKeyboardMarkup
 
 from utils.pagination_handler import BasePaginationHandler
+
+
+def _callback_message() -> MagicMock:
+    """Сообщение, проходящее isinstance(..., Message), с моками методов."""
+    message = MagicMock()
+    message.__class__ = types.Message
+    message.edit_reply_markup = AsyncMock()
+    return message
 
 
 class ConcretePaginationHandler(BasePaginationHandler):
@@ -26,8 +35,7 @@ async def test_handle_prev_page() -> None:
     handler = ConcretePaginationHandler(entity_name="items")
     query = AsyncMock()
     query.data = "pag__2"
-    query.message = AsyncMock()
-    query.message.edit_reply_markup = AsyncMock()
+    query.message = _callback_message()
     query.answer = AsyncMock()
     state = AsyncMock()
     container = None
@@ -45,8 +53,7 @@ async def test_handle_next_page_has_items() -> None:
     handler = ConcretePaginationHandler(entity_name="items")
     query = AsyncMock()
     query.data = "pag__0"
-    query.message = AsyncMock()
-    query.message.edit_reply_markup = AsyncMock()
+    query.message = _callback_message()
     query.answer = AsyncMock()
     state = AsyncMock()
 

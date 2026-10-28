@@ -33,7 +33,7 @@ class ReportScheduleService:
         self,
         chat_id: int,
         sent_time: time,
-        tz_name: str = None,
+        tz_name: str | None = None,
         enabled: bool = True,
     ) -> ReportSchedule:
         """

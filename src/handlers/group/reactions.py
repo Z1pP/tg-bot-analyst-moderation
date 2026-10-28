@@ -78,9 +78,9 @@ def _get_emoji(event: types.MessageReactionUpdated) -> str:
         return "Неизвестно"
 
     reaction = reactions[0]
-    if reaction.type == "emoji":
+    if isinstance(reaction, types.ReactionTypeEmoji):
         return reaction.emoji
-    elif reaction.type == "custom_emoji":
+    if isinstance(reaction, types.ReactionTypeCustomEmoji):
         return reaction.custom_emoji_id
 
     return "Неизвестно"

@@ -4,7 +4,11 @@ import html
 import logging
 from typing import Literal, Optional
 
-from aiogram.types import ChatMemberAdministrator, ChatMemberOwner
+from aiogram.types import (
+    ChatMemberAdministrator,
+    ChatMemberOwner,
+    ChatMemberUnion,
+)
 from pydantic import BaseModel, ConfigDict
 
 from dto.chat_dto import GetChatWithArchiveDTO
@@ -99,7 +103,9 @@ ADMIN_PERMISSIONS_CHANNEL = [
 ]
 
 
-def _build_permission_lines(member, is_channel: bool) -> list[str]:
+def _build_permission_lines(
+    member: ChatMemberUnion, is_channel: bool
+) -> list[str]:
     """Строит список строк с правами (✅/❌) и пояснениями."""
     if isinstance(member, ChatMemberOwner):
         return ["✅ Все права (создатель)"]
@@ -181,7 +187,7 @@ class GetBotPermissionsInChatUseCase:
         is_channel = await self._permission_service.is_channel(chat.chat_id)
         permission_lines = _build_permission_lines(member, is_channel=is_channel)
         text = _format_report(
-            chat_title=chat.title,
+            chat_title=chat.title or "",
             status=member.status,
             permission_lines=permission_lines,
         )

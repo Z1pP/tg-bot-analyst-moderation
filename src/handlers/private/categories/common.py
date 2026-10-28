@@ -14,7 +14,7 @@ from keyboards.inline.categories import (
 from keyboards.inline.templates import templates_menu_ikb
 from states import CategoryStateManager, TemplateStateManager
 from usecases.categories import GetCategoryByIdUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -23,8 +23,13 @@ logger = logging.getLogger(__name__)
 @router.callback_query(F.data.startswith(("add_category", "edit_category__")))
 async def request_category_name_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
-):
+) -> None:
     await callback.answer()
+
+    if callback.data is None:
+        return
+    if callback.message is None or not isinstance(callback.message, types.Message):
+        return
 
     if callback.data.startswith("add_category"):
         mode = "add"
@@ -37,27 +42,27 @@ async def request_category_name_handler(
             category_id = int(callback.data.split("__")[1])
         except (IndexError, ValueError):
             logger.warning("Некорректный формат callback_data: %s", callback.data)
-            return await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text="⚠️ Некорректный запрос. Повторите действие через меню.",
                 reply_markup=templates_menu_ikb(),
             )
+            return
         mode = "edit"
         old_name = None
         try:
             usecase: GetCategoryByIdUseCase = container.resolve(GetCategoryByIdUseCase)
             category = await usecase.execute(category_id)
+            if category is None:
+                raise CategoryNotFoundError()
             old_name = category.name
         except CategoryNotFoundError as e:
             logger.warning("Категория ID=%d не найдена: %s", category_id, e)
-            return await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=e.get_user_message(),
             )
+            return
         text = f"<b>Редактирование категории:</b> {old_name}\n\nВведите новое название:"
         reply_markup = cancel_category_ikb()
 
@@ -68,10 +73,8 @@ async def request_category_name_handler(
         active_message_id=callback.message.message_id,
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=text,
         reply_markup=reply_markup,
     )
@@ -84,7 +87,7 @@ async def process_category_name_handler(
     message: types.Message,
     state: FSMContext,
     bot: Bot,
-):
+) -> None:
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
     mode = data.get("mode", "add")
@@ -142,10 +145,8 @@ async def cancel_category_handler(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     await callback.answer()
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text="❌ Действие отменено.",
         reply_markup=templates_menu_ikb(),
     )

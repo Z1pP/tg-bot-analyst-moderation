@@ -10,7 +10,7 @@ from models import ChatMessage, ChatSession, MessageReaction, MessageReply, User
 from services.time_service import TimeZoneService
 
 
-async def create_test_data():
+async def create_test_data() -> None:
     """Создает тестовые данные для демонстрации работы бота."""
     print("Создание тестовых данных...")
 
@@ -26,7 +26,7 @@ async def create_test_data():
     print("Тестовые данные успешно созданы!")
 
 
-async def create_test_users():
+async def create_test_users() -> list[User]:
     """Создает тестовых пользователей."""
     moderators = [
         {"username": "test_user1", "tg_id": "1001"},
@@ -58,7 +58,7 @@ async def create_test_users():
         return result
 
 
-async def create_chats():
+async def create_chats() -> list[ChatSession]:
     """Создает тестовые чаты."""
     chats = [
         {"chat_id": "-1001", "title": "Тестовый чат 1"},
@@ -90,7 +90,9 @@ async def create_chats():
         return result
 
 
-async def create_messages_replies_and_reactions(users, chats):
+async def create_messages_replies_and_reactions(
+    users: list[User], chats: list[ChatSession]
+) -> None:
     """Создает тестовые сообщения, ответы и реакции."""
     base_date = TimeZoneService.now().replace(
         hour=10, minute=0, second=0, microsecond=0
@@ -112,9 +114,11 @@ async def create_messages_replies_and_reactions(users, chats):
                         minutes=random.choice((5, 15, 45, 55)),
                     )
 
-                    created_at = TimeZoneService.convert_to_local_time(
+                    local_message_date = TimeZoneService.convert_to_local_time(
                         message_date
-                    ).replace(day=datetime.now().day)
+                    )
+                    assert local_message_date is not None
+                    created_at = local_message_date.replace(day=datetime.now().day)
 
                     message_id = f"{user.id}_{chat.id}_{i}"
                     message = ChatMessage(
@@ -189,7 +193,7 @@ async def create_messages_replies_and_reactions(users, chats):
         )
 
 
-async def main():
+async def main() -> None:
     await create_test_data()
 
 

@@ -13,7 +13,7 @@ from exceptions.base import BotBaseException
 from keyboards.inline.admin_logs import admin_logs_ikb, admin_select_ikb
 from keyboards.inline.menu import main_menu_ikb
 from usecases.admin_logs import GetAdminLogsPageUseCase, GetAdminsWithLogsUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -40,19 +40,15 @@ async def admin_logs_handler(
         else:
             text = Dialog.AdminLogs.SELECT_ADMIN
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=text,
             reply_markup=admin_select_ikb(admins),
         )
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=main_menu_ikb(
                 user=None,
@@ -102,10 +98,8 @@ async def admin_logs_select_handler(
         else:
             text = result.header_text + "\n" + "\n".join(result.entry_lines)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=text,
             reply_markup=admin_logs_ikb(
                 page=1,

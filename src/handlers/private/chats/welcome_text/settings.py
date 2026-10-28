@@ -10,7 +10,7 @@ from constants.callback import CallbackData
 from dto.chat_dto import GetChatWithArchiveDTO
 from keyboards.inline.chats import chats_menu_ikb
 from usecases.chat import GetChatWithArchiveUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 from .helpers import build_welcome_text_view
 
@@ -30,10 +30,8 @@ async def welcome_text_settings_handler(
     chat_id = await state.get_value("chat_id")
     if not chat_id:
         logger.error("chat_id не найден в state")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chats_menu_ikb(),
         )
@@ -45,20 +43,16 @@ async def welcome_text_settings_handler(
     chat = await get_chat_uc.execute(GetChatWithArchiveDTO(chat_id=chat_id))
 
     if chat is None:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
             reply_markup=chats_menu_ikb(),
         )
         return
 
     text, reply_markup = build_welcome_text_view(chat)
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=text,
         reply_markup=reply_markup,
     )

@@ -2,12 +2,10 @@ import logging
 from typing import Any, Optional
 
 from sqlalchemy import and_, select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from exceptions import DatabaseException
 from models.user_chat_status import UserChatStatus
-from repositories.base import BaseRepository
+from repositories.base import BaseRepository, transactional
 
 logger = logging.getLogger(__name__)
 
@@ -30,119 +28,86 @@ class UserChatStatusRepository(BaseRepository):
         )
         return result.scalars().first()
 
+    @transactional
     async def get_status(
         self,
+        session: AsyncSession,
+        /,
         user_id: int,
         chat_id: int,
     ) -> Optional[UserChatStatus]:
-        async with self._db.session() as session:
-            try:
-                status = await self._get_status(session, user_id, chat_id)
+        status = await self._get_status(session, user_id, chat_id)
 
-                if status:
-                    logger.info(
-                        "Получен статус для user_id=%s, chat_id=%s", user_id, chat_id
-                    )
-                else:
-                    logger.info(
-                        "Статус для user_id=%s, chat_id=%s не найден", user_id, chat_id
-                    )
-                return status
-            except SQLAlchemyError as e:
-                logger.error(
-                    "Ошибка при получении статуса для user_id=%s, chat_id=%s: %s",
-                    user_id,
-                    chat_id,
-                    e,
-                    exc_info=True,
-                )
-                await session.rollback()
-                raise DatabaseException(
-                    details={"context": "get_status", "original": str(e)}
-                ) from e
+        if status:
+            logger.info(
+                "Получен статус для user_id=%s, chat_id=%s", user_id, chat_id
+            )
+        else:
+            logger.info(
+                "Статус для user_id=%s, chat_id=%s не найден", user_id, chat_id
+            )
+        return status
 
+    @transactional
     async def get_or_create(
         self,
+        session: AsyncSession,
+        /,
         user_id: int,
         chat_id: int,
         defaults: Optional[dict[str, Any]] = None,
     ) -> tuple[UserChatStatus, bool]:
         """Получает или создает запись о статусе пользователя в чате."""
-        async with self._db.session() as session:
-            try:
-                status = await self._get_status(session, user_id, chat_id)
+        status = await self._get_status(session, user_id, chat_id)
 
-                if status:
-                    return status, False
+        if status:
+            return status, False
 
-                if defaults is None:
-                    defaults = {}
+        if defaults is None:
+            defaults = {}
 
-                create_params = {
-                    "user_id": user_id,
-                    "chat_id": chat_id,
-                    **defaults,
-                }
-                status = UserChatStatus(**create_params)
-                session.add(status)
-                await session.commit()
-                await session.refresh(status)
-                logger.info(
-                    "Создана новая запись UserChatStatus для user_id=%s, chat_id=%s",
-                    user_id,
-                    chat_id,
-                )
-                return status, True
-            except SQLAlchemyError as e:
-                logger.error(
-                    "Ошибка при получении или создании UserChatStatus для user_id=%s, chat_id=%s: %s",
-                    user_id,
-                    chat_id,
-                    e,
-                    exc_info=True,
-                )
-                await session.rollback()
-                raise DatabaseException(
-                    details={"context": "get_or_create", "original": str(e)}
-                ) from e
+        create_params = {
+            "user_id": user_id,
+            "chat_id": chat_id,
+            **defaults,
+        }
+        status = UserChatStatus(**create_params)
+        session.add(status)
+        await session.commit()
+        await session.refresh(status)
+        logger.info(
+            "Создана новая запись UserChatStatus для user_id=%s, chat_id=%s",
+            user_id,
+            chat_id,
+        )
+        return status, True
 
+    @transactional
     async def update_status(
         self,
+        session: AsyncSession,
+        /,
         user_id: int,
         chat_id: int,
         **kwargs: Any,
     ) -> Optional[UserChatStatus]:
         """Обновляет статус пользователя в чате."""
-        async with self._db.session() as session:
-            try:
-                status = await self._get_status(session, user_id, chat_id)
+        status = await self._get_status(session, user_id, chat_id)
 
-                if not status:
-                    logger.warning(
-                        "Статус для user_id=%s, chat_id=%s не найден для обновления",
-                        user_id,
-                        chat_id,
-                    )
-                    return None
+        if not status:
+            logger.warning(
+                "Статус для user_id=%s, chat_id=%s не найден для обновления",
+                user_id,
+                chat_id,
+            )
+            return None
 
-                for key, value in kwargs.items():
-                    setattr(status, key, value)
+        for key, value in kwargs.items():
+            setattr(status, key, value)
 
-                await session.commit()
-                await session.refresh(status)
-                logger.info(
-                    "Статус для user_id=%s, chat_id=%s обновлен", user_id, chat_id
-                )
-                return status
-            except SQLAlchemyError as e:
-                logger.error(
-                    "Ошибка при обновлении статуса для user_id=%s, chat_id=%s: %s",
-                    user_id,
-                    chat_id,
-                    e,
-                    exc_info=True,
-                )
-                await session.rollback()
-                raise DatabaseException(
-                    details={"context": "update_status", "original": str(e)}
-                ) from e
+        await session.commit()
+        await session.refresh(status)
+        logger.info(
+            "Статус для user_id=%s, chat_id=%s обновлен", user_id, chat_id
+        )
+        return status

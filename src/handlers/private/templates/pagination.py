@@ -12,7 +12,10 @@ from keyboards.inline.templates import templates_inline_kb
 from models import MessageTemplate
 from states import TemplateStateManager
 from usecases.templates import GetTemplatesPaginatedUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import (
+    safe_edit_callback_message,
+    safe_edit_callback_reply_markup,
+)
 
 router = Router(name=__name__)
 
@@ -32,6 +35,8 @@ async def prev_page_templates_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик перехода на предыдущую страницу шаблонов"""
+    if callback.data is None:
+        return
     current_page = int(callback.data.split("__")[1])
     prev_page = max(1, current_page - 1)
     state_data = await extract_state_data(state=state)
@@ -42,13 +47,14 @@ async def prev_page_templates_handler(
         container=container,
     )
 
-    await callback.message.edit_reply_markup(
+    await safe_edit_callback_reply_markup(
+        callback=callback,
         reply_markup=templates_inline_kb(
             templates=templates,
             page=prev_page,
             total_count=total_count,
             show_back_to_categories=state_data.category_id is not None,
-        )
+        ),
     )
     await callback.answer()
 
@@ -61,6 +67,8 @@ async def next_page_templates_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Обработчик перехода на следующую страницу шаблонов"""
+    if callback.data is None:
+        return
     current_page = int(callback.data.split("__")[1])
     next_page = current_page + 1
     state_data = await extract_state_data(state=state)
@@ -80,10 +88,8 @@ async def next_page_templates_handler(
             page=current_page,
             container=container,
         )
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text="ℹ️ Больше шаблонов нет",
             reply_markup=templates_inline_kb(
                 templates=prev_templates,
@@ -95,13 +101,14 @@ async def next_page_templates_handler(
         await callback.answer()
         return
 
-    await callback.message.edit_reply_markup(
+    await safe_edit_callback_reply_markup(
+        callback=callback,
         reply_markup=templates_inline_kb(
             templates=templates,
             page=next_page,
             total_count=total_count,
             show_back_to_categories=state_data.category_id is not None,
-        )
+        ),
     )
     await callback.answer()
 

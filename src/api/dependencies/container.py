@@ -1,6 +1,6 @@
 from punq import Container
 
-from container import container as app_container
+from di import container as app_container
 
 
 def get_container() -> Container:

@@ -17,7 +17,7 @@ from keyboards.inline.users import (
     users_menu_ikb,
 )
 from usecases.user_tracking import GetListTrackedUsersUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -54,10 +54,8 @@ async def _display_tracked_users_page(
         users = await get_tracked_users(str(admin_tgid), container)
 
         if not users:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=Dialog.User.EMPTY_TRACKED_LIST,
                 reply_markup=users_menu_ikb(has_tracked_users=False),
             )
@@ -78,10 +76,8 @@ async def _display_tracked_users_page(
 
         message_text = "\n".join(lines)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=message_text,
             reply_markup=back_to_users_menu_ikb(),
         )
@@ -94,10 +90,8 @@ async def _display_tracked_users_page(
             e,
             exc_info=True,
         )
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.User.ERROR_GET_TRACKED_USERS,
             reply_markup=users_menu_ikb(has_tracked_users=False),
         )
@@ -151,10 +145,8 @@ async def select_user_for_analytics_handler(
     # Показываем первую страницу
     first_page_users = users[:USERS_PAGE_SIZE]
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Analytics.TOTAL_USERS.format(total=len(users)),
         reply_markup=show_tracked_users_ikb(
             users=first_page_users,
@@ -166,10 +158,8 @@ async def select_user_for_analytics_handler(
 
 async def _show_no_users_message(callback: CallbackQuery) -> None:
     """Показывает сообщение о том, что нет отслеживаемых пользователей."""
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Analytics.NO_TRACKED_USERS,
         reply_markup=no_tracked_users_ikb(),
     )

@@ -73,7 +73,7 @@ async def get_send_confirm_state(state: FSMContext) -> Optional[SendConfirmState
     admin_tgid = data.get(ADMIN_TGID)
     admin_username = data.get(ADMIN_USERNAME)
     admin_message_id = data.get(ADMIN_MESSAGE_ID)
-    if not all((active_message_id, admin_tgid, admin_username, admin_message_id)):
+    if not active_message_id or not admin_tgid or not admin_username or not admin_message_id:
         return None
     return SendConfirmStateData(
         active_message_id=int(active_message_id),

@@ -67,7 +67,7 @@ def back_to_chat_actions_only_ikb() -> InlineKeyboardMarkup:
 
 
 def remove_chat_ikb(
-    chats: List[ChatSession],
+    chats: List[ChatDTO],
     page: int = 1,
     total_count: int = 0,
     page_size: int = CHATS_PAGE_SIZE,
@@ -209,7 +209,7 @@ def tracked_chats_with_all_ikb(
     return builder.as_markup()
 
 
-def template_scope_selector_ikb(chats: List[ChatSession]) -> InlineKeyboardMarkup:
+def template_scope_selector_ikb(chats: List[ChatDTO]) -> InlineKeyboardMarkup:
     """Клавиатура для выбора области применения шаблона"""
     kb = InlineKeyboardBuilder()
 

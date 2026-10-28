@@ -39,7 +39,7 @@ class ChatService:
         self, data: ChatSessionCacheDTO
     ) -> ChatSession:
         """Восстанавливает отсоединённые ORM-объекты для чтения (свойства без lazy load)."""
-        kw: dict = {
+        kw: dict[str, Any] = {
             "chat_id": data.id,
             "start_time": data.start_time,
             "end_time": data.end_time,
@@ -167,7 +167,7 @@ class ChatService:
             return chat
 
         try:
-            return await self.create_chat(chat_tgid, title)
+            return await self.create_chat(chat_tgid, title or "")
         except DatabaseException as e:
             if isinstance(e.__cause__, IntegrityError):
                 logger.warning(
@@ -232,15 +232,15 @@ class ChatService:
 
         # In-memory кеш (без Redis — pickle ломает archive_chat lazy load)
         if chat_tgid:
-            chat = self._archive_chat_cache.get(chat_tgid)
-            if chat:
-                return chat
+            cached_chat: ChatSession | None = self._archive_chat_cache.get(chat_tgid)
+            if cached_chat:
+                return cached_chat
 
         # Загрузка из репозитория
         if chat_id:
             chat = await self._chat_repository.get_chat_by_id(chat_id=chat_id)
         else:
-            chat = await self._chat_repository.get_chat_by_tgid(chat_tgid)
+            chat = await self._chat_repository.get_chat_by_tgid(chat_tgid or "")
 
         if chat:
             tgid = chat_tgid or chat.chat_id

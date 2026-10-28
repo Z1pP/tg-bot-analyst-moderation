@@ -36,14 +36,18 @@ async def handle_moderation_error(
         clear_state: Флаг необходимости полной очистки состояния FSM.
     """
     bot = event.bot
-    chat_id = (
-        event.chat.id if isinstance(event, types.Message) else event.message.chat.id
-    )
-
+    message_id: int | None
     if isinstance(event, types.CallbackQuery):
+        if event.message is None:
+            return
+        chat_id = event.message.chat.id
         message_id = event.message.message_id
     else:
+        chat_id = event.chat.id
         message_id = message_to_edit_id
+
+    if message_id is None:
+        return
 
     await safe_edit_message(
         bot=bot,
@@ -62,7 +66,7 @@ async def handle_chats_error(
     state: FSMContext,
     violator_username: str = "",
     violator_tgid: str = "",
-    error: Exception = None,
+    error: Optional[Exception] = None,
 ) -> None:
     """Обрабатывает ошибки, возникающие при получении списка чатов.
 

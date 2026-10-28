@@ -33,7 +33,11 @@ from usecases.admin_actions import (
 )
 from usecases.chat import GetChatWithArchiveUseCase
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
-from utils.send_message import safe_delete_message, safe_edit_message
+from utils.send_message import (
+    safe_delete_message,
+    safe_edit_callback_message,
+    safe_edit_message,
+)
 
 from .helpers import show_message_management_menu
 
@@ -60,10 +64,8 @@ async def start_send_handler(
             callback.from_user.username,
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Messages.NO_TRACKED_CHATS,
             reply_markup=send_message_ikb(),
         )
@@ -79,10 +81,8 @@ async def start_send_handler(
     total_count = len(chats)
     first_page_chats = chats[:CHATS_PAGE_SIZE]
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Messages.SELECT_CHAT,
         reply_markup=select_chat_ikb(
             chats=first_page_chats,
@@ -105,6 +105,8 @@ async def process_select_chat_handler(
 ) -> None:
     """Обработчик выбора чата для отправки сообщения."""
     await callback.answer()
+    if callback.data is None or callback.message is None:
+        return
 
     suffix = callback.data.replace(CallbackData.Messages.PREFIX_SELECT_CHAT, "")
 
@@ -119,10 +121,8 @@ async def process_select_chat_handler(
             }
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Messages.SEND_CONTENT_INPUT_ALL,
             reply_markup=cancel_send_message_ikb(),
         )
@@ -144,10 +144,8 @@ async def process_select_chat_handler(
 
         if not selected_chat:
             logger.error("Чат с id %s не найден", chat_id)
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=Dialog.Messages.INVALID_STATE_DATA,
                 reply_markup=send_message_ikb(),
             )
@@ -163,10 +161,8 @@ async def process_select_chat_handler(
             }
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Messages.SEND_CONTENT_INPUT.format(
                 chat_title=selected_chat.title
             ),
@@ -191,6 +187,9 @@ async def process_content_handler(
     container: Container,
 ) -> None:
     """Обработчик получения контента для отправки в чат. Сохраняет данные и показывает подтверждение."""
+    if message.bot is None or message.from_user is None:
+        return
+
     data = await state.get_data()
     active_message_id = data.get(ACTIVE_MESSAGE_ID)
     broadcast_all = data.get(BROADCAST_ALL, False)
@@ -312,6 +311,8 @@ async def process_confirm_broadcast_handler(
 ) -> None:
     """Обработчик подтверждения рассылки (отправки) сообщения в чаты (один чат)."""
     await callback.answer()
+    if callback.bot is None or callback.message is None:
+        return
 
     confirm_state = await get_send_confirm_state(state)
     if not confirm_state:

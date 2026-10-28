@@ -12,7 +12,7 @@ from states import TemplateStateManager
 from exceptions.base import BotBaseException
 from handlers._handler_errors import raise_business_logic
 from usecases.templates import GetTemplatesByScopeUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -39,10 +39,8 @@ async def select_global_templates_handler(
         )
 
         if not templates:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text="❗ Глобальных шаблонов не найдено",
                 reply_markup=templates_menu_ikb(),
             )
@@ -51,10 +49,8 @@ async def select_global_templates_handler(
 
         await state.update_data(template_scope="global")
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=f"Глобальные шаблоны ({total_count}):",
             reply_markup=templates_inline_kb(
                 templates=templates,
@@ -66,10 +62,8 @@ async def select_global_templates_handler(
         await state.set_state(TemplateStateManager.listing_templates)
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )
@@ -93,6 +87,8 @@ async def select_chat_templates_handler(
 ) -> None:
     """Обработчик выбора шаблонов для конкретного чата"""
     await callback.answer()
+    if callback.data is None:
+        return
 
     chat_id = int(callback.data.split("__")[1])
 
@@ -107,10 +103,8 @@ async def select_chat_templates_handler(
         )
 
         if not templates:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text="❗ Шаблонов для этого чата не найдено",
                 reply_markup=templates_menu_ikb(),
             )
@@ -119,10 +113,8 @@ async def select_chat_templates_handler(
 
         await state.update_data(template_scope="chat", chat_id=chat_id)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=f"Шаблоны для чата ({total_count}):",
             reply_markup=templates_inline_kb(
                 templates=templates,
@@ -134,10 +126,8 @@ async def select_chat_templates_handler(
         await state.set_state(TemplateStateManager.listing_templates)
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=templates_menu_ikb(),
         )

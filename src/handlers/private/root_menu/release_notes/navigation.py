@@ -22,7 +22,7 @@ from keyboards.inline.release_notes import (
 )
 from states.release_notes import ReleaseNotesStateManager
 from usecases.release_notes import BroadcastTextToAdminsUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -39,10 +39,8 @@ async def release_notes_menu_handler(
         return
     await state.clear()
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.ReleaseNotes.INPUT_NOTE_TEXT,
         reply_markup=broadcast_step1_ikb(),
     )
@@ -103,10 +101,8 @@ async def broadcast_change_text_handler(
     await state.set_state(ReleaseNotesStateManager.waiting_for_note_text)
     await state.update_data(broadcast_note_text=None)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.ReleaseNotes.INPUT_NOTE_TEXT,
         reply_markup=broadcast_step1_ikb(),
     )
@@ -140,10 +136,8 @@ async def broadcast_select_language_handler(
         text=text,
         language=language_label,
     )
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=preview_text,
         reply_markup=broadcast_confirm_ikb(),
     )
@@ -176,10 +170,8 @@ async def broadcast_confirm_yes_handler(
     try:
         recipients = await usecase.execute(dto)
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=broadcast_error_ikb(),
         )
@@ -213,10 +205,8 @@ async def broadcast_confirm_yes_handler(
             )
 
     if success_count < len(recipients) or (recipients and success_count == 0):
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.ReleaseNotes.BROADCAST_ERROR_RETRY,
             reply_markup=broadcast_error_ikb(),
         )
@@ -227,10 +217,8 @@ async def broadcast_confirm_yes_handler(
         if language.lower() == "ru"
         else Dialog.ReleaseNotes.BROADCAST_SUCCESS_EN
     )
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=success_msg,
         reply_markup=broadcast_success_ikb(),
     )
@@ -250,10 +238,8 @@ async def broadcast_try_again_handler(
     await state.update_data(active_message_id=callback.message.message_id)
     await state.set_state(ReleaseNotesStateManager.waiting_for_note_text)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.ReleaseNotes.INPUT_NOTE_TEXT,
         reply_markup=broadcast_step1_ikb(),
     )

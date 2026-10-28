@@ -6,7 +6,8 @@ from constants import Dialog
 from constants.punishment import PunishmentText
 from dto import ModerationActionDTO
 from models import Punishment, User
-from models.punishment_ladder import PunishmentLadder, PunishmentType
+from constants.punishment import PunishmentType
+from models.punishment_ladder import PunishmentLadder
 from repositories import PunishmentLadderRepository, PunishmentRepository
 from repositories.user_chat_status_repository import UserChatStatusRepository
 from services.time_service import TimeZoneService

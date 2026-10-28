@@ -1,11 +1,13 @@
 import logging
-from typing import List
+from typing import List, cast
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     CallbackQuery,
     InputMediaAnimation,
+    InputMediaAudio,
+    InputMediaDocument,
     InputMediaPhoto,
     InputMediaVideo,
     Message,
@@ -17,7 +19,7 @@ from keyboards.inline.message_actions import hide_album_ikb, hide_template_ikb
 from models import MessageTemplate, TemplateMedia
 from states import TemplateStateManager
 from usecases.templates import GetTemplateByIdUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -34,6 +36,8 @@ async def select_template_handler(
     container: Container,
 ) -> None:
     """Обработчик выбора шаблона"""
+    if query.data is None:
+        return
     template_id_str = query.data.split("__")[1]
     if not template_id_str.isdigit():
         logger.error("Некорректный ID шаблона в callback: %s", query.data)
@@ -44,6 +48,10 @@ async def select_template_handler(
     logger.info(
         f"Был выбран шаблон c ID={template_id} пользователем - {query.from_user.username}"
     )
+
+    if not isinstance(query.message, Message):
+        logger.error("Callback без доступного сообщения для шаблона %s", template_id)
+        return
 
     await send_template_handler(
         bot=bot,
@@ -176,7 +184,13 @@ async def send_media_group(
     media_files: List[TemplateMedia],
 ) -> list[Message]:
     """Отправляет группу медиа файлов и возвращает список отправленных сообщений"""
-    media_group = []
+    media_group: list[
+        InputMediaPhoto
+        | InputMediaVideo
+        | InputMediaAnimation
+        | InputMediaAudio
+        | InputMediaDocument
+    ] = []
 
     # Создаем медиа группу
     for i, media in enumerate(media_files):
@@ -208,9 +222,19 @@ async def send_media_group(
     # Отправляем группу
     if media_group:
         try:
+            # shortcut: InputMediaAnimation не входит в тип send_media_group,
+            # Telegram отклонит анимацию в альбоме (сработает fallback ниже).
             sent_messages = await bot.send_media_group(
                 chat_id=message.chat.id,
-                media=media_group,
+                media=cast(
+                    list[
+                        InputMediaAudio
+                        | InputMediaDocument
+                        | InputMediaPhoto
+                        | InputMediaVideo
+                    ],
+                    media_group,
+                ),
             )
             return sent_messages
         except Exception as e:
@@ -227,6 +251,8 @@ async def send_media_group(
 @router.callback_query(F.data.startswith("hide_template_"))
 async def hide_template_handler(callback: CallbackQuery) -> None:
     """Обработчик скрытия шаблона (одно сообщение)"""
+    if callback.data is None or callback.bot is None or callback.message is None:
+        return
     try:
         message_id = int(callback.data.split("_")[2])
         await callback.bot.delete_message(
@@ -234,34 +260,29 @@ async def hide_template_handler(callback: CallbackQuery) -> None:
             message_id=message_id,
         )
         # Удаляем само сообщение с кнопкой, если оно существует
-        if callback.message:
+        if isinstance(callback.message, Message):
             try:
                 await callback.message.delete()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Не удалось удалить сообщение: %s", e, exc_info=True)
         await callback.answer(Dialog.Template.MESSAGE_HIDDEN)
     except Exception as e:
         logger.error(f"Ошибка при скрытии шаблона: {e}")
         # Пытаемся отредактировать сообщение с ошибкой
-        if callback.message:
-            success = await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=Dialog.Template.ERROR_HIDE_MESSAGE,
-            )
-            if not success:
-                # Если не удалось отредактировать, показываем alert
-                await callback.answer(
-                    Dialog.Template.ERROR_HIDE_MESSAGE, show_alert=True
-                )
-        else:
+        success = await safe_edit_callback_message(
+            callback=callback,
+            text=Dialog.Template.ERROR_HIDE_MESSAGE,
+        )
+        if not success:
+            # Если не удалось отредактировать, показываем alert
             await callback.answer(Dialog.Template.ERROR_HIDE_MESSAGE, show_alert=True)
 
 
 @router.callback_query(F.data.startswith("hide_album_"))
 async def hide_album_handler(callback: CallbackQuery) -> None:
     """Обработчик скрытия альбома шаблонов (несколько сообщений)"""
+    if callback.data is None or callback.bot is None or callback.message is None:
+        return
     try:
         # Извлекаем ID сообщений из callback_data
         message_ids_str = callback.data.replace("hide_album_", "")
@@ -278,25 +299,20 @@ async def hide_album_handler(callback: CallbackQuery) -> None:
                 logger.warning(f"Не удалось удалить сообщение {msg_id}: {e}")
 
         # Удаляем само сообщение с кнопкой
-        if callback.message:
+        if isinstance(callback.message, Message):
             try:
                 await callback.message.delete()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Не удалось удалить сообщение: %s", e, exc_info=True)
 
         await callback.answer(Dialog.Template.ALBUM_HIDDEN)
     except Exception as e:
         logger.error(f"Ошибка при скрытии альбома: {e}")
         # Пытаемся отредактировать сообщение с ошибкой
-        if callback.message:
-            success = await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=Dialog.Template.ERROR_HIDE_ALBUM,
-            )
-            if not success:
-                # Если не удалось отредактировать, показываем alert
-                await callback.answer(Dialog.Template.ERROR_HIDE_ALBUM, show_alert=True)
-        else:
+        success = await safe_edit_callback_message(
+            callback=callback,
+            text=Dialog.Template.ERROR_HIDE_ALBUM,
+        )
+        if not success:
+            # Если не удалось отредактировать, показываем alert
             await callback.answer(Dialog.Template.ERROR_HIDE_ALBUM, show_alert=True)

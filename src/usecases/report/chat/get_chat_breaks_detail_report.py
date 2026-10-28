@@ -1,6 +1,8 @@
 import logging
+from typing import Any
 
 from constants.dialogs import ReportDialogs
+from constants.period import TimePeriod
 from dto.report import BreaksDetailReportDTO, BreaksDetailUserDTO, ChatReportDTO
 from models import ChatSession, User
 from services.break_analysis_service import BreakAnalysisService
@@ -11,7 +13,7 @@ from ..base import ChatReportUseCase
 logger = logging.getLogger(__name__)
 
 
-class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
+class GetChatBreaksDetailReportUseCase(ChatReportUseCase[ChatReportDTO]):
     async def execute(self, dto: ChatReportDTO) -> BreaksDetailReportDTO:
         """Генерирует детализированный отчет по перерывам для чата."""
         # Получаем отслеживаемых пользователей
@@ -42,14 +44,22 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
                 error_message=ReportDialogs.CHAT_REPORT_SETTINGS_REQUIRED,
             )
 
+        start_date = dto.start_date
+        end_date = dto.end_date
+        if start_date is None or end_date is None:
+            start_date, end_date = TimePeriod.to_datetime(period=dto.selected_period)
+        resolved_dto = dto.model_copy(
+            update={"start_date": start_date, "end_date": end_date}
+        )
+
         period = self._format_selected_period(
-            start_date=dto.start_date,
-            end_date=dto.end_date,
+            start_date=start_date,
+            end_date=end_date,
         )
         user_ids = [user.id for user in users]
         users_data = await self._get_all_users_data_for_chat(
             user_ids=user_ids,
-            dto=dto,
+            dto=resolved_dto,
         )
 
         reports = []
@@ -76,21 +86,26 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
 
     async def _get_all_users_data_for_chat(
         self, user_ids: list[int], dto: ChatReportDTO
-    ) -> dict:
+    ) -> dict[int, dict[str, list[Any]]]:
         """Получает данные пользователей за период в конкретном чате."""
+        start_date = dto.start_date
+        end_date = dto.end_date
+        if start_date is None or end_date is None:
+            return {}
+
         messages = await self._get_processed_items_by_chat_with_users(
             self._message_repository.get_messages_by_chat_id_and_period,
             dto.chat_id,
-            dto.start_date,
-            dto.end_date,
+            start_date,
+            end_date,
             user_ids,
         )
 
         reactions = await self._get_processed_items_by_chat_with_users(
             self._reaction_repository.get_reactions_by_chat_and_period,
             dto.chat_id,
-            dto.start_date,
-            dto.end_date,
+            start_date,
+            end_date,
             user_ids,
         )
 
@@ -107,7 +122,7 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
 
     def _generate_user_breaks_detail(
         self,
-        data: dict,
+        data: dict[str, Any],
         user: User,
         chat: ChatSession,
         period: str,
@@ -119,7 +134,7 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
         # Если нет активности - показываем отсутствие перерывов
         if not messages and not reactions:
             return BreaksDetailUserDTO(
-                username=user.username,
+                username=user.username or "",
                 has_activity=False,
                 days=[],
             )
@@ -127,17 +142,17 @@ class GetChatBreaksDetailReportUseCase(ChatReportUseCase):
         breaks = BreakAnalysisService.calculate_breaks_structured(
             messages,
             reactions,
-            min_break_minutes=chat.breaks_time,
+            min_break_minutes=chat.breaks_time or 0,
         )
 
         return BreaksDetailUserDTO(
-            username=user.username,
+            username=user.username or "",
             has_activity=True,
             days=breaks,
         )
 
     @staticmethod
-    def _has_time_settings(chat) -> bool:
+    def _has_time_settings(chat: ChatSession) -> bool:
         return (
             chat.start_time is not None
             and chat.end_time is not None

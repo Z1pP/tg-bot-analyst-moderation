@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from taskiq_aio_pika import AioPikaBroker, Queue
 from taskiq_redis import RedisAsyncResultBackend
@@ -9,7 +10,7 @@ from utils.logger_config import setup_logger
 # Инициализируем логгер для воркера
 setup_logger(log_level=logging.INFO)
 
-result_backend = RedisAsyncResultBackend(
+result_backend: RedisAsyncResultBackend[Any] = RedisAsyncResultBackend(
     redis_url=f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}",
 )
 

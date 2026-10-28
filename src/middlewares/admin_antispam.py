@@ -2,7 +2,7 @@ import logging
 from typing import Any, Awaitable, Callable
 
 from aiogram import BaseMiddleware
-from aiogram.types import Message
+from aiogram.types import Message, TelegramObject
 
 from services.caching import ICache
 from services.caching.redis import RedisCache
@@ -40,8 +40,8 @@ class AdminAntispamMiddleware(BaseMiddleware):
 
     async def __call__(
         self,
-        handler: Callable[[Message, dict[str, Any]], Awaitable[Any]],
-        event: Message,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
         """
@@ -55,7 +55,7 @@ class AdminAntispamMiddleware(BaseMiddleware):
         Returns:
             Результат выполнения обработчика или None, если сообщение заблокировано
         """
-        if not isinstance(event, Message):
+        if not isinstance(event, Message) or event.from_user is None:
             return await handler(event, data)
 
         admin_id = event.from_user.id
@@ -72,7 +72,7 @@ class AdminAntispamMiddleware(BaseMiddleware):
                 return None  # Игнорируем сообщение
         else:
             # Fallback: проверяем через get
-            mute_value = await self.cache.get(mute_key)
+            mute_value: Any = await self.cache.get(mute_key)
             if mute_value is not None:
                 logger.debug(
                     f"Сообщение от админа {admin_id} заблокировано (мут активен)"
@@ -84,7 +84,7 @@ class AdminAntispamMiddleware(BaseMiddleware):
             count = await self.cache.increment(count_key, ttl=WINDOW_SECONDS)
         else:
             # Fallback: используем get/set
-            current_count = await self.cache.get(count_key)
+            current_count: Any = await self.cache.get(count_key)
             if current_count is None:
                 count = 1
                 await self.cache.set(count_key, count, ttl=WINDOW_SECONDS)
@@ -127,7 +127,7 @@ class AdminAntispamMiddleware(BaseMiddleware):
             message: Сообщение от администратора
             duration_seconds: Длительность мута в секундах
         """
-        admin_id = message.from_user.id
+        admin_id = message.from_user.id if message.from_user else None
         mute_key = f"antispam:mute:{admin_id}"
         await self.cache.set(mute_key, True, ttl=duration_seconds)
         logger.debug(f"Мут применен к админу {admin_id} на {duration_seconds} секунд")
@@ -143,6 +143,7 @@ class AdminAntispamMiddleware(BaseMiddleware):
             message: Сообщение, на которое нужно ответить
             duration_seconds: Длительность мута в секундах
         """
+        admin_id = message.from_user.id if message.from_user else None
         try:
             # Форматируем длительность мута
             if duration_seconds >= 60:
@@ -157,7 +158,7 @@ class AdminAntispamMiddleware(BaseMiddleware):
             await message.reply(mute_text)
         except Exception as e:
             logger.error(
-                f"Не удалось отправить предупреждение о муте админу {message.from_user.id}: {e}"
+                f"Не удалось отправить предупреждение о муте админу {admin_id}: {e}"
             )
 
     async def _send_warning(self, message: Message) -> None:
@@ -167,10 +168,11 @@ class AdminAntispamMiddleware(BaseMiddleware):
         Args:
             message: Сообщение, на которое нужно ответить
         """
+        admin_id = message.from_user.id if message.from_user else None
         try:
             warning_text = "⚠️ Слишком много сообщений! Пожалуйста, замедлите темп."
             await message.reply(warning_text)
         except Exception as e:
             logger.error(
-                f"Не удалось отправить предупреждение админу {message.from_user.id}: {e}"
+                f"Не удалось отправить предупреждение админу {admin_id}: {e}"
             )

@@ -4,6 +4,7 @@ from aiogram.types import Message
 from punq import Container
 
 from constants import Dialog
+from dto import UserDTO
 from keyboards.inline.menu import main_menu_ikb
 from usecases.user import GetUserByTgIdUseCase
 
@@ -17,6 +18,9 @@ async def start_handler(
     """
     Выводит приветственное сообщение
     """
+    if message.from_user is None:
+        return
+
     usecase: GetUserByTgIdUseCase = container.resolve(GetUserByTgIdUseCase)
     user = await usecase.execute(tg_id=str(message.from_user.id))
     if not user:
@@ -28,7 +32,7 @@ async def start_handler(
             username=user.username or f"ID:{user.tg_id}",
         ),
         reply_markup=main_menu_ikb(
-            user=user,
+            user=UserDTO.from_model(user),
             user_language=user_language,
         ),
     )

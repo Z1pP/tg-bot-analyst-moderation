@@ -63,7 +63,7 @@ def main_menu_ikb(
         ),
     )
 
-    if user.role in (UserRole.ROOT, UserRole.DEV):
+    if user is not None and user.role in (UserRole.ROOT, UserRole.DEV):
         builder.row(
             InlineKeyboardButton(
                 text=InlineButtons.Root.MENU,

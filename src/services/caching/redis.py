@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import pickle
-from typing import Optional, TypeVar
+from typing import Any, Awaitable, Optional, cast
 
 from redis.asyncio import Redis as RedisClient
 from redis.exceptions import (
@@ -18,7 +18,6 @@ from redis.exceptions import (
 from .base import ICache
 
 logger = logging.getLogger(__name__)
-T = TypeVar("T")
 
 _REDIS_ERRORS = (
     RedisConnectionError,
@@ -39,7 +38,7 @@ class RedisCache(ICache):
     async def _ensure_connection(self) -> bool:
         if not self._connected:
             try:
-                await self.redis.ping()
+                await cast(Awaitable[bool], self.redis.ping())
                 self._connected = True
             except _REDIS_ERRORS as e:
                 self._connected = False
@@ -59,7 +58,7 @@ class RedisCache(ICache):
                 return False
         return True
 
-    async def get(self, key: str) -> Optional[T]:
+    async def get(self, key: str) -> Any:
         try:
             if not await self._ensure_connection():
                 return None
@@ -74,7 +73,7 @@ class RedisCache(ICache):
             logger.error("Redis GET %s deserialize failed: %s", key, e)
             return None
 
-    async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         try:
             if not await self._ensure_connection():
                 return
@@ -122,7 +121,7 @@ class RedisCache(ICache):
             if not await self._ensure_connection():
                 return 0
             # Используем INCR для атомарного инкремента
-            value = await self.redis.incr(key)
+            value: int = await self.redis.incr(key)
             # Если значение стало 1 (ключ только что создан), устанавливаем TTL
             if value == 1 and ttl:
                 await self.redis.expire(key, ttl)

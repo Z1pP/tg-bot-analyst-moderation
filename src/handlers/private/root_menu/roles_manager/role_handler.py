@@ -19,7 +19,7 @@ from usecases.user import (
     GetUserByUsernameUseCase,
     UpdateUserRoleUseCase,
 )
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 from utils.user_data_parser import parse_data_from_text
 
 router = Router(name=__name__)
@@ -34,13 +34,13 @@ async def input_user_data_handler(callback: CallbackQuery, state: FSMContext) ->
     await callback.answer()
     await state.clear()
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Roles.INPUT_USER_DATA,
         reply_markup=cancel_role_select_ikb(),
     )
+    if callback.message is None:
+        return
 
     await state.update_data(active_message_id=callback.message.message_id)
 
@@ -54,6 +54,9 @@ async def process_user_data_input(
     """
     Обработчик ввода данных пользователя для изменения роли.
     """
+
+    if message.text is None:
+        return
 
     user_data = parse_data_from_text(text=message.text)
     active_message_id = await state.get_value("active_message_id")
@@ -130,8 +133,8 @@ async def process_user_data_input(
 
     try:
         await message.delete()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Не удалось удалить сообщение: %s", e, exc_info=True)
 
     await state.clear()
 
@@ -163,15 +166,15 @@ async def role_select_callback_handler(
 
         await callback.answer()
         # Парсим callback_data
+        if callback.data is None:
+            return
         callback_data = callback.data.replace(CallbackData.User.PREFIX_ROLE_SELECT, "")
         parts = callback_data.split("__")
 
         if len(parts) != 2:
             logger.error(f"Неверный формат callback_data: {callback.data}")
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text="❌ Ошибка: неверный формат данных",
             )
             return
@@ -184,10 +187,8 @@ async def role_select_callback_handler(
             new_role = UserRole(role_str)
         except ValueError:
             logger.error(f"Неверная роль: {role_str}")
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=f"❌ Ошибка: неверная роль '{role_str}'",
             )
             return
@@ -197,20 +198,16 @@ async def role_select_callback_handler(
         user = await get_by_id.execute(user_id=user_id)
 
         if not user:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text="❌ Пользователь не найден",
             )
             return
 
         # Защита от изменения роли для захардкоженного пользователя
         if user.tg_id == settings.PROTECTED_USER_TG_ID:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text="❌ Нельзя изменить роль этому пользователю",
             )
             await callback.answer(
@@ -236,10 +233,8 @@ async def role_select_callback_handler(
                 f"✅ Роль уже установлена на {role_display}"
             )
 
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=text,
                 reply_markup=role_select_ikb(user_id=user.id, current_role=new_role),
             )
@@ -252,10 +247,8 @@ async def role_select_callback_handler(
         )
 
         if not updated_user:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text="❌ Не удалось обновить роль пользователя",
             )
             return
@@ -282,10 +275,8 @@ async def role_select_callback_handler(
         )
 
         # Обновляем сообщение с новой ролью
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=text,
             reply_markup=role_select_ikb(
                 user_id=updated_user.id, current_role=new_role
@@ -298,18 +289,14 @@ async def role_select_callback_handler(
         )
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
         )
     except ValueError as e:
         logger.warning("Ошибка парсинга данных в role_select_callback_handler: %s", e)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text="❌ Ошибка: неверный формат данных",
         )
     except Exception as e:

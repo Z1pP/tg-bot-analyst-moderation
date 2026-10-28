@@ -52,7 +52,9 @@ class BotCannotUnbanError(AmnestyError):
 class UnbanFailedError(AmnestyError):
     """Не удалось разбанить пользователя."""
 
-    def __init__(self, username: str, chat_title: str, reason: str = None) -> None:
+    def __init__(
+        self, username: str, chat_title: str, reason: str | None = None
+    ) -> None:
         self.username = username
         self.chat_title = chat_title
         self.reason = reason

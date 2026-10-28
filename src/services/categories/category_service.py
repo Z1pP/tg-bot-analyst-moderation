@@ -21,7 +21,7 @@ class CategoryService:
         Получает список категорий из БД с проверкой кеша.
         """
         cache_key = "cat:all"
-        categories = await self._cache.get(cache_key)
+        categories: list[TemplateCategory] | None = await self._cache.get(cache_key)
         if categories is not None:
             return categories
 

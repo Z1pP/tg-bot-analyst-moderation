@@ -4,13 +4,12 @@ from aiogram import Router
 from aiogram.types import Message
 from punq import Container
 
-from dto.automoderation import AutoModerationRunDTO
+from dto.automoderation import CheckAndRunAutoModerationDTO
 from dto.message import CreateMessageDTO
 from dto.message_reply import CreateMessageReplyDTO
 from dto.time_dto import ConvertToLocalTimeDTO
 from models.message import MessageType
-from services.chat import ChatService
-from usecases.automoderation import RunAutoModerationOnMessageUseCase
+from usecases.automoderation import CheckAndRunAutoModerationUseCase
 from usecases.message import (
     SaveMessageUseCase,
     SaveReplyMessageUseCase,
@@ -22,37 +21,23 @@ logger = logging.getLogger(__name__)
 
 
 async def _run_automoderation_if_needed(message: Message, container: Container) -> None:
-    """Запускает цепочку автомодерации для текстового сообщения (не глотает исключения наружу)."""
-    if not message.text:
+    """Передаёт текстовое сообщение в use case автомодерации."""
+    if not message.text or message.from_user is None:
         return
-    try:
-        chat_service: ChatService = container.resolve(ChatService)
-        chat = await chat_service.get_chat(
+
+    usecase: CheckAndRunAutoModerationUseCase = container.resolve(
+        CheckAndRunAutoModerationUseCase
+    )
+    await usecase.execute(
+        CheckAndRunAutoModerationDTO(
             chat_tgid=str(message.chat.id),
-            title=message.chat.title,
+            chat_title=message.chat.title,
+            username=message.from_user.username,
+            user_tg_id=message.from_user.id,
+            message_id=message.message_id,
+            message_text=message.text,
         )
-        if not chat or not chat.is_auto_moderation_enabled:
-            return
-        run_uc: RunAutoModerationOnMessageUseCase = container.resolve(
-            RunAutoModerationOnMessageUseCase
-        )
-        await run_uc.execute(
-            AutoModerationRunDTO(
-                chat_tgid=str(message.chat.id),
-                chat_title=chat.title or "",
-                is_auto_moderation_enabled=True,
-                archive_chat_tgid=chat.archive_chat_id,
-                username=message.from_user.username,
-                user_tg_id=message.from_user.id,
-                message_id=message.message_id,
-                message_text=message.text,
-            )
-        )
-    except Exception:
-        logger.exception(
-            "automod: непойманная ошибка после сообщения chat_id=%s",
-            message.chat.id,
-        )
+    )
 
 
 def _get_message_type(message: Message) -> MessageType:
@@ -67,7 +52,7 @@ async def group_message_handler(message: Message, container: Container) -> None:
     """
     Сохраняет все сообщения и ответы от всех пользователей для построения метрик.
     """
-    if message.from_user.is_bot:
+    if message.from_user is None or message.from_user.is_bot:
         return
 
     # sender, chat = await _get_sender_and_chat(message, container)
@@ -89,11 +74,16 @@ async def process_reply_message(
     """
     Сохраняет reply-сообщения и связь с оригинальным сообщением.
     """
+    reply_to_message = message.reply_to_message
+    if message.from_user is None or reply_to_message is None:
+        return
     convert_uc: ConvertToLocalTimeUseCase = container.resolve(ConvertToLocalTimeUseCase)
     message_date = convert_uc.execute(ConvertToLocalTimeDTO(dt=message.date))
     reply_to_message_date = convert_uc.execute(
-        ConvertToLocalTimeDTO(dt=message.reply_to_message.date)
+        ConvertToLocalTimeDTO(dt=reply_to_message.date)
     )
+    if message_date is None or reply_to_message_date is None:
+        return
 
     # Создаем DTO для сохранения сообщения
     msg_dto = CreateMessageDTO(
@@ -102,7 +92,7 @@ async def process_reply_message(
         user_username=message.from_user.username,
         message_id=str(message.message_id),
         message_type=MessageType.REPLY.value,
-        content_type=message.content_type.value,
+        content_type=message.content_type,
         text=message.text,
         created_at=message_date,
     )
@@ -148,8 +138,12 @@ async def process_message(
     """
     Сохраняет обычные сообщения от всех пользователей.
     """
+    if message.from_user is None:
+        return
     convert_uc: ConvertToLocalTimeUseCase = container.resolve(ConvertToLocalTimeUseCase)
     message_date = convert_uc.execute(ConvertToLocalTimeDTO(dt=message.date))
+    if message_date is None:
+        return
 
     msg_dto = CreateMessageDTO(
         chat_tgid=str(message.chat.id),
@@ -157,7 +151,7 @@ async def process_message(
         user_username=message.from_user.username,
         message_id=str(message.message_id),
         message_type=MessageType.MESSAGE.value,
-        content_type=message.content_type.value,
+        content_type=message.content_type,
         text=message.text,
         created_at=message_date,
     )
@@ -177,8 +171,11 @@ def _get_original_message_url(message: Message) -> str:
     """
     Генерирует ссылку на оригинальное сообщение.
     """
+    reply_to_message = message.reply_to_message
+    if reply_to_message is None:
+        return ""
     chat_id = str(message.chat.id)
-    message_id = message.reply_to_message.message_id
+    message_id = reply_to_message.message_id
 
     if chat_id.startswith("-100"):
         # Супергруппы: убираем -100

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from aiogram.types import Message
 from sqlalchemy.exc import SQLAlchemyError
@@ -39,8 +39,16 @@ class TemplateContentService:
         """
         Извлекает контент из сообщений медиа группы
         """
+        if not messages:
+            return {
+                "text": "",
+                "media_types": [],
+                "media_files": [],
+                "media_unique_ids": [],
+            }
+
         # Берем первое сообщение для получения текста/подписи
-        content = {
+        content: Dict[str, Any] = {
             "text": messages[0].html_text or messages[0].caption or "",
             "media_types": [],
             "media_files": [],
@@ -49,7 +57,7 @@ class TemplateContentService:
 
         # Обрабатываем все сообщения для сбора медиа файлов
         for message in messages:
-            media_mapping = {
+            media_mapping: dict[str, tuple[Any, Callable[[Any], Any]]] = {
                 "photo": (message.photo, lambda x: x[-1]),
                 "document": (message.document, lambda x: x),
                 "video": (message.video, lambda x: x),

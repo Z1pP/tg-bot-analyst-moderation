@@ -1,7 +1,7 @@
 """Модуль вспомогательных инструментов для работы с данными пользователей."""
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, cast
 
 from aiogram.fsm.context import FSMContext
 
@@ -45,8 +45,10 @@ async def extract_violator_data_from_state(state: FSMContext) -> ViolatorData:
         ViolatorData: Объект с данными нарушителя.
     """
     data = await state.get_data()
+    # В FSM данные могут отсутствовать: по контракту (см. тесты) поля тогда
+    # остаются None, хотя ViolatorData объявляет int.
     return ViolatorData(
-        id=data.get("id"),
+        id=cast(int, data.get("id")),
         username=data.get("username"),
-        tg_id=data.get("tg_id"),
+        tg_id=cast(int, data.get("tg_id")),
     )

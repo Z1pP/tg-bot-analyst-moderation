@@ -27,6 +27,8 @@ async def process_link_handler(
     message: types.Message, state: FSMContext, bot: Bot
 ) -> None:
     """Обработчик ссылки на сообщение."""
+    if message.text is None or message.from_user is None:
+        return
     result = parse_message_link(message.text)
 
     data = await state.get_data()
