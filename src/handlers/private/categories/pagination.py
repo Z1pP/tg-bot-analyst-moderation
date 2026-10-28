@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
@@ -16,7 +16,7 @@ router = Router(name=__name__)
 
 
 class CategoriesPaginationHandler(BasePaginationHandler):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("категорий")
 
     async def get_page_data(
@@ -24,7 +24,7 @@ class CategoriesPaginationHandler(BasePaginationHandler):
         page: int,
         query: CallbackQuery,
         state: FSMContext,
-        container: Optional[Container] = None,
+        container: Container,
     ) -> Tuple[List[TemplateCategory], int]:
         usecase: GetCategoriesPaginatedUseCase = container.resolve(
             GetCategoriesPaginatedUseCase

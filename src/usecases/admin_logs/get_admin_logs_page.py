@@ -59,7 +59,9 @@ class GetAdminLogsPageUseCase:
             )
             action_name = format_action_type(log.action_type)
             local_time = TimeZoneService.convert_to_local_time(log.created_at)
-            time_str = local_time.strftime("%d.%m.%Y %H:%M")
+            time_str = (
+                local_time.strftime("%d.%m.%Y %H:%M") if local_time else "—"
+            )
             entry_lines.append(
                 f"• {action_name}\n  Админ: {admin_display}\n  Дата: {time_str}"
             )

@@ -12,7 +12,7 @@ from exceptions import BusinessLogicException
 from exceptions.base import BotBaseException
 from keyboards.inline.admin_logs import admin_logs_ikb
 from usecases.admin_logs import GetAdminLogsPageUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -58,10 +58,8 @@ async def prev_admin_logs_page_handler(
         else:
             text = result.header_text + "\n" + "\n".join(result.entry_lines)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=text,
             reply_markup=admin_logs_ikb(
                 page=prev_page,
@@ -113,10 +111,8 @@ async def next_admin_logs_page_handler(
 
         text = result.header_text + "\n" + "\n".join(result.entry_lines)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=text,
             reply_markup=admin_logs_ikb(
                 page=next_page,

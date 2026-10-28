@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from punq import Container
@@ -12,7 +12,7 @@ from keyboards.inline.users import user_actions_ikb
 from states.user import SingleUserReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from utils.exception_handler import handle_exception
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -24,6 +24,8 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
     Обработчик выбора пользователя из списка.
     """
     try:
+        if callback.data is None:
+            return
         user_id_str = callback.data.replace(CallbackData.User.PREFIX_USER, "")
         if not user_id_str.isdigit():
             logger.error("Некорректный ID пользователя в callback: %s", callback.data)
@@ -34,10 +36,8 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
         await state.set_state(SingleUserReportStates.selected_single_user)
         await state.update_data(user_id=user_id)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Report.SELECT_ACTION,
             reply_markup=user_actions_ikb(),
         )
@@ -45,9 +45,10 @@ async def user_selected_handler(callback: CallbackQuery, state: FSMContext) -> N
         await callback.answer()
 
     except Exception as e:
-        await handle_exception(
-            message=callback.message, exc=e, context="user_selected_handler"
-        )
+        if isinstance(callback.message, types.Message):
+            await handle_exception(
+                message=callback.message, exc=e, context="user_selected_handler"
+            )
 
 
 @router.callback_query(
@@ -68,10 +69,8 @@ async def get_user_report_handler(
                 "Отсутствует user_id в state для пользователя %s",
                 callback.from_user.username,
             )
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=Dialog.User.ERROR_SELECT_USER_AGAIN,
             )
             return
@@ -91,10 +90,8 @@ async def get_user_report_handler(
         )
 
         if not user_chats_dto.chats:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=Dialog.Report.NO_TRACKED_CHATS_FOR_REPORT,
             )
             logger.warning(
@@ -105,12 +102,11 @@ async def get_user_report_handler(
 
         await state.set_state(SingleUserReportStates.selecting_period)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Report.SELECT_PERIOD,
             reply_markup=time_period_ikb_single_user(),
         )
     except Exception as e:
-        await handle_exception(callback.message, e, "get_user_report_handler")
+        if isinstance(callback.message, types.Message):
+            await handle_exception(callback.message, e, "get_user_report_handler")

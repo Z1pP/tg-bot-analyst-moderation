@@ -11,7 +11,7 @@ from dto.chat_dto import GetChatWithArchiveDTO
 from keyboards.inline.chats import chat_actions_ikb
 from states import ChatStateManager, RatingStateManager
 from usecases.chat import GetChatWithArchiveUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -37,10 +37,8 @@ async def back_to_chat_actions_handler(
 
     chat_id = await state.get_value("chat_id")
     if not chat_id:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
             reply_markup=chat_actions_ikb(),
         )
@@ -52,23 +50,23 @@ async def back_to_chat_actions_handler(
     chat = await get_chat_uc.execute(GetChatWithArchiveDTO(chat_id=chat_id))
 
     if not chat:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
             reply_markup=chat_actions_ikb(),
         )
         return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.CHAT_ACTIONS_INFO.format(
             title=chat.title,
-            start_time=chat.start_time.strftime("%H:%M"),
-            end_time=chat.end_time.strftime("%H:%M"),
+            start_time=chat.start_time.strftime("%H:%M")
+            if chat.start_time
+            else "не указано",
+            end_time=chat.end_time.strftime("%H:%M")
+            if chat.end_time
+            else "не указано",
         ),
         reply_markup=chat_actions_ikb(),
     )

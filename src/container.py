@@ -8,7 +8,7 @@ from redis.asyncio import Redis
 
 from config import settings
 from database.session import DatabaseContextManager, async_session
-from di import container
+from di import container as container
 from repositories import (
     AdminActionLogRepository,
     ChatMembershipEventRepository,
@@ -55,6 +55,7 @@ from usecases.admin_actions import (
 )
 from usecases.admin_logs import (
     GetAdminLogsPageUseCase,
+    GetModerationLogsUseCase,
     GetAdminsWithLogsUseCase,
 )
 from usecases.amnesty import (
@@ -78,6 +79,7 @@ from usecases.archive import (
     ToggleArchiveScheduleUseCase,
 )
 from usecases.automoderation import (
+    CheckAndRunAutoModerationUseCase,
     GetAutoModerationSettingsUseCase,
     NotifyAutoModerationHitUseCase,
     ProcessAutoModerationBatchUseCase,
@@ -139,6 +141,11 @@ from usecases.report import (
 )
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from usecases.settings import ResetAllTrackingUseCase
+from usecases.stats import (
+    GetActivityStatsUseCase,
+    GetModeratorsStatsUseCase,
+    GetStatsSummaryUseCase,
+)
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
 from usecases.templates import (
     CreateTemplateFromContentUseCase,
@@ -304,6 +311,7 @@ class ContainerSetup:
         ContainerSetup._register_permissions_usecases(container)
         ContainerSetup._register_archive_toggle_usecases(container)
         ContainerSetup._register_time_usecases(container)
+        ContainerSetup._register_stats_usecases(container)
 
     @staticmethod
     def _register_punishment_usecases(container: Container) -> None:
@@ -322,6 +330,7 @@ class ContainerSetup:
         """Регистрация use cases для просмотра логов администраторов."""
         container.register(GetAdminsWithLogsUseCase)
         container.register(GetAdminLogsPageUseCase)
+        container.register(GetModerationLogsUseCase)
 
     @staticmethod
     def _register_release_notes_usecases(container: Container) -> None:
@@ -335,6 +344,7 @@ class ContainerSetup:
         container.register(GetAutoModerationSettingsUseCase)
         container.register(NotifyAutoModerationHitUseCase)
         container.register(ProcessAutoModerationBatchUseCase)
+        container.register(CheckAndRunAutoModerationUseCase)
         container.register(
             RunAutoModerationOnMessageUseCase,
             factory=lambda: RunAutoModerationOnMessageUseCase(
@@ -507,6 +517,13 @@ class ContainerSetup:
         """Регистрация use cases для переключения/настройки архива."""
         container.register(ToggleArchiveScheduleUseCase)
         container.register(SetArchiveSendingTimeUseCase)
+
+    @staticmethod
+    def _register_stats_usecases(container: Container) -> None:
+        """Регистрация use cases для статистики Mini App."""
+        container.register(GetStatsSummaryUseCase)
+        container.register(GetActivityStatsUseCase)
+        container.register(GetModeratorsStatsUseCase)
 
     @staticmethod
     def _register_time_usecases(container: Container) -> None:

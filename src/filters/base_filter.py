@@ -12,7 +12,7 @@ class BaseUserFilter(Filter):
     async def get_user(
         self,
         tg_id: str,
-        current_username: str,
+        current_username: str | None,
         container: Container,
     ) -> Optional[User]:
         """Получает пользователя из кеша или БД через UserService"""

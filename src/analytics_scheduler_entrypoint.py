@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 ANALYTICS_CHECK_INTERVAL = 10
 
 
-async def main():
+async def main() -> None:
     """Главная функция для запуска analytics scheduler"""
     ContainerSetup.setup()
     await broker.startup()

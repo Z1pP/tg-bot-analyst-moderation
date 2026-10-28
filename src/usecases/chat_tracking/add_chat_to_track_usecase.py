@@ -146,7 +146,7 @@ class AddChatToTrackUseCase:
                 f"Чат: {chat_name}"
             )
             await self._admin_action_log_service.log_action(
-                admin_tg_id=admin.tg_id,
+                admin_tg_id=admin.tg_id or "",
                 action_type=AdminActionType.ADD_CHAT,
                 details=details,
             )

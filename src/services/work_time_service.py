@@ -1,9 +1,11 @@
 from datetime import datetime, time, timedelta
 from functools import lru_cache
-from typing import Optional, Tuple
+from typing import Optional, Tuple, TypeVar
 
 from constants.work_time import END_TIME, START_TIME, TOLERANCE
-from models import ChatMessage, MessageReply
+from models import ChatMessage, MessageReaction, MessageReply
+
+ItemT = TypeVar("ItemT", ChatMessage, MessageReply, MessageReaction)
 
 
 class WorkTimeService:
@@ -82,9 +84,7 @@ class WorkTimeService:
         return adjusted_dt.time()
 
     @classmethod
-    def filter_by_work_time(
-        cls, items: list[MessageReply | ChatMessage]
-    ) -> list[MessageReply | ChatMessage]:
+    def filter_by_work_time(cls, items: list[ItemT]) -> list[ItemT]:
         """
         Фильтрует элементы, оставляя только те, которые созданы в рабочее время.
 
@@ -112,9 +112,9 @@ class WorkTimeService:
         start_date: datetime,
         end_date: datetime,
         *,
-        work_start: time,
-        work_end: time,
-        tolerance: int,
+        work_start: Optional[time] = None,
+        work_end: Optional[time] = None,
+        tolerance: Optional[int] = None,
     ) -> Tuple[datetime, datetime]:
         """
         Корректирует даты начала и конца в соответствии с рабочими часами и допустимым отклонением.
@@ -134,12 +134,12 @@ class WorkTimeService:
                 Кортеж из скорректированных дат начала и окончания
         """
         start_work_time = cls._adjust_time_with_tolerance(
-            base_time=work_start,
-            delta=-tolerance,
+            base_time=work_start if work_start is not None else START_TIME,
+            delta=-(tolerance if tolerance is not None else TOLERANCE),
         )
         end_work_time = cls._adjust_time_with_tolerance(
-            base_time=work_end,
-            delta=tolerance,
+            base_time=work_end if work_end is not None else END_TIME,
+            delta=tolerance if tolerance is not None else TOLERANCE,
         )
 
         start_date = start_date.replace(

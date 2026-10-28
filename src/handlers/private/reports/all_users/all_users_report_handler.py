@@ -20,7 +20,7 @@ from states import AllUsersReportStates
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.report import GetAllUsersReportUseCase
 from usecases.time import GetAppNowUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -55,10 +55,8 @@ async def get_all_users_report_handler(
             e,
             exc_info=True,
         )
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Report.ERROR_GETTING_TRACKED_CHATS,
             reply_markup=all_users_actions_ikb(),
         )
@@ -71,19 +69,15 @@ async def get_all_users_report_handler(
             callback.from_user.username,
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Report.NO_TRACKED_CHATS_WITH_INSTRUCTIONS,
             reply_markup=all_users_actions_ikb(),
         )
         return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Report.SELECT_PERIOD_COLON,
         reply_markup=time_period_ikb_all_users(),
     )
@@ -100,6 +94,8 @@ async def process_period_selection_callback(
 ) -> None:
     """Обрабатывает выбор периода для отчета через callback."""
     await callback.answer()
+    if callback.data is None:
+        return
 
     period_text = callback.data.replace(CallbackData.Report.PREFIX_PERIOD, "")
     logger.info("Выбран период: %s", period_text)
@@ -118,10 +114,8 @@ async def process_period_selection_callback(
             month=now.month,
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Calendar.SELECT_START_DATE,
             reply_markup=calendar_kb,
         )
@@ -145,10 +139,8 @@ async def process_period_selection_callback(
             e,
             exc_info=True,
         )
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Report.ERROR_GENERATING_REPORT,
             reply_markup=all_users_actions_ikb(),
         )
@@ -200,10 +192,8 @@ async def _render_all_users_report(
 
         if result.error_message:
             # Если есть ошибка, presenter уже вернул её в report_parts
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=report_parts[0] if report_parts else result.error_message,
                 reply_markup=all_users_actions_ikb(),
             )
@@ -220,10 +210,8 @@ async def _render_all_users_report(
         # Объединяем все части отчета в один text
         full_report = "\n\n".join(report_parts)
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=full_report,
             parse_mode=ParseMode.HTML,
             reply_markup=order_details_kb_all_users(
@@ -238,10 +226,8 @@ async def _render_all_users_report(
             e,
             exc_info=True,
         )
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Report.ERROR_GENERATING_REPORT,
             reply_markup=all_users_actions_ikb(),
         )

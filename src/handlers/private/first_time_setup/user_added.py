@@ -29,6 +29,8 @@ async def process_user_added(
     Обработчик нажатия на кнопку продолжить настройку после добавления пользователя
     (начать настройку времени начала работы или вернуться в меню настроек пользователей и чатов).
     """
+    if message.from_user is None or message.text is None or message.bot is None:
+        return
 
     data = await state.get_data()
     active_message_id = data.get("active_message_id")
@@ -97,7 +99,7 @@ async def process_user_added(
             bot=message.bot,
             chat_id=message.chat.id,
             active_message_id=active_message_id,
-            text=result.message,
+            text=result.message or Dialog.UserTracking.ERROR_ADD_USER_TO_TRACKING,
             reply_markup=reply_markup,
         )
         return
@@ -109,8 +111,10 @@ async def process_user_added(
     )
 
     await message.answer(
-        text=result.message,
-        reply_markup=move_to_analytics_ikb(user_id=result.user_id),
+        text=result.message or Dialog.UserTracking.ERROR_ADD_USER_TO_TRACKING,
+        reply_markup=(
+            move_to_analytics_ikb(user_id=result.user_id) if result.user_id else None
+        ),
     )
 
     get_tracked_chats_usecase: GetUserTrackedChatsUseCase = container.resolve(

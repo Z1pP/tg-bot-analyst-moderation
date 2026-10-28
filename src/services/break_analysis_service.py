@@ -19,6 +19,8 @@ class BreakAnalysisService:
         activities_by_date: Dict[date, List[Tuple[datetime, str]]] = {}
         for activity_time, activity_type in activities:
             local_time = TimeZoneService.convert_to_local_time(activity_time)
+            if local_time is None:
+                continue
             date_key = local_time.date()
             if date_key not in activities_by_date:
                 activities_by_date[date_key] = []
@@ -56,7 +58,7 @@ class BreakAnalysisService:
         for date_key, day_activities in sorted(activities_by_date.items()):
             day_activities.sort(key=lambda x: x[0])
             day_breaks = []
-            total_break_time = 0
+            total_break_time: float = 0
 
             # Ищем перерывы в пределах одного дня
             for i in range(1, len(day_activities)):
@@ -106,7 +108,7 @@ class BreakAnalysisService:
         result: List[BreakDayDTO] = []
         for date_key, day_activities in sorted(activities_by_date.items()):
             intervals: List[BreakIntervalDTO] = []
-            total_break_minutes = 0
+            total_break_minutes: float = 0
 
             for i in range(1, len(day_activities)):
                 prev_time, _ = day_activities[i - 1]
@@ -149,10 +151,10 @@ class BreakAnalysisService:
         # Группируем по дате (нужны только времена, тип активности не важен)
         activities_by_date = cls._group_activities_by_date(activities)
 
-        daily_totals = []
+        daily_totals: List[float] = []
         for day_activities in activities_by_date.values():
             times_only = [t for t, _ in day_activities]
-            day_total = 0
+            day_total = 0.0
             for i in range(1, len(times_only)):
                 diff = (times_only[i] - times_only[i - 1]).total_seconds() / 60
                 if diff >= min_break_minutes:

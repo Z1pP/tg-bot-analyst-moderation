@@ -15,6 +15,9 @@ class AdminOnlyFilter(BaseUserFilter):
         event: Message | CallbackQuery,
         container: Container,
     ) -> bool:
+        if event.from_user is None:
+            return False
+
         if isinstance(event, Message):
             tg_id = str(event.from_user.id)
             current_username = event.from_user.username
@@ -42,6 +45,8 @@ class AdminOnlyFilter(BaseUserFilter):
 
 class StaffOnlyFilter(BaseUserFilter):
     async def __call__(self, message: Message, container: Container) -> bool:
+        if message.from_user is None:
+            return False
         tg_id = str(message.from_user.id)
         current_username = message.from_user.username
 
@@ -61,6 +66,8 @@ class StaffOnlyInlineFilter(BaseUserFilter):
     """Фильтр только для администраторов"""
 
     async def __call__(self, inline_query: InlineQuery, container: Container) -> bool:
+        if inline_query.from_user is None:
+            return False
         tg_id = str(inline_query.from_user.id)
         current_username = inline_query.from_user.username
 

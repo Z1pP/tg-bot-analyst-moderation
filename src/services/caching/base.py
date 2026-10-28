@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Optional, TypeVar
-
-T = TypeVar("T")
+from typing import Any, Optional
 
 
 class ICache(ABC):
     @abstractmethod
-    async def get(self, key: str) -> Optional[T]:
+    async def get(self, key: str) -> Any:
         """
         Получает значение из кеша по ключу.
 
@@ -19,7 +17,7 @@ class ICache(ABC):
         pass
 
     @abstractmethod
-    async def set(self, key: str, value: T, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         """
         Устанавливает значение в кеш по ключу.
 

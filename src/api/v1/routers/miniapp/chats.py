@@ -5,7 +5,7 @@ POST /api/miniapp/chats/antibot  — переключить антибот
 """
 
 import logging
-from typing import cast
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from punq import Container
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 async def get_chats(
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     tg_id = tg_id_from_init_data(init_data)
     uc = cast(GetAllChatsUseCase, dc.resolve(GetAllChatsUseCase))
 
@@ -53,7 +53,7 @@ async def toggle_antibot(
     body: ToggleAntibotRequest,
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     tg_id = tg_id_from_init_data(init_data)
     uc = cast(ToggleAntibotUseCase, dc.resolve(ToggleAntibotUseCase))
 

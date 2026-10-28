@@ -17,7 +17,7 @@ from states import ChatStateManager
 from states.first_time_setup import FirstTimeSetupStates
 from usecases.chat import UpdateChatWorkHoursUseCase
 from utils.data_parser import parse_breaks_time, parse_time, parse_tolerance
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 
 from .helpers import _show_time_menu
 
@@ -34,11 +34,12 @@ async def first_time_change_work_start(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     await callback.answer()
+    if callback.message is None:
+        return
+
     await state.update_data(active_message_id=callback.message.message_id)
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.ENTER_WORK_START,
         reply_markup=first_time_cancel_time_input_ikb(),
     )
@@ -53,11 +54,12 @@ async def first_time_change_work_end(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     await callback.answer()
+    if callback.message is None:
+        return
+
     await state.update_data(active_message_id=callback.message.message_id)
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.ENTER_WORK_END,
         reply_markup=first_time_cancel_time_input_ikb(),
     )
@@ -72,11 +74,12 @@ async def first_time_change_tolerance(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     await callback.answer()
+    if callback.message is None:
+        return
+
     await state.update_data(active_message_id=callback.message.message_id)
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.ENTER_TOLERANCE,
         reply_markup=first_time_cancel_time_input_ikb(),
     )
@@ -91,11 +94,12 @@ async def first_time_change_breaks_time(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     await callback.answer()
+    if callback.message is None:
+        return
+
     await state.update_data(active_message_id=callback.message.message_id)
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.ENTER_BREAKS_TIME,
         reply_markup=first_time_cancel_time_input_ikb(),
     )
@@ -115,6 +119,9 @@ async def first_time_cancel_time_input(
     callback: CallbackQuery, state: FSMContext
 ) -> None:
     await callback.answer()
+    if callback.bot is None or callback.message is None:
+        return
+
     await _show_time_menu(
         bot=callback.bot,
         chat_id=callback.message.chat.id,
@@ -137,14 +144,12 @@ async def first_time_save_and_finish(
     end_time_str = data.get("end_time")
     tolerance = data.get("tolerance")
     breaks_time = data.get("breaks_time")
-    if not all(
-        [
-            chat_id,
-            start_time_str,
-            end_time_str,
-            tolerance is not None,
-            breaks_time is not None,
-        ]
+    if (
+        not chat_id
+        or not start_time_str
+        or not end_time_str
+        or tolerance is None
+        or breaks_time is None
     ):
         return
     start_time = (
@@ -167,20 +172,16 @@ async def first_time_save_and_finish(
         )
     except Exception as e:
         logger.error("Ошибка при сохранении времени в визарде: %s", e, exc_info=True)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text="❌ Ошибка при сохранении. Попробуйте позже.",
             reply_markup=first_time_work_hours_ikb(all_filled=True),
         )
         return
     saved_chat_id = chat_id
     await state.clear()
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.UserAndChatsSettings.FIRST_TIME_SETUP_SUCCESS,
         reply_markup=first_time_setup_success_ikb(chat_id=saved_chat_id),
     )
@@ -191,6 +192,9 @@ async def first_time_save_and_finish(
 # --- Message handlers: input work start / end / tolerance / breaks ---
 @router.message(FirstTimeSetupStates.waiting_work_start_input, F.text)
 async def first_time_work_start_input(message: Message, state: FSMContext) -> None:
+    if message.bot is None or message.text is None:
+        return
+
     parsed = parse_time(message.text)
     await message.delete()
     data = await state.get_data()
@@ -215,6 +219,9 @@ async def first_time_work_start_input(message: Message, state: FSMContext) -> No
 
 @router.message(FirstTimeSetupStates.waiting_work_end_input, F.text)
 async def first_time_work_end_input(message: Message, state: FSMContext) -> None:
+    if message.bot is None or message.text is None:
+        return
+
     parsed = parse_time(message.text)
     await message.delete()
     data = await state.get_data()
@@ -239,6 +246,9 @@ async def first_time_work_end_input(message: Message, state: FSMContext) -> None
 
 @router.message(FirstTimeSetupStates.waiting_tolerance_input, F.text)
 async def first_time_tolerance_input(message: Message, state: FSMContext) -> None:
+    if message.bot is None or message.text is None:
+        return
+
     parsed = parse_tolerance(message.text)
     await message.delete()
     data = await state.get_data()
@@ -263,6 +273,9 @@ async def first_time_tolerance_input(message: Message, state: FSMContext) -> Non
 
 @router.message(FirstTimeSetupStates.waiting_breaks_time_input, F.text)
 async def first_time_breaks_time_input(message: Message, state: FSMContext) -> None:
+    if message.bot is None or message.text is None:
+        return
+
     parsed = parse_breaks_time(message.text)
     await message.delete()
     data = await state.get_data()

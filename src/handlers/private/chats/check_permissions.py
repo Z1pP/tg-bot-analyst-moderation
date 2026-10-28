@@ -16,7 +16,7 @@ from keyboards.inline.chats import (
 )
 from states import ChatStateManager
 from usecases.permissions import GetBotPermissionsInChatUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -40,10 +40,8 @@ async def check_permissions_handler(
     chat_id = await state.get_value("chat_id")
     if chat_id is None:
         logger.warning("chat_id не найден в state при проверке прав")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chats_menu_ikb(),
         )
@@ -61,19 +59,15 @@ async def check_permissions_handler(
         else:
             text = Dialog.Chat.PERMISSIONS_CHECK_ERROR
             reply_markup = back_to_chat_actions_only_ikb()
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=text,
             reply_markup=reply_markup,
         )
         return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=result.text,
         reply_markup=back_to_chat_actions_only_ikb(),
     )

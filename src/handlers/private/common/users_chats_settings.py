@@ -7,7 +7,7 @@ from constants.callback import CallbackData
 from keyboards.inline.users_chats_settings import users_chats_settings_ikb
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from usecases.user_tracking import HasTrackedUsersUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 
@@ -39,10 +39,8 @@ async def users_chats_settings_handler(
 
     has_tracking = has_tracked_users or user_tracked_chats.total_count > 0
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.UserAndChatsSettings.MENU_TEXT,
         reply_markup=users_chats_settings_ikb(has_tracking=has_tracking),
     )

@@ -63,7 +63,7 @@ class GetDailyTopUsersUseCase:
 
         # Получаем информацию о чате
         chat = await self._chat_repository.get_chat_by_id(chat_id)
-        chat_title = chat.title if chat else "Неизвестный чат"
+        chat_title = (chat.title if chat else None) or "Неизвестный чат"
 
         # Получаем топ пользователей
         top_users = await self._message_repository.get_daily_top_users(

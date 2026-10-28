@@ -44,7 +44,7 @@ async def test_get_chat_report_handler_success_shows_period(
 ) -> None:
     """Успешный сценарий: показ выбора периода и переход в selecting_period."""
     with patch(
-        "handlers.private.reports.chat.chat_report_handler.safe_edit_message",
+        "handlers.private.reports.chat.chat_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(
@@ -69,7 +69,7 @@ async def test_process_period_selection_no_chat_id_shows_error(
     state.get_data = AsyncMock(return_value={})
 
     with patch(
-        "handlers.private.reports.chat.chat_report_handler.safe_edit_message",
+        "handlers.private.reports.chat.chat_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         await process_period_selection_callback(
@@ -98,7 +98,7 @@ async def test_process_period_selection_success_calls_render(
     container.resolve = MagicMock(return_value=mock_usecase)
 
     with patch(
-        "handlers.private.reports.chat.chat_report_handler.safe_edit_message",
+        "handlers.private.reports.chat.chat_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ):
         with patch(

@@ -14,11 +14,11 @@ class ReportSchedule(BaseModel):
     )
     timezone: Mapped[str] = mapped_column(String(length=64))  # Europe/Moscow
     sent_time: Mapped[time] = mapped_column(Time)
-    enabled: Mapped[Boolean] = mapped_column(Boolean, default=True)
-    next_run_at: Mapped[datetime] = mapped_column(
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    next_run_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    last_run_at: Mapped[datetime] = mapped_column(
+    last_run_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

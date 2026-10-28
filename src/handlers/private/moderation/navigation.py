@@ -13,7 +13,7 @@ from aiogram.types import CallbackQuery
 from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.moderation import moderation_menu_ikb
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
@@ -36,10 +36,8 @@ async def moderation_menu_handler(
     await callback.answer()
     await state.clear()
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Moderation.SELECT_ACTION,
         reply_markup=moderation_menu_ikb(),
     )

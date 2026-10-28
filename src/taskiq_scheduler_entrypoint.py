@@ -13,7 +13,7 @@ setup_logger(log_level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def main():
+async def main() -> None:
     ContainerSetup.setup()
     await broker.startup()
     logger.info("TaskIQ scheduler запущен")

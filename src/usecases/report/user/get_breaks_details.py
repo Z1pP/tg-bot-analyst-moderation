@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 from datetime import datetime
 
 from dto.report import (
@@ -15,7 +16,7 @@ from .base import BaseReportUseCase
 logger = logging.getLogger(__name__)
 
 
-class GetBreaksDetailReportUseCase(BaseReportUseCase):
+class GetBreaksDetailReportUseCase(BaseReportUseCase[SingleUserReportDTO]):
     async def execute(self, report_dto: SingleUserReportDTO) -> BreaksDetailReportDTO:
         """Генерирует детализированный отчет по перерывам пользователя."""
         user = await self._get_user(user_id=report_dto.user_id)
@@ -35,7 +36,7 @@ class GetBreaksDetailReportUseCase(BaseReportUseCase):
             raise UserNotFoundException(identifier=str(user_id))
         return user
 
-    async def _get_user_data(self, user: User, dto: SingleUserReportDTO) -> dict:
+    async def _get_user_data(self, user: User, dto: SingleUserReportDTO) -> dict[str, Any]:
         """Получает данные пользователя за период."""
         # Проверяем наличие отслеживаемых чатов
         tracked_chats = await self._chat_repository.get_tracked_chats_for_admin(
@@ -66,7 +67,7 @@ class GetBreaksDetailReportUseCase(BaseReportUseCase):
 
     def _generate_breaks_detail_report(
         self,
-        data: dict,
+        data: dict[str, Any],
         user: User,
         start_date: datetime,
         end_date: datetime,
@@ -97,7 +98,7 @@ class GetBreaksDetailReportUseCase(BaseReportUseCase):
         )
 
         user_detail = BreaksDetailUserDTO(
-            username=user.username,
+            username=user.username or "",
             has_activity=bool(messages or reactions),
             days=breaks_detail,
         )

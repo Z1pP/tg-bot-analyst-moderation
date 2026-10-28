@@ -41,7 +41,10 @@ def map_message_to_moderation_dto(message: Message) -> ModerationActionDTO:
         ModerationActionDTO с всеми необходимыми данными
     """
     reason = extract_reason_from_message(message=message)
-    reply_user = message.reply_to_message.from_user
+    reply = message.reply_to_message
+    if reply is None or reply.from_user is None or message.from_user is None:
+        raise ValueError("Команда должна быть ответом на сообщение пользователя")
+    reply_user = reply.from_user
 
     return ModerationActionDTO(
         action=Actions.WARNING,
@@ -50,11 +53,11 @@ def map_message_to_moderation_dto(message: Message) -> ModerationActionDTO:
         admin_username=message.from_user.username or "",
         admin_tgid=str(message.from_user.id),
         chat_tgid=str(message.chat.id),
-        chat_title=message.chat.title,
-        reply_message_id=message.reply_to_message.message_id,
+        chat_title=message.chat.title or "",
+        reply_message_id=reply.message_id,
         original_message_id=message.message_id,
         reply_message_date=TimeZoneService.convert_to_local_time(
-            dt=message.reply_to_message.date,
+            dt=reply.date,
         ),
         original_message_date=TimeZoneService.convert_to_local_time(
             dt=message.date,

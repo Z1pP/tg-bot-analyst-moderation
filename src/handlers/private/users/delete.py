@@ -16,7 +16,7 @@ from states import UsernameStates
 from usecases.user_tracking import (
     RemoveUserFromTrackingUseCase,
 )
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 from utils.user_data_parser import parse_data_from_text
 
 router = Router(name=__name__)
@@ -42,10 +42,8 @@ async def remove_user_from_tracking_handler(
         callback.from_user.username,
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.User.REMOVE_USER_INSTRUCTION,
         reply_markup=back_to_users_menu_ikb(),
     )
@@ -62,6 +60,8 @@ async def process_removing_user(
     """
     Обработчик для получения ID выбранного пользователя на удаление.
     """
+    if message.from_user is None or message.text is None:
+        return
 
     admin_id = message.from_user.id
     admin_username = message.from_user.username or "неизвестно"

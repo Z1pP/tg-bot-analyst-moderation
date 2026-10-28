@@ -34,4 +34,6 @@ class UpdateCategoryNameUseCase:
         updated_category = await self._category_service.update_category_name(
             category_id, new_name
         )
+        if updated_category is None:
+            raise CategoryNotFoundError()
         return CategoryDTO.from_model(updated_category)

@@ -1,5 +1,5 @@
 import logging
-from typing import List, Type, TypeVar
+from typing import Any, Awaitable, List, Type, TypeVar, cast
 
 from pydantic import BaseModel
 from redis.asyncio import Redis as RedisClient
@@ -34,7 +34,7 @@ class AnalyticsBufferService:
         """Проверяет доступность Redis."""
         if not self._connected:
             try:
-                await self._redis.ping()
+                await cast(Awaitable[bool], self._redis.ping())
                 self._connected = True
                 logger.debug("Подключение к Redis установлено")
                 return True
@@ -52,7 +52,9 @@ class AnalyticsBufferService:
 
         try:
             json_data = dto.model_dump_json()
-            await self._redis.rpush(key, json_data.encode("utf-8"))
+            await cast(
+                Awaitable[int], self._redis.rpush(key, json_data.encode("utf-8"))
+            )
             logger.debug("%s добавлено в буфер", entity_name.capitalize())
         except _REDIS_ERRORS as e:
             logger.error(
@@ -77,7 +79,9 @@ class AnalyticsBufferService:
             return []
 
         try:
-            data = await self._redis.lrange(key, 0, count - 1)
+            data = await cast(
+                Awaitable[list[Any]], self._redis.lrange(key, 0, count - 1)
+            )
             items = []
             for item in data:
                 try:
@@ -105,7 +109,7 @@ class AnalyticsBufferService:
             return
 
         try:
-            await self._redis.ltrim(key, count, -1)
+            await cast(Awaitable[bool], self._redis.ltrim(key, count, -1))
             logger.debug("Удалено %s %s из буфера", count, entity_name)
         except _REDIS_ERRORS as e:
             logger.error(
@@ -136,7 +140,9 @@ class AnalyticsBufferService:
             return
         try:
             values = [dto.model_dump_json().encode("utf-8") for dto in dtos]
-            await self._redis.rpush(self.REDIS_KEY_REPLIES, *values)
+            await cast(
+                Awaitable[int], self._redis.rpush(self.REDIS_KEY_REPLIES, *values)
+            )
             logger.debug("Возвращено %d reply в буфер", len(dtos))
         except _REDIS_ERRORS as e:
             logger.error(

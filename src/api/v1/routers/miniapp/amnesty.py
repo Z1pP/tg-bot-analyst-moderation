@@ -8,7 +8,7 @@ POST /api/v1/miniapp/amnesty/cancel_warn       — отменить послед
 """
 
 import logging
-from typing import List, cast
+from typing import Any, List, cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from punq import Container
@@ -21,16 +21,16 @@ from api.dependencies.miniapp import (
     username_from_init_data,
 )
 from dto.amnesty import AmnestyUserDTO
-from dto.chat_dto import ChatDTO
+from dto.chat_dto import ChatDTO, GetChatWithArchiveDTO
 from exceptions.base import BotBaseException
-from repositories import UserRepository
-from repositories.chat_repository import ChatRepository
 from usecases.amnesty import (
     CancelLastWarnUseCase,
     GetChatsWithAnyRestrictionUseCase,
     UnbanUserUseCase,
     UnmuteUserUseCase,
 )
+from usecases.chat import GetChatWithArchiveUseCase
+from usecases.user import GetUserByTgIdUseCase
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -47,10 +47,10 @@ async def _resolve_violator_and_chats(
     Получает данные нарушителя и чатов из БД,
     формирует AmnestyUserDTO для use cases амнистии.
     """
-    user_repo = cast(UserRepository, dc.resolve(UserRepository))
-    chat_repo = cast(ChatRepository, dc.resolve(ChatRepository))
+    get_user = cast(GetUserByTgIdUseCase, dc.resolve(GetUserByTgIdUseCase))
+    get_chat = cast(GetChatWithArchiveUseCase, dc.resolve(GetChatWithArchiveUseCase))
 
-    violator = await user_repo.get_user_by_tg_id(tg_id=violator_tgid)
+    violator = await get_user.execute(tg_id=violator_tgid)
     if not violator:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -59,7 +59,7 @@ async def _resolve_violator_and_chats(
 
     chat_dtos: List[ChatDTO] = []
     for chat_id in chat_ids:
-        chat = await chat_repo.get_chat_by_id(chat_id=chat_id)
+        chat = await get_chat.execute(GetChatWithArchiveDTO(chat_id=chat_id))
         if not chat:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -82,13 +82,13 @@ async def get_chats_with_restrictions(
     user_tgid: str,
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     """Возвращает чаты, где у пользователя есть ограничения (бан, мут, варны)."""
     admin_tgid = tg_id_from_init_data(init_data)
     admin_username = username_from_init_data(init_data)
 
-    user_repo = cast(UserRepository, dc.resolve(UserRepository))
-    violator = await user_repo.get_user_by_tg_id(tg_id=user_tgid)
+    get_user = cast(GetUserByTgIdUseCase, dc.resolve(GetUserByTgIdUseCase))
+    violator = await get_user.execute(tg_id=user_tgid)
     if not violator:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -132,7 +132,7 @@ async def unban_user(
     body: AmnestyRequest,
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     """Снимает бан с пользователя в указанных чатах."""
     admin_tgid = tg_id_from_init_data(init_data)
     admin_username = username_from_init_data(init_data)
@@ -162,7 +162,7 @@ async def unmute_user(
     body: AmnestyRequest,
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     """Снимает мьют с пользователя в указанных чатах."""
     admin_tgid = tg_id_from_init_data(init_data)
     admin_username = username_from_init_data(init_data)
@@ -192,7 +192,7 @@ async def cancel_last_warn(
     body: CancelWarnRequest,
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     """Отменяет последнее предупреждение пользователя в указанном чате."""
     admin_tgid = tg_id_from_init_data(init_data)
     admin_username = username_from_init_data(init_data)

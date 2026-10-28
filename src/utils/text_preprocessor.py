@@ -1,4 +1,9 @@
-def format_messages_for_llm(messages: list, max_chars: int = 100000) -> tuple[str, int]:
+from typing import Any
+
+
+def format_messages_for_llm(
+    messages: list[Any], max_chars: int = 100000
+) -> tuple[str, int]:
     """
     Превращает список объектов сообщений в строку вида:
     [User1]: Ребят, когда деплой?

@@ -20,7 +20,12 @@ class TaskiqSchedulerService:
         from tasks.report_tasks import send_chat_report_task
 
         for schedule in due_schedules:
-            unique_task_id = f"{schedule.id}:{schedule.last_run_at.isoformat()}"
+            last_run = (
+                schedule.last_run_at.isoformat()
+                if schedule.last_run_at
+                else "never"
+            )
+            unique_task_id = f"{schedule.id}:{last_run}"
 
             await (
                 send_chat_report_task.kicker()

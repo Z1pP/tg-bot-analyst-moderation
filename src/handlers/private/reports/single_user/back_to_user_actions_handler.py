@@ -8,7 +8,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.users import user_actions_ikb
 from states import SingleUserReportStates
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -32,10 +32,8 @@ async def back_to_single_user_actions_handler(
         callback.from_user.id,
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Report.SELECT_ACTION,
         reply_markup=user_actions_ikb(),
     )

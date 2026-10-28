@@ -23,6 +23,8 @@ async def process_reply_handler(
     message: types.Message, state: FSMContext, bot: Bot, container: Container
 ) -> None:
     """Обработчик получения контента для ответа."""
+    if message.from_user is None:
+        return
     action_state = await get_message_action_state(state)
 
     if not action_state:

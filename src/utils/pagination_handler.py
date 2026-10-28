@@ -1,10 +1,10 @@
 """Базовый обработчик пагинации для устранения дублирования кода."""
 
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Tuple
 
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 from punq import Container
 
 
@@ -18,9 +18,11 @@ class BasePaginationHandler(ABC):
         self,
         query: CallbackQuery,
         state: FSMContext,
-        container: Optional[Container] = None,
+        container: Container,
     ) -> None:
         """Обработчик перехода на предыдущую страницу."""
+        if query.data is None:
+            return
         current_page = int(query.data.split("__")[1])
         prev_page = max(1, current_page - 1)
 
@@ -29,6 +31,8 @@ class BasePaginationHandler(ABC):
         )
         keyboard = await self.build_keyboard(items, prev_page, total_count)
 
+        if not isinstance(query.message, Message):
+            return
         await query.message.edit_reply_markup(reply_markup=keyboard)
         await query.answer()
 
@@ -36,9 +40,11 @@ class BasePaginationHandler(ABC):
         self,
         query: CallbackQuery,
         state: FSMContext,
-        container: Optional[Container] = None,
+        container: Container,
     ) -> None:
         """Обработчик перехода на следующую страницу."""
+        if query.data is None:
+            return
         current_page = int(query.data.split("__")[1])
         next_page = current_page + 1
 
@@ -52,6 +58,8 @@ class BasePaginationHandler(ABC):
 
         keyboard = await self.build_keyboard(items, next_page, total_count)
 
+        if not isinstance(query.message, Message):
+            return
         await query.message.edit_reply_markup(reply_markup=keyboard)
         await query.answer()
 
@@ -61,7 +69,7 @@ class BasePaginationHandler(ABC):
         page: int,
         query: CallbackQuery,
         state: FSMContext,
-        container: Optional[Container] = None,
+        container: Container,
     ) -> Tuple[List[Any], int]:
         """Получает данные для страницы. Должен быть реализован в наследниках."""
         pass

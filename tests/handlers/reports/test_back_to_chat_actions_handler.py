@@ -52,7 +52,7 @@ async def test_back_to_chat_actions_no_chat_id_shows_error(
     """При отсутствии chat_id в state показывается сообщение об ошибке."""
     state.get_value = AsyncMock(return_value=None)
     with patch(
-        "handlers.private.reports.chat.back_to_chat_actions_handler.safe_edit_message",
+        "handlers.private.reports.chat.back_to_chat_actions_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(
@@ -76,14 +76,14 @@ async def test_back_to_chat_actions_success_edits_message(
     state: MagicMock,
     sample_chat: MagicMock,
 ) -> None:
-    """Успешный сценарий: resolve use case, execute возвращает чат — вызывается safe_edit_message с текстом действий."""
+    """Успешный сценарий: resolve use case, execute возвращает чат — вызывается safe_edit_callback_message с текстом действий."""
     mock_usecase = MagicMock()
     mock_usecase.execute = AsyncMock(return_value=sample_chat)
     container = MagicMock()
     container.resolve = MagicMock(return_value=mock_usecase)
 
     with patch(
-        "handlers.private.reports.chat.back_to_chat_actions_handler.safe_edit_message",
+        "handlers.private.reports.chat.back_to_chat_actions_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(

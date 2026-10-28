@@ -5,13 +5,14 @@ from aiogram.types import CallbackQuery
 from punq import Container
 
 from constants import Dialog
+from dto import UserDTO
 from exceptions.base import BotBaseException
 from handlers._handler_errors import raise_business_logic
 from keyboards.inline.chats import chats_menu_ikb
 from keyboards.inline.menu import main_menu_ikb
 from keyboards.inline.users import hide_notification_ikb
 from usecases.user import GetUserByTgIdUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,8 @@ async def show_main_menu(
         usecase: GetUserByTgIdUseCase = container.resolve(GetUserByTgIdUseCase)
         user = await usecase.execute(tg_id=str(callback.from_user.id))
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=hide_notification_ikb(),
         )
@@ -46,24 +45,20 @@ async def show_main_menu(
         )
 
     if not user:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.User.ERROR_GET_USER,
             reply_markup=hide_notification_ikb(),
         )
         return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Menu.MENU_TEXT.format(
             username=user.username or f"ID:{user.tg_id}",
         ),
         reply_markup=main_menu_ikb(
-            user=user,
+            user=UserDTO.from_model(user),
             user_language=user_language,
         ),
     )
@@ -73,10 +68,8 @@ async def show_chats_menu(callback: CallbackQuery, state: FSMContext) -> None:
     """Показывает меню управления чатами и очищает состояние FSM."""
     await state.clear()
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.SELECT_ACTION,
         reply_markup=chats_menu_ikb(),
     )

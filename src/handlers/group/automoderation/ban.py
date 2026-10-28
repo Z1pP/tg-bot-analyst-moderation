@@ -4,7 +4,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 from punq import Container
 
 from constants.callback import CallbackData
@@ -46,7 +46,7 @@ async def automoderation_block_user_handler(
         await callback.answer("Некорректные данные кнопки.", show_alert=True)
         return
 
-    if not callback.message:
+    if not isinstance(callback.message, Message):
         await callback.answer("Сообщение недоступно.", show_alert=True)
         return
 

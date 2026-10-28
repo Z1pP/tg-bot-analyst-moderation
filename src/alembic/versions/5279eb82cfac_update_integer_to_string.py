@@ -49,8 +49,8 @@ def downgrade() -> None:
                existing_type=sa.String(length=32),
                type_=sa.INTEGER(),
                existing_nullable=False)
-    op.drop_constraint(None, 'message_replies', type_='foreignkey')
-    op.drop_constraint(None, 'message_replies', type_='foreignkey')
+    op.drop_constraint(None, 'message_replies', type_='foreignkey')  # type: ignore[arg-type]
+    op.drop_constraint(None, 'message_replies', type_='foreignkey')  # type: ignore[arg-type]
     op.create_foreign_key('message_replies_reply_user_id_fkey', 'message_replies', 'users', ['reply_user_id'], ['tg_id'])
     op.create_foreign_key('message_replies_original_user_id_fkey', 'message_replies', 'users', ['original_user_id'], ['tg_id'])
     op.add_column('chat_sessions', sa.Column('name', sa.VARCHAR(), autoincrement=False, nullable=True))

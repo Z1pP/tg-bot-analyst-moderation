@@ -137,14 +137,16 @@ class SendDailyChatReportsUseCase:
         admins = await self._user_repository.get_admins_for_chat(
             chat_tg_id=chat.chat_id
         )
-        admins_set.update(admins)
+        admins_set.update(admins or [])
 
         tracked_users_set: Set[User] = set()
         for admin in admins_set:
+            if admin.tg_id is None:
+                continue
             users = await self._user_repository.get_tracked_users_for_admin(
                 admin_tg_id=admin.tg_id
             )
-            tracked_users_set.update(users)
+            tracked_users_set.update(users or [])
 
         return [user.id for user in tracked_users_set]
 
@@ -159,7 +161,7 @@ class SendDailyChatReportsUseCase:
         Параллельно загружает сообщения, ответы и реакции для конкретного чата.
         """
         # Формируем задачи
-        tasks = [
+        messages, replies, reactions = await asyncio.gather(
             self._get_processed_items(
                 self._message_repository.get_messages_by_chat_id_and_period,
                 chat.id,
@@ -181,10 +183,7 @@ class SendDailyChatReportsUseCase:
                 end_date,
                 tracked_user_ids,
             ),
-        ]
-
-        # Запускаем параллельно
-        messages, replies, reactions = await asyncio.gather(*tasks)
+        )
 
         return {
             "messages": messages,
@@ -208,7 +207,9 @@ class SendDailyChatReportsUseCase:
         )
         # Конвертация времени
         for item in items:
-            item.created_at = TimeZoneService.convert_to_local_time(dt=item.created_at)
+            converted = TimeZoneService.convert_to_local_time(dt=item.created_at)
+            if converted is not None:
+                item.created_at = converted
         return items
 
     def _generate_chat_report(
@@ -253,13 +254,13 @@ class SendDailyChatReportsUseCase:
         chat: ChatSession,
     ) -> str:
         # Группировка данных по пользователям
-        users_data = defaultdict(
+        users_data: dict[int, dict[str, Any]] = defaultdict(
             lambda: {"messages": [], "replies": [], "reactions": []}
         )
         user_names: Dict[int, str] = {}
 
         # Функция для извлечения имени пользователя
-        def get_username(user_obj, user_id):
+        def get_username(user_obj: User | None, user_id: int) -> str:
             if user_id in user_names:
                 return user_names[user_id]
             name = (
@@ -314,12 +315,12 @@ class SendDailyChatReportsUseCase:
         return "\n\n".join(user_reports)
 
     def _generate_user_report(
-        self, data: dict, start_date: datetime, end_date: datetime, chat: ChatSession
+        self, data: dict[str, Any], start_date: datetime, end_date: datetime, chat: ChatSession
     ) -> str:
         username = data.get("username")
-        messages = data.get("messages")
-        replies = data.get("replies")
-        reactions = data.get("reactions")
+        messages = data["messages"]
+        replies = data["replies"]
+        reactions = data["reactions"]
 
         parts = [f"@{username}:"]
 
@@ -335,7 +336,7 @@ class SendDailyChatReportsUseCase:
 
         # Перерывы
         parts.append(
-            self._generate_breaks_section(messages, reactions, chat.breaks_time)
+            self._generate_breaks_section(messages, reactions, chat.breaks_time or 0)
         )
 
         return "\n".join(filter(None, parts))
@@ -439,6 +440,8 @@ class SendDailyChatReportsUseCase:
             chat_title=chat.title or "Без названия"
         )
         for admin in admins:
+            if admin.tg_id is None:
+                continue
             await self._bot_message_service.send_private_message(
                 user_tgid=admin.tg_id,
                 text=text,

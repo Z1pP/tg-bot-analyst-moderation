@@ -11,7 +11,7 @@ from constants.callback import CallbackData
 from dto import GetChatWithArchiveDTO
 from keyboards.inline.chats import chats_menu_ikb
 from usecases.archive import GetArchiveSettingsUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 
@@ -26,10 +26,8 @@ async def archive_channel_setting_handler(
     chat_id: int | None = await state.get_value("chat_id")
 
     if chat_id is None:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chats_menu_ikb(),
         )
@@ -38,10 +36,8 @@ async def archive_channel_setting_handler(
     usecase: GetArchiveSettingsUseCase = container.resolve(GetArchiveSettingsUseCase)
     result = await usecase.execute(GetChatWithArchiveDTO(chat_id=chat_id))
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=result.text,
         reply_markup=result.reply_markup,
     )

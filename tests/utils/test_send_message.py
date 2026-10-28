@@ -3,11 +3,14 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from aiogram import types
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 from utils.send_message import (
     safe_delete_message,
+    safe_edit_callback_message,
+    safe_edit_callback_reply_markup,
     safe_edit_message,
     safe_edit_message_reply_markup,
     sanitize_html_for_telegram,
@@ -96,6 +99,93 @@ async def test_safe_edit_message_not_modified_returns_none() -> None:
     )
     result = await safe_edit_message(bot, chat_id=1, message_id=2, text="Тот же текст")
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_safe_edit_callback_message_success() -> None:
+    """safe_edit_callback_message редактирует сообщение из callback."""
+    callback = MagicMock()
+    callback.bot = AsyncMock()
+    edited = MagicMock()
+    callback.bot.edit_message_text = AsyncMock(return_value=edited)
+    callback.message = types.Message.model_construct(
+        chat=types.Chat(id=10, type="private"),
+        message_id=20,
+    )
+
+    result = await safe_edit_callback_message(
+        callback,
+        text="<b>Новый текст</b>",
+        reply_markup=MagicMock(),
+    )
+
+    assert result == edited
+    callback.bot.edit_message_text.assert_called_once()
+    assert callback.bot.edit_message_text.call_args.kwargs["chat_id"] == 10
+    assert callback.bot.edit_message_text.call_args.kwargs["message_id"] == 20
+
+
+@pytest.mark.asyncio
+async def test_safe_edit_callback_message_without_message_returns_none() -> None:
+    """Если сообщения нет, редактирование пропускается."""
+    callback = MagicMock()
+    callback.bot = AsyncMock()
+    callback.message = None
+
+    result = await safe_edit_callback_message(callback, text="Текст")
+
+    assert result is None
+    callback.bot.edit_message_text.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_safe_edit_callback_message_with_inaccessible_message_returns_none() -> None:
+    """InaccessibleMessage не редактируется, возвращается None."""
+    callback = MagicMock()
+    callback.bot = AsyncMock()
+    callback.message = types.InaccessibleMessage.model_construct(
+        chat=types.Chat(id=10, type="private"),
+        message_id=20,
+    )
+
+    result = await safe_edit_callback_message(callback, text="Текст")
+
+    assert result is None
+    callback.bot.edit_message_text.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_safe_edit_callback_reply_markup_success() -> None:
+    """safe_edit_callback_reply_markup обновляет клавиатуру через bot."""
+    callback = MagicMock()
+    callback.bot = AsyncMock()
+    callback.message = types.Message.model_construct(
+        chat=types.Chat(id=10, type="private"),
+        message_id=20,
+    )
+    markup = MagicMock()
+
+    result = await safe_edit_callback_reply_markup(callback, reply_markup=markup)
+
+    assert result is True
+    callback.bot.edit_message_reply_markup.assert_awaited_once_with(
+        chat_id=10,
+        message_id=20,
+        reply_markup=markup,
+    )
+
+
+@pytest.mark.asyncio
+async def test_safe_edit_callback_reply_markup_without_message() -> None:
+    """Без доступного сообщения клавиатура не обновляется."""
+    callback = MagicMock()
+    callback.bot = AsyncMock()
+    callback.message = None
+
+    result = await safe_edit_callback_reply_markup(callback, reply_markup=MagicMock())
+
+    assert result is False
+    callback.bot.edit_message_reply_markup.assert_not_called()
 
 
 @pytest.mark.asyncio

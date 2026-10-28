@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Literal, Optional, Union
+from typing import Callable, Literal, Optional, Union
 
 from aiogram import Bot, types
 from aiogram.fsm.context import FSMContext
@@ -29,7 +29,7 @@ from usecases.moderation import ExecuteModerationInChatsUseCase
 from usecases.user import GetUserByTgIdUseCase, GetUserByUsernameUseCase
 from utils.chat_selection import filter_chats_by_callback_selection
 from utils.moderation import format_violator_display
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message, safe_edit_message
 from utils.user_data_parser import parse_data_from_text
 
 from .errors import handle_moderation_error
@@ -39,9 +39,9 @@ logger = logging.getLogger(__name__)
 
 def _get_retry_callback_for_moderation_state(next_state: State) -> str:
     """Возвращает callback данных для кнопки «Повторить» в зависимости от состояния модерации."""
-    if next_state.state.startswith("BanUserStates"):
+    if (next_state.state or "").startswith("BanUserStates"):
         return InlineButtons.Moderation.BLOCK_USER
-    if next_state.state.startswith("WarnUserStates"):
+    if (next_state.state or "").startswith("WarnUserStates"):
         return InlineButtons.Moderation.WARN_USER
     return InlineButtons.Moderation.AMNESTY
 
@@ -64,9 +64,9 @@ def _get_protected_error_text_for_moderation_state(next_state: State) -> str:
         WarnUserDialogs,
     )
 
-    if next_state.state.startswith("BanUserStates"):
+    if (next_state.state or "").startswith("BanUserStates"):
         return BanUserDialogs.PUNISHMENT_ERROR
-    if next_state.state.startswith("WarnUserStates"):
+    if (next_state.state or "").startswith("WarnUserStates"):
         return WarnUserDialogs.PUNISHMENT_ERROR
     return AmnestyUserDialogs.AMNESTY_ERROR
 
@@ -91,12 +91,12 @@ async def setup_user_input_view(
         Сохраняет: message_to_edit_id для последующего редактирования.
     """
     await callback.answer()
+    if callback.message is None:
+        return
     await state.update_data(message_to_edit_id=callback.message.message_id)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=dialog_text,
         reply_markup=back_to_moderation_menu_ikb(),
     )
@@ -127,6 +127,8 @@ async def execute_moderation_logic(
         Ожидает: данные о нарушителе (username, tg_id) и список чатов (chat_dtos).
     """
     data = await state.get_data()
+    if callback.data is None:
+        return
     chat_id_from_callback = callback.data.split("__")[1]
     chat_dtos_data = data.get("chat_dtos")
     username = data.get("username")
@@ -168,10 +170,8 @@ async def execute_moderation_logic(
         fail_text=fail_text,
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=response_text,
         reply_markup=moderation_menu_ikb(),
     )
@@ -184,9 +184,8 @@ async def handle_user_search_logic(
     container: Container,
     *,
     dialog_texts: dict[str, str],
-    success_keyboard: types.InlineKeyboardMarkup,
+    success_keyboard: Callable[[], types.InlineKeyboardMarkup],
     next_state: State,
-    show_block_actions_on_error: bool = False,
 ) -> None:
     """Обрабатывает ввод данных пользователя и выполняет поиск в базе.
 
@@ -198,12 +197,14 @@ async def handle_user_search_logic(
         dialog_texts: Словарь с текстами ответов (invalid_format, user_not_found, user_info).
         success_keyboard: Клавиатура, отображаемая при успешном нахождении пользователя.
         next_state: Состояние для перехода после успешного поиска.
-        show_block_actions_on_error: Флаг для отображения меню модерации при ошибке.
 
     State:
         Устанавливает: next_state при успехе.
         Сохраняет: данные найденного пользователя (username, id, tg_id).
     """
+    if message.text is None or message.from_user is None:
+        return
+
     user_data = parse_data_from_text(text=message.text)
     await message.delete()
 
@@ -245,7 +246,7 @@ async def handle_user_search_logic(
         return
 
     # --- Проверка защищенных пользователей (только для бана и варна)
-    if next_state.state.startswith(
+    if (next_state.state or "").startswith(
         ("BanUserStates", "WarnUserStates")
     ) and _is_protected_user(user, message.from_user.id):
         error_text = _get_protected_error_text_for_moderation_state(next_state)
@@ -268,7 +269,9 @@ async def handle_user_search_logic(
         await safe_edit_message(
             bot=bot,
             text=dialog_texts["user_info"].format(
-                user_display=format_violator_display(user.username, user.tg_id),
+                user_display=format_violator_display(
+                    user.username or "", user.tg_id or ""
+                ),
                 tg_id=user.tg_id,
             ),
             chat_id=message.chat.id,
@@ -285,7 +288,6 @@ async def handle_reason_input_logic(
     state: FSMContext,
     bot: Bot,
     container: Container,
-    is_callback: bool,
     next_state: State,
     action: Literal[Actions.BAN, Actions.WARNING],
 ) -> None:
@@ -297,19 +299,25 @@ async def handle_reason_input_logic(
         state: Контекст состояния FSM.
         bot: Экземпляр бота.
         container: DI-контейнер.
-        is_callback: Флаг, указывающий, является ли отправитель callback-запросом.
         next_state: Состояние для перехода после обработки причины.
         action: Тип выполняемого действия (Actions.BAN, Actions.WARNING).
     State:
         Устанавливает: next_state при наличии доступных чатов.
         Сохраняет: причину (reason) и список чатов (chat_dtos).
     """
-    chat_id = sender.message.chat.id if is_callback else sender.chat.id
+    if sender.from_user is None:
+        return
+
+    if isinstance(sender, types.CallbackQuery):
+        if sender.message is None:
+            return
+        chat_id = sender.message.chat.id
+    else:
+        chat_id = sender.chat.id
+        await sender.delete()
+
     from_user_id = sender.from_user.id
     message_to_edit_id = None
-
-    if not is_callback:
-        await sender.delete()
 
     data = await state.get_data()
     user_tgid = data.get("tg_id")
@@ -327,9 +335,11 @@ async def handle_reason_input_logic(
     usecase: GetChatsForUserActionUseCase = container.resolve(
         GetChatsForUserActionUseCase
     )
-    chat_dtos = await usecase.execute(admin_tgid=str(from_user_id), user_tgid=user_tgid)
+    chat_dtos = await usecase.execute(
+        admin_tgid=str(from_user_id), user_tgid=str(user_tgid or "")
+    )
 
-    user_display = format_violator_display(username, user_tgid)
+    user_display = format_violator_display(username or "", str(user_tgid or ""))
 
     if not chat_dtos:
         await handle_moderation_error(

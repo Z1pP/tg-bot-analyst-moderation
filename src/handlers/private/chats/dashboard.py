@@ -11,7 +11,7 @@ from dto.chat_dto import GetChatWithArchiveDTO
 from keyboards.inline.chats import chat_actions_ikb, chats_menu_ikb
 from states import ChatStateManager
 from usecases.chat import GetChatWithArchiveUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -30,6 +30,8 @@ async def chat_selected_handler(
     Обработчик выбора чата из списка чатов.
     """
     await callback.answer()
+    if callback.data is None:
+        return
 
     chat_id_str = callback.data.replace(CallbackData.Chat.PREFIX_CHAT, "")
     if not chat_id_str or not chat_id_str.isdigit():
@@ -56,10 +58,8 @@ async def chat_selected_handler(
 
 async def _show_chat_not_found_message(callback: CallbackQuery) -> None:
     """Показывает сообщение о том, что чат не найден."""
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
         reply_markup=chats_menu_ikb(),
     )
@@ -67,10 +67,8 @@ async def _show_chat_not_found_message(callback: CallbackQuery) -> None:
 
 async def _show_chat_actions_message(callback: CallbackQuery) -> None:
     """Показывает сообщение с информацией о действиях с чатом."""
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.CHAT_ACTIONS_INFO,
         reply_markup=chat_actions_ikb(),
     )
@@ -79,10 +77,8 @@ async def _show_chat_actions_message(callback: CallbackQuery) -> None:
 async def _handle_error(callback: CallbackQuery, error: Exception) -> None:
     """Обрабатывает ошибки при выборе чата."""
     logger.error("Ошибка при выборе чата: %s", error, exc_info=True)
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.ERROR_GET_CHAT_WITH_ARCHIVE,
         reply_markup=chats_menu_ikb(),
     )

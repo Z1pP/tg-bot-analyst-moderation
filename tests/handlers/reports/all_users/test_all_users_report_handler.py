@@ -53,7 +53,7 @@ async def test_get_all_users_report_handler_no_chats_shows_instructions(
     container.resolve = MagicMock(return_value=mock_usecase)
 
     with patch(
-        "handlers.private.reports.all_users.all_users_report_handler.safe_edit_message",
+        "handlers.private.reports.all_users.all_users_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(
@@ -84,7 +84,7 @@ async def test_get_all_users_report_handler_success_shows_period(
     container.resolve = MagicMock(return_value=mock_usecase)
 
     with patch(
-        "handlers.private.reports.all_users.all_users_report_handler.safe_edit_message",
+        "handlers.private.reports.all_users.all_users_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(
@@ -121,7 +121,7 @@ async def test_process_period_selection_all_users_calls_render(
     container.resolve = MagicMock(return_value=mock_usecase)
 
     with patch(
-        "handlers.private.reports.all_users.all_users_report_handler.safe_edit_message",
+        "handlers.private.reports.all_users.all_users_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ):
         with patch(

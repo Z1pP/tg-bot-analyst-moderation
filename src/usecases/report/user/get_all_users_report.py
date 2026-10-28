@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List
+from typing import Any, List
 
 from constants.enums import AdminActionType
 from constants.work_time import END_TIME, START_TIME, TOLERANCE
@@ -27,7 +27,7 @@ from .base import BaseReportUseCase
 logger = logging.getLogger(__name__)
 
 
-class GetAllUsersReportUseCase(BaseReportUseCase):
+class GetAllUsersReportUseCase(BaseReportUseCase[AllUsersReportDTO]):
     def __init__(
         self,
         msg_reply_repository: MessageReplyRepository,
@@ -91,6 +91,8 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
                 start_date=adjusted_start,
                 end_date=adjusted_end,
             )
+            if self._punishment_repository
+            else {}
         )
 
         users_data = await self._get_all_users_data(
@@ -150,7 +152,7 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
         user_ids: List[int],
         start_date: datetime,
         end_date: datetime,
-    ) -> dict:
+    ) -> dict[int, dict[str, list[Any]]]:
         """Получает все данные пользователей за период одной выборкой."""
         replies = await self._msg_reply_repository.get_replies_by_period_date_for_users(
             user_ids=user_ids,
@@ -226,7 +228,7 @@ class GetAllUsersReportUseCase(BaseReportUseCase):
 
         return AllUsersUserStatsResult(
             user_id=user.id,
-            username=user.username,
+            username=user.username or "",
             day_stats=day_stats,
             multi_day_stats=multi_day_stats,
             replies_stats=replies_stats,

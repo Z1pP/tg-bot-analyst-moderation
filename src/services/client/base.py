@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type, TypeVar, Union
+from typing import Any, Optional, Type, TypeVar, Union, cast
 from urllib.parse import urljoin
 
 from aiohttp import ClientSession
@@ -34,7 +34,7 @@ class BaseApiClient:
 
             if response_model:
                 return response_model.model_validate(data)
-            return data
+            return cast(Union[T, dict[str, Any]], data)
 
     async def close(self) -> None:
         """Явное закрытие сессии."""

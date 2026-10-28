@@ -16,7 +16,7 @@ from usecases.report import (
 )
 from utils.exception_handler import handle_exception
 from utils.send_message import (
-    safe_edit_message,
+    safe_edit_callback_message,
     safe_edit_message_reply_markup,
     send_html_message_with_kb,
 )
@@ -31,6 +31,10 @@ async def detailed_report_handler(
     state: FSMContext,
     container: Container,
 ) -> None:
+    message = callback.message
+    if not isinstance(message, types.Message):
+        return
+
     try:
         await callback.answer()
 
@@ -49,26 +53,55 @@ async def detailed_report_handler(
         logger.info(f"chat_dto: {type(chat_dto) if chat_dto else None}")
 
         if single_user_dto:
-            dto = SingleUserReportDTO.model_validate(single_user_dto)
-            await _handle_single_user_details(callback, dto, container)
+            single_dto = SingleUserReportDTO.model_validate(single_user_dto)
+            await _handle_single_user_details(callback, single_dto, container)
         elif all_users_dto:
-            dto = AllUsersReportDTO.model_validate(all_users_dto)
-            await _handle_all_users_details(callback, dto, container)
+            all_dto = AllUsersReportDTO.model_validate(all_users_dto)
+            await _handle_all_users_details(callback, all_dto, container)
         elif chat_dto:
-            dto = ChatReportDTO.model_validate(chat_dto)
-            await _handle_chat_details(callback, dto, container)
+            chat_report_dto = ChatReportDTO.model_validate(chat_dto)
+            await _handle_chat_details(callback, chat_report_dto, container)
         else:
             await send_html_message_with_kb(
-                message=callback.message,
+                message=message,
                 text=Dialog.Report.ERROR_GET_REPORT_DATA,
             )
 
     except Exception as e:
-        await handle_exception(callback.message, e, "detailed_report_handler")
+        await handle_exception(message, e, "detailed_report_handler")
+
+
+async def _send_detail_parts(
+    callback: types.CallbackQuery,
+    report_parts: list[str],
+) -> None:
+    """Отправляет части детализации и добавляет кнопку скрытия к последней."""
+    message = callback.message
+    if not isinstance(message, types.Message) or callback.bot is None:
+        return
+
+    message_ids = []
+    for part in report_parts:
+        sent_message = await send_html_message_with_kb(
+            message=message,
+            text=part,
+        )
+        message_ids.append(sent_message.message_id)
+
+    # Добавляем кнопку "Скрыть детализацию" к последнему сообщению
+    if message_ids:
+        await safe_edit_message_reply_markup(
+            bot=callback.bot,
+            chat_id=message.chat.id,
+            message_id=message_ids[-1],
+            reply_markup=hide_details_ikb(message_ids),
+        )
 
 
 async def _handle_single_user_details(
-    callback: types.CallbackQuery, report_dto, container: Container
+    callback: types.CallbackQuery,
+    report_dto: SingleUserReportDTO,
+    container: Container,
 ) -> None:
     """Обрабатывает детализацию для одного пользователя"""
     usecase: GetBreaksDetailReportUseCase = container.resolve(
@@ -77,23 +110,7 @@ async def _handle_single_user_details(
     report_data = await usecase.execute(report_dto)
     report_parts = BreaksDetailPresenter.format_report(report_data)
 
-    message_ids = []
-    for part in report_parts:
-        sent_message = await send_html_message_with_kb(
-            message=callback.message,
-            text=part,
-        )
-        message_ids.append(sent_message.message_id)
-
-    # Добавляем кнопку "Скрыть детализацию" к последнему сообщению
-    if message_ids:
-        last_message_id = message_ids[-1]
-        await safe_edit_message_reply_markup(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=last_message_id,
-            reply_markup=hide_details_ikb(message_ids),
-        )
+    await _send_detail_parts(callback, report_parts)
 
     logger.info(
         f"Детализация перерывов отправлена для пользователя {report_dto.user_id}"
@@ -101,15 +118,19 @@ async def _handle_single_user_details(
 
 
 async def _handle_all_users_details(
-    callback: types.CallbackQuery, report_dto, container: Container
+    callback: types.CallbackQuery,
+    report_dto: AllUsersReportDTO,
+    container: Container,
 ) -> None:
     """Обрабатывает детализацию для всех пользователей"""
     # Проверяем что это правильный тип DTO
     if not isinstance(report_dto, AllUsersReportDTO):
-        await send_html_message_with_kb(
-            message=callback.message,
-            text=Dialog.Report.ERROR_INVALID_REPORT_DATA_TYPE,
-        )
+        message = callback.message
+        if isinstance(message, types.Message):
+            await send_html_message_with_kb(
+                message=message,
+                text=Dialog.Report.ERROR_INVALID_REPORT_DATA_TYPE,
+            )
         return
 
     usecase: GetAllUsersBreaksDetailReportUseCase = container.resolve(
@@ -118,23 +139,7 @@ async def _handle_all_users_details(
     report_data = await usecase.execute(report_dto)
     report_parts = BreaksDetailPresenter.format_report(report_data)
 
-    message_ids = []
-    for part in report_parts:
-        sent_message = await send_html_message_with_kb(
-            message=callback.message,
-            text=part,
-        )
-        message_ids.append(sent_message.message_id)
-
-    # Добавляем кнопку "Скрыть детализацию" к последнему сообщению
-    if message_ids:
-        last_message_id = message_ids[-1]
-        await safe_edit_message_reply_markup(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=last_message_id,
-            reply_markup=hide_details_ikb(message_ids),
-        )
+    await _send_detail_parts(callback, report_parts)
 
     logger.info(
         f"Детализация перерывов отправлена для всех пользователей админа {report_dto.user_tg_id}"
@@ -142,15 +147,19 @@ async def _handle_all_users_details(
 
 
 async def _handle_chat_details(
-    callback: types.CallbackQuery, report_dto, container: Container
+    callback: types.CallbackQuery,
+    report_dto: ChatReportDTO,
+    container: Container,
 ) -> None:
     """Обрабатывает детализацию для отчета по чату"""
     # Проверяем что это правильный тип DTO
     if not isinstance(report_dto, ChatReportDTO):
-        await send_html_message_with_kb(
-            message=callback.message,
-            text=Dialog.Report.ERROR_INVALID_REPORT_DATA_TYPE,
-        )
+        message = callback.message
+        if isinstance(message, types.Message):
+            await send_html_message_with_kb(
+                message=message,
+                text=Dialog.Report.ERROR_INVALID_REPORT_DATA_TYPE,
+            )
         return
 
     usecase: GetChatBreaksDetailReportUseCase = container.resolve(
@@ -159,23 +168,7 @@ async def _handle_chat_details(
     report_data = await usecase.execute(report_dto)
     report_parts = BreaksDetailPresenter.format_report(report_data)
 
-    message_ids = []
-    for part in report_parts:
-        sent_message = await send_html_message_with_kb(
-            message=callback.message,
-            text=part,
-        )
-        message_ids.append(sent_message.message_id)
-
-    # Добавляем кнопку "Скрыть детализацию" к последнему сообщению
-    if message_ids:
-        last_message_id = message_ids[-1]
-        await safe_edit_message_reply_markup(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=last_message_id,
-            reply_markup=hide_details_ikb(message_ids),
-        )
+    await _send_detail_parts(callback, report_parts)
 
     logger.info(f"Детализация перерывов отправлена для чата {report_dto.chat_id}")
 
@@ -183,6 +176,8 @@ async def _handle_chat_details(
 @router.callback_query(F.data.startswith(CallbackData.Report.PREFIX_HIDE_DETAILS))
 async def hide_details_handler(callback: types.CallbackQuery) -> None:
     """Обработчик скрытия детализации (одно или несколько сообщений)"""
+    if callback.data is None or callback.bot is None or callback.message is None:
+        return
     try:
         # Извлекаем ID сообщений из callback_data
         message_ids_str = callback.data.replace(
@@ -209,11 +204,11 @@ async def hide_details_handler(callback: types.CallbackQuery) -> None:
                 logger.warning(f"Не удалось удалить сообщение {msg_id}: {e}")
 
         # Удаляем само сообщение с кнопкой, если оно существует
-        if callback.message:
+        if isinstance(callback.message, types.Message):
             try:
                 await callback.message.delete()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Не удалось удалить сообщение: %s", e, exc_info=True)
 
         if deleted_count > 0:
             await callback.answer(Dialog.Report.DETAILS_HIDDEN)
@@ -223,18 +218,11 @@ async def hide_details_handler(callback: types.CallbackQuery) -> None:
     except Exception as e:
         logger.error(f"Ошибка при скрытии детализации: {e}", exc_info=True)
         # Пытаемся отредактировать сообщение с ошибкой
-        if callback.message:
-            success = await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=Dialog.Report.ERROR_HIDE_DETAILS_FAILED,
-            )
-            if not success:
-                await callback.answer(
-                    Dialog.Report.ERROR_HIDE_DETAILS_FAILED, show_alert=True
-                )
-        else:
+        success = await safe_edit_callback_message(
+            callback=callback,
+            text=Dialog.Report.ERROR_HIDE_DETAILS_FAILED,
+        )
+        if not success:
             await callback.answer(
                 Dialog.Report.ERROR_HIDE_DETAILS_FAILED, show_alert=True
             )

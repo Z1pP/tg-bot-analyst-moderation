@@ -17,7 +17,7 @@ from dto.time_dto import GetAppNowDTO
 from states import RatingStateManager
 from usecases.report.daily_rating import GetDailyTopUsersUseCase
 from usecases.time import GetAppNowUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
@@ -28,10 +28,8 @@ async def chat_daily_rating_handler(callback: CallbackQuery, state: FSMContext) 
     """Обработчик для показа рейтинга выбранного чата за сутки."""
     await callback.answer()
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Rating.SELECT_PERIOD,
         reply_markup=time_period_ikb_chat(
             back_callback=CallbackData.Chat.BACK_TO_ANALYTICS_CHAT_ACTIONS
@@ -50,10 +48,18 @@ async def process_period_selection_callback(
 ) -> None:
     """Обрабатывает выбор периода для рейтинга чата через callback."""
     await callback.answer()
+    if callback.data is None:
+        return
 
     period_text = callback.data.replace(CallbackData.Report.PREFIX_PERIOD, "")
     data = await state.get_data()
     chat_id = data.get("chat_id")
+
+    if not isinstance(chat_id, int):
+        await callback.answer(
+            Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED, show_alert=True
+        )
+        return
 
     logger.info(
         "Пользователь %s выбрал период для рейтинга %s для чата %s",
@@ -74,10 +80,8 @@ async def process_period_selection_callback(
             month=now.month,
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Calendar.SELECT_START_DATE,
             reply_markup=calendar_kb,
         )
@@ -88,10 +92,8 @@ async def process_period_selection_callback(
         start_date, end_date = TimePeriod.to_datetime(period_text)
     except Exception as e:
         logger.error("Ошибка при получении дат для периода %s: %s", period_text, e)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Report.ERROR_GENERATING_REPORT,
             reply_markup=chat_actions_ikb(),
         )
@@ -117,19 +119,15 @@ async def _render_rating_view(
 ) -> None:
     """Рендерит представление рейтинга чата."""
     if not chat_id:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chat_actions_ikb(),
         )
         return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Report.GENERATING_REPORT,
     )
 
@@ -143,10 +141,8 @@ async def _render_rating_view(
         )
     except Exception as e:
         logger.error("Ошибка при получении рейтинга чата: %s", e, exc_info=True)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.ERROR_GETTING_RATING,
             reply_markup=chat_actions_ikb(),
         )
@@ -157,19 +153,15 @@ async def _render_rating_view(
         rating_text = RatingPresenter.format_daily_rating(stats)
     except Exception as e:
         logger.error("Ошибка при форматировании рейтинга чата: %s", e, exc_info=True)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.ERROR_FORMATTING_RATING,
             reply_markup=chat_actions_ikb(),
         )
         return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=rating_text,
         reply_markup=rating_report_ikb(
             back_callback=CallbackData.Report.BACK_TO_PERIODS

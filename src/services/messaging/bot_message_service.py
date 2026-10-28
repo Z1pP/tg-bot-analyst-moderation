@@ -380,7 +380,7 @@ class BotMessageService:
                 return await self.mute_chat_member(
                     chat_tg_id=chat_tg_id,
                     user_tg_id=int(user_tg_id),
-                    duration_seconds=duration_seconds,
+                    duration_seconds=duration_seconds or 0,
                 )
             elif action == PunishmentType.BAN:
                 return await self.ban_chat_member(
@@ -596,7 +596,7 @@ class BotMessageService:
     async def unmute_chat_member(
         self,
         chat_tg_id: ChatIdUnion,
-        user_tg_id: int,
+        user_tg_id: int | str,
     ) -> bool:
         """
         Размьютит пользователя в чате.
@@ -632,7 +632,7 @@ class BotMessageService:
         try:
             return await self.bot.restrict_chat_member(
                 chat_id=chat_tg_id,
-                user_id=user_tg_id,
+                user_id=int(user_tg_id),
                 permissions=permissions,
             )
         except TelegramAPIError as e:
@@ -679,12 +679,14 @@ class BotMessageService:
             result = await self.bot.export_chat_invite_link(chat_id=chat_tgid)
             # В aiogram 3.x метод возвращает ChatInviteLink объект с атрибутом invite_link
             if hasattr(result, "invite_link"):
-                return result.invite_link
+                invite_link = result.invite_link
+                return invite_link if isinstance(invite_link, str) else None
             # Если вернулась строка напрямую (старые версии или другой формат)
             if isinstance(result, str):
                 return result
             # Fallback: пытаемся получить из атрибута
-            return getattr(result, "invite_link", None)
+            invite_link = getattr(result, "invite_link", None)
+            return invite_link if isinstance(invite_link, str) else None
         except TelegramAPIError as e:
             logger.error(
                 "Не удалось получить invite ссылку для чата %s: %s",

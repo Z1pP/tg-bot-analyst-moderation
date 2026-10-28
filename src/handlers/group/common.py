@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from aiogram import Bot, F, Router
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 from constants import Dialog
 from constants.callback import CallbackData
@@ -67,6 +67,9 @@ async def send_permission_error(
 @router.callback_query(F.data == CallbackData.Menu.HIDE_NOTIFICATION)
 async def close_notification_handler(callback: CallbackQuery) -> None:
     """Обработчик закрытия уведомления."""
+    if not isinstance(callback.message, Message):
+        await callback.answer()
+        return
     try:
         await callback.message.delete()
     except Exception as e:

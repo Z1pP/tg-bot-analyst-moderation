@@ -180,7 +180,7 @@ def categories_select_only_ikb(
     return builder.as_markup()
 
 
-def conf_remove_category_kb() -> InlineKeyboardBuilder:
+def conf_remove_category_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
 
     builder.row(

@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 
-def setup_logger(log_level: int = logging.INFO):
+def setup_logger(log_level: int = logging.INFO) -> None:
     """
     Настраивает глобальный логгер для всего приложения.
     Поддерживает вывод в консоль и в ротируемые файлы.

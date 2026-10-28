@@ -1,6 +1,6 @@
 """Обработчики пагинации выбора чата для отправки сообщения."""
 
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
@@ -16,7 +16,7 @@ from keyboards.inline.message_actions import send_message_ikb
 from states.message_management import MessageManagerState
 from usecases.chat_tracking import GetUserTrackedChatsUseCase
 from utils.pagination_handler import BasePaginationHandler
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 
@@ -24,7 +24,7 @@ router = Router(name=__name__)
 class SelectChatPaginationHandler(BasePaginationHandler):
     """Обработчик пагинации при выборе чата для отправки сообщения."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("чатов")
 
     async def get_page_data(
@@ -32,7 +32,7 @@ class SelectChatPaginationHandler(BasePaginationHandler):
         page: int,
         callback: CallbackQuery,
         state: FSMContext,
-        container: Optional[Container] = None,
+        container: Container,
     ) -> Tuple[List[ChatDTO], int]:
         usecase: GetUserTrackedChatsUseCase = container.resolve(
             GetUserTrackedChatsUseCase
@@ -65,10 +65,8 @@ class SelectChatPaginationHandler(BasePaginationHandler):
         state: FSMContext,
     ) -> None:
         """При пустом списке чатов показывает сообщение и очищает state."""
-        await safe_edit_message(
-            bot=query.bot,
-            chat_id=query.message.chat.id,
-            message_id=query.message.message_id,
+        await safe_edit_callback_message(
+            callback=query,
             text=Dialog.Messages.NO_TRACKED_CHATS,
             reply_markup=send_message_ikb(),
         )
@@ -78,10 +76,12 @@ class SelectChatPaginationHandler(BasePaginationHandler):
         self,
         query: CallbackQuery,
         state: FSMContext,
-        container: Optional[Container] = None,
+        container: Container,
     ) -> None:
         """Обработчик перехода на предыдущую страницу."""
         await query.answer()
+        if query.data is None:
+            return
 
         current_page = int(query.data.split("__")[1])
         prev_page = max(1, current_page - 1)
@@ -95,10 +95,8 @@ class SelectChatPaginationHandler(BasePaginationHandler):
             return
 
         keyboard = await self.build_keyboard(items, prev_page, total_count)
-        await safe_edit_message(
-            bot=query.bot,
-            chat_id=query.message.chat.id,
-            message_id=query.message.message_id,
+        await safe_edit_callback_message(
+            callback=query,
             text=Dialog.Messages.SELECT_CHAT,
             reply_markup=keyboard,
         )
@@ -107,9 +105,11 @@ class SelectChatPaginationHandler(BasePaginationHandler):
         self,
         query: CallbackQuery,
         state: FSMContext,
-        container: Optional[Container] = None,
+        container: Container,
     ) -> None:
         """Обработчик перехода на следующую страницу."""
+        if query.data is None:
+            return
         current_page = int(query.data.split("__")[1])
         next_page = current_page + 1
 
@@ -128,10 +128,8 @@ class SelectChatPaginationHandler(BasePaginationHandler):
 
         await query.answer()
         keyboard = await self.build_keyboard(items, next_page, total_count)
-        await safe_edit_message(
-            bot=query.bot,
-            chat_id=query.message.chat.id,
-            message_id=query.message.message_id,
+        await safe_edit_callback_message(
+            callback=query,
             text=Dialog.Messages.SELECT_CHAT,
             reply_markup=keyboard,
         )

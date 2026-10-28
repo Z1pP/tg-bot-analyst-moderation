@@ -17,7 +17,7 @@ from dto.report import (
     UserMultiDayStats,
     UserStatsDTO,
 )
-from models import ChatMessage, ChatSession, MessageReaction, MessageReply
+from models import ChatMessage, ChatSession, MessageReaction, MessageReply, User
 from repositories import (
     ChatRepository,
     MessageReactionRepository,
@@ -64,8 +64,8 @@ class GetChatReportUseCase:
         reaction_repository: MessageReactionRepository,
         msg_reply_repository: MessageReplyRepository,
         punishment_repository: PunishmentRepository,
-        bot_permission_service: BotPermissionService = None,
-        admin_action_log_service: AdminActionLogService = None,
+        bot_permission_service: BotPermissionService | None = None,
+        admin_action_log_service: AdminActionLogService | None = None,
     ) -> None:
         self._chat_repository = chat_repository
         self._user_repository = user_repository
@@ -169,7 +169,7 @@ class GetChatReportUseCase:
             end_date=end_date,
             is_single_day=is_single_day,
             working_hours=working_hours,
-            breaks_time=chat.breaks_time,
+            breaks_time=chat.breaks_time or 0,
         )
 
         # Логирование действия администратора
@@ -202,7 +202,7 @@ class GetChatReportUseCase:
         Получает все данные чата параллельно.
         """
         # Формируем список задач
-        tasks = [
+        messages, reactions, replies = await asyncio.gather(
             self._get_processed_items_with_users(
                 self._message_repository.get_messages_by_chat_id_and_period,
                 chat_id,
@@ -224,9 +224,7 @@ class GetChatReportUseCase:
                 end_date,
                 tracked_user_ids,
             ),
-        ]
-
-        messages, reactions, replies = await asyncio.gather(*tasks)
+        )
 
         data = ChatData(messages=messages, reactions=reactions, replies=replies)
 
@@ -273,8 +271,10 @@ class GetChatReportUseCase:
             Конвертированное локальное время
         """
         if hasattr(item, "created_at"):
-            return TimeZoneService.convert_to_local_time(dt=item.created_at)
-        return item.created_at if hasattr(item, "created_at") else datetime.now()
+            converted = TimeZoneService.convert_to_local_time(dt=item.created_at)
+            if converted is not None:
+                return converted
+        return datetime.now()
 
     async def _get_currect_dates(
         self, period: str, chat: ChatSession
@@ -303,13 +303,13 @@ class GetChatReportUseCase:
         Группирует данные по user_id и создает UserStatsDTO.
         """
         # Используем defaultdict для группировки за один проход
-        users_data: dict[int, dict[str, list]] = defaultdict(
+        users_data: dict[int, dict[str, Any]] = defaultdict(
             lambda: {"messages": [], "replies": [], "reactions": []}
         )
         user_names: dict[int, str] = {}
 
         # Функция-хелпер для получения имени
-        def resolve_username(user_obj, uid):
+        def resolve_username(user_obj: User | None, uid: int) -> None:
             if uid not in user_names:
                 user_names[uid] = (
                     user_obj.username
@@ -615,6 +615,8 @@ class GetChatReportUseCase:
     ) -> None:
         period = format_selected_period(start_date=start_date, end_date=end_date)
         details = f"Чат: {chat.title}, Период: {period}"
+        if self._admin_action_log_service is None:
+            return
         await self._admin_action_log_service.log_action(
             admin_tg_id=dto.admin_tg_id,
             action_type=AdminActionType.REPORT_CHAT,

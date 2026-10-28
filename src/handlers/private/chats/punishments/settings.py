@@ -10,7 +10,7 @@ from constants.callback import CallbackData
 from keyboards.inline.chats import chats_menu_ikb
 from keyboards.inline.punishments import punishment_setting_ikb
 from usecases.punishment import GetPunishmentLadderUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ async def punishment_settings_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
-):
+) -> None:
     """Меню настройки наказаний"""
     await callback.answer()
 
@@ -30,10 +30,8 @@ async def punishment_settings_handler(
 
     if not chat_id:
         logger.error("chat_db_id не найден в state")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chats_menu_ikb(),
         )
@@ -59,10 +57,8 @@ async def punishment_settings_handler(
         f"{Dialog.Punishment.PUNISHMENT_STEP_INSTRUCTION}"
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=text,
         reply_markup=punishment_setting_ikb(),
     )

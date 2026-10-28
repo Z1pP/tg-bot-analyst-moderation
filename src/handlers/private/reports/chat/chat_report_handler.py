@@ -21,9 +21,7 @@ from exceptions.base import BotBaseException
 from handlers._handler_errors import raise_business_logic
 from usecases.report import GetChatReportUseCase
 from usecases.time import GetAppNowUseCase
-from utils.send_message import (
-    safe_edit_message,
-)
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -45,10 +43,8 @@ async def _show_analytics_chat_action_menu(
         "❗️Больше информации о настройках чата в FAQ на сайте Analyst AI"
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=menu_text,
         reply_markup=analytics_chat_actions_ikb(),
     )
@@ -65,13 +61,13 @@ async def analytics_chat_selected_handler(
 ) -> None:
     """Обрабатывает выбор чата для аналитики."""
     await callback.answer()
+    if callback.data is None:
+        return
 
     chat_id_str = callback.data.replace(CallbackData.Chat.PREFIX_CHAT, "")
     if not chat_id_str.isdigit():
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
             reply_markup=chat_actions_ikb(),
         )
@@ -118,10 +114,8 @@ async def get_chat_report_handler(callback: CallbackQuery, state: FSMContext) ->
     await callback.answer()
 
     # Проверка tracked_users перенесена в UseCase
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Report.SELECT_PERIOD,
         reply_markup=time_period_ikb_chat(
             back_callback=CallbackData.Chat.BACK_TO_ANALYTICS_CHAT_ACTIONS
@@ -140,16 +134,16 @@ async def process_period_selection_callback(
 ) -> None:
     """Обрабатывает выбор периода для отчета по чату через callback."""
     await callback.answer()
+    if callback.data is None:
+        return
 
     period_text = callback.data.replace(CallbackData.Report.PREFIX_PERIOD, "")
     data = await state.get_data()
     chat_id = data.get("chat_id")
 
     if not chat_id:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
         )
         return
@@ -173,10 +167,8 @@ async def process_period_selection_callback(
             month=now.month,
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Calendar.SELECT_START_DATE,
             reply_markup=calendar_kb,
         )
@@ -228,10 +220,8 @@ async def _render_report_view(
         usecase: GetChatReportUseCase = container.resolve(GetChatReportUseCase)
         result = await usecase.execute(dto=report_dto)
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=chat_actions_ikb(),
         )
@@ -250,10 +240,8 @@ async def _render_report_view(
 
     if result.error_message:
         # Если есть ошибка, presenter уже вернул её в report_parts
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=report_parts[0] if report_parts else result.error_message,
             reply_markup=chat_actions_ikb(),
         )
@@ -266,10 +254,8 @@ async def _render_report_view(
     # Объединяем все части отчета в один текст
     full_report = "\n\n".join(report_parts)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=full_report,
         reply_markup=order_details_kb_chat(
             show_details=not result.is_single_day,

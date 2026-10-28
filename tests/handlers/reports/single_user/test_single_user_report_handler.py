@@ -47,7 +47,7 @@ async def test_get_user_report_handler_no_user_id_shows_error(
     state.get_data = AsyncMock(return_value={})
 
     with patch(
-        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_message",
+        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(
@@ -76,7 +76,7 @@ async def test_get_user_report_handler_no_tracked_chats_shows_instructions(
     container.resolve = MagicMock(return_value=mock_usecase)
 
     with patch(
-        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_message",
+        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(
@@ -112,7 +112,7 @@ async def test_get_user_report_handler_success_shows_period_select(
     container.resolve = MagicMock(return_value=mock_usecase)
 
     with patch(
-        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_message",
+        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(
@@ -148,7 +148,7 @@ async def test_process_period_selection_custom_shows_calendar(
     container.resolve = MagicMock(return_value=mock_get_now)
 
     with patch(
-        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_message",
+        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         with patch(
@@ -188,7 +188,7 @@ async def test_process_period_selection_fixed_period_calls_render(
     container.resolve = MagicMock(return_value=mock_usecase)
 
     with patch(
-        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_message",
+        "handlers.private.reports.single_user.single_user_report_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ):
         with patch(

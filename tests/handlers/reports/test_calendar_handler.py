@@ -52,7 +52,7 @@ async def test_calendar_handler_action_ignore_returns_early(
     callback.data = f"{CallbackData.Report.PREFIX_CALENDAR}ignore_0_0"
 
     with patch(
-        "handlers.private.reports.calendar_handler.safe_edit_message",
+        "handlers.private.reports.calendar_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ) as mock_edit:
         await calendar_handler(callback=callback, state=state, container=MagicMock())
@@ -76,7 +76,7 @@ async def test_calendar_handler_action_prev_calls_handle_navigation(
     )
 
     with patch(
-        "handlers.private.reports.calendar_handler.safe_edit_message",
+        "handlers.private.reports.calendar_handler.safe_edit_callback_message",
         new_callable=AsyncMock,
     ):
         with patch(
@@ -99,7 +99,7 @@ async def test_handle_navigation_prev_decrements_month(
     callback: MagicMock,
     state: MagicMock,
 ) -> None:
-    """Навигация prev — уменьшение месяца и вызов safe_edit_message."""
+    """Навигация prev — уменьшение месяца и вызов safe_edit_callback_message."""
     state.get_state = AsyncMock(
         return_value=SingleUserReportStates.selecting_custom_period.state
     )
@@ -109,7 +109,7 @@ async def test_handle_navigation_prev_decrements_month(
         return_value=MagicMock(),
     ) as mock_create:
         with patch(
-            "handlers.private.reports.calendar_handler.safe_edit_message",
+            "handlers.private.reports.calendar_handler.safe_edit_callback_message",
             new_callable=AsyncMock,
         ) as mock_edit:
             await handle_navigation(
@@ -152,7 +152,7 @@ async def test_handle_reset_single_user_state(
     ) as mock_kb:
         mock_kb.create_calendar_single_user.return_value = MagicMock()
         with patch(
-            "handlers.private.reports.calendar_handler.safe_edit_message",
+            "handlers.private.reports.calendar_handler.safe_edit_callback_message",
             new_callable=AsyncMock,
         ) as mock_edit:
             await handle_reset(callback=callback, state=state, container=container)

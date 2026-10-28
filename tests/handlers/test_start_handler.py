@@ -6,7 +6,9 @@ from aiogram.types import Chat, Message
 from aiogram.types import User as TgUser
 
 from constants import Dialog
+from constants.enums import UserRole
 from handlers.private.common.start_handler import start_handler
+from dto import UserDTO
 from keyboards.inline.menu import main_menu_ikb
 from models import User
 from usecases.user import GetUserByTgIdUseCase
@@ -26,7 +28,13 @@ async def test_start_handler(mock_container: MagicMock) -> None:
     full_name = "Test User"
     user_language = "ru"
 
-    db_user = User(id=1, tg_id=str(user_id), username=full_name)
+    db_user = User(
+        id=1,
+        tg_id=str(user_id),
+        username=full_name,
+        role=UserRole.USER,
+        is_active=True,
+    )
     mock_usecase = AsyncMock(spec=GetUserByTgIdUseCase)
     mock_usecase.execute.return_value = db_user
     mock_container.resolve.return_value = mock_usecase
@@ -46,7 +54,9 @@ async def test_start_handler(mock_container: MagicMock) -> None:
     )
 
     expected_text = Dialog.Menu.MENU_TEXT.format(username=full_name)
-    expected_markup = main_menu_ikb(user=db_user, user_language=user_language)
+    expected_markup = main_menu_ikb(
+        user=UserDTO.from_model(db_user), user_language=user_language
+    )
 
     message.answer.assert_called_once()
     _, kwargs = message.answer.call_args

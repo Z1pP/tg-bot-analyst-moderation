@@ -12,7 +12,7 @@ from keyboards.inline.chats import (
     confirm_set_default_punishments_ikb,
 )
 from usecases.punishment import SetDefaultPunishmentLadderUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 from .settings import punishment_settings_handler
 
@@ -25,7 +25,7 @@ async def set_default_punishments_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
-):
+) -> None:
     """Сброс до настроек по умолчанию"""
     await callback.answer()
 
@@ -34,19 +34,15 @@ async def set_default_punishments_handler(
     chat_id = data.get("chat_id")
     if not chat_id:
         logger.error("chat_db_id не найден в state")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chats_menu_ikb(),
         )
         return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Punishment.CONFIRM_SET_DEFAULT,
         reply_markup=confirm_set_default_punishments_ikb(),
     )
@@ -64,14 +60,22 @@ async def confirm_set_default_punishments_handler(
     callback: CallbackQuery,
     state: FSMContext,
     container: Container,
-):
+) -> None:
     """Подтверждение сброса до настроек по умолчанию"""
+    if callback.data is None:
+        return
 
     data = await state.get_data()
     chat_id = data.get("chat_id")
     admin_tgid = str(callback.from_user.id)
     action = callback.data.split("_")[-1]
     confirm = action == "confirm"
+
+    if not isinstance(chat_id, int):
+        await callback.answer(
+            Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED, show_alert=True
+        )
+        return
 
     try:
         usecase: SetDefaultPunishmentLadderUseCase = container.resolve(

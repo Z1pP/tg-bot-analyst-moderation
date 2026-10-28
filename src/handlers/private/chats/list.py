@@ -17,7 +17,7 @@ from keyboards.inline.chats import (
 )
 from states import ChatStateManager
 from usecases.chat import GetTrackedChatsUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -71,10 +71,8 @@ async def show_tracked_chats_handler(
 
 async def _show_no_chats_message(callback: CallbackQuery) -> None:
     """Показывает сообщение о том, что нет отслеживаемых чатов."""
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Chat.NO_TRACKED_CHATS,
         reply_markup=not_tracked_chats_ikb(),
     )
@@ -96,10 +94,8 @@ async def _show_chats_list_message(
     message_text = f"Найдено {len(chats)} чат(-ов):"
     total_count = len(chats)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=message_text,
         reply_markup=show_tracked_chats_ikb(
             chats=first_page_chats,
@@ -116,10 +112,8 @@ async def _show_chats_list_message(
 async def _handle_error(callback: CallbackQuery, error: Exception) -> None:
     """Обрабатывает ошибки при получении списка чатов."""
     logger.error(f"Ошибка при получении списка чатов: {error}")
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text="❌ Ошибка при получении списка чатов",
         reply_markup=chat_actions_ikb(),
     )

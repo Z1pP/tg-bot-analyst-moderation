@@ -1,8 +1,9 @@
 import asyncio
 import logging
 
+from constants.punishment import PunishmentType
 from database.session import async_session
-from models.punishment_ladder import PunishmentLadder, PunishmentType
+from models.punishment_ladder import PunishmentLadder
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -10,7 +11,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def set_default_punishments():
+async def set_default_punishments() -> None:
     """
     Создает и сохраняет в базу данных дефолтную (глобальную) лестницу наказаний.
     """

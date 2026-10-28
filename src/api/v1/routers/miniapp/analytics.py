@@ -8,7 +8,7 @@ DELETE /api/v1/miniapp/analytics/tracking/{user_tgid} — удалить из о
 """
 
 import logging
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from punq import Container
@@ -21,7 +21,15 @@ from api.dependencies.miniapp import (
     username_from_init_data,
 )
 from constants.period import TimePeriod
-from dto.report import AllUsersReportDTO, SingleUserReportDTO
+from dto.report import (
+    AllUsersReportDTO,
+    RepliesStats,
+    SingleUserDayStats,
+    SingleUserMultiDayStats,
+    SingleUserReportDTO,
+    UserDayStats,
+    UserMultiDayStats,
+)
 from dto.user_tracking import RemoveUserTrackingDTO, UserTrackingDTO
 from usecases.report import GetAllUsersReportUseCase, GetSingleUserReportUseCase
 from usecases.user_tracking import (
@@ -35,7 +43,9 @@ logger = logging.getLogger(__name__)
 VALID_PERIODS = [p.value for p in TimePeriod if p != TimePeriod.CUSTOM]
 
 
-def _serialize_day_stats(s) -> Optional[dict]:
+def _serialize_day_stats(
+    s: Optional[UserDayStats | SingleUserDayStats],
+) -> Optional[dict[str, Any]]:
     if s is None:
         return None
     return {
@@ -55,7 +65,9 @@ def _serialize_day_stats(s) -> Optional[dict]:
     }
 
 
-def _serialize_multi_day_stats(s) -> Optional[dict]:
+def _serialize_multi_day_stats(
+    s: Optional[UserMultiDayStats | SingleUserMultiDayStats],
+) -> Optional[dict[str, Any]]:
     if s is None:
         return None
     return {
@@ -70,8 +82,8 @@ def _serialize_multi_day_stats(s) -> Optional[dict]:
     }
 
 
-def _serialize_replies_stats(s) -> dict:
-    def fmt(sec):
+def _serialize_replies_stats(s: RepliesStats) -> dict[str, Any]:
+    def fmt(sec: Optional[int]) -> Optional[str]:
         if sec is None:
             return None
         m, remainder = divmod(int(sec), 60)
@@ -95,7 +107,7 @@ async def get_all_users_report(
     init_data: TelegramInitData,
     period: str = Query(default="За сегодня"),
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     """Отчёт по всем отслеживаемым пользователям за период."""
     tg_id = tg_id_from_init_data(init_data)
 
@@ -156,7 +168,7 @@ async def get_single_user_report(
     init_data: TelegramInitData,
     period: str = Query(default="За сегодня"),
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     """Отчёт по одному пользователю за период."""
     tg_id = tg_id_from_init_data(init_data)
 
@@ -207,7 +219,7 @@ async def add_user_to_tracking(
     body: AddTrackingRequest,
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     """Добавить пользователя в отслеживание."""
     tg_id = tg_id_from_init_data(init_data)
     username = username_from_init_data(init_data)
@@ -242,7 +254,7 @@ async def remove_user_from_tracking(
     user_tgid: str,
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     """Удалить пользователя из отслеживания."""
     tg_id = tg_id_from_init_data(init_data)
     username = username_from_init_data(init_data)

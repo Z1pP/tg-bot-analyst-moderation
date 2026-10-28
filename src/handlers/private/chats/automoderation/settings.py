@@ -9,7 +9,7 @@ from constants import Dialog
 from constants.callback import CallbackData
 from keyboards.inline.chats import chats_menu_ikb
 from usecases.automoderation import GetAutoModerationSettingsUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 
@@ -22,10 +22,8 @@ async def auto_moderation_settings_handler(
 ) -> None:
     chat_id = await state.get_value("chat_id")
     if not chat_id:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chats_menu_ikb(),
         )
@@ -34,10 +32,8 @@ async def auto_moderation_settings_handler(
         GetAutoModerationSettingsUseCase
     )
     result = await usecase.execute(chat_id=chat_id)
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=result.text,
         reply_markup=result.reply_markup,
     )

@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 
 from keyboards.inline.templates import templates_menu_ikb
 from states import TemplateStateManager
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 
@@ -18,10 +18,8 @@ async def templates_menu_handler(
 
     message_text = "Выбери действие:"
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=message_text,
         reply_markup=templates_menu_ikb(),
     )

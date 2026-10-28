@@ -1,9 +1,10 @@
 import logging
 from datetime import datetime
+from typing import Any
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 from punq import Container
 
 from constants import Dialog
@@ -25,7 +26,7 @@ from states import (
 )
 from exceptions.base import BotBaseException
 from handlers._handler_errors import raise_business_logic
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -37,8 +38,8 @@ async def handle_navigation(
     action: str,
     year: int,
     month: int,
-    cal_start: datetime,
-    cal_end: datetime,
+    cal_start: datetime | None,
+    cal_end: datetime | None,
 ) -> None:
     """Обработка навигации по календарю (prev/next)."""
     if action == "prev":
@@ -65,22 +66,20 @@ async def handle_navigation(
     if cal_start:
         text = Dialog.Calendar.SELECT_END_DATE
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=text,
         reply_markup=calendar_kb,
     )
 
 
 def _create_calendar_by_state(
-    current_state,
+    current_state: str | None,
     year: int,
     month: int,
-    start_date: datetime,
-    end_date: datetime = None,
-):
+    start_date: datetime | None,
+    end_date: datetime | None = None,
+) -> InlineKeyboardMarkup | None:
     """Создает календарь в зависимости от текущего состояния."""
     if current_state == SingleUserReportStates.selecting_custom_period:
         return CalendarKeyboard.create_calendar_single_user(
@@ -107,8 +106,8 @@ async def handle_day_selection(
     year: int,
     month: int,
     day: int,
-    cal_start: datetime,
-    cal_end: datetime,
+    cal_start: datetime | None,
+    cal_end: datetime | None,
 ) -> None:
     """Обработка выбора дня в календаре."""
     selected_date = datetime(year, month, day)
@@ -127,10 +126,8 @@ async def handle_day_selection(
             start_date=selected_date,
         )
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Calendar.SELECT_END_DATE,
             reply_markup=calendar_kb,
         )
@@ -151,10 +148,8 @@ async def handle_day_selection(
         end_date=selected_date,
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Calendar.DATE_RANGE_SELECTED.format(
             start_date=cal_start.strftime("%d.%m.%Y"),
             end_date=selected_date.strftime("%d.%m.%Y"),
@@ -172,6 +167,7 @@ async def handle_reset(
     await state.update_data(cal_start_date=None, cal_end_date=None)
 
     current_state = await state.get_state()
+    calendar_kb: InlineKeyboardMarkup | None = None
     if current_state == SingleUserReportStates.selecting_custom_period:
         calendar_kb = CalendarKeyboard.create_calendar_single_user(
             year=now.year,
@@ -193,10 +189,8 @@ async def handle_reset(
             month=now.month,
         )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Calendar.SELECT_START_DATE,
         reply_markup=calendar_kb,
     )
@@ -208,6 +202,7 @@ async def handle_cancel(callback: CallbackQuery, state: FSMContext) -> None:
     current_state = await state.get_state()
 
     # Выбираем клавиатуру в зависимости от состояния
+    keyboard: InlineKeyboardMarkup | None = None
     if current_state == SingleUserReportStates.selecting_custom_period:
         keyboard = time_period_ikb_single_user()
     elif current_state == AllUsersReportStates.selecting_custom_period:
@@ -217,10 +212,8 @@ async def handle_cancel(callback: CallbackQuery, state: FSMContext) -> None:
     elif current_state == RatingStateManager.selecting_custom_period:
         keyboard = time_period_ikb_chat()
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Calendar.SELECT_PERIOD,
         reply_markup=keyboard,
     )
@@ -229,9 +222,9 @@ async def handle_cancel(callback: CallbackQuery, state: FSMContext) -> None:
 async def handle_confirm_action(
     callback: CallbackQuery,
     state: FSMContext,
-    cal_start: datetime,
-    cal_end: datetime,
-    user_data: dict,
+    cal_start: datetime | None,
+    cal_end: datetime | None,
+    user_data: dict[str, Any],
     container: Container,
 ) -> None:
     """Обработка подтверждения выбора дат - вызов генерации отчета."""
@@ -244,23 +237,19 @@ async def handle_confirm_action(
 
     # В зависимости от state вызываем нужную функцию генерации отчета
     if current_state == ChatStateManager.selecting_custom_period:
-        from .chat.chat_report_handler import _render_report_view
+        from .chat.chat_report_handler import _render_report_view as _render_chat_report
 
         chat_id = user_data.get("chat_id")
         if not chat_id:
-            await callback.answer(
-                Dialog.Report.ERROR_SELECT_CHAT_AGAIN, show_alert=True
-            )
+            await callback.answer(Dialog.Chat.CHAT_NOT_SELECTED, show_alert=True)
             return
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Calendar.GENERATING_REPORT,
         )
 
-        await _render_report_view(
+        await _render_chat_report(
             callback=callback,
             state=state,
             chat_id=chat_id,
@@ -287,7 +276,9 @@ async def handle_confirm_action(
         )
 
     elif current_state == SingleUserReportStates.selecting_custom_period:
-        from .single_user.single_user_report_handler import _render_report_view
+        from .single_user.single_user_report_handler import (
+            _render_report_view as _render_single_user_report,
+        )
 
         user_id = user_data.get("user_id")
         if not user_id:
@@ -298,14 +289,12 @@ async def handle_confirm_action(
             return
 
         # Редактируем сообщение с календарем
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Calendar.GENERATING_REPORT,
         )
 
-        await _render_report_view(
+        await _render_single_user_report(
             callback=callback,
             state=state,
             user_id=user_id,
@@ -319,10 +308,8 @@ async def handle_confirm_action(
         from .all_users.all_users_report_handler import _render_all_users_report
 
         # Редактируем сообщение с календарем
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Calendar.GENERATING_REPORT,
         )
 
@@ -341,6 +328,8 @@ async def calendar_handler(
     callback: CallbackQuery, state: FSMContext, container: Container
 ) -> None:
     """Главный обработчик callback-кнопок календаря."""
+    if callback.data is None:
+        return
     try:
         await callback.answer()
 
@@ -393,10 +382,8 @@ async def calendar_handler(
             )
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
         )
     except Exception as e:

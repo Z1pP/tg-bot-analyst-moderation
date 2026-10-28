@@ -19,7 +19,11 @@ from usecases.categories import GetCategoriesPaginatedUseCase, GetCategoriesUseC
 from exceptions.base import BotBaseException
 from handlers._handler_errors import raise_business_logic
 from usecases.templates import CreateTemplateFromContentUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import (
+    safe_edit_callback_message,
+    safe_edit_callback_reply_markup,
+    safe_edit_message,
+)
 from utils.template_content import extract_media_content_from_messages
 
 from .common import common_process_template_title_handler
@@ -47,10 +51,8 @@ async def add_template_handler(
 
         if not categories:
             msg_text = Dialog.Template.CREATE_CATEGORY_FIRST
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=msg_text,
                 reply_markup=templates_menu_ikb(),
             )
@@ -58,10 +60,8 @@ async def add_template_handler(
 
         first_page_categories = categories[:CATEGORIES_PAGE_SIZE]
 
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Template.SELECT_CATEGORY,
             reply_markup=categories_select_only_ikb(
                 categories=first_page_categories,
@@ -74,10 +74,8 @@ async def add_template_handler(
 
     except Exception as e:
         logger.error(f"Ошибка при начале создания шаблона: {e}")
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Template.ERROR_CREATE_TEMPLATE,
             reply_markup=templates_menu_ikb(),
         )
@@ -90,30 +88,29 @@ async def add_template_handler(
 async def process_template_category_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
-):
+) -> None:
     """Обработчик выбора категории шаблона"""
     await callback.answer()
+    if callback.data is None or callback.message is None:
+        return
 
     try:
         category_id = int(callback.data.split("__")[1])
     except (IndexError, ValueError):
         logger.warning("Некорректный формат callback_data: %s", callback.data)
-        return await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Template.INVALID_REQUEST,
             reply_markup=templates_menu_ikb(),
         )
+        return
 
     await state.update_data(
         category_id=category_id, active_message_id=callback.message.message_id
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Template.SEND_TEMPLATE_NAME,
         reply_markup=cancel_template_ikb(),
     )
@@ -126,7 +123,7 @@ async def process_template_title_handler(
     message: Message,
     state: FSMContext,
     bot: Bot,
-):
+) -> None:
     """Обработчик получения названия нового шаблона"""
     await common_process_template_title_handler(
         message=message,
@@ -142,8 +139,11 @@ async def process_template_content_handler(
     bot: Bot,
     container: Container,
     album_messages: list[Message] | None = None,
-):
+) -> None:
     """Обработчик получения контента шаблона"""
+    if message.from_user is None:
+        return
+
     state_data = await state.get_data()
     title = state_data.get("title")
     active_message_id = state_data.get("active_message_id")
@@ -206,6 +206,8 @@ async def prev_categories_page_for_template_handler(
 ) -> None:
     """Обработчик перехода на предыдущую страницу категорий при добавлении шаблона"""
     await callback.answer()
+    if callback.data is None:
+        return
 
     try:
         current_page = int(callback.data.split("__")[1])
@@ -226,7 +228,10 @@ async def prev_categories_page_for_template_handler(
             total_count=total_count,
         )
 
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
+        await safe_edit_callback_reply_markup(
+            callback=callback,
+            reply_markup=keyboard,
+        )
 
     except BotBaseException as e:
         await callback.answer(e.get_user_message(), show_alert=True)
@@ -248,6 +253,8 @@ async def next_categories_page_for_template_handler(
 ) -> None:
     """Обработчик перехода на следующую страницу категорий при добавлении шаблона"""
     await callback.answer()
+    if callback.data is None:
+        return
 
     try:
         current_page = int(callback.data.split("__")[1])
@@ -272,7 +279,10 @@ async def next_categories_page_for_template_handler(
             total_count=total_count,
         )
 
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
+        await safe_edit_callback_reply_markup(
+            callback=callback,
+            reply_markup=keyboard,
+        )
 
     except BotBaseException as e:
         await callback.answer(e.get_user_message(), show_alert=True)
@@ -297,6 +307,8 @@ async def process_template_chat_handler(
     Обработчик выбора чата из списка чатов.
     """
     await callback.answer()
+    if callback.data is None or not isinstance(callback.message, types.Message):
+        return
 
     chat_id_str = callback.data.replace(CallbackData.Chat.PREFIX_TEMPLATE_SCOPE, "")
     if not chat_id_str.lstrip("-").isdigit():

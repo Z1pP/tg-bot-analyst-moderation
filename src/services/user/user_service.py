@@ -39,7 +39,7 @@ class UserService:
             Объект User или None
         """
         # Проверяем кеш
-        user = await self._cache.get(f"user:username:{username}")
+        user: User | None = await self._cache.get(f"user:username:{username}")
         if user:
             return user
 
@@ -60,7 +60,7 @@ class UserService:
             Объект User или None
         """
         # Проверяем кеш
-        user = await self._cache.get(f"user:id:{user_id}")
+        user: User | None = await self._cache.get(f"user:id:{user_id}")
         if user:
             return user
 
@@ -93,7 +93,7 @@ class UserService:
 
         # Проверяем кеш по tg_id
         if tg_id:
-            user = await self._cache.get(f"user:tg_id:{tg_id}")
+            user: User | None = await self._cache.get(f"user:tg_id:{tg_id}")
             if user:
                 if username_provided:
                     user = await self._sync_username(user, username_value)
@@ -149,10 +149,13 @@ class UserService:
             old_username,
             new_username,
         )
-        user = await self._user_repository.update_user(
+        updated_user: User | None = await self._user_repository.update_user(
             user_id=user.id,
             username=new_username,
         )
+        if updated_user is None:
+            return user
+        user = updated_user
         if old_username:
             await self._cache.delete(f"user:username:{old_username}")
         await self._cache_user(user)
@@ -169,8 +172,8 @@ class UserService:
 
     async def create_user(
         self,
-        tg_id: str = None,
-        username: str = None,
+        tg_id: str | None = None,
+        username: str | None = None,
         role: Optional[UserRole] = UserRole.USER,
         language: str = "ru",
     ) -> User:

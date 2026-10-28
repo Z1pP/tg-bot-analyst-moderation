@@ -16,7 +16,7 @@ BATCH_SIZE = 100
 
 
 @broker.task
-async def process_buffered_messages_task():
+async def process_buffered_messages_task() -> None:
     """
     Задача для обработки буферизованных сообщений из Redis.
     """
@@ -50,7 +50,7 @@ async def process_buffered_messages_task():
 
 
 @broker.task
-async def process_buffered_reactions_task():
+async def process_buffered_reactions_task() -> None:
     """
     Задача для обработки буферизованных реакций из Redis.
     """
@@ -86,7 +86,7 @@ async def process_buffered_reactions_task():
 
 
 @broker.task
-async def process_buffered_replies_task():
+async def process_buffered_replies_task() -> None:
     """
     Задача для обработки буферизованных reply сообщений из Redis.
     """

@@ -4,7 +4,7 @@ import logging
 import time
 import traceback
 from html import escape
-from typing import Any, Awaitable, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Optional
 
 from aiogram import BaseMiddleware, Dispatcher
 from aiogram.types import CallbackQuery, Message, TelegramObject
@@ -17,6 +17,9 @@ from keyboards.inline.chats import hide_notification_ikb
 from repositories.user_repository import UserRepository
 from services import BotMessageService
 from utils.send_message import send_html_message_with_kb
+
+if TYPE_CHECKING:
+    from models import User
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +161,7 @@ class AsyncErrorHandler(BaseMiddleware):
         self._error_cooldown_lock = asyncio.Lock()
 
         # Кеш DEV-пользователей внутри инстанса
-        self._dev_users_cache: Optional[list] = None
+        self._dev_users_cache: "Optional[list[User]]" = None
         self._dev_users_cache_until: float = 0.0
         self._dev_users_cache_lock = asyncio.Lock()
 
@@ -221,7 +224,7 @@ class AsyncErrorHandler(BaseMiddleware):
             self._error_last_sent[key] = now
             return True
 
-    async def _get_dev_users(self) -> list:
+    async def _get_dev_users(self) -> "list[User]":
         """Возвращает DEV-пользователей с кешированием на 5 минут."""
         async with self._dev_users_cache_lock:
             now = time.monotonic()

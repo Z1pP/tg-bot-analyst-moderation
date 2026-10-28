@@ -26,6 +26,8 @@ async def remove_chat_from_tracking_handler(
 ) -> None:
     """Обработчик команды /untrack для удаления чата из отслеживания."""
     admin_user = message.from_user
+    if admin_user is None or message.bot is None:
+        return
     chat = message.chat
 
     logger.info(
@@ -44,7 +46,7 @@ async def remove_chat_from_tracking_handler(
         result = await usecase.execute(
             admin_tg_id=str(admin_user.id),
             chat_tg_id=str(chat.id),
-            chat_title=chat.title,
+            chat_title=chat.title or "",
             admin_username=admin_user.username,
         )
 
@@ -52,7 +54,10 @@ async def remove_chat_from_tracking_handler(
             await _handle_error(message, result)
             return
 
-        await _send_success_notification(message, result.chat.title)
+        if result.chat is None:
+            return
+
+        await _send_success_notification(message, result.chat.title or "")
 
     except Exception as e:
         logger.error("Ошибка в remove_chat_from_tracking_handler: %s", e, exc_info=True)
@@ -62,6 +67,8 @@ async def remove_chat_from_tracking_handler(
 
 async def _handle_error(message: Message, result: RemoveChatFromTrackingResult) -> None:
     """Обработка ошибок при удалении чата."""
+    if message.from_user is None or message.bot is None:
+        return
     if result.permissions_check and not result.permissions_check.has_all_permissions:
         error_text = (
             Dialog.Chat.ERROR_REMOVE_CHAT_NOT_MEMBER
@@ -91,6 +98,8 @@ async def _handle_error(message: Message, result: RemoveChatFromTrackingResult) 
 
 async def _send_success_notification(message: Message, chat_title: str) -> None:
     """Уведомление об успешном удалении чата."""
+    if message.from_user is None or message.bot is None:
+        return
     await send_notification(
         bot=message.bot,
         chat_id=message.from_user.id,

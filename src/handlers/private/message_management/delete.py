@@ -37,6 +37,8 @@ async def confirm_handler(
 ) -> None:
     """Обработчик подтверждения удаления сообщения."""
     await callback.answer()
+    if callback.bot is None or callback.message is None:
+        return
 
     action_state = await get_message_action_state(state)
     active_message_id = (

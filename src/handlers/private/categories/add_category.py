@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import Bot, F, Router, types
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from punq import Container
 
@@ -9,7 +9,7 @@ from exceptions.category import CategoryAlreadyExists
 from keyboards.inline.templates import templates_menu_ikb
 from states import CategoryStateManager, TemplateStateManager
 from usecases.categories import CreateCategoryUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 logger = logging.getLogger(__name__)
@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 async def confirm_category_creation_handler(
     callback: types.CallbackQuery,
     state: FSMContext,
-    bot: Bot,
     container: Container,
 ) -> None:
     """Обработчик подтверждения создания категории"""
@@ -30,6 +29,8 @@ async def confirm_category_creation_handler(
 
     data = await state.get_data()
     category_name = data.get("category_name")
+    if not isinstance(category_name, str):
+        category_name = ""
 
     try:
         usecase: CreateCategoryUseCase = container.resolve(CreateCategoryUseCase)
@@ -47,10 +48,8 @@ async def confirm_category_creation_handler(
         logger.error("Ошибка при создании категории: %s", e, exc_info=True)
         text = "⚠️ Произошла ошибка при создании категории."
 
-    await safe_edit_message(
-        bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=text,
         reply_markup=templates_menu_ikb(),
     )

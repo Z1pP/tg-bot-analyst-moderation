@@ -105,6 +105,8 @@ async def process_humanity_verification(
     container: Container,
 ) -> None:
     """Обработчик нажатия кнопки антибот-верификации в групповом чате."""
+    if callback.data is None:
+        return
     raw_suffix = callback.data.removeprefix(
         CallbackData.Antibot.CONFIRM_HUMANITY_PREFIX
     )
@@ -121,6 +123,10 @@ async def process_humanity_verification(
 
     if callback.from_user.id != target_user_id:
         await callback.answer(Dialog.Antibot.VERIFIED_ERROR_USER, show_alert=True)
+        return
+
+    if not isinstance(callback.message, types.Message):
+        await callback.answer("Сообщение недоступно.", show_alert=True)
         return
 
     verify_usecase: VerifyMemberUseCase = container.resolve(VerifyMemberUseCase)

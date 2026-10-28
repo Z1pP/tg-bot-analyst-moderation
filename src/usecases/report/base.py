@@ -3,7 +3,18 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from statistics import mean, median
-from typing import Any, Awaitable, Callable, List, Optional, Sequence, TypeVar, Union, cast
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from pydantic import BaseModel
 
@@ -25,10 +36,11 @@ from services.work_time_service import WorkTimeService
 from utils.formatter import format_selected_period
 
 T = TypeVar("T", ChatMessage, MessageReply, MessageReaction)
+ReportDtoT = TypeVar("ReportDtoT", bound=BaseModel)
 logger = logging.getLogger(__name__)
 
 
-class BaseReportUseCase(ABC):
+class BaseReportUseCase(ABC, Generic[ReportDtoT]):
     """Абстрактный базовый класс для use case отчётов."""
 
     def __init__(
@@ -38,7 +50,7 @@ class BaseReportUseCase(ABC):
         user_repository: UserRepository,
         reaction_repository: MessageReactionRepository,
         chat_repository: ChatRepository,
-        punishment_repository: PunishmentRepository = None,
+        punishment_repository: PunishmentRepository | None = None,
     ):
         self._msg_reply_repository = msg_reply_repository
         self._user_repository = user_repository
@@ -48,14 +60,14 @@ class BaseReportUseCase(ABC):
         self._punishment_repository = punishment_repository
 
     @abstractmethod
-    async def execute(self, dto: BaseModel) -> Any:
+    async def execute(self, dto: ReportDtoT) -> Any:
         """Абстрактный метод выполнения use case. Принимает DTO из src/dto."""
         ...
 
 
     async def _get_processed_items_by_user(
         self,
-        repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],
+        repository_method: Callable[..., Awaitable[List[T]]],
         user_id: int,
         start_date: datetime,
         end_date: datetime,
@@ -70,7 +82,7 @@ class BaseReportUseCase(ABC):
 
     async def _get_processed_items_by_user_in_chats(
         self,
-        repository_method,
+        repository_method: Callable[..., Awaitable[List[T]]],
         user_id: int,
         start_date: datetime,
         end_date: datetime,
@@ -87,7 +99,7 @@ class BaseReportUseCase(ABC):
 
     async def _get_processed_items_by_chat_with_users(
         self,
-        repository_method,
+        repository_method: Callable[..., Awaitable[List[T]]],
         chat_id: int,
         start_date: datetime,
         end_date: datetime,
@@ -105,7 +117,9 @@ class BaseReportUseCase(ABC):
     def _process_items(self, items: List[T]) -> List[T]:
         """Обрабатывает элементы: конвертирует время и фильтрует по рабочему времени."""
         for item in items:
-            item.created_at = TimeZoneService.convert_to_local_time(item.created_at)
+            converted = TimeZoneService.convert_to_local_time(item.created_at)
+            if converted is not None:
+                item.created_at = converted
         return cast(
             List[T],
             WorkTimeService.filter_by_work_time(items=items),
@@ -364,12 +378,12 @@ class BaseReportUseCase(ABC):
         return (end_date.date() - start_date.date()).days <= 1
 
 
-class UserReportUseCase(BaseReportUseCase):
+class UserReportUseCase(BaseReportUseCase[ReportDtoT], Generic[ReportDtoT]):
     """Базовый класс для отчётов по пользователям."""
 
     async def _get_processed_items(
         self,
-        repository_method: Callable[[int, datetime, datetime], Awaitable[List[T]]],
+        repository_method: Callable[..., Awaitable[List[T]]],
         user_id: int,
         start_date: datetime,
         end_date: datetime,
@@ -380,7 +394,7 @@ class UserReportUseCase(BaseReportUseCase):
         )
 
 
-class ChatReportUseCase(BaseReportUseCase):
+class ChatReportUseCase(BaseReportUseCase[ReportDtoT], Generic[ReportDtoT]):
     """Базовый класс для отчётов по чатам."""
 
     pass

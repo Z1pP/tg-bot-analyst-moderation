@@ -23,6 +23,8 @@ async def message_management_menu_handler(
         state: Контекст состояния FSM.
     """
     await callback.answer()
+    if callback.bot is None or callback.message is None:
+        return
 
     logger.info(
         "Администратор %s выбрал пункт управления сообщениями",

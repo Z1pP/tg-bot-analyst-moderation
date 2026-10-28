@@ -51,7 +51,7 @@ select_user_for_report_pagination_handler = SelectUserForReportPaginationHandler
 class RemoveUsersPaginationHandler(BasePaginationHandler):
     """Обработчик пагинации для удаления пользователей."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("пользователей")
 
     async def get_page_data(

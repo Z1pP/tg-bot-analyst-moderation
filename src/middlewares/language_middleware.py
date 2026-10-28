@@ -1,13 +1,15 @@
 """Middleware для определения и сохранения языка пользователя"""
 
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, cast
 
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
+from aiogram.types import User as TelegramUser
 from punq import Container
 
 from constants.i18n import DEFAULT_LANGUAGE
+from models.user import User
 from services.user import UserService
 
 logger = logging.getLogger(__name__)
@@ -62,7 +64,7 @@ class LanguageMiddleware(BaseMiddleware):
 
         return await handler(event, data)
 
-    async def _get_user_language(self, telegram_user) -> str:
+    async def _get_user_language(self, telegram_user: TelegramUser) -> str:
         """
         Получает язык пользователя из базы данных или определяет его из Telegram.
 
@@ -103,7 +105,10 @@ class LanguageMiddleware(BaseMiddleware):
                 # Создаем пользователя с определенным языком
                 try:
                     await self.user_service.create_user(
-                        tg_id=tg_id, username=telegram_user.username, language=language
+                        tg_id=tg_id,
+                        # create_user объявляет username: str, но принимает None
+                        username=cast(str, telegram_user.username),
+                        language=language,
                     )
                 except Exception as e:
                     logger.warning(
@@ -119,7 +124,7 @@ class LanguageMiddleware(BaseMiddleware):
             )
             return DEFAULT_LANGUAGE
 
-    async def _update_user_language(self, user, language: str) -> None:
+    async def _update_user_language(self, user: User, language: str) -> None:
         """
         Обновляет язык пользователя в базе данных.
 

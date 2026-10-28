@@ -1,6 +1,6 @@
 """Утилита извлечения контента шаблона из сообщений (для использования в хендлерах)."""
 
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 from aiogram.types import Message
 
@@ -18,7 +18,7 @@ def extract_media_content_from_messages(messages: List[Message]) -> Dict[str, An
     }
 
     for message in messages:
-        media_mapping = {
+        media_mapping: Dict[str, tuple[Any, Callable[[Any], Any]]] = {
             "photo": (message.photo, lambda x: x[-1]),
             "document": (message.document, lambda x: x),
             "video": (message.video, lambda x: x),

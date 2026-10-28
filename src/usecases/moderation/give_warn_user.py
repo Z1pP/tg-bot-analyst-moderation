@@ -96,7 +96,7 @@ class GiveUserWarnUseCase(ModerationUseCase):
         # Применяем наказание в чате для нарушителя
         is_success = await self.bot_message_service.apply_punishment(
             chat_tg_id=context.chat.chat_id,
-            user_tg_id=context.violator.tg_id,
+            user_tg_id=context.violator.tg_id or "",
             action=punishment_ladder.punishment_type,
             duration_seconds=punishment_ladder.duration_seconds,
         )
@@ -129,9 +129,9 @@ class GiveUserWarnUseCase(ModerationUseCase):
 
         reason_text = self.punishment_service.generate_reason_for_user(
             punishment_type=punishment_ladder.punishment_type,
-            duration_of_punishment=punishment_ladder.duration_seconds,
-            violator_username=context.violator.username,
-            violator_tg_id=context.violator.tg_id,
+            duration_of_punishment=punishment_ladder.duration_seconds or 0,
+            violator_username=context.violator.username or "",
+            violator_tg_id=context.violator.tg_id or "",
         )
 
         report = self.punishment_service.generate_report(
@@ -154,7 +154,7 @@ class GiveUserWarnUseCase(ModerationUseCase):
             duration_text = format_duration(punishment_ladder.duration_seconds)
 
         violator_display = format_violator_display(
-            context.violator.username, context.violator.tg_id
+            context.violator.username or "", context.violator.tg_id or ""
         )
         details = (
             f"Нарушитель: {violator_display} ({context.violator.tg_id}), "

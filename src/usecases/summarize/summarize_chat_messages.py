@@ -40,7 +40,7 @@ class GetChatSummaryUseCase:
     ) -> str:
         # Пытаемся получить из кеша
         cache_key = f"summary:{chat_id}:{summary_type.value}"
-        cached_data = await self._cache.get(cache_key)
+        cached_data: tuple[str, int] | None = await self._cache.get(cache_key)
 
         if cached_data:
             summary, last_msg_id = cached_data

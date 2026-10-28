@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from punq import Container
@@ -22,7 +22,7 @@ from exceptions.base import BotBaseException
 from handlers._handler_errors import raise_business_logic
 from usecases.summarize.summarize_chat_messages import GetChatSummaryUseCase
 from utils.send_message import (
-    safe_edit_message,
+    safe_edit_callback_message,
     send_split_html_message,
 )
 
@@ -53,10 +53,8 @@ async def process_get_chat_summary_handler(
         if is_analytics_flow
         else CallbackData.Chat.BACK_TO_CHAT_ACTIONS
     )
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Summary.SELECT_FORMAT,
         reply_markup=summary_type_ikb(back_callback=back_callback),
     )
@@ -75,6 +73,12 @@ async def process_summary_type_selection_handler(
 ) -> None:
     """Обработчик выбора типа сводки и её генерации."""
     await callback.answer()
+    if (
+        callback.data is None
+        or callback.bot is None
+        or not isinstance(callback.message, types.Message)
+    ):
+        return
 
     summary_type_str = callback.data.replace(
         CallbackData.Chat.PREFIX_CHAT_SUMMARY_TYPE, ""
@@ -92,10 +96,8 @@ async def process_summary_type_selection_handler(
     chat_id = data.get("chat_id")
 
     if not chat_id:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
         )
         return
@@ -107,10 +109,8 @@ async def process_summary_type_selection_handler(
     chat = await get_chat_uc.execute(GetChatWithArchiveDTO(chat_id=chat_id))
 
     # 1. Показываем статус выполнения в текущем сообщении
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Summary.GENERATING,
     )
 
@@ -148,31 +148,29 @@ async def process_summary_type_selection_handler(
 
         # 5. Возвращаем исходное сообщение к виду Dashboard
         if chat:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=Dialog.Chat.CHAT_ACTIONS_INFO.format(
                     title=chat.title,
-                    start_time=chat.start_time.strftime("%H:%M"),
-                    end_time=chat.end_time.strftime("%H:%M"),
+                    start_time=chat.start_time.strftime("%H:%M")
+                    if chat.start_time
+                    else "не указано",
+                    end_time=chat.end_time.strftime("%H:%M")
+                    if chat.end_time
+                    else "не указано",
                 ),
                 reply_markup=finish_keyboard,
             )
         else:
-            await safe_edit_message(
-                bot=callback.bot,
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
+            await safe_edit_callback_message(
+                callback=callback,
                 text=Dialog.Summary.READY,
                 reply_markup=finish_keyboard,
             )
 
     except BotBaseException as e:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=finish_keyboard,
         )

@@ -1,6 +1,6 @@
 import logging
 
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery
 from punq import Container
@@ -10,7 +10,7 @@ from constants.callback import CallbackData
 from keyboards.inline.users import users_menu_ikb
 from states import UserStateManager
 from usecases.user_tracking import HasTrackedUsersUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 from .navigation import show_chats_menu, show_main_menu
 
@@ -37,6 +37,9 @@ async def users_menu_callback_handler(
     """Обработчик меню пользователей через callback"""
     await callback.answer()
     await state.clear()
+
+    if callback.message is None or not isinstance(callback.message, types.Message):
+        return
 
     usecase: HasTrackedUsersUseCase = container.resolve(HasTrackedUsersUseCase)
     has_tracked_users = await usecase.execute(admin_tgid=str(callback.from_user.id))
@@ -70,15 +73,16 @@ async def messages_menu_handler(callback: CallbackQuery, state: FSMContext) -> N
     await callback.answer()
     await state.clear()
 
+    if callback.message is None or not isinstance(callback.message, types.Message):
+        return
+
     logger.info(
         "Администратор %s выбрал пункт управления сообщениями",
         callback.from_user.username,
     )
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.Messages.MESSAGE_LINK_INSTRUCTION,
         reply_markup=send_message_ikb(),
     )

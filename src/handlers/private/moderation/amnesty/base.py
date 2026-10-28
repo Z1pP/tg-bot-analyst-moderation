@@ -1,6 +1,7 @@
 """Общие хендлеры и диспетчер для сценария амнистии."""
 
 import logging
+from typing import Any, cast
 
 from aiogram import Bot, F, Router, types
 from aiogram.fsm.context import FSMContext
@@ -29,7 +30,7 @@ from utils.moderation import (
     extract_violator_data_from_state,
     format_violator_display,
 )
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 from ..errors import handle_chats_error
 from ..helpers import handle_user_search_logic, setup_user_input_view
@@ -46,7 +47,7 @@ ACTION_MAP = {
     InlineButtons.Moderation.CANCEL_WARN: Dialog.AmnestyUser.CANCEL_WARN_CONFIRMATION,
 }
 
-ACTION_CONFIG = {
+ACTION_CONFIG: dict[str, dict[str, Any]] = {
     InlineButtons.Moderation.UNBAN: {
         "usecase": GetChatsWithAnyRestrictionUseCase,
         "text": Dialog.AmnestyUser.SELECT_CHAT_UNBAN,
@@ -123,7 +124,6 @@ async def amnesty_user_input_handler(
         },
         success_keyboard=amnesty_actions_ikb,
         next_state=AmnestyStates.waiting_action_select,
-        show_block_actions_on_error=True,
     )
 
 
@@ -145,13 +145,16 @@ async def amnesty_action_select_handler(
         Устанавливает: AmnestyStates.waiting_confirmation_action.
     """
     await callback.answer()
+    if callback.data is None or callback.message is None:
+        return
     action = callback.data
 
     violator = await extract_violator_data_from_state(state=state)
     await state.update_data(action=action)
 
     user_display = format_violator_display(violator.username, str(violator.tg_id))
-    await callback.message.edit_text(
+    await safe_edit_callback_message(
+        callback=callback,
         text=ACTION_MAP[action].format(user_display=user_display),
         reply_markup=confirm_action_ikb(),
     )
@@ -180,7 +183,7 @@ async def amnesty_confirm_handler(
     await callback.answer()
 
     data = await state.get_data()
-    action = data.get("action")
+    action = data.get("action") or ""
 
     violator = await extract_violator_data_from_state(state=state)
 
@@ -194,10 +197,8 @@ async def amnesty_confirm_handler(
 
     config = ACTION_CONFIG.get(action)
     if not config:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.AmnestyUser.UNKNOWN_ACTION,
             reply_markup=moderation_menu_ikb(),
         )
@@ -215,7 +216,7 @@ async def amnesty_confirm_handler(
         await handle_chats_error(
             callback,
             state,
-            violator_username=violator.username,
+            violator_username=violator.username or "",
             violator_tgid=str(violator.tg_id),
             error=e,
         )
@@ -225,7 +226,7 @@ async def amnesty_confirm_handler(
         await handle_chats_error(
             callback,
             state,
-            violator_username=violator.username,
+            violator_username=violator.username or "",
             violator_tgid=str(violator.tg_id),
         )
         return
@@ -234,10 +235,8 @@ async def amnesty_confirm_handler(
     await state.update_data(
         chat_dtos=[chat.model_dump(mode="json") for chat in chat_dtos]
     )
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=text,
         reply_markup=tracked_chats_with_all_ikb(dtos=chat_dtos),
     )
@@ -263,8 +262,11 @@ async def amnesty_cancel_handler(
         Устанавливает: AmnestyStates.waiting_action_select.
     """
     await callback.answer()
+    if callback.message is None:
+        return
 
-    await callback.message.edit_text(
+    await safe_edit_callback_message(
+        callback=callback,
         text=Dialog.AmnestyUser.ACTION_CANCELLED,
         reply_markup=amnesty_actions_ikb(),
     )
@@ -290,22 +292,24 @@ async def amnesty_execute_handler(
         Устанавливает: AmnestyStates.waiting_action_select после выполнения.
     """
     await callback.answer()
+    if callback.data is None:
+        return
 
     data = await state.get_data()
 
-    action = data.get("action")
+    action = data.get("action") or ""
     chat_id_from_callback = callback.data.split("__")[1]
     chat_dtos_data = data.get("chat_dtos")
 
     chat_dtos = filter_chats_by_callback_selection(
-        (ChatDTO.model_validate(chat) for chat in chat_dtos_data),
+        (ChatDTO.model_validate(chat) for chat in (chat_dtos_data or [])),
         chat_id_from_callback,
     )
 
     violator = ViolatorData(
-        id=data.get("id"),
+        id=cast(int, data.get("id")),
         username=data.get("username"),
-        tg_id=data.get("tg_id"),
+        tg_id=cast(int, data.get("tg_id")),
     )
 
     amnesty_dto = AmnestyUserDTO(
@@ -319,10 +323,8 @@ async def amnesty_execute_handler(
 
     executor = ACTION_EXECUTORS.get(action)
     if not executor:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.AmnestyUser.UNKNOWN_ACTION,
             reply_markup=moderation_menu_ikb(),
         )
@@ -332,19 +334,15 @@ async def amnesty_execute_handler(
         text = await executor(amnesty_dto, container)
     except AmnestyError as e:
         logger.error("Ошибка амнистии: %s", e, exc_info=True)
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=e.get_user_message(),
             reply_markup=moderation_menu_ikb(),
         )
         return
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=text,
         reply_markup=amnesty_actions_ikb(),
     )

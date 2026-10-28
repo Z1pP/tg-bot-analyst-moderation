@@ -10,7 +10,7 @@ from constants.callback import CallbackData
 from keyboards.inline.chats import chats_menu_ikb
 from usecases.antibot import GetAntibotSettingsUseCase
 from usecases.chat import ToggleAntibotUseCase
-from utils.send_message import safe_edit_message
+from utils.send_message import safe_edit_callback_message
 
 router = Router(name=__name__)
 
@@ -27,10 +27,8 @@ async def toggle_antibot_handler(
     chat_id = await state.get_value("chat_id")
 
     if not chat_id:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_SELECTED,
             reply_markup=chats_menu_ikb(),
         )
@@ -42,10 +40,8 @@ async def toggle_antibot_handler(
     )
 
     if new_state is None:
-        await safe_edit_message(
-            bot=callback.bot,
-            chat_id=callback.message.chat.id,
-            message_id=callback.message.message_id,
+        await safe_edit_callback_message(
+            callback=callback,
             text=Dialog.Chat.CHAT_NOT_FOUND_OR_ALREADY_REMOVED,
             reply_markup=chats_menu_ikb(),
         )
@@ -56,10 +52,8 @@ async def toggle_antibot_handler(
     )
     result = await settings_usecase.execute(chat_id=chat_id)
 
-    await safe_edit_message(
-        bot=callback.bot,
-        chat_id=callback.message.chat.id,
-        message_id=callback.message.message_id,
+    await safe_edit_callback_message(
+        callback=callback,
         text=result.text,
         reply_markup=result.reply_markup,
     )

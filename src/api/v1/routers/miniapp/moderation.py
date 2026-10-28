@@ -6,7 +6,7 @@ POST /api/miniapp/moderation/ban     — заблокировать пользо
 """
 
 import logging
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from punq import Container
@@ -19,10 +19,13 @@ from api.dependencies.miniapp import (
     username_from_init_data,
 )
 from constants.punishment import PunishmentActions as Actions
+from dto.admin_log import GetAdminLogsPageDTO
+from dto.chat_dto import GetChatWithArchiveDTO
 from dto.moderation import ModerationActionDTO
 from exceptions.base import BotBaseException
-from repositories import AdminActionLogRepository, UserRepository
-from repositories.chat_repository import ChatRepository
+from usecases.admin_logs import GetModerationLogsUseCase
+from usecases.chat import GetChatWithArchiveUseCase
+from usecases.user import GetUserByTgIdUseCase
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -34,31 +37,17 @@ async def get_moderation_log(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     tg_id = tg_id_from_init_data(init_data)
-    user_repo = cast(UserRepository, dc.resolve(UserRepository))
-    log_repo = cast(AdminActionLogRepository, dc.resolve(AdminActionLogRepository))
+    get_user = cast(GetUserByTgIdUseCase, dc.resolve(GetUserByTgIdUseCase))
+    get_logs = cast(GetModerationLogsUseCase, dc.resolve(GetModerationLogsUseCase))
 
-    caller = await user_repo.get_user_by_tg_id(tg_id=tg_id)
+    caller = await get_user.execute(tg_id=tg_id)
     if not caller:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-    logs, total = await log_repo.get_logs_paginated(page=page, limit=limit)
-
-    items = []
-    for log in logs:
-        items.append(
-            {
-                "id": log.id,
-                "action_type": log.action_type,
-                "details": log.details,
-                "admin_username": log.admin.username if log.admin else None,
-                "admin_tg_id": log.admin.tg_id if log.admin else None,
-                "created_at": log.created_at.isoformat(),
-            }
-        )
-
-    return {"items": items, "total": total, "page": page, "limit": limit}
+    result = await get_logs.execute(GetAdminLogsPageDTO(page=page, limit=limit))
+    return result.model_dump(mode="json")
 
 
 class ModerationActionRequest(BaseModel):
@@ -74,18 +63,18 @@ async def perform_moderation_action(
     body: ModerationActionRequest,
     init_data: TelegramInitData,
     dc: Container = Depends(get_container),
-):
+) -> dict[str, Any]:
     tg_id = tg_id_from_init_data(init_data)
     username = username_from_init_data(init_data)
 
-    user_repo = cast(UserRepository, dc.resolve(UserRepository))
-    chat_repo = cast(ChatRepository, dc.resolve(ChatRepository))
+    get_user = cast(GetUserByTgIdUseCase, dc.resolve(GetUserByTgIdUseCase))
+    get_chat = cast(GetChatWithArchiveUseCase, dc.resolve(GetChatWithArchiveUseCase))
 
-    caller = await user_repo.get_user_by_tg_id(tg_id=tg_id)
+    caller = await get_user.execute(tg_id=tg_id)
     if not caller:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-    chat = await chat_repo.get_chat_by_tg_id(chat_tg_id=body.chat_tgid)
+    chat = await get_chat.execute(GetChatWithArchiveDTO(chat_tgid=body.chat_tgid))
     if not chat:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found"
